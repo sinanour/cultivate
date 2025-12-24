@@ -13,13 +13,19 @@
     "diff": "cdk diff",
     "destroy": "cdk destroy"
   },
-  "keywords": ["cdk", "aws", "infrastructure"],
+  "keywords": [
+    "cdk",
+    "aws",
+    "infrastructure"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@aws-cdk/assertions": "^1.203.0",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "aws-cdk": "^2.100.0",
+    "fast-check": "^4.5.2",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.0",
