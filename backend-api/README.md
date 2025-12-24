@@ -1,0 +1,129 @@
+# Community Activity Tracker - Backend API
+
+RESTful API service for the Community Activity Tracker system.
+
+## Tech Stack
+
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js 4.x
+- **Language**: TypeScript 5.x
+- **ORM**: Prisma 5.x
+- **Database**: PostgreSQL 14+
+- **Authentication**: JWT (jsonwebtoken)
+- **Validation**: Zod
+- **Password Hashing**: bcrypt
+
+## Project Structure
+
+```
+backend-api/
+├── src/
+│   ├── routes/         # API route handlers
+│   ├── services/       # Business logic layer
+│   ├── repositories/   # Data access layer
+│   ├── middleware/     # Express middleware
+│   ├── utils/          # Utility functions
+│   ├── types/          # TypeScript type definitions
+│   └── index.ts        # Application entry point
+├── prisma/             # Prisma schema and migrations
+├── dist/               # Compiled JavaScript output
+└── tests/              # Test files
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18 or higher
+- PostgreSQL 14 or higher
+- npm or yarn
+
+### Installation
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your database credentials and configuration
+```
+
+3. Initialize Prisma:
+```bash
+npm run prisma:generate
+```
+
+4. Run database migrations:
+```bash
+npm run prisma:migrate
+```
+
+### Development
+
+Start the development server:
+```bash
+npm run dev
+```
+
+The API will be available at `http://localhost:3000`
+
+### Building
+
+Build the project:
+```bash
+npm run build
+```
+
+### Testing
+
+Run tests:
+```bash
+npm test
+```
+
+Run tests in watch mode:
+```bash
+npm run test:watch
+```
+
+### Linting and Formatting
+
+Lint code:
+```bash
+npm run lint
+```
+
+Fix linting issues:
+```bash
+npm run lint:fix
+```
+
+Format code:
+```bash
+npm run format
+```
+
+## API Documentation
+
+Once the server is running, API documentation is available at:
+- Swagger UI: `http://localhost:3000/api/docs`
+- OpenAPI Spec: `http://localhost:3000/api/docs/openapi.json`
+
+## Scripts
+
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm test` - Run tests
+- `npm run lint` - Lint code
+- `npm run format` - Format code with Prettier
+- `npm run prisma:generate` - Generate Prisma client
+- `npm run prisma:migrate` - Run database migrations
+- `npm run prisma:studio` - Open Prisma Studio
+
+## License
+
+MIT
