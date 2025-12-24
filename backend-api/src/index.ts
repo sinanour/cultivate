@@ -1,12 +1,44 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { getPrismaClient, disconnectPrisma } from './utils/prisma.client';
+import { UserRepository } from './repositories/user.repository';
+import { ActivityTypeRepository } from './repositories/activity-type.repository';
+import { AuthService } from './services/auth.service';
+import { ActivityTypeService } from './services/activity-type.service';
+import { AuthMiddleware } from './middleware/auth.middleware';
+import { AuthorizationMiddleware } from './middleware/authorization.middleware';
+import { AuthRoutes } from './routes/auth.routes';
+import { ActivityTypeRoutes } from './routes/activity-type.routes';
 
 // Load environment variables
 dotenv.config();
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize Prisma client
+const prisma = getPrismaClient();
+
+// Initialize repositories
+const userRepository = new UserRepository(prisma);
+const activityTypeRepository = new ActivityTypeRepository(prisma);
+
+// Initialize services
+const authService = new AuthService(userRepository);
+const activityTypeService = new ActivityTypeService(activityTypeRepository);
+
+// Initialize middleware
+const authMiddleware = new AuthMiddleware(authService);
+const authorizationMiddleware = new AuthorizationMiddleware();
+
+// Initialize routes
+const authRoutes = new AuthRoutes(authService, authMiddleware);
+const activityTypeRoutes = new ActivityTypeRoutes(
+  activityTypeService,
+  authMiddleware,
+  authorizationMiddleware
+);
 
 // Middleware
 app.use(
@@ -23,7 +55,22 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', message: 'API is running' });
 });
 
-// Routes will be added here
+// API Routes
+app.use('/api/auth', authRoutes.getRouter());
+app.use('/api/activity-types', activityTypeRoutes.getRouter());
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down gracefully...');
+  await disconnectPrisma();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Shutting down gracefully...');
+  await disconnectPrisma();
+  process.exit(0);
+});
 
 // Start server
 app.listen(PORT, () => {
