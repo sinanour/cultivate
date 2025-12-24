@@ -49,6 +49,41 @@ export const ParticipantSearchSchema = z.object({
   q: z.string().optional(),
 });
 
+// Geographic Area schemas
+export const GeographicAreaCreateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),
+  areaType: z.enum([
+    'NEIGHBOURHOOD',
+    'COMMUNITY',
+    'CITY',
+    'CLUSTER',
+    'COUNTY',
+    'PROVINCE',
+    'STATE',
+    'COUNTRY',
+    'CUSTOM',
+  ]),
+  parentGeographicAreaId: z.string().uuid('Invalid parent ID format').optional(),
+});
+
+export const GeographicAreaUpdateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
+  areaType: z
+    .enum([
+      'NEIGHBOURHOOD',
+      'COMMUNITY',
+      'CITY',
+      'CLUSTER',
+      'COUNTY',
+      'PROVINCE',
+      'STATE',
+      'COUNTRY',
+      'CUSTOM',
+    ])
+    .optional(),
+  parentGeographicAreaId: z.string().uuid('Invalid parent ID format').optional().nullable(),
+});
+
 // UUID validation schema
 export const UuidParamSchema = z.object({
     id: z.string().uuid('Invalid ID format'),
@@ -63,4 +98,6 @@ export type RoleUpdateInput = z.infer<typeof RoleUpdateSchema>;
 export type ParticipantCreateInput = z.infer<typeof ParticipantCreateSchema>;
 export type ParticipantUpdateInput = z.infer<typeof ParticipantUpdateSchema>;
 export type ParticipantSearchQuery = z.infer<typeof ParticipantSearchSchema>;
+export type GeographicAreaCreateInput = z.infer<typeof GeographicAreaCreateSchema>;
+export type GeographicAreaUpdateInput = z.infer<typeof GeographicAreaUpdateSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;
