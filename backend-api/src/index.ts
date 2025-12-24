@@ -5,14 +5,18 @@ import { getPrismaClient, disconnectPrisma } from './utils/prisma.client';
 import { UserRepository } from './repositories/user.repository';
 import { ActivityTypeRepository } from './repositories/activity-type.repository';
 import { RoleRepository } from './repositories/role.repository';
+import { ParticipantRepository } from './repositories/participant.repository';
+import { ParticipantAddressHistoryRepository } from './repositories/participant-address-history.repository';
 import { AuthService } from './services/auth.service';
 import { ActivityTypeService } from './services/activity-type.service';
 import { RoleService } from './services/role.service';
+import { ParticipantService } from './services/participant.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { AuthRoutes } from './routes/auth.routes';
 import { ActivityTypeRoutes } from './routes/activity-type.routes';
 import { RoleRoutes } from './routes/role.routes';
+import { ParticipantRoutes } from './routes/participant.routes';
 
 // Load environment variables
 dotenv.config();
@@ -27,11 +31,18 @@ const prisma = getPrismaClient();
 const userRepository = new UserRepository(prisma);
 const activityTypeRepository = new ActivityTypeRepository(prisma);
 const roleRepository = new RoleRepository(prisma);
+const participantRepository = new ParticipantRepository(prisma);
+const addressHistoryRepository = new ParticipantAddressHistoryRepository(prisma);
 
 // Initialize services
 const authService = new AuthService(userRepository);
 const activityTypeService = new ActivityTypeService(activityTypeRepository);
 const roleService = new RoleService(roleRepository);
+const participantService = new ParticipantService(
+  participantRepository,
+  addressHistoryRepository,
+  prisma
+);
 
 // Initialize middleware
 const authMiddleware = new AuthMiddleware(authService);
@@ -45,6 +56,11 @@ const activityTypeRoutes = new ActivityTypeRoutes(
   authorizationMiddleware
 );
 const roleRoutes = new RoleRoutes(roleService, authMiddleware, authorizationMiddleware);
+const participantRoutes = new ParticipantRoutes(
+  participantService,
+  authMiddleware,
+  authorizationMiddleware
+);
 
 // Middleware
 app.use(
@@ -65,6 +81,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes.getRouter());
 app.use('/api/activity-types', activityTypeRoutes.getRouter());
 app.use('/api/roles', roleRoutes.getRouter());
+app.use('/api/participants', participantRoutes.getRouter());
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
