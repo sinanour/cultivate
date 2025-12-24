@@ -10,5 +10,22 @@ export const RefreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+// Activity Type schemas
+export const ActivityTypeCreateSchema = z.object({
+    name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
+});
+
+export const ActivityTypeUpdateSchema = z.object({
+    name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
+});
+
+// UUID validation schema
+export const UuidParamSchema = z.object({
+    id: z.string().uuid('Invalid ID format'),
+});
+
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
+export type ActivityTypeCreateInput = z.infer<typeof ActivityTypeCreateSchema>;
+export type ActivityTypeUpdateInput = z.infer<typeof ActivityTypeUpdateSchema>;
+export type UuidParam = z.infer<typeof UuidParamSchema>;
