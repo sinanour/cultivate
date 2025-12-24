@@ -3,6 +3,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
 import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
 import { EnvironmentConfig } from '../lib/types';
+import { getNumRuns } from './test-config';
 
 /**
  * Feature: infrastructure, Property 8: Security Group Least Privilege
@@ -55,34 +56,44 @@ describe('Property 8: Security Group Least Privilege', () => {
         // Find database security group
         const securityGroups = template.findResources('AWS::EC2::SecurityGroup');
         
-        // Find the database security group by checking ingress rules for port 5432
-        let databaseSgFound = false;
+        // Find the database security group by description
+        let databaseSgId: string | null = null;
         for (const [sgId, sg] of Object.entries(securityGroups)) {
           const sgProps = (sg as any).Properties;
-          const ingressRules = sgProps.SecurityGroupIngress || [];
-          
-          const hasPostgresRule = ingressRules.some((rule: any) => 
-            rule.IpProtocol === 'tcp' && 
-            (rule.FromPort === 5432 || rule.ToPort === 5432)
-          );
-
-          if (hasPostgresRule) {
-            databaseSgFound = true;
-            
-            // Verify that ingress rules don't allow 0.0.0.0/0
-            for (const rule of ingressRules) {
-              expect(rule.CidrIp).not.toBe('0.0.0.0/0');
-              expect(rule.CidrIpv6).not.toBe('::/0');
-              
-              // Should reference a source security group
-              expect(rule.SourceSecurityGroupId).toBeDefined();
-            }
+          if (sgProps.GroupDescription === 'Security group for Aurora database') {
+            databaseSgId = sgId;
+            break;
           }
         }
 
-        expect(databaseSgFound).toBe(true);
+        expect(databaseSgId).not.toBeNull();
+
+        // Find ingress rules for the database security group
+        const ingressRules = template.findResources('AWS::EC2::SecurityGroupIngress');
+
+        let databaseIngressFound = false;
+        for (const [ruleId, rule] of Object.entries(ingressRules)) {
+          const ruleProps = (rule as any).Properties;
+
+          // Check if this rule targets the database security group and port 5432
+          const groupIdRef = ruleProps.GroupId;
+          if (groupIdRef && groupIdRef['Fn::GetAtt'] &&
+            groupIdRef['Fn::GetAtt'][0] === databaseSgId &&
+            ruleProps.FromPort === 5432) {
+            databaseIngressFound = true;
+
+            // Verify that it doesn't allow 0.0.0.0/0
+            expect(ruleProps.CidrIp).not.toBe('0.0.0.0/0');
+            expect(ruleProps.CidrIpv6).not.toBe('::/0');
+
+        // Should reference a source security group
+            expect(ruleProps.SourceSecurityGroupId).toBeDefined();
+          }
+        }
+
+        expect(databaseIngressFound).toBe(true);
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -104,34 +115,44 @@ describe('Property 8: Security Group Least Privilege', () => {
         // Find API security group
         const securityGroups = template.findResources('AWS::EC2::SecurityGroup');
         
-        // Find the API security group by checking ingress rules for port 3000
-        let apiSgFound = false;
+        // Find the API security group by description
+        let apiSgId: string | null = null;
         for (const [sgId, sg] of Object.entries(securityGroups)) {
           const sgProps = (sg as any).Properties;
-          const ingressRules = sgProps.SecurityGroupIngress || [];
-          
-          const hasApiRule = ingressRules.some((rule: any) => 
-            rule.IpProtocol === 'tcp' && 
-            (rule.FromPort === 3000 || rule.ToPort === 3000)
-          );
-
-          if (hasApiRule) {
-            apiSgFound = true;
-            
-            // Verify that ingress rules don't allow 0.0.0.0/0
-            for (const rule of ingressRules) {
-              expect(rule.CidrIp).not.toBe('0.0.0.0/0');
-              expect(rule.CidrIpv6).not.toBe('::/0');
-              
-              // Should reference a source security group
-              expect(rule.SourceSecurityGroupId).toBeDefined();
-            }
+          if (sgProps.GroupDescription === 'Security group for API containers') {
+            apiSgId = sgId;
+            break;
           }
         }
 
-        expect(apiSgFound).toBe(true);
+        expect(apiSgId).not.toBeNull();
+
+        // Find ingress rules for the API security group
+        const ingressRules = template.findResources('AWS::EC2::SecurityGroupIngress');
+
+        let apiIngressFound = false;
+        for (const [ruleId, rule] of Object.entries(ingressRules)) {
+          const ruleProps = (rule as any).Properties;
+
+          // Check if this rule targets the API security group and port 3000
+          const groupIdRef = ruleProps.GroupId;
+          if (groupIdRef && groupIdRef['Fn::GetAtt'] &&
+            groupIdRef['Fn::GetAtt'][0] === apiSgId &&
+            ruleProps.FromPort === 3000) {
+            apiIngressFound = true;
+            
+            // Verify that it doesn't allow 0.0.0.0/0
+            expect(ruleProps.CidrIp).not.toBe('0.0.0.0/0');
+            expect(ruleProps.CidrIpv6).not.toBe('::/0');
+
+            // Should reference a source security group
+            expect(ruleProps.SourceSecurityGroupId).toBeDefined();
+          }
+        }
+
+        expect(apiIngressFound).toBe(true);
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -184,7 +205,7 @@ describe('Property 8: Security Group Least Privilege', () => {
         // So we'll check for that instead
         expect(nonAlbSgWithPublicAccess).toBe(false);
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 });

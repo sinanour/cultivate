@@ -3,6 +3,7 @@ import { Template } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
 import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
 import { EnvironmentConfig } from '../lib/types';
+import { getNumRuns } from './test-config';
 
 /**
  * Feature: infrastructure, Property 5: Multi-AZ Deployment
@@ -62,7 +63,7 @@ describe('Property 5: Multi-AZ Deployment', () => {
                 // With 2 AZs and public/private subnets, we should have at least 4 subnets
                 expect(subnetCount).toBeGreaterThanOrEqual(4);
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -92,7 +93,7 @@ describe('Property 5: Multi-AZ Deployment', () => {
                 // Should have at least 2 instances (writer + reader)
                 expect(instanceCount).toBeGreaterThanOrEqual(2);
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -125,7 +126,7 @@ describe('Property 5: Multi-AZ Deployment', () => {
                 expect(Array.isArray(subnets)).toBe(true);
                 expect(subnets.length).toBeGreaterThanOrEqual(2);
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 });

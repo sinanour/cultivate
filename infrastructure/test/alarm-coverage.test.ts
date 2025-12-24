@@ -3,6 +3,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
 import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
 import { EnvironmentConfig } from '../lib/types';
+import { getNumRuns } from './test-config';
 
 /**
  * Feature: infrastructure, Property 9: CloudWatch Alarm Coverage
@@ -82,7 +83,7 @@ describe('Property 9: CloudWatch Alarm Coverage', () => {
 
                 expect(latencyAlarmFound).toBe(true);
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -127,7 +128,7 @@ describe('Property 9: CloudWatch Alarm Coverage', () => {
 
                 expect(errorAlarmFound).toBe(true);
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -171,7 +172,7 @@ describe('Property 9: CloudWatch Alarm Coverage', () => {
 
                 expect(dbAlarmFound).toBe(true);
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -207,7 +208,7 @@ describe('Property 9: CloudWatch Alarm Coverage', () => {
                     }
                 }
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -247,7 +248,7 @@ describe('Property 9: CloudWatch Alarm Coverage', () => {
                     expect(alarmProps.TreatMissingData).toBeDefined();
                 }
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -291,7 +292,7 @@ describe('Property 9: CloudWatch Alarm Coverage', () => {
                 expect(criticalTopicFound).toBe(true);
                 expect(warningTopicFound).toBe(true);
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 });

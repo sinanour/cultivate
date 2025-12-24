@@ -3,6 +3,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
 import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
 import { EnvironmentConfig } from '../lib/types';
+import { getNumRuns } from './test-config';
 
 /**
  * Feature: infrastructure, Property 7: Backup Configuration
@@ -64,7 +65,7 @@ describe('Property 7: Backup Configuration', () => {
           expect(clusterProps.BackupRetentionPeriod).toBeGreaterThanOrEqual(7);
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -99,7 +100,7 @@ describe('Property 7: Backup Configuration', () => {
           expect(clusterProps.PreferredBackupWindow).toMatch(/^\d{2}:\d{2}-\d{2}:\d{2}$/);
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -130,7 +131,7 @@ describe('Property 7: Backup Configuration', () => {
           expect(clusterProps.StorageEncrypted).toBe(true);
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -161,7 +162,7 @@ describe('Property 7: Backup Configuration', () => {
           expect(clusterProps.BackupRetentionPeriod).toBeGreaterThan(0);
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -192,7 +193,7 @@ describe('Property 7: Backup Configuration', () => {
           expect(clusterProps.DeletionProtection).toBe(true);
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 });

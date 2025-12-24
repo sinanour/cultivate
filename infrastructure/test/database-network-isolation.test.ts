@@ -3,6 +3,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
 import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
 import { EnvironmentConfig } from '../lib/types';
+import { getNumRuns } from './test-config';
 
 /**
  * Feature: infrastructure, Property 2: Database Network Isolation
@@ -66,7 +67,7 @@ describe('Property 2: Database Network Isolation', () => {
           }
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -99,7 +100,7 @@ describe('Property 2: Database Network Isolation', () => {
           expect(subnetIds.length).toBeGreaterThanOrEqual(2);
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -141,7 +142,7 @@ describe('Property 2: Database Network Isolation', () => {
           }
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -173,7 +174,7 @@ describe('Property 2: Database Network Isolation', () => {
           }
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 });

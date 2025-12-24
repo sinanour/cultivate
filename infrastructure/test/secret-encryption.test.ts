@@ -3,6 +3,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
 import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
 import { EnvironmentConfig } from '../lib/types';
+import { getNumRuns } from './test-config';
 
 /**
  * Feature: infrastructure, Property 3: Secret Encryption
@@ -67,7 +68,7 @@ describe('Property 3: Secret Encryption', () => {
 
         expect(databaseSecretFound).toBe(true);
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -102,7 +103,7 @@ describe('Property 3: Secret Encryption', () => {
           expect(secretProps.GenerateSecretString || secretProps.SecretString).toBeDefined();
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -136,7 +137,7 @@ describe('Property 3: Secret Encryption', () => {
           expect(scheduleProps.HostedRotationLambda).toBeDefined();
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -182,7 +183,7 @@ describe('Property 3: Secret Encryption', () => {
 
         expect(secretAccessPolicyFound).toBe(true);
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -223,7 +224,7 @@ describe('Property 3: Secret Encryption', () => {
           }
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 });

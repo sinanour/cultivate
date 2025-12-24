@@ -124,8 +124,8 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
           scaleWithWriter: true,
         }),
       ],
-      serverlessV2MinCapacity: config.databaseMinCapacity,
-      serverlessV2MaxCapacity: config.databaseMaxCapacity,
+      serverlessV2MinCapacity: Math.round(config.databaseMinCapacity * 2) / 2,
+      serverlessV2MaxCapacity: Math.round(config.databaseMaxCapacity * 2) / 2,
       vpc: this.vpc,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
@@ -150,7 +150,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
     this.ecsCluster = new ecs.Cluster(this, 'EcsCluster', {
       vpc: this.vpc,
       clusterName: `${environmentName}-community-tracker`,
-      containerInsights: true,
+      enableFargateCapacityProviders: true,
     });
 
     // Create Application Load Balancer
@@ -166,7 +166,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
     // Create log group for API
     const apiLogGroup = new logs.LogGroup(this, 'ApiLogGroup', {
       logGroupName: `/ecs/${environmentName}/community-tracker-api`,
-      retention: config.logRetentionDays as logs.RetentionDays,
+      retention: Math.round(config.logRetentionDays) as logs.RetentionDays,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
@@ -277,19 +277,10 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
       ],
     });
 
-    // Create CloudFront Origin Access Identity
-    const originAccessIdentity = new cloudfront.OriginAccessIdentity(this, 'OAI', {
-      comment: `OAI for ${environmentName} frontend`,
-    });
-
-    this.frontendBucket.grantRead(originAccessIdentity);
-
     // Create CloudFront distribution
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
-        origin: new origins.S3Origin(this.frontendBucket, {
-          originAccessIdentity,
-        }),
+        origin: origins.S3BucketOrigin.withOriginAccessControl(this.frontendBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
         cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
@@ -327,7 +318,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
 
     // Create CloudWatch alarms
     const apiLatencyAlarm = new cloudwatch.Alarm(this, 'ApiLatencyAlarm', {
-      metric: targetGroup.metricTargetResponseTime({
+      metric: targetGroup.metrics.targetResponseTime({
         statistic: 'p95',
       }),
       threshold: 2000, // 2 seconds
@@ -340,7 +331,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
     apiLatencyAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(criticalAlarmTopic));
 
     const apiErrorRateAlarm = new cloudwatch.Alarm(this, 'ApiErrorRateAlarm', {
-      metric: targetGroup.metricHttpCodeTarget(
+      metric: targetGroup.metrics.httpCodeTarget(
         elbv2.HttpCodeTarget.TARGET_5XX_COUNT,
         {
           statistic: 'Sum',
@@ -387,12 +378,12 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
     dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'API Latency',
-        left: [targetGroup.metricTargetResponseTime()],
+        left: [targetGroup.metrics.targetResponseTime()],
       }),
       new cloudwatch.GraphWidget({
         title: 'API Error Rate',
         left: [
-          targetGroup.metricHttpCodeTarget(elbv2.HttpCodeTarget.TARGET_5XX_COUNT),
+          targetGroup.metrics.httpCodeTarget(elbv2.HttpCodeTarget.TARGET_5XX_COUNT),
         ],
       })
     );

@@ -3,6 +3,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
 import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
 import { EnvironmentConfig } from '../lib/types';
+import { getNumRuns } from './test-config';
 
 /**
  * Feature: infrastructure, Property 4: Resource Tagging Completeness
@@ -61,7 +62,7 @@ describe('Property 4: Resource Tagging Completeness', () => {
                 // We can verify this by checking that the stack has tags
                 expect(cfnTemplate).toBeDefined();
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -78,15 +79,22 @@ describe('Property 4: Resource Tagging Completeness', () => {
                     },
                 });
 
-                // Verify that the stack was created with the correct environment name
-                // Tags are applied via cdk.Tags.of(this).add() in the stack
-                expect(stack).toBeDefined();
+                const template = Template.fromStack(stack);
 
-                // The environment name should be passed correctly
-                const stackProps = (stack as any).environmentName;
-                expect(stackProps).toBe(envName);
+                // Find a taggable resource (VPC) and verify Environment tag
+                const vpcs = template.findResources('AWS::EC2::VPC');
+                expect(Object.keys(vpcs).length).toBeGreaterThan(0);
+
+                for (const [vpcId, vpc] of Object.entries(vpcs)) {
+                    const vpcProps = (vpc as any).Properties;
+                    const tags = vpcProps.Tags || [];
+
+                    const environmentTag = tags.find((tag: any) => tag.Key === 'Environment');
+                    expect(environmentTag).toBeDefined();
+                    expect(environmentTag.Value).toBe(envName);
+                }
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -111,7 +119,7 @@ describe('Property 4: Resource Tagging Completeness', () => {
                 // Tags are applied at stack level and propagate to resources
                 // The applyTags method in the stack ensures all resources get tagged
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -135,7 +143,7 @@ describe('Property 4: Resource Tagging Completeness', () => {
 
                 // The applyTags method sets ManagedBy to 'CDK'
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -172,7 +180,7 @@ describe('Property 4: Resource Tagging Completeness', () => {
                 // CDK's Tags.of(this).add() applies tags to all resources in the stack
                 // that support tagging, so we verify the mechanism is in place
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -201,7 +209,7 @@ describe('Property 4: Resource Tagging Completeness', () => {
                     // Only the Environment tag value differs
                 }
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 
@@ -227,7 +235,7 @@ describe('Property 4: Resource Tagging Completeness', () => {
                 // The applyTags method ensures these tags are applied
                 // This enables AWS Cost Explorer to filter and group costs
             }),
-            { numRuns: 100 }
+            { numRuns: getNumRuns() }
         );
     });
 });

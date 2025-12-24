@@ -3,6 +3,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
 import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
 import { EnvironmentConfig } from '../lib/types';
+import { getNumRuns } from './test-config';
 
 /**
  * Feature: infrastructure, Property 6: HTTPS Enforcement
@@ -68,7 +69,7 @@ describe('Property 6: HTTPS Enforcement', () => {
           expect(defaultCacheBehavior.ViewerProtocolPolicy).toBe('redirect-to-https');
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -103,7 +104,7 @@ describe('Property 6: HTTPS Enforcement', () => {
           }
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -139,7 +140,7 @@ describe('Property 6: HTTPS Enforcement', () => {
           expect(listenerProps.Port).toBeDefined();
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -184,7 +185,7 @@ describe('Property 6: HTTPS Enforcement', () => {
         // We verify that security groups exist and can be configured
         expect(Object.keys(securityGroups).length).toBeGreaterThan(0);
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 
@@ -223,7 +224,7 @@ describe('Property 6: HTTPS Enforcement', () => {
           }
         }
       }),
-      { numRuns: 100 }
+      { numRuns: getNumRuns() }
     );
   });
 });
