@@ -1,0 +1,222 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and authorization
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         UserRole
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMINISTRATOR
+  EDITOR
+  READ_ONLY
+}
+
+// Activity Type model
+model ActivityType {
+  id         String     @id @default(uuid())
+  name       String     @unique
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  activities Activity[]
+
+  @@map("activity_types")
+}
+
+// Role model for participant roles
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  assignments Assignment[]
+
+  @@map("roles")
+}
+
+// Geographic Area model for hierarchical geographic regions
+model GeographicArea {
+  id                     String           @id @default(uuid())
+  name                   String
+  areaType               AreaType
+  parentGeographicAreaId String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  parent                 GeographicArea?  @relation("GeographicAreaHierarchy", fields: [parentGeographicAreaId], references: [id])
+  children               GeographicArea[] @relation("GeographicAreaHierarchy")
+  venues                 Venue[]
+
+  @@index([parentGeographicAreaId])
+  @@map("geographic_areas")
+}
+
+enum AreaType {
+  NEIGHBOURHOOD
+  COMMUNITY
+  CITY
+  CLUSTER
+  COUNTY
+  PROVINCE
+  STATE
+  COUNTRY
+  CUSTOM
+}
+
+// Venue model for physical locations
+model Venue {
+  id                        String                      @id @default(uuid())
+  name                      String
+  address                   String
+  geographicAreaId          String
+  latitude                  Decimal?                    @db.Decimal(10, 8)
+  longitude                 Decimal?                    @db.Decimal(11, 8)
+  venueType                 VenueType?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  geographicArea            GeographicArea              @relation(fields: [geographicAreaId], references: [id])
+  activityVenueHistory      ActivityVenueHistory[]
+  participantAddressHistory ParticipantAddressHistory[]
+
+  @@index([geographicAreaId])
+  @@index([name])
+  @@index([address])
+  @@map("venues")
+}
+
+enum VenueType {
+  PUBLIC_BUILDING
+  PRIVATE_RESIDENCE
+}
+
+// Participant model
+model Participant {
+  id             String                      @id @default(uuid())
+  name           String
+  email          String                      @unique
+  phone          String?
+  notes          String?
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  assignments    Assignment[]
+  addressHistory ParticipantAddressHistory[]
+
+  @@index([email])
+  @@index([name])
+  @@map("participants")
+}
+
+// Participant Address History for Type 2 SCD tracking
+model ParticipantAddressHistory {
+  id            String      @id @default(uuid())
+  participantId String
+  venueId       String
+  effectiveFrom DateTime    @default(now())
+  effectiveTo   DateTime?
+  createdAt     DateTime    @default(now())
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  venue         Venue       @relation(fields: [venueId], references: [id])
+
+  @@index([participantId])
+  @@index([venueId])
+  @@index([effectiveFrom])
+  @@index([effectiveTo])
+  @@map("participant_address_history")
+}
+
+// Activity model
+model Activity {
+  id                   String                 @id @default(uuid())
+  name                 String
+  activityTypeId       String
+  startDate            DateTime
+  endDate              DateTime?
+  status               ActivityStatus         @default(PLANNED)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  activityType         ActivityType           @relation(fields: [activityTypeId], references: [id])
+  assignments          Assignment[]
+  activityVenueHistory ActivityVenueHistory[]
+
+  @@index([activityTypeId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("activities")
+}
+
+enum ActivityStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// Activity Venue History for temporal tracking
+model ActivityVenueHistory {
+  id            String    @id @default(uuid())
+  activityId    String
+  venueId       String
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+  createdAt     DateTime  @default(now())
+  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  venue         Venue     @relation(fields: [venueId], references: [id])
+
+  @@index([activityId])
+  @@index([venueId])
+  @@index([effectiveFrom])
+  @@index([effectiveTo])
+  @@map("activity_venue_history")
+}
+
+// Assignment model for participant-activity-role relationships
+model Assignment {
+  id            String      @id @default(uuid())
+  activityId    String
+  participantId String
+  roleId        String
+  createdAt     DateTime    @default(now())
+  activity      Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  role          Role        @relation(fields: [roleId], references: [id])
+
+  @@unique([activityId, participantId, roleId])
+  @@index([activityId])
+  @@index([participantId])
+  @@index([roleId])
+  @@map("assignments")
+}
+
+// Audit Log model for tracking user actions
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  actionType String
+  entityType String
+  entityId   String
+  details    Json
+  timestamp  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([entityType])
+  @@map("audit_logs")
+}
