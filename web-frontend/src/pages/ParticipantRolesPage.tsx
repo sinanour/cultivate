@@ -1,3 +1,10 @@
+import ContentLayout from '@cloudscape-design/components/content-layout';
+import { ParticipantRoleList } from '../components/features/ParticipantRoleList';
+
 export default function ParticipantRolesPage() {
-  return <div>ParticipantRolesPage - To be implemented</div>;
+  return (
+    <ContentLayout>
+      <ParticipantRoleList />
+    </ContentLayout>
+  );
 }

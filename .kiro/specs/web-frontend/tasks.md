@@ -106,7 +106,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 2.7, 3.7**
 
 - [ ] 6. Implement participant role management UI
-  - [ ] 6.1 Create ParticipantRoleList and ParticipantRoleForm components
+  - [x] 6.1 Create ParticipantRoleList and ParticipantRoleForm components
     - Similar structure to activity type management
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
