@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useState, useEffect } from 'react';
 import { User, AuthTokens } from '../types';
+import { AuthService } from '../services/auth/auth.service';
 
 interface AuthContextType {
   user: User | null;
@@ -19,46 +20,72 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load tokens from localStorage on mount
-    const storedTokens = localStorage.getItem('authTokens');
-    if (storedTokens) {
-      try {
-        const parsed = JSON.parse(storedTokens);
-        setTokens(parsed);
-        // TODO: Decode token to get user info
-      } catch (error) {
-        console.error('Failed to parse stored tokens:', error);
-        localStorage.removeItem('authTokens');
+    // Load tokens and user from localStorage on mount
+    const storedTokens = AuthService.getStoredTokens();
+    const storedUser = AuthService.getCurrentUser();
+
+    if (storedTokens && storedUser) {
+      // Check if access token is expired
+      if (AuthService.isTokenExpired(storedTokens.accessToken)) {
+        // Try to refresh token
+        AuthService.refreshToken()
+          .then((newTokens) => {
+            setTokens(newTokens);
+            setUser(storedUser);
+          })
+          .catch(() => {
+            // Refresh failed, clear everything
+            AuthService.logout();
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } else {
+        setTokens(storedTokens);
+        setUser(storedUser);
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
   }, []);
 
   const login = async (email: string, password: string) => {
-    // TODO: Implement actual login logic
-    console.log('Login:', email, password);
+    const { user: loggedInUser, tokens: authTokens } = await AuthService.login({
+      email,
+      password,
+    });
+    setUser(loggedInUser);
+    setTokens(authTokens);
   };
 
   const logout = () => {
+    AuthService.logout();
     setUser(null);
     setTokens(null);
-    localStorage.removeItem('authTokens');
   };
 
   const refreshToken = async () => {
-    // TODO: Implement token refresh logic
-    console.log('Refresh token');
+    const newTokens = await AuthService.refreshToken();
+    setTokens(newTokens);
   };
 
   const value = {
     user,
     tokens,
-    isAuthenticated: !!tokens,
+    isAuthenticated: !!tokens && !!user,
     login,
     logout,
     refreshToken,
   };
+
+  // Don't render children until we've checked for stored auth
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
