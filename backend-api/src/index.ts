@@ -22,6 +22,7 @@ import { ActivityService } from './services/activity.service';
 import { AssignmentService } from './services/assignment.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
+import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
 import { AuthRoutes } from './routes/auth.routes';
 import { ActivityTypeRoutes } from './routes/activity-type.routes';
 import { RoleRoutes } from './routes/role.routes';
@@ -135,6 +136,12 @@ app.use('/api/geographic-areas', geographicAreaRoutes.getRouter());
 app.use('/api/venues', venueRoutes.getRouter());
 app.use('/api/activities', activityRoutes.getRouter());
 app.use('/api/activities/:id/participants', assignmentRoutes.getRouter());
+
+// 404 handler for undefined routes
+app.use(ErrorHandlerMiddleware.notFound());
+
+// Global error handler (must be last)
+app.use(ErrorHandlerMiddleware.handle());
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
