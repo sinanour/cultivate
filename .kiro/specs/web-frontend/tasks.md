@@ -362,12 +362,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 10.6, 10.7**
 
 - [ ] 16. Implement PWA capabilities
-  - [ ] 16.1 Create service worker
+  - [x] 16.1 Create service worker
     - Cache static assets
     - Implement offline detection
     - _Requirements: 12.3, 12.4_
 
-  - [ ] 16.2 Create web app manifest
+  - [x] 16.2 Create web app manifest
     - Configure icons and colors
     - Enable installability
     - Provide splash screen
