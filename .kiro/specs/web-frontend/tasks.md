@@ -76,7 +76,7 @@ This implementation plan covers the React-based web application built with TypeS
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Implement activity type management UI
-  - [ ] 5.1 Create ActivityTypeList component
+  - [x] 5.1 Create ActivityTypeList component
     - Display table using CloudScape Table
     - Distinguish predefined vs custom types with badges
     - Provide edit and delete actions
@@ -95,7 +95,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 3: Deletion Error Messages**
     - **Validates: Requirements 2.6, 3.6**
 
-  - [ ] 5.2 Create ActivityTypeForm component
+  - [x] 5.2 Create ActivityTypeForm component
     - Modal form for create/edit
     - Validate name is not empty
     - Submit to API and update cache

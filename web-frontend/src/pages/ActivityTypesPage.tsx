@@ -1,3 +1,10 @@
+import ContentLayout from '@cloudscape-design/components/content-layout';
+import { ActivityTypeList } from '../components/features/ActivityTypeList';
+
 export default function ActivityTypesPage() {
-  return <div>Activity Types Page - To be implemented</div>;
+  return (
+    <ContentLayout>
+      <ActivityTypeList />
+    </ContentLayout>
+  );
 }
