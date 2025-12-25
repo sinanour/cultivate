@@ -21,7 +21,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Configure route-based code splitting
     - _Requirements: 13.1, 13.3, 9.1_
 
-  - [ ] 2.2 Create AppLayout component
+  - [x] 2.2 Create AppLayout component
     - Use CloudScape AppLayout component
     - Implement navigation sidebar with links
     - Display user menu with name, role, and logout
