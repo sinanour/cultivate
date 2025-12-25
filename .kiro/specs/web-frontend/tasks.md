@@ -222,7 +222,7 @@ This implementation plan covers the React-based web application built with TypeS
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 11. Implement activity management UI
-  - [ ] 11.1 Create ActivityList component
+  - [x] 11.1 Create ActivityList component
     - Display table with filtering by type and status
     - Visually distinguish finite vs ongoing
     - Provide sort capabilities
@@ -234,7 +234,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 13: Finite vs Ongoing Activity Distinction**
     - **Validates: Requirements 5.1, 5.2, 5.4**
 
-  - [ ] 11.2 Create ActivityForm component
+  - [x] 11.2 Create ActivityForm component
     - Conditionally require end date for finite activities
     - Allow null end date for ongoing
     - Validate name, type, start date
@@ -246,7 +246,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 15: Ongoing Activity Null End Date**
     - **Validates: Requirements 5.8, 5.9**
 
-  - [ ] 11.3 Create ActivityDetail component
+  - [x] 11.3 Create ActivityDetail component
     - Show activity information
     - List assigned participants with roles
     - Display venue history
@@ -258,7 +258,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 5.12**
 
 - [ ] 12. Implement assignment management UI
-  - [ ] 12.1 Create AssignmentForm component
+  - [x] 12.1 Create AssignmentForm component
     - Require role selection
     - Validate role is selected
     - Prevent duplicate assignments
@@ -270,7 +270,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 19: Duplicate Assignment Prevention**
     - **Validates: Requirements 6.2, 6.3, 6.5, 6.6**
 
-  - [ ] 12.2 Create AssignmentList component
+  - [x] 12.2 Create AssignmentList component
     - Display assigned participants on activity detail
     - Show participant name and role
     - Provide remove button

@@ -1,3 +1,10 @@
+import ContentLayout from '@cloudscape-design/components/content-layout';
+import { ActivityList } from '../components/features/ActivityList';
+
 export default function ActivitiesPage() {
-  return <div>ActivitiesPage - To be implemented</div>;
+  return (
+    <ContentLayout>
+      <ActivityList />
+    </ContentLayout>
+  );
 }
