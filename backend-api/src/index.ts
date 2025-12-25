@@ -1,7 +1,9 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import { getPrismaClient, disconnectPrisma } from './utils/prisma.client';
+import { openApiSpec } from './utils/openapi.spec';
 import { UserRepository } from './repositories/user.repository';
 import { ActivityTypeRepository } from './repositories/activity-type.repository';
 import { RoleRepository } from './repositories/role.repository';
@@ -133,6 +135,12 @@ app.use(express.urlencoded({ extended: true }));
 // Health check endpoint
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', message: 'API is running' });
+});
+
+// API Documentation
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+app.get('/api/docs/openapi.json', (_req, res) => {
+  res.status(200).json(openApiSpec);
 });
 
 // API Routes
