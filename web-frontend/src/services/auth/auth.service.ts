@@ -112,6 +112,9 @@ export class AuthService {
     static isTokenExpired(token: string): boolean {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
+            if (!payload.exp) {
+                return true; // No expiration claim means invalid token
+            }
             const exp = payload.exp * 1000; // Convert to milliseconds
             return Date.now() >= exp;
         } catch (error) {
