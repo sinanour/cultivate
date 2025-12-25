@@ -1,3 +1,10 @@
+import ContentLayout from '@cloudscape-design/components/content-layout';
+import { GeographicAreaList } from '../components/features/GeographicAreaList';
+
 export default function GeographicAreasPage() {
-  return <div>GeographicAreasPage - To be implemented</div>;
+  return (
+    <ContentLayout>
+      <GeographicAreaList />
+    </ContentLayout>
+  );
 }
