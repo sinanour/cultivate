@@ -277,7 +277,7 @@ This implementation plan covers the React-based web application built with TypeS
     - _Requirements: 6.3, 6.4_
 
 - [ ] 13. Implement map view UI
-  - [ ] 13.1 Create MapView component
+  - [x] 13.1 Create MapView component
     - Render interactive map using Leaflet or Mapbox
     - Display venue markers with coordinates
     - Use different colors for activity types/statuses
@@ -290,7 +290,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 56: Map Marker Activity Information**
     - **Validates: Requirements 6C.2, 6C.3**
 
-  - [ ] 13.2 Create MapFilters component
+  - [x] 13.2 Create MapFilters component
     - Provide filter controls for type, status, date range
     - Update markers based on filters
     - Support geographic area boundary toggle
