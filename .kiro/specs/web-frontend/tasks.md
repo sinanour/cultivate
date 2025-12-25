@@ -56,13 +56,13 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 25: Unauthenticated Access Protection**
     - **Validates: Requirements 9.1, 9.2**
 
-  - [ ] 3.3 Create ProtectedRoute component
+  - [x] 3.3 Create ProtectedRoute component
     - Check authentication status
     - Redirect to login if not authenticated
     - Check user role for authorization
     - _Requirements: 9.1, 9.2_
 
-  - [ ] 3.4 Implement role-based UI rendering
+  - [x] 3.4 Implement role-based UI rendering
     - Show all features for ADMINISTRATOR
     - Show create/update/delete for EDITOR
     - Hide create/update/delete for READ_ONLY
