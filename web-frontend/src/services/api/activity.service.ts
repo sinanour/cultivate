@@ -1,4 +1,4 @@
-import { Activity } from '../../types';
+import type { Activity } from '../../types';
 import { ApiClient } from './api.client';
 
 interface CreateActivityData {

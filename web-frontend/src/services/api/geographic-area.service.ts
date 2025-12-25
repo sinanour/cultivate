@@ -1,4 +1,4 @@
-import { GeographicArea, GeographicAreaStatistics } from '../../types';
+import type { GeographicArea, GeographicAreaStatistics } from '../../types';
 import { ApiClient } from './api.client';
 
 interface CreateGeographicAreaData {

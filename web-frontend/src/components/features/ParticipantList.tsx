@@ -10,7 +10,7 @@ import TextFilter from '@cloudscape-design/components/text-filter';
 import Pagination from '@cloudscape-design/components/pagination';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
-import { Participant } from '../../types';
+import type { Participant } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { ParticipantForm } from './ParticipantForm';
 import { usePermissions } from '../../hooks/usePermissions';

@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
 import Form from '@cloudscape-design/components/form';

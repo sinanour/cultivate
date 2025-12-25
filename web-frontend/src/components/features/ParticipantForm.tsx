@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -8,7 +8,7 @@ import Select from '@cloudscape-design/components/select';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
-import { Participant } from '../../types';
+import type { Participant } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { VenueService } from '../../services/api/venue.service';
 

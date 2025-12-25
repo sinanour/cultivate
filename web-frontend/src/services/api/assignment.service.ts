@@ -1,4 +1,4 @@
-import { Assignment } from '../../types';
+import type { Assignment } from '../../types';
 import { ApiClient } from './api.client';
 
 export class AssignmentService {

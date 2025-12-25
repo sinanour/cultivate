@@ -1,4 +1,4 @@
-import { ParticipantRole } from '../../types';
+import type { ParticipantRole } from '../../types';
 import { ApiClient } from './api.client';
 
 export class ParticipantRoleService {

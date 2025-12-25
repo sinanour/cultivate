@@ -11,7 +11,7 @@ import Select from '@cloudscape-design/components/select';
 import Pagination from '@cloudscape-design/components/pagination';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
-import { Activity } from '../../types';
+import type { Activity } from '../../types';
 import { ActivityService } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { ActivityForm } from './ActivityForm';

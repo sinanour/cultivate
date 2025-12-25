@@ -10,7 +10,7 @@ import TextFilter from '@cloudscape-design/components/text-filter';
 import Pagination from '@cloudscape-design/components/pagination';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
-import { Venue } from '../../types';
+import type { Venue } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { VenueForm } from './VenueForm';
 import { usePermissions } from '../../hooks/usePermissions';

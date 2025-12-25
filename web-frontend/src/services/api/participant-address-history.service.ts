@@ -1,4 +1,4 @@
-import { ParticipantAddressHistory } from '../../types';
+import type { ParticipantAddressHistory } from '../../types';
 import { ApiClient } from './api.client';
 
 export class ParticipantAddressHistoryService {

@@ -9,11 +9,11 @@ import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import Box from '@cloudscape-design/components/box';
-import { GeographicArea } from '../../types';
+import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeographicAreaForm } from './GeographicAreaForm';
 import { usePermissions } from '../../hooks/usePermissions';
-import { buildGeographicAreaTree, TreeNode } from '../../utils/tree.utils';
+import { buildGeographicAreaTree, type TreeNode } from '../../utils/tree.utils';
 
 export function GeographicAreaList() {
   const queryClient = useQueryClient();
@@ -66,7 +66,7 @@ export function GeographicAreaList() {
     navigate(`/geographic-areas/${area.id}`);
   };
 
-  const renderTreeNode = (node: TreeNode, level = 0): JSX.Element => {
+  const renderTreeNode = (node: TreeNode, level = 0): React.JSX.Element => {
     const area = node.data;
     return (
       <div key={node.id} style={{ marginLeft: `${level * 24}px` }}>

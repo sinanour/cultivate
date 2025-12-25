@@ -7,7 +7,7 @@ import Select from '@cloudscape-design/components/select';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
-import type { GeographicArea, AreaType } from '../../types';
+import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { isCircularRelationship } from '../../utils/tree.utils';
 

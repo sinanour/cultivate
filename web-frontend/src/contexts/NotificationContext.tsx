@@ -1,5 +1,6 @@
-import { createContext, ReactNode, useState, useCallback } from 'react';
-import Flashbar, { FlashbarProps } from '@cloudscape-design/components/flashbar';
+import type { ReactNode } from 'react';
+import { createContext, useState, useCallback } from 'react';
+import Flashbar, { type FlashbarProps } from '@cloudscape-design/components/flashbar';
 
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
 

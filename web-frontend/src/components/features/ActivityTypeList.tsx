@@ -8,7 +8,7 @@ import Header from '@cloudscape-design/components/header';
 import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
-import { ActivityType } from '../../types';
+import type { ActivityType } from '../../types';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { ActivityTypeForm } from './ActivityTypeForm';
 import { usePermissions } from '../../hooks/usePermissions';

@@ -141,7 +141,7 @@ export function EngagementDashboard() {
               outerRadius={100}
               label
             >
-              {metrics.roleDistribution.map((entry, index) => (
+              {metrics.roleDistribution.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>

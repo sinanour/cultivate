@@ -1,6 +1,6 @@
 import { Suspense, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import AppLayout from '@cloudscape-design/components/app-layout';
+import AppLayoutComponent from '@cloudscape-design/components/app-layout';
 import SideNavigation from '@cloudscape-design/components/side-navigation';
 import TopNavigation from '@cloudscape-design/components/top-navigation';
 import Spinner from '@cloudscape-design/components/spinner';
@@ -80,7 +80,6 @@ export function AppLayout() {
           {
             type: 'button',
             text: isOnline ? 'Online' : 'Offline',
-            variant: isOnline ? 'normal' : 'primary',
             iconName: isOnline ? 'status-positive' : 'status-negative',
             disableUtilityCollapse: true,
           },
@@ -109,11 +108,11 @@ export function AppLayout() {
           },
         ]}
       />
-      <AppLayout
+      <AppLayoutComponent
         navigation={
           <SideNavigation
             activeHref={location.pathname}
-            items={navigationItems}
+            items={navigationItems as any}
             onFollow={(event) => {
               event.preventDefault();
               navigate(event.detail.href);
@@ -121,7 +120,7 @@ export function AppLayout() {
           />
         }
         navigationOpen={navigationOpen}
-        onNavigationChange={({ detail }) => setNavigationOpen(detail.open)}
+        onNavigationChange={({ detail }: any) => setNavigationOpen(detail.open)}
         content={
           <Suspense fallback={<Spinner size="large" />}>
             <Outlet />

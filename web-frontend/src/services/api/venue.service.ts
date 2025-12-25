@@ -1,4 +1,4 @@
-import { Venue } from '../../types';
+import type { Venue } from '../../types';
 import { ApiClient } from './api.client';
 
 interface CreateVenueData {

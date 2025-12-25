@@ -8,7 +8,7 @@ import Header from '@cloudscape-design/components/header';
 import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
-import { ParticipantRole } from '../../types';
+import type { ParticipantRole } from '../../types';
 import { ParticipantRoleService } from '../../services/api/participant-role.service';
 import { ParticipantRoleForm } from './ParticipantRoleForm';
 import { usePermissions } from '../../hooks/usePermissions';
