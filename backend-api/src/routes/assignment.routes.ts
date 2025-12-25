@@ -3,7 +3,7 @@ import { AssignmentService } from '../services/assignment.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
-import { AssignmentCreateSchema, UuidParamSchema } from '../utils/validation.schemas';
+import { AssignmentCreateSchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
 
 export class AssignmentRoutes {

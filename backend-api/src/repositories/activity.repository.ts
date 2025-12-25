@@ -1,91 +1,91 @@
 import { PrismaClient, Activity, ActivityStatus } from '@prisma/client';
 
 export interface CreateActivityData {
-    name: string;
-    activityTypeId: string;
-    startDate: Date;
-    endDate?: Date;
-    status?: ActivityStatus;
+  name: string;
+  activityTypeId: string;
+  startDate: Date;
+  endDate?: Date;
+  status?: ActivityStatus;
 }
 
 export interface UpdateActivityData {
-    name?: string;
-    activityTypeId?: string;
-    startDate?: Date;
-    endDate?: Date;
-    status?: ActivityStatus;
+  name?: string;
+  activityTypeId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  status?: ActivityStatus;
 }
 
 export class ActivityRepository {
-    constructor(private prisma: PrismaClient) { }
+  constructor(private prisma: PrismaClient) {}
 
-    async findAll(): Promise<Activity[]> {
-        return this.prisma.activity.findMany({
-            orderBy: { startDate: 'desc' },
-            include: {
-                activityType: true,
-            },
-        });
-    }
+  async findAll(): Promise<Activity[]> {
+    return this.prisma.activity.findMany({
+      orderBy: { startDate: 'desc' },
+      include: {
+        activityType: true,
+      },
+    });
+  }
 
-    async findById(id: string): Promise<Activity | null> {
-        return this.prisma.activity.findUnique({
-            where: { id },
-            include: {
-                activityType: true,
-            },
-        });
-    }
+  async findById(id: string): Promise<Activity | null> {
+    return this.prisma.activity.findUnique({
+      where: { id },
+      include: {
+        activityType: true,
+      },
+    });
+  }
 
-    async findByType(activityTypeId: string): Promise<Activity[]> {
-        return this.prisma.activity.findMany({
-            where: { activityTypeId },
-            orderBy: { startDate: 'desc' },
-            include: {
-                activityType: true,
-            },
-        });
-    }
+  async findByType(activityTypeId: string): Promise<Activity[]> {
+    return this.prisma.activity.findMany({
+      where: { activityTypeId },
+      orderBy: { startDate: 'desc' },
+      include: {
+        activityType: true,
+      },
+    });
+  }
 
-    async findByStatus(status: ActivityStatus): Promise<Activity[]> {
-        return this.prisma.activity.findMany({
-            where: { status },
-            orderBy: { startDate: 'desc' },
-            include: {
-                activityType: true,
-            },
-        });
-    }
+  async findByStatus(status: ActivityStatus): Promise<Activity[]> {
+    return this.prisma.activity.findMany({
+      where: { status },
+      orderBy: { startDate: 'desc' },
+      include: {
+        activityType: true,
+      },
+    });
+  }
 
-    async create(data: CreateActivityData): Promise<Activity> {
-        return this.prisma.activity.create({
-            data,
-            include: {
-                activityType: true,
-            },
-        });
-    }
+  async create(data: CreateActivityData): Promise<Activity> {
+    return this.prisma.activity.create({
+      data,
+      include: {
+        activityType: true,
+      },
+    });
+  }
 
-    async update(id: string, data: UpdateActivityData): Promise<Activity> {
-        return this.prisma.activity.update({
-            where: { id },
-            data,
-            include: {
-                activityType: true,
-            },
-        });
-    }
+  async update(id: string, data: UpdateActivityData): Promise<Activity> {
+    return this.prisma.activity.update({
+      where: { id },
+      data,
+      include: {
+        activityType: true,
+      },
+    });
+  }
 
-    async delete(id: string): Promise<Activity> {
-        return this.prisma.activity.delete({
-            where: { id },
-        });
-    }
+  async delete(id: string): Promise<Activity> {
+    return this.prisma.activity.delete({
+      where: { id },
+    });
+  }
 
-    async exists(id: string): Promise<boolean> {
-        const count = await this.prisma.activity.count({
-            where: { id },
-        });
-        return count > 0;
-    }
+  async exists(id: string): Promise<boolean> {
+    const count = await this.prisma.activity.count({
+      where: { id },
+    });
+    return count > 0;
+  }
 }

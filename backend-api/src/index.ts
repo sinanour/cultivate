@@ -101,11 +101,7 @@ const geographicAreaRoutes = new GeographicAreaRoutes(
   authorizationMiddleware
 );
 const venueRoutes = new VenueRoutes(venueService, authMiddleware, authorizationMiddleware);
-const activityRoutes = new ActivityRoutes(
-  activityService,
-  authMiddleware,
-  authorizationMiddleware
-);
+const activityRoutes = new ActivityRoutes(activityService, authMiddleware, authorizationMiddleware);
 const assignmentRoutes = new AssignmentRoutes(
   assignmentService,
   authMiddleware,
