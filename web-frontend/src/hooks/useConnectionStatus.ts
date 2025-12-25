@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
+import { ConnectionMonitor } from '../services/offline/connection-monitor.service';
 
 export function useConnectionStatus() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(ConnectionMonitor.isOnline());
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    // Initialize connection monitor
+    ConnectionMonitor.initialize();
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    // Subscribe to connection changes
+    const unsubscribe = ConnectionMonitor.subscribe((online) => {
+      setIsOnline(online);
+    });
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      unsubscribe();
     };
   }, []);
 

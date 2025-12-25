@@ -327,7 +327,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 7.8, 7.10, 7.11**
 
 - [ ] 15. Implement offline support
-  - [ ] 15.1 Create OfflineStorage service
+  - [x] 15.1 Create OfflineStorage service
     - Use Dexie.js for IndexedDB management
     - Store tables for all entities
     - Implement syncFromServer
@@ -338,7 +338,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 27: Offline Data Caching**
     - **Validates: Requirements 10.2**
 
-  - [ ] 15.2 Create SyncQueue service
+  - [x] 15.2 Create SyncQueue service
     - Store pending operations in IndexedDB
     - Implement enqueue, processQueue, clearQueue
     - Implement exponential backoff
@@ -351,7 +351,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 32: Pending Operation Count Display**
     - **Validates: Requirements 10.3, 11.2, 11.3, 11.4, 11.6**
 
-  - [ ] 15.3 Create ConnectionMonitor service
+  - [x] 15.3 Create ConnectionMonitor service
     - Listen to online/offline events
     - Update global connection state
     - Trigger sync when connectivity restored
