@@ -129,6 +129,12 @@ export const ActivityVenueAssociationSchema = z.object({
   venueId: z.string().uuid('Invalid venue ID format'),
 });
 
+// Assignment schemas
+export const AssignmentCreateSchema = z.object({
+  participantId: z.string().uuid('Invalid participant ID format'),
+  roleId: z.string().uuid('Invalid role ID format'),
+});
+
 // UUID validation schema
 export const UuidParamSchema = z.object({
     id: z.string().uuid('Invalid ID format'),
@@ -151,4 +157,5 @@ export type VenueSearchQuery = z.infer<typeof VenueSearchSchema>;
 export type ActivityCreateInput = z.infer<typeof ActivityCreateSchema>;
 export type ActivityUpdateInput = z.infer<typeof ActivityUpdateSchema>;
 export type ActivityVenueAssociationInput = z.infer<typeof ActivityVenueAssociationSchema>;
+export type AssignmentCreateInput = z.infer<typeof AssignmentCreateSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;

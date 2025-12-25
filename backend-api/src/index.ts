@@ -11,6 +11,7 @@ import { GeographicAreaRepository } from './repositories/geographic-area.reposit
 import { VenueRepository } from './repositories/venue.repository';
 import { ActivityRepository } from './repositories/activity.repository';
 import { ActivityVenueHistoryRepository } from './repositories/activity-venue-history.repository';
+import { AssignmentRepository } from './repositories/assignment.repository';
 import { AuthService } from './services/auth.service';
 import { ActivityTypeService } from './services/activity-type.service';
 import { RoleService } from './services/role.service';
@@ -18,6 +19,7 @@ import { ParticipantService } from './services/participant.service';
 import { GeographicAreaService } from './services/geographic-area.service';
 import { VenueService } from './services/venue.service';
 import { ActivityService } from './services/activity.service';
+import { AssignmentService } from './services/assignment.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { AuthRoutes } from './routes/auth.routes';
@@ -27,6 +29,7 @@ import { ParticipantRoutes } from './routes/participant.routes';
 import { GeographicAreaRoutes } from './routes/geographic-area.routes';
 import { VenueRoutes } from './routes/venue.routes';
 import { ActivityRoutes } from './routes/activity.routes';
+import { AssignmentRoutes } from './routes/assignment.routes';
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +50,7 @@ const geographicAreaRepository = new GeographicAreaRepository(prisma);
 const venueRepository = new VenueRepository(prisma);
 const activityRepository = new ActivityRepository(prisma);
 const activityVenueHistoryRepository = new ActivityVenueHistoryRepository(prisma);
+const assignmentRepository = new AssignmentRepository(prisma);
 
 // Initialize services
 const authService = new AuthService(userRepository);
@@ -65,6 +69,12 @@ const activityService = new ActivityService(
   activityVenueHistoryRepository,
   venueRepository,
   prisma
+);
+const assignmentService = new AssignmentService(
+  assignmentRepository,
+  activityRepository,
+  participantRepository,
+  roleRepository
 );
 
 // Initialize middleware
@@ -95,6 +105,11 @@ const activityRoutes = new ActivityRoutes(
   authMiddleware,
   authorizationMiddleware
 );
+const assignmentRoutes = new AssignmentRoutes(
+  assignmentService,
+  authMiddleware,
+  authorizationMiddleware
+);
 
 // Middleware
 app.use(
@@ -119,6 +134,7 @@ app.use('/api/participants', participantRoutes.getRouter());
 app.use('/api/geographic-areas', geographicAreaRoutes.getRouter());
 app.use('/api/venues', venueRoutes.getRouter());
 app.use('/api/activities', activityRoutes.getRouter());
+app.use('/api/activities/:id/participants', assignmentRoutes.getRouter());
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
