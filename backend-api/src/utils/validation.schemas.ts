@@ -84,6 +84,29 @@ export const GeographicAreaUpdateSchema = z.object({
   parentGeographicAreaId: z.string().uuid('Invalid parent ID format').optional().nullable(),
 });
 
+// Venue schemas
+export const VenueCreateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),
+  address: z.string().min(1, 'Address is required').max(500, 'Address must be at most 500 characters'),
+  geographicAreaId: z.string().uuid('Invalid geographic area ID format'),
+  latitude: z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90').optional(),
+  longitude: z.number().min(-180, 'Longitude must be >= -180').max(180, 'Longitude must be <= 180').optional(),
+  venueType: z.enum(['PUBLIC_BUILDING', 'PRIVATE_RESIDENCE']).optional(),
+});
+
+export const VenueUpdateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
+  address: z.string().min(1, 'Address is required').max(500, 'Address must be at most 500 characters').optional(),
+  geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  latitude: z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90').optional().nullable(),
+  longitude: z.number().min(-180, 'Longitude must be >= -180').max(180, 'Longitude must be <= 180').optional().nullable(),
+  venueType: z.enum(['PUBLIC_BUILDING', 'PRIVATE_RESIDENCE']).optional().nullable(),
+});
+
+export const VenueSearchSchema = z.object({
+  q: z.string().optional(),
+});
+
 // UUID validation schema
 export const UuidParamSchema = z.object({
     id: z.string().uuid('Invalid ID format'),
@@ -100,4 +123,7 @@ export type ParticipantUpdateInput = z.infer<typeof ParticipantUpdateSchema>;
 export type ParticipantSearchQuery = z.infer<typeof ParticipantSearchSchema>;
 export type GeographicAreaCreateInput = z.infer<typeof GeographicAreaCreateSchema>;
 export type GeographicAreaUpdateInput = z.infer<typeof GeographicAreaUpdateSchema>;
+export type VenueCreateInput = z.infer<typeof VenueCreateSchema>;
+export type VenueUpdateInput = z.infer<typeof VenueUpdateSchema>;
+export type VenueSearchQuery = z.infer<typeof VenueSearchSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;
