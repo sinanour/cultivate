@@ -21,6 +21,7 @@ import { VenueService } from './services/venue.service';
 import { ActivityService } from './services/activity.service';
 import { AssignmentService } from './services/assignment.service';
 import { AnalyticsService } from './services/analytics.service';
+import { SyncService } from './services/sync.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
@@ -33,6 +34,7 @@ import { VenueRoutes } from './routes/venue.routes';
 import { ActivityRoutes } from './routes/activity.routes';
 import { AssignmentRoutes } from './routes/assignment.routes';
 import { AnalyticsRoutes } from './routes/analytics.routes';
+import { SyncRoutes } from './routes/sync.routes';
 
 // Load environment variables
 dotenv.config();
@@ -80,6 +82,7 @@ const assignmentService = new AssignmentService(
   roleRepository
 );
 const analyticsService = new AnalyticsService(prisma, geographicAreaRepository);
+const syncService = new SyncService(prisma);
 
 // Initialize middleware
 const authMiddleware = new AuthMiddleware(authService);
@@ -115,6 +118,7 @@ const analyticsRoutes = new AnalyticsRoutes(
   authMiddleware,
   authorizationMiddleware
 );
+const syncRoutes = new SyncRoutes(syncService, authMiddleware, authorizationMiddleware);
 
 // Middleware
 app.use(
@@ -141,6 +145,7 @@ app.use('/api/venues', venueRoutes.getRouter());
 app.use('/api/activities', activityRoutes.getRouter());
 app.use('/api/activities/:id/participants', assignmentRoutes.getRouter());
 app.use('/api/analytics', analyticsRoutes.getRouter());
+app.use('/api/sync', syncRoutes.getRouter());
 
 // 404 handler for undefined routes
 app.use(ErrorHandlerMiddleware.notFound());

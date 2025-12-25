@@ -149,6 +149,20 @@ export const GrowthQuerySchema = z.object({
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
 });
 
+// Sync schemas
+export const SyncOperationSchema = z.object({
+  operation: z.enum(['CREATE', 'UPDATE', 'DELETE']),
+  entityType: z.string().min(1, 'Entity type is required'),
+  localId: z.string().optional(),
+  serverId: z.string().uuid('Invalid server ID format').optional(),
+  data: z.any().optional(),
+  timestamp: z.string().datetime('Invalid timestamp format'),
+});
+
+export const BatchSyncSchema = z.object({
+  operations: z.array(SyncOperationSchema).min(1, 'At least one operation is required'),
+});
+
 // UUID validation schema
 export const UuidParamSchema = z.object({
     id: z.string().uuid('Invalid ID format'),
@@ -174,4 +188,6 @@ export type ActivityVenueAssociationInput = z.infer<typeof ActivityVenueAssociat
 export type AssignmentCreateInput = z.infer<typeof AssignmentCreateSchema>;
 export type EngagementQuery = z.infer<typeof EngagementQuerySchema>;
 export type GrowthQuery = z.infer<typeof GrowthQuerySchema>;
+export type SyncOperationInput = z.infer<typeof SyncOperationSchema>;
+export type BatchSyncInput = z.infer<typeof BatchSyncSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;
