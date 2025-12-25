@@ -1,3 +1,10 @@
+import ContentLayout from '@cloudscape-design/components/content-layout';
+import { VenueList } from '../components/features/VenueList';
+
 export default function VenuesPage() {
-  return <div>VenuesPage - To be implemented</div>;
+  return (
+    <ContentLayout>
+      <VenueList />
+    </ContentLayout>
+  );
 }
