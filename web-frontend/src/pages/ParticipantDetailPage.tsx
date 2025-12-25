@@ -1,3 +1,10 @@
+import ContentLayout from '@cloudscape-design/components/content-layout';
+import { ParticipantDetail } from '../components/features/ParticipantDetail';
+
 export default function ParticipantDetailPage() {
-  return <div>ParticipantDetailPage - To be implemented</div>;
+  return (
+    <ContentLayout>
+      <ParticipantDetail />
+    </ContentLayout>
+  );
 }
