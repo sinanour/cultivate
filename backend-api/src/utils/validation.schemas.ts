@@ -135,6 +135,20 @@ export const AssignmentCreateSchema = z.object({
   roleId: z.string().uuid('Invalid role ID format'),
 });
 
+// Analytics schemas
+export const EngagementQuerySchema = z.object({
+  startDate: z.string().datetime('Invalid start date format').optional(),
+  endDate: z.string().datetime('Invalid end date format').optional(),
+  geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+});
+
+export const GrowthQuerySchema = z.object({
+  period: z.enum(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+  startDate: z.string().datetime('Invalid start date format').optional(),
+  endDate: z.string().datetime('Invalid end date format').optional(),
+  geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+});
+
 // UUID validation schema
 export const UuidParamSchema = z.object({
     id: z.string().uuid('Invalid ID format'),
@@ -158,4 +172,6 @@ export type ActivityCreateInput = z.infer<typeof ActivityCreateSchema>;
 export type ActivityUpdateInput = z.infer<typeof ActivityUpdateSchema>;
 export type ActivityVenueAssociationInput = z.infer<typeof ActivityVenueAssociationSchema>;
 export type AssignmentCreateInput = z.infer<typeof AssignmentCreateSchema>;
+export type EngagementQuery = z.infer<typeof EngagementQuerySchema>;
+export type GrowthQuery = z.infer<typeof GrowthQuerySchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;
