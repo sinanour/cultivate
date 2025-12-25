@@ -9,12 +9,15 @@ import { ParticipantRepository } from './repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from './repositories/participant-address-history.repository';
 import { GeographicAreaRepository } from './repositories/geographic-area.repository';
 import { VenueRepository } from './repositories/venue.repository';
+import { ActivityRepository } from './repositories/activity.repository';
+import { ActivityVenueHistoryRepository } from './repositories/activity-venue-history.repository';
 import { AuthService } from './services/auth.service';
 import { ActivityTypeService } from './services/activity-type.service';
 import { RoleService } from './services/role.service';
 import { ParticipantService } from './services/participant.service';
 import { GeographicAreaService } from './services/geographic-area.service';
 import { VenueService } from './services/venue.service';
+import { ActivityService } from './services/activity.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { AuthRoutes } from './routes/auth.routes';
@@ -23,6 +26,7 @@ import { RoleRoutes } from './routes/role.routes';
 import { ParticipantRoutes } from './routes/participant.routes';
 import { GeographicAreaRoutes } from './routes/geographic-area.routes';
 import { VenueRoutes } from './routes/venue.routes';
+import { ActivityRoutes } from './routes/activity.routes';
 
 // Load environment variables
 dotenv.config();
@@ -41,6 +45,8 @@ const participantRepository = new ParticipantRepository(prisma);
 const addressHistoryRepository = new ParticipantAddressHistoryRepository(prisma);
 const geographicAreaRepository = new GeographicAreaRepository(prisma);
 const venueRepository = new VenueRepository(prisma);
+const activityRepository = new ActivityRepository(prisma);
+const activityVenueHistoryRepository = new ActivityVenueHistoryRepository(prisma);
 
 // Initialize services
 const authService = new AuthService(userRepository);
@@ -53,6 +59,13 @@ const participantService = new ParticipantService(
 );
 const geographicAreaService = new GeographicAreaService(geographicAreaRepository, prisma);
 const venueService = new VenueService(venueRepository, geographicAreaRepository);
+const activityService = new ActivityService(
+  activityRepository,
+  activityTypeRepository,
+  activityVenueHistoryRepository,
+  venueRepository,
+  prisma
+);
 
 // Initialize middleware
 const authMiddleware = new AuthMiddleware(authService);
@@ -77,6 +90,11 @@ const geographicAreaRoutes = new GeographicAreaRoutes(
   authorizationMiddleware
 );
 const venueRoutes = new VenueRoutes(venueService, authMiddleware, authorizationMiddleware);
+const activityRoutes = new ActivityRoutes(
+  activityService,
+  authMiddleware,
+  authorizationMiddleware
+);
 
 // Middleware
 app.use(
@@ -100,6 +118,7 @@ app.use('/api/roles', roleRoutes.getRouter());
 app.use('/api/participants', participantRoutes.getRouter());
 app.use('/api/geographic-areas', geographicAreaRoutes.getRouter());
 app.use('/api/venues', venueRoutes.getRouter());
+app.use('/api/activities', activityRoutes.getRouter());
 
 // Graceful shutdown
 process.on('SIGINT', async () => {

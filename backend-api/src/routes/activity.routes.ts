@@ -1,0 +1,301 @@
+import { Router, Response } from 'express';
+import { ActivityService } from '../services/activity.service';
+import { AuthMiddleware } from '../middleware/auth.middleware';
+import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { ValidationMiddleware } from '../middleware/validation.middleware';
+import {
+    ActivityCreateSchema,
+    ActivityUpdateSchema,
+    ActivityVenueAssociationSchema,
+    UuidParamSchema,
+} from '../utils/validation.schemas';
+import { AuthenticatedRequest } from '../types/express.types';
+
+export class ActivityRoutes {
+    private router: Router;
+
+    constructor(
+        private activityService: ActivityService,
+        private authMiddleware: AuthMiddleware,
+        private authorizationMiddleware: AuthorizationMiddleware
+    ) {
+        this.router = Router();
+        this.initializeRoutes();
+    }
+
+    private initializeRoutes() {
+        this.router.get(
+            '/',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
+            this.getAll.bind(this)
+        );
+
+        this.router.get(
+            '/:id',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
+            ValidationMiddleware.validateParams(UuidParamSchema),
+            this.getById.bind(this)
+        );
+
+        this.router.get(
+            '/:id/venues',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
+            ValidationMiddleware.validateParams(UuidParamSchema),
+            this.getVenues.bind(this)
+        );
+
+        this.router.post(
+            '/',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateBody(ActivityCreateSchema),
+            this.create.bind(this)
+        );
+
+        this.router.post(
+            '/:id/venues',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateParams(UuidParamSchema),
+            ValidationMiddleware.validateBody(ActivityVenueAssociationSchema),
+            this.associateVenue.bind(this)
+        );
+
+        this.router.put(
+            '/:id',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateParams(UuidParamSchema),
+            ValidationMiddleware.validateBody(ActivityUpdateSchema),
+            this.update.bind(this)
+        );
+
+        this.router.delete(
+            '/:id',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateParams(UuidParamSchema),
+            this.delete.bind(this)
+        );
+
+        this.router.delete(
+            '/:id/venues/:venueId',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            this.removeVenue.bind(this)
+        );
+    }
+
+    private async getAll(_req: AuthenticatedRequest, res: Response) {
+        try {
+            const activities = await this.activityService.getAllActivities();
+            res.status(200).json({ success: true, data: activities });
+        } catch (error) {
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while fetching activities',
+                details: {},
+            });
+        }
+    }
+
+    private async getById(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const activity = await this.activityService.getActivityById(id);
+            res.status(200).json({ success: true, data: activity });
+        } catch (error) {
+            if (error instanceof Error && error.message === 'Activity not found') {
+                return res.status(404).json({
+                    code: 'NOT_FOUND',
+                    message: error.message,
+                    details: {},
+                });
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while fetching activity',
+                details: {},
+            });
+        }
+    }
+
+    private async getVenues(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const venues = await this.activityService.getActivityVenues(id);
+            res.status(200).json({ success: true, data: venues });
+        } catch (error) {
+            if (error instanceof Error && error.message === 'Activity not found') {
+                return res.status(404).json({
+                    code: 'NOT_FOUND',
+                    message: error.message,
+                    details: {},
+                });
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while fetching activity venues',
+                details: {},
+            });
+        }
+    }
+
+    private async create(req: AuthenticatedRequest, res: Response) {
+        try {
+            const activityData = {
+                ...req.body,
+                startDate: new Date(req.body.startDate),
+                endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+            };
+            const activity = await this.activityService.createActivity(activityData);
+            res.status(201).json({ success: true, data: activity });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('required') || error.message.includes('must be after')) {
+                    return res.status(400).json({
+                        code: 'VALIDATION_ERROR',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('not found')) {
+                    return res.status(400).json({
+                        code: 'INVALID_REFERENCE',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while creating activity',
+                details: {},
+            });
+        }
+    }
+
+    private async update(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const activityData = {
+                ...req.body,
+                startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
+                endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+            };
+            const activity = await this.activityService.updateActivity(id, activityData);
+            res.status(200).json({ success: true, data: activity });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message === 'Activity not found') {
+                    return res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('must be after')) {
+                    return res.status(400).json({
+                        code: 'VALIDATION_ERROR',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('not found')) {
+                    return res.status(400).json({
+                        code: 'INVALID_REFERENCE',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while updating activity',
+                details: {},
+            });
+        }
+    }
+
+    private async delete(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            await this.activityService.deleteActivity(id);
+            res.status(200).json({ success: true, message: 'Activity deleted successfully' });
+        } catch (error) {
+            if (error instanceof Error && error.message === 'Activity not found') {
+                return res.status(404).json({
+                    code: 'NOT_FOUND',
+                    message: error.message,
+                    details: {},
+                });
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while deleting activity',
+                details: {},
+            });
+        }
+    }
+
+    private async associateVenue(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const { venueId } = req.body;
+            const association = await this.activityService.associateVenue(id, venueId);
+            res.status(201).json({ success: true, data: association });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('not found')) {
+                    return res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('already associated')) {
+                    return res.status(400).json({
+                        code: 'DUPLICATE_ASSOCIATION',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while associating venue',
+                details: {},
+            });
+        }
+    }
+
+    private async removeVenue(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id, venueId } = req.params;
+            await this.activityService.removeVenueAssociation(id, venueId);
+            res.status(200).json({ success: true, message: 'Venue association removed successfully' });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('not found')) {
+                    return res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while removing venue association',
+                details: {},
+            });
+        }
+    }
+
+    getRouter(): Router {
+        return this.router;
+    }
+}

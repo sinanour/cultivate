@@ -107,6 +107,28 @@ export const VenueSearchSchema = z.object({
   q: z.string().optional(),
 });
 
+// Activity schemas
+export const ActivityCreateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),
+  activityTypeId: z.string().uuid('Invalid activity type ID format'),
+  startDate: z.string().datetime('Invalid start date format'),
+  endDate: z.string().datetime('Invalid end date format').optional(),
+  status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional(),
+  venueIds: z.array(z.string().uuid('Invalid venue ID format')).optional(),
+});
+
+export const ActivityUpdateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
+  activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
+  startDate: z.string().datetime('Invalid start date format').optional(),
+  endDate: z.string().datetime('Invalid end date format').optional().nullable(),
+  status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional(),
+});
+
+export const ActivityVenueAssociationSchema = z.object({
+  venueId: z.string().uuid('Invalid venue ID format'),
+});
+
 // UUID validation schema
 export const UuidParamSchema = z.object({
     id: z.string().uuid('Invalid ID format'),
@@ -126,4 +148,7 @@ export type GeographicAreaUpdateInput = z.infer<typeof GeographicAreaUpdateSchem
 export type VenueCreateInput = z.infer<typeof VenueCreateSchema>;
 export type VenueUpdateInput = z.infer<typeof VenueUpdateSchema>;
 export type VenueSearchQuery = z.infer<typeof VenueSearchSchema>;
+export type ActivityCreateInput = z.infer<typeof ActivityCreateSchema>;
+export type ActivityUpdateInput = z.infer<typeof ActivityUpdateSchema>;
+export type ActivityVenueAssociationInput = z.infer<typeof ActivityVenueAssociationSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;
