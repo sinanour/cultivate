@@ -471,13 +471,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Return pagination metadata in responses
     - _Requirements: API Contract alignment_
 
-  - [-] 21.3 Add missing assignment endpoints
+  - [x] 21.3 Add missing assignment endpoints
     - Implement PUT /api/activities/:activityId/participants/:participantId
     - Add `notes` field support to assignment creation and updates
     - Add `joinedAt` field to assignment responses
     - _Requirements: API Contract alignment_
 
-  - [ ] 21.4 Standardize DELETE response codes
+  - [-] 21.4 Standardize DELETE response codes
     - Update all DELETE endpoints to return 204 No Content instead of 200 OK
     - Remove JSON body from DELETE responses
     - _Requirements: API Contract alignment_

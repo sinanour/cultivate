@@ -265,7 +265,7 @@ export class VenueRoutes {
         try {
             const { id } = req.params;
             await this.venueService.deleteVenue(id);
-            res.status(200).json({ success: true, message: 'Venue deleted successfully' });
+            res.status(204).send();
         } catch (error) {
             if (error instanceof Error) {
                 if (error.message === 'Venue not found') {

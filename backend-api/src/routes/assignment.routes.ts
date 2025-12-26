@@ -132,7 +132,7 @@ export class AssignmentRoutes {
         try {
             const { id, participantId } = req.params;
             await this.assignmentService.removeParticipant(id, participantId);
-            res.status(200).json({ success: true, message: 'Participant removed successfully' });
+            res.status(204).send();
         } catch (error) {
             if (error instanceof Error && error.message.includes('not found')) {
                 return res.status(404).json({

@@ -229,7 +229,7 @@ export class ParticipantRoutes {
         try {
             const { id } = req.params;
             await this.participantService.deleteParticipant(id);
-            res.status(200).json({ success: true, message: 'Participant deleted successfully' });
+            res.status(204).send();
         } catch (error) {
             if (error instanceof Error && error.message === 'Participant not found') {
                 return res.status(404).json({

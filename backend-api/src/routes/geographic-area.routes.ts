@@ -300,7 +300,7 @@ export class GeographicAreaRoutes {
         try {
             const { id } = req.params;
             await this.geographicAreaService.deleteGeographicArea(id);
-            res.status(200).json({ success: true, message: 'Geographic area deleted successfully' });
+            res.status(204).send();
         } catch (error) {
             if (error instanceof Error) {
                 if (error.message === 'Geographic area not found') {

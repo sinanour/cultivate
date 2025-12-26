@@ -248,7 +248,7 @@ export class ActivityRoutes {
         try {
             const { id } = req.params;
             await this.activityService.deleteActivity(id);
-            res.status(200).json({ success: true, message: 'Activity deleted successfully' });
+            res.status(204).send();
         } catch (error) {
             if (error instanceof Error && error.message === 'Activity not found') {
           res.status(404).json({
@@ -303,7 +303,7 @@ export class ActivityRoutes {
         try {
             const { id, venueId } = req.params;
             await this.activityService.removeVenueAssociation(id, venueId);
-            res.status(200).json({ success: true, message: 'Venue association removed successfully' });
+            res.status(204).send();
         } catch (error) {
         if (error instanceof Error && error.message.includes('not found')) {
             res.status(404).json({

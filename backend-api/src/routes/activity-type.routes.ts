@@ -174,10 +174,7 @@ export class ActivityTypeRoutes {
       const { id } = req.params;
       await this.activityTypeService.deleteActivityType(id);
 
-      res.status(200).json({
-        success: true,
-        message: 'Activity type deleted successfully',
-      });
+      res.status(204).send();
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === 'Activity type not found') {
