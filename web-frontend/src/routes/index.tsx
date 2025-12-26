@@ -19,6 +19,7 @@ const GeographicAreaDetailPage = lazy(() => import('../pages/GeographicAreaDetai
 const MapViewPage = lazy(() => import('../pages/MapViewPage'));
 const EngagementDashboardPage = lazy(() => import('../pages/EngagementDashboardPage'));
 const GrowthDashboardPage = lazy(() => import('../pages/GrowthDashboardPage'));
+const GeographicAnalyticsDashboardPage = lazy(() => import('../pages/GeographicAnalyticsDashboardPage'));
 const UsersPage = lazy(() => import('../pages/UsersPage'));
 
 export const router = createBrowserRouter([
@@ -93,6 +94,10 @@ export const router = createBrowserRouter([
       {
         path: 'analytics/growth',
         element: <GrowthDashboardPage />,
+      },
+      {
+        path: 'analytics/geographic',
+        element: <GeographicAnalyticsDashboardPage />,
       },
       {
         path: 'users',

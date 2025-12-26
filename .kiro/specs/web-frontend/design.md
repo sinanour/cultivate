@@ -282,76 +282,88 @@ src/
 #### API Service
 
 **AuthService**
-- `login(email, password)`: Authenticates user and stores tokens
+- `login(email, password)`: Authenticates user and returns JWT tokens (access token expires in 15 minutes, refresh token in 7 days)
 - `logout()`: Clears tokens and redirects to login
-- `refreshToken()`: Refreshes expired access token
-- `getCurrentUser()`: Returns current user info from token
+- `refreshToken(refreshToken)`: Refreshes expired access token using refresh token
+- `getCurrentUser()`: Fetches current user info from `/auth/me` endpoint
+- `decodeToken(token)`: Decodes JWT to extract user information (userId, email, role)
 
 **ActivityTypeService**
-- `getActivityTypes()`: Fetches all activity types
+- `getActivityTypes()`: Fetches all activity types from `/activity-types`
 - `createActivityType(data)`: Creates new activity type
-- `updateActivityType(id, data)`: Updates existing activity type
-- `deleteActivityType(id)`: Deletes activity type (validates references)
+- `updateActivityType(id, data, version?)`: Updates existing activity type with optional version for optimistic locking
+- `deleteActivityType(id)`: Deletes activity type (validates references, returns REFERENCED_ENTITY error if referenced)
 
 **ParticipantRoleService**
-- `getRoles()`: Fetches all roles
+- `getRoles()`: Fetches all roles from `/roles` endpoint
 - `createRole(data)`: Creates new role
-- `updateRole(id, data)`: Updates existing role
-- `deleteRole(id)`: Deletes role (validates references)
+- `updateRole(id, data, version?)`: Updates existing role with optional version for optimistic locking
+- `deleteRole(id)`: Deletes role (validates references, returns REFERENCED_ENTITY error if referenced)
 
 **ParticipantService**
-- `getParticipants()`: Fetches all participants
-- `getParticipant(id)`: Fetches single participant with activities
-- `createParticipant(data)`: Creates new participant
-- `updateParticipant(id, data)`: Updates existing participant
+- `getParticipants(page?, limit?)`: Fetches all participants with optional pagination
+- `getParticipant(id)`: Fetches single participant
+- `createParticipant(data)`: Creates new participant with optional homeVenueId
+- `updateParticipant(id, data, version?)`: Updates existing participant with optional version for optimistic locking
 - `deleteParticipant(id)`: Deletes participant
+- `getAddressHistory(id)`: Fetches participant's home address history from `/participants/:id/address-history`
 
 **ActivityService**
-- `getActivities()`: Fetches all activities
-- `getActivity(id)`: Fetches single activity with assignments
-- `createActivity(data)`: Creates new activity
-- `updateActivity(id, data)`: Updates existing activity
+- `getActivities(page?, limit?)`: Fetches all activities with optional pagination
+- `getActivity(id)`: Fetches single activity with activityType populated
+- `createActivity(data)`: Creates new activity (status defaults to PLANNED if not provided)
+- `updateActivity(id, data, version?)`: Updates existing activity with optional version for optimistic locking
 - `deleteActivity(id)`: Deletes activity
-- `markComplete(id)`: Marks finite activity as complete
+- `getActivityParticipants(id)`: Fetches participants assigned to activity from `/activities/:id/participants`
+- `getActivityVenues(id)`: Fetches venue history for activity from `/activities/:id/venues`
+- `addActivityVenue(activityId, venueId)`: Associates venue with activity
+- `removeActivityVenue(activityId, venueId)`: Removes venue association
 
 **AssignmentService**
-- `assignParticipant(activityId, participantId, roleId)`: Creates assignment
-- `removeAssignment(assignmentId)`: Removes assignment
-- `getAssignments(activityId)`: Fetches assignments for activity
+- `addParticipant(activityId, participantId, roleId, notes?)`: Creates assignment via `/activities/:activityId/participants`
+- `updateParticipant(activityId, participantId, roleId?, notes?)`: Updates assignment
+- `removeParticipant(activityId, participantId)`: Removes assignment via `/activities/:activityId/participants/:participantId`
+- `getActivityParticipants(activityId)`: Fetches assignments for activity
 
 **VenueService**
-- `getVenues()`: Fetches all venues
-- `getVenue(id)`: Fetches single venue with activities and participants
-- `searchVenues(query)`: Searches venues by name or address
+- `getVenues(page?, limit?)`: Fetches all venues with optional pagination
+- `getVenue(id)`: Fetches single venue with geographicArea populated
+- `searchVenues(query)`: Searches venues by name or address via `/venues/search?q=`
 - `createVenue(data)`: Creates new venue
-- `updateVenue(id, data)`: Updates existing venue
-- `deleteVenue(id)`: Deletes venue (validates references)
-- `getVenueActivities(id)`: Fetches activities associated with venue
-- `getVenueParticipants(id)`: Fetches participants with venue as home
+- `updateVenue(id, data, version?)`: Updates existing venue with optional version for optimistic locking
+- `deleteVenue(id)`: Deletes venue (validates references, returns REFERENCED_ENTITY error if referenced)
+- `getVenueActivities(id)`: Fetches activities associated with venue from `/venues/:id/activities`
+- `getVenueParticipants(id)`: Fetches participants with venue as home from `/venues/:id/participants`
 
 **GeographicAreaService**
-- `getGeographicAreas()`: Fetches all geographic areas
-- `getGeographicArea(id)`: Fetches single geographic area with details
-- `createGeographicArea(data)`: Creates new geographic area
-- `updateGeographicArea(id, data)`: Updates existing geographic area
-- `deleteGeographicArea(id)`: Deletes geographic area (validates references)
-- `getChildren(id)`: Fetches child geographic areas
-- `getAncestors(id)`: Fetches hierarchy path to root
-- `getVenues(id)`: Fetches venues in geographic area
-- `getStatistics(id)`: Fetches statistics for geographic area and descendants
+- `getGeographicAreas(page?, limit?)`: Fetches all geographic areas with optional pagination
+- `getGeographicArea(id)`: Fetches single geographic area with parent populated
+- `createGeographicArea(data)`: Creates new geographic area (validates circular relationships)
+- `updateGeographicArea(id, data, version?)`: Updates existing geographic area with optional version for optimistic locking
+- `deleteGeographicArea(id)`: Deletes geographic area (validates references, returns REFERENCED_ENTITY error if referenced)
+- `getChildren(id)`: Fetches child geographic areas from `/geographic-areas/:id/children`
+- `getAncestors(id)`: Fetches hierarchy path to root from `/geographic-areas/:id/ancestors`
+- `getVenues(id)`: Fetches venues in geographic area from `/geographic-areas/:id/venues`
+- `getStatistics(id)`: Fetches statistics for geographic area and descendants from `/geographic-areas/:id/statistics`
 
 **ParticipantAddressHistoryService**
-- `getAddressHistory(participantId)`: Fetches participant's home address history
+- `getAddressHistory(participantId)`: Fetches participant's home address history from `/participants/:id/address-history`
 
 **AnalyticsService**
-- `getEngagementMetrics(startDate, endDate, geographicAreaId)`: Fetches engagement data with optional geographic filter
-- `getGrowthMetrics(period, geographicAreaId)`: Fetches growth data with optional geographic filter
-- `getGeographicBreakdown()`: Fetches engagement metrics grouped by geographic area
+- `getEngagementMetrics(startDate?, endDate?, geographicAreaId?)`: Fetches engagement data from `/analytics/engagement` with optional filters
+- `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR)
+- `getGeographicAnalytics(startDate?, endDate?)`: Fetches geographic breakdown from `/analytics/geographic`
 
 **UserService** (Admin only)
-- `getUsers()`: Fetches all users
-- `createUser(data)`: Creates new user
-- `updateUser(id, data)`: Updates user including role
+- `getUsers()`: Fetches all users (admin only)
+- `createUser(data)`: Creates new user (admin only)
+- `updateUser(id, data)`: Updates user including role (admin only)
+
+#### Sync Service
+
+**SyncService**
+- `batchSync(clientId, operations)`: Sends batch of operations to `/sync/batch` endpoint
+- `processSyncResults(results)`: Handles sync results including conflicts and errors
 
 #### Offline Service
 
@@ -383,20 +395,27 @@ src/
 interface User {
   id: string;
   email: string;
-  name: string;
   role: 'ADMINISTRATOR' | 'EDITOR' | 'READ_ONLY';
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ActivityType {
   id: string;
   name: string;
   isPredefined: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ParticipantRole {
   id: string;
   name: string;
   isPredefined: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Participant {
@@ -405,8 +424,9 @@ interface Participant {
   email: string;
   phone?: string;
   notes?: string;
-  homeVenueId?: string;
+  version: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface ParticipantAddressHistory {
@@ -427,7 +447,9 @@ interface Venue {
   latitude?: number;
   longitude?: number;
   venueType?: 'PUBLIC_BUILDING' | 'PRIVATE_RESIDENCE';
+  version: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface GeographicArea {
@@ -437,15 +459,16 @@ interface GeographicArea {
   parentGeographicAreaId?: string;
   parent?: GeographicArea;
   children?: GeographicArea[];
+  version: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface GeographicAreaStatistics {
-  geographicAreaId: string;
   totalActivities: number;
   totalParticipants: number;
+  totalVenues: number;
   activeActivities: number;
-  ongoingActivities: number;
 }
 
 interface Activity {
@@ -455,10 +478,12 @@ interface Activity {
   activityType?: ActivityType;
   startDate: string;
   endDate?: string;
-  status: 'ACTIVE' | 'COMPLETED';
+  status: 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   isOngoing: boolean;
-  venues?: ActivityVenueHistory[];
+  createdBy?: string;
+  version: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface ActivityVenueHistory {
@@ -475,42 +500,135 @@ interface Assignment {
   activityId: string;
   participantId: string;
   roleId: string;
+  notes?: string;
   participant?: Participant;
   role?: ParticipantRole;
+  createdAt: string;
 }
 
 interface EngagementMetrics {
-  totalParticipants: number;
   totalActivities: number;
   activeActivities: number;
-  ongoingActivities: number;
-  activitiesByType: { type: string; count: number }[];
-  roleDistribution: { role: string; count: number }[];
-  geographicBreakdown?: { area: string; count: number }[];
+  totalParticipants: number;
+  activeParticipants: number;
+  participationRate: number;
+  retentionRate: number;
+  averageActivitySize: number;
+  geographicBreakdown: {
+    geographicAreaId: string;
+    geographicAreaName: string;
+    activityCount: number;
+    participantCount: number;
+  }[];
+  periodStart: string;
+  periodEnd: string;
 }
 
 interface GrowthMetrics {
-  newParticipants: { date: string; count: number }[];
-  newActivities: { date: string; count: number }[];
-  cumulativeParticipants: { date: string; count: number }[];
-  cumulativeActivities: { date: string; count: number }[];
-  participantChange: number;
-  activityChange: number;
+  date: string;
+  newParticipants: number;
+  newActivities: number;
+  cumulativeParticipants: number;
+  cumulativeActivities: number;
+}
+
+interface GeographicAnalytics {
+  geographicAreaId: string;
+  geographicAreaName: string;
+  areaType: string;
+  totalActivities: number;
+  activeActivities: number;
+  totalParticipants: number;
+  activeParticipants: number;
 }
 
 interface QueuedOperation {
   id: string;
-  type: 'CREATE' | 'UPDATE' | 'DELETE';
-  entity: string;
+  entityType: 'Activity' | 'Participant' | 'ActivityParticipant' | 'Venue' | 'GeographicArea' | 'ActivityType' | 'Role';
+  entityId: string;
+  operation: 'CREATE' | 'UPDATE' | 'DELETE';
   data: any;
-  timestamp: number;
+  timestamp: string;
+  version?: number;
   retries: number;
+}
+
+interface APIResponse<T> {
+  success: boolean;
+  data: T;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface APIError {
+  code: string;
+  message: string;
+  details?: any;
 }
 ```
 
 ### API Request/Response Types
 
 All API requests and responses follow the Backend API package specifications. The frontend transforms these into the above data models for internal use.
+
+**Response Format:**
+All successful API responses are wrapped in a standard format:
+```typescript
+{
+  success: true,
+  data: T,
+  pagination?: {
+    page: number,
+    limit: number,
+    total: number,
+    totalPages: number
+  }
+}
+```
+
+**Error Response Format:**
+```typescript
+{
+  code: string,
+  message: string,
+  details?: any
+}
+```
+
+**Error Codes:**
+- `VALIDATION_ERROR`: Request validation failed
+- `AUTHENTICATION_REQUIRED`: Missing or invalid token
+- `INSUFFICIENT_PERMISSIONS`: User lacks required permissions
+- `NOT_FOUND`: Resource not found
+- `VERSION_CONFLICT`: Optimistic locking conflict (version mismatch)
+- `CIRCULAR_REFERENCE`: Circular relationship detected
+- `REFERENCED_ENTITY`: Entity is referenced and cannot be deleted
+- `DUPLICATE_EMAIL`: Email already exists
+- `DUPLICATE_NAME`: Name already exists
+- `DUPLICATE_ASSIGNMENT`: Assignment already exists
+- `INVALID_REFERENCE`: Referenced entity does not exist
+- `RATE_LIMIT_EXCEEDED`: Too many requests
+- `INTERNAL_ERROR`: Unexpected server error
+
+**Rate Limiting:**
+- Authentication endpoints: 5 requests/minute per IP
+- Mutation endpoints (POST, PUT, DELETE): 100 requests/minute per user
+- Query endpoints (GET): 1000 requests/minute per user
+
+Rate limit headers included in responses:
+- `X-RateLimit-Limit`: Request limit
+- `X-RateLimit-Remaining`: Remaining requests
+- `X-RateLimit-Reset`: Reset timestamp (Unix)
+
+**Pagination:**
+Pagination is optional on list endpoints. When `page` or `limit` query parameters are provided, the response includes pagination metadata. Without these parameters, all results are returned.
+
+**Optimistic Locking:**
+All entities support optimistic locking via the `version` field. When updating an entity, include the current version number in the request. If the version doesn't match, a `VERSION_CONFLICT` error (409) is returned.
 
 ## Correctness Properties
 
@@ -941,11 +1059,23 @@ All API requests and responses follow the Backend API package specifications. Th
 - Provide navigation back to list view
 - Log error details to console
 
+**409 Conflict (Version Mismatch):**
+- Detect VERSION_CONFLICT error code
+- Display conflict notification to user
+- Provide options: retry with latest version, discard changes, or view differences
+- Refetch latest entity data
+
 **500 Internal Server Error:**
 - Display generic error message to user
 - Log full error details to console
 - Provide retry option
 - Maintain application state
+
+**429 Too Many Requests:**
+- Display rate limit exceeded message
+- Show retry-after time from X-RateLimit-Reset header
+- Automatically retry after cooldown period
+- Log rate limit details
 
 ### Offline Handling
 
@@ -1148,9 +1278,10 @@ Accessibility tests ensure WCAG 2.1 AA compliance using axe-core.
 ### Security Considerations
 
 **Token Storage:**
-- Store access tokens in memory only
-- Store refresh tokens in httpOnly cookies
+- Store access tokens in memory only (expires in 15 minutes)
+- Store refresh tokens in localStorage or httpOnly cookies (expires in 7 days)
 - Clear tokens on logout
+- Decode JWT access token to extract user information (userId, email, role)
 
 **XSS Prevention:**
 - Sanitize user inputs

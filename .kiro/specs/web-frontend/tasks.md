@@ -39,9 +39,11 @@ This implementation plan covers the React-based web application built with TypeS
 
 - [ ] 3. Implement authentication system
   - [x] 3.1 Create authentication service
-    - Implement login API call
+    - Implement login API call (returns access token with 15 min expiry, refresh token with 7 day expiry)
     - Implement logout functionality
-    - Implement token refresh
+    - Implement token refresh using refresh token
+    - Implement JWT token decoding to extract user info (userId, email, role)
+    - Implement getCurrentUser() to fetch from /auth/me endpoint
     - Store tokens securely in localStorage
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
 
@@ -80,7 +82,8 @@ This implementation plan covers the React-based web application built with TypeS
     - Display table using CloudScape Table
     - Distinguish predefined vs custom types with badges
     - Provide edit and delete actions
-    - Handle delete validation
+    - Handle delete validation (REFERENCED_ENTITY error)
+    - Display version number for debugging
     - _Requirements: 2.1, 2.4, 2.5, 2.6_
 
   - [ ]* 5.2 Write property test for type/role distinction
@@ -98,6 +101,7 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 5.2 Create ActivityTypeForm component
     - Modal form for create/edit
     - Validate name is not empty
+    - Include version field in update requests for optimistic locking
     - Submit to API and update cache
     - _Requirements: 2.2, 2.3, 2.7_
 
@@ -108,12 +112,14 @@ This implementation plan covers the React-based web application built with TypeS
 - [ ] 6. Implement participant role management UI
   - [x] 6.1 Create ParticipantRoleList and ParticipantRoleForm components
     - Similar structure to activity type management
+    - Include version field in update requests for optimistic locking
+    - Handle REFERENCED_ENTITY errors on deletion
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
 - [ ] 7. Implement participant management UI
   - [x] 7.1 Create ParticipantList component
     - Display table with search, sort, and filter
-    - Use CloudScape Table with pagination
+    - Use CloudScape Table with optional pagination support
     - Implement client-side search
     - _Requirements: 4.1, 4.2, 4.3_
 
@@ -129,7 +135,8 @@ This implementation plan covers the React-based web application built with TypeS
     - Modal form for create/edit
     - Validate name, email format, and required fields
     - Support optional phone and notes
-    - Support home venue selection
+    - Support home venue selection (homeVenueId)
+    - Include version field in update requests for optimistic locking
     - Display inline validation errors
     - _Requirements: 4.4, 4.5, 4.7, 4.8, 4.9, 4.11_
 
@@ -142,7 +149,7 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 7.3 Create ParticipantDetail component
     - Show participant information
     - List all activities with roles
-    - Display address history
+    - Display address history from /participants/:id/address-history endpoint
     - _Requirements: 4.10, 4.12_
 
   - [ ]* 7.5 Write property test for participant detail view
@@ -152,7 +159,8 @@ This implementation plan covers the React-based web application built with TypeS
 - [ ] 8. Implement venue management UI
   - [x] 8.1 Create VenueList component
     - Display table with name, address, and geographic area
-    - Implement search, sort, and filter
+    - Implement search via /venues/search?q= endpoint, sort, and filter
+    - Support optional pagination
     - _Requirements: 6A.1, 6A.2, 6A.3_
 
   - [ ]* 8.2 Write property tests for venue list and search
@@ -163,7 +171,8 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 8.2 Create VenueForm component
     - Validate required fields (name, address, geographic area)
     - Support optional latitude, longitude, venue type
-    - Handle delete validation
+    - Include version field in update requests for optimistic locking
+    - Handle delete validation (REFERENCED_ENTITY error)
     - _Requirements: 6A.4, 6A.5, 6A.6, 6A.7, 6A.8, 6A.10, 6A.11_
 
   - [ ]* 8.3 Write property tests for venue validation
@@ -174,9 +183,9 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [x] 8.3 Create VenueDetail component
     - Show venue information
-    - List associated activities
-    - List participants with venue as home
-    - Display geographic area hierarchy
+    - List associated activities from /venues/:id/activities endpoint
+    - List participants with venue as home from /venues/:id/participants endpoint
+    - Display geographic area hierarchy using /geographic-areas/:id/ancestors endpoint
     - _Requirements: 6A.9_
 
   - [ ]* 8.4 Write property test for venue detail view
@@ -188,7 +197,8 @@ This implementation plan covers the React-based web application built with TypeS
     - Display hierarchical tree view using CloudScape Tree
     - Show area type badges
     - Provide expand/collapse functionality
-    - Handle delete validation
+    - Support optional pagination
+    - Handle delete validation (REFERENCED_ENTITY error)
     - _Requirements: 6B.1, 6B.4, 6B.9, 6B.10_
 
   - [ ]* 9.2 Write property test for hierarchical display
@@ -198,7 +208,8 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 9.2 Create GeographicAreaForm component
     - Validate required fields (name, area type)
     - Support parent selection
-    - Prevent circular relationships
+    - Prevent circular relationships (CIRCULAR_REFERENCE error)
+    - Include version field in update requests for optimistic locking
     - _Requirements: 6B.2, 6B.3, 6B.5, 6B.6, 6B.7_
 
   - [ ]* 9.3 Write property tests for geographic area validation
@@ -208,10 +219,10 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 6B.5, 6B.7, 6B.9, 6B.10**
 
   - [x] 9.3 Create GeographicAreaDetail component
-    - Display full hierarchy path
-    - List child areas
-    - List associated venues
-    - Show statistics
+    - Display full hierarchy path using /geographic-areas/:id/ancestors endpoint
+    - List child areas from /geographic-areas/:id/children endpoint
+    - List associated venues from /geographic-areas/:id/venues endpoint
+    - Show statistics from /geographic-areas/:id/statistics endpoint
     - _Requirements: 6B.8, 6B.11_
 
   - [ ]* 9.4 Write property test for hierarchy path display
@@ -223,10 +234,11 @@ This implementation plan covers the React-based web application built with TypeS
 
 - [ ] 11. Implement activity management UI
   - [x] 11.1 Create ActivityList component
-    - Display table with filtering by type and status
+    - Display table with filtering by type and status (PLANNED, ACTIVE, COMPLETED, CANCELLED)
     - Visually distinguish finite vs ongoing
     - Provide sort capabilities
-    - _Requirements: 5.1, 5.2, 5.3, 5.4_
+    - Support optional pagination
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.11_
 
   - [ ]* 11.2 Write property tests for activity list
     - **Property 11: Activity List Display**
@@ -238,8 +250,10 @@ This implementation plan covers the React-based web application built with TypeS
     - Conditionally require end date for finite activities
     - Allow null end date for ongoing
     - Validate name, type, start date
-    - Support venue selection
-    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.13_
+    - Support all four status values (PLANNED, ACTIVE, COMPLETED, CANCELLED)
+    - Support venue selection and management
+    - Include version field in update requests for optimistic locking
+    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14_
 
   - [ ]* 11.3 Write property tests for activity validation
     - **Property 14: Finite Activity End Date Requirement**
@@ -247,11 +261,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 5.8, 5.9**
 
   - [x] 11.3 Create ActivityDetail component
-    - Show activity information
-    - List assigned participants with roles
-    - Display venue history
-    - Provide "Mark Complete" button
-    - _Requirements: 5.11, 5.12, 5.14_
+    - Show activity information with all status values
+    - List assigned participants with roles from /activities/:id/participants endpoint
+    - Display venue history from /activities/:id/venues endpoint
+    - Provide status update button (not just "Mark Complete")
+    - Support adding/removing venues via /activities/:id/venues endpoints
+    - _Requirements: 5.11, 5.12, 5.13, 5.14_
 
   - [ ]* 11.4 Write property test for activity detail view
     - **Property 16: Activity Detail View Completeness**
@@ -261,7 +276,9 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 12.1 Create AssignmentForm component
     - Require role selection
     - Validate role is selected
-    - Prevent duplicate assignments
+    - Prevent duplicate assignments (DUPLICATE_ASSIGNMENT error)
+    - Support optional notes field
+    - Use /activities/:activityId/participants endpoint
     - _Requirements: 6.1, 6.2, 6.5, 6.6_
 
   - [ ]* 12.2 Write property tests for assignments
@@ -272,8 +289,9 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [x] 12.2 Create AssignmentList component
     - Display assigned participants on activity detail
-    - Show participant name and role
-    - Provide remove button
+    - Show participant name, role, and notes
+    - Provide remove button using DELETE /activities/:activityId/participants/:participantId
+    - Support updating assignments via PUT /activities/:activityId/participants/:participantId
     - _Requirements: 6.3, 6.4_
 
 - [ ] 13. Implement map view UI
@@ -300,11 +318,12 @@ This implementation plan covers the React-based web application built with TypeS
 
 - [ ] 14. Implement analytics dashboards
   - [x] 14.1 Create EngagementDashboard component
-    - Display summary metrics using CloudScape Cards
+    - Display summary metrics using CloudScape Cards (totalActivities, activeActivities, totalParticipants, activeParticipants, participationRate, retentionRate, averageActivitySize)
     - Render charts for activities by type and role distribution
-    - Provide date range filter
-    - Provide geographic area filter
-    - Display geographic breakdown chart
+    - Provide date range filter (optional startDate, endDate)
+    - Provide geographic area filter (optional geographicAreaId)
+    - Display geographic breakdown chart with geographicAreaId, geographicAreaName, activityCount, participantCount
+    - Use /analytics/engagement endpoint
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.12, 7.13, 7.14_
 
   - [ ]* 14.2 Write property tests for engagement metrics
@@ -313,11 +332,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 7.2, 7.3, 7.4, 7.5**
 
   - [x] 14.2 Create GrowthDashboard component
-    - Display time-series charts
-    - Provide time period selector
-    - Show percentage changes
-    - Display cumulative counts
-    - Provide geographic area filter
+    - Display time-series charts for new participants and activities
+    - Provide time period selector (DAY, WEEK, MONTH, YEAR) using period parameter
+    - Show percentage changes between periods
+    - Display cumulative counts over time
+    - Provide geographic area filter (optional geographicAreaId)
+    - Use /analytics/growth endpoint with optional startDate, endDate, period, geographicAreaId
     - _Requirements: 7.7, 7.8, 7.9, 7.10, 7.11, 7.12_
 
   - [ ]* 14.3 Write property tests for growth metrics
@@ -326,11 +346,17 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 24: Cumulative Count Calculation**
     - **Validates: Requirements 7.8, 7.10, 7.11**
 
+  - [x] 14.3 Create GeographicAnalyticsDashboard component
+    - Display geographic breakdown using /analytics/geographic endpoint
+    - Show metrics by geographic area (geographicAreaId, geographicAreaName, areaType, totalActivities, activeActivities, totalParticipants, activeParticipants)
+    - Provide optional date range filter (startDate, endDate)
+    - _Requirements: 7.13_
+
 - [ ] 15. Implement offline support
   - [x] 15.1 Create OfflineStorage service
     - Use Dexie.js for IndexedDB management
-    - Store tables for all entities
-    - Implement syncFromServer
+    - Store tables for all entities (participants, activities, activityTypes, roles, assignments, venues, geographicAreas)
+    - Implement syncFromServer to fetch and cache all data
     - Implement getLocalData
     - _Requirements: 10.1, 10.2_
 
@@ -339,9 +365,11 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 10.2**
 
   - [x] 15.2 Create SyncQueue service
-    - Store pending operations in IndexedDB
+    - Store pending operations in IndexedDB with proper format (entityType, entityId, operation, data, timestamp, version)
     - Implement enqueue, processQueue, clearQueue
-    - Implement exponential backoff
+    - Use /sync/batch endpoint for synchronization
+    - Implement exponential backoff for retries
+    - Handle sync results including conflicts and errors
     - _Requirements: 10.3, 11.2, 11.3, 11.4_
 
   - [ ]* 15.3 Write property tests for sync queue
@@ -392,15 +420,67 @@ This implementation plan covers the React-based web application built with TypeS
     - Display user-friendly error messages
     - Use toast notifications for transient errors
     - Use modal dialogs for critical errors
+    - Handle VERSION_CONFLICT errors (409) with conflict resolution UI
+    - Handle RATE_LIMIT_EXCEEDED errors (429) with retry logic
+    - Parse and display specific error codes (VALIDATION_ERROR, REFERENCED_ENTITY, CIRCULAR_REFERENCE, etc.)
     - Maintain application state during errors
     - Log errors to console
-    - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6_
+    - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 18.2, 18.3, 19.1, 19.2_
 
   - [ ]* 17.3 Write property tests for error handling
     - **Property 38: Error Notification Type**
     - **Property 39: Error State Preservation**
     - **Property 40: Error Console Logging**
     - **Validates: Requirements 15.2, 15.3, 15.5, 15.6**
+
+- [ ] 17A. Implement optimistic locking and conflict resolution
+  - [ ] 17A.1 Create version conflict detection utility
+    - Detect 409 errors with VERSION_CONFLICT code
+    - Extract version information from error response
+    - _Requirements: 18.2_
+
+  - [ ] 17A.2 Create conflict resolution UI component
+    - Display conflict notification modal
+    - Show current vs server version differences
+    - Provide options: retry with latest, discard changes, view details
+    - Refetch latest entity data on conflict
+    - _Requirements: 18.2, 18.3, 18.4_
+
+  - [ ] 17A.3 Update all entity forms to include version
+    - Pass version field in all update requests
+    - Handle version conflicts gracefully
+    - _Requirements: 18.1_
+
+  - [ ]* 17A.4 Write property tests for optimistic locking
+    - Test version conflict detection
+    - Test conflict resolution flow
+    - Test version field inclusion in updates
+    - **Validates: Requirements 18.1, 18.2, 18.3, 18.4**
+
+- [ ] 17B. Implement rate limiting handling
+  - [ ] 17B.1 Create rate limit detection utility
+    - Detect 429 errors with RATE_LIMIT_EXCEEDED code
+    - Parse X-RateLimit-* headers from responses
+    - Calculate retry-after time from X-RateLimit-Reset header
+    - _Requirements: 19.1, 19.2_
+
+  - [ ] 17B.2 Create rate limit notification component
+    - Display rate limit exceeded message
+    - Show countdown timer for retry-after period
+    - Display remaining request counts when available
+    - _Requirements: 19.1, 19.2, 19.5_
+
+  - [ ] 17B.3 Implement automatic retry logic
+    - Queue requests when rate limited
+    - Automatically retry after cooldown period
+    - Log rate limit events for debugging
+    - _Requirements: 19.3, 19.4_
+
+  - [ ]* 17B.4 Write property tests for rate limiting
+    - Test rate limit detection
+    - Test retry logic
+    - Test cooldown period calculation
+    - **Validates: Requirements 19.1, 19.2, 19.3, 19.4**
 
 - [ ] 18. Implement loading states
   - [x] 18.1 Create loading components
@@ -424,7 +504,12 @@ This implementation plan covers the React-based web application built with TypeS
     - Hide from non-administrators
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6_
 
-- [ ] 20. Final checkpoint - Ensure all tests pass
+- [ ] 20. Checkpoint - Verify error handling and conflict resolution
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify optimistic locking works correctly
+  - Verify rate limiting is handled gracefully
+
+- [ ] 21. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
@@ -434,3 +519,24 @@ This implementation plan covers the React-based web application built with TypeS
 - Checkpoints ensure incremental validation
 - Property tests validate universal correctness properties
 - Unit tests validate specific examples and edge cases
+
+## API Alignment Notes
+
+This implementation plan has been updated to align with the Backend API contract defined in `/docs/API_CONTRACT.md`:
+
+**Key API Contract Features:**
+- All responses wrapped in `{ success: true, data: {...} }` format
+- Optimistic locking via `version` field on all entities
+- Optional pagination on list endpoints (page, limit query params)
+- Rate limiting with X-RateLimit-* headers
+- Comprehensive error codes (VERSION_CONFLICT, RATE_LIMIT_EXCEEDED, REFERENCED_ENTITY, etc.)
+- Activity status: PLANNED, ACTIVE, COMPLETED, CANCELLED
+- Token expiration: 15 min (access), 7 days (refresh)
+- Assignment notes field support
+
+**Implementation Priorities:**
+1. High: Activity status values, optimistic locking, response format handling
+2. Medium: Rate limiting, version conflict UI, error code mapping
+3. Low: Rate limit display, advanced conflict resolution
+
+See `API_ALIGNMENT_SUMMARY.md` for detailed alignment documentation.

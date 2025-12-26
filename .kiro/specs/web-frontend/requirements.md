@@ -94,10 +94,11 @@ The Web Frontend package provides a responsive React-based web application that 
 8. WHEN creating a finite activity, THE Web_App SHALL require an end date
 9. WHEN creating an ongoing activity, THE Web_App SHALL allow null end date
 10. THE Web_App SHALL validate that activity name, type, and start date are provided
-11. THE Web_App SHALL provide a button to mark finite activities as complete
-12. THE Web_App SHALL display a detail view showing activity information and assigned participants
-13. THE Web_App SHALL allow selection of one or more venues for each activity
-14. THE Web_App SHALL display the activity's venue history when venues have changed over time
+11. THE Web_App SHALL support activity statuses: PLANNED, ACTIVE, COMPLETED, CANCELLED
+12. THE Web_App SHALL provide a button to update activity status
+13. THE Web_App SHALL display a detail view showing activity information and assigned participants
+14. THE Web_App SHALL allow selection of one or more venues for each activity
+15. THE Web_App SHALL display the activity's venue history when venues have changed over time
 
 ### Requirement 6: Activity-Participant Assignment UI
 
@@ -314,3 +315,27 @@ The Web Frontend package provides a responsive React-based web application that 
 4. THE Web_App SHALL provide a form to edit existing users
 5. THE Web_App SHALL allow administrators to assign and modify user roles
 6. THE Web_App SHALL hide user management from non-administrators
+
+### Requirement 18: Optimistic Locking and Conflict Resolution
+
+**User Story:** As a user, I want to be notified when my changes conflict with another user's changes, so that I can resolve conflicts appropriately.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL include version numbers when updating entities
+2. WHEN a version conflict occurs (409 error), THE Web_App SHALL display a conflict notification
+3. THE Web_App SHALL provide options to retry with latest version or discard changes
+4. THE Web_App SHALL refetch the latest entity data when a conflict is detected
+5. THE Web_App SHALL log version conflict details for debugging
+
+### Requirement 19: Rate Limiting Handling
+
+**User Story:** As a user, I want to be informed when I've exceeded rate limits, so that I know when I can retry my actions.
+
+#### Acceptance Criteria
+
+1. WHEN a rate limit is exceeded (429 error), THE Web_App SHALL display a rate limit message
+2. THE Web_App SHALL show the retry-after time from response headers
+3. THE Web_App SHALL automatically retry after the cooldown period
+4. THE Web_App SHALL log rate limit details for debugging
+5. THE Web_App SHALL display remaining request counts from rate limit headers when available

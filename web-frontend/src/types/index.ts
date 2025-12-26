@@ -4,12 +4,18 @@ export interface ActivityType {
     id: string;
     name: string;
     isPredefined: boolean;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface ParticipantRole {
     id: string;
     name: string;
     isPredefined: boolean;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Participant {
@@ -18,8 +24,9 @@ export interface Participant {
     email: string;
     phone?: string;
     notes?: string;
-    homeVenueId?: string;
+    version: number;
     createdAt: string;
+    updatedAt: string;
 }
 
 export interface Venue {
@@ -31,7 +38,9 @@ export interface Venue {
     latitude?: number;
     longitude?: number;
     venueType?: 'PUBLIC_BUILDING' | 'PRIVATE_RESIDENCE';
+    version: number;
     createdAt: string;
+    updatedAt: string;
 }
 
 export type AreaType =
@@ -52,7 +61,9 @@ export interface GeographicArea {
     parentGeographicAreaId?: string;
     parent?: GeographicArea;
     children?: GeographicArea[];
+    version: number;
     createdAt: string;
+    updatedAt: string;
 }
 
 export interface Activity {
@@ -62,10 +73,12 @@ export interface Activity {
     activityType?: ActivityType;
     startDate: string;
     endDate?: string;
-    status: 'ACTIVE' | 'COMPLETED';
+    status: 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
     isOngoing: boolean;
-    venues?: ActivityVenueHistory[];
+    createdBy?: string;
+    version: number;
     createdAt: string;
+    updatedAt: string;
 }
 
 export interface ActivityVenueHistory {
@@ -91,33 +104,51 @@ export interface Assignment {
     activityId: string;
     participantId: string;
     roleId: string;
+    notes?: string;
     participant?: Participant;
     role?: ParticipantRole;
+    createdAt: string;
 }
 
 export interface EngagementMetrics {
-    totalParticipants: number;
     totalActivities: number;
     activeActivities: number;
-    ongoingActivities: number;
-    activitiesByType: { type: string; count: number }[];
-    roleDistribution: { role: string; count: number }[];
-    geographicBreakdown?: { area: string; count: number }[];
+    totalParticipants: number;
+    activeParticipants: number;
+    participationRate: number;
+    retentionRate: number;
+    averageActivitySize: number;
+    geographicBreakdown: {
+        geographicAreaId: string;
+        geographicAreaName: string;
+        activityCount: number;
+        participantCount: number;
+    }[];
+    periodStart: string;
+    periodEnd: string;
 }
 
 export interface GrowthMetrics {
-    newParticipants: { date: string; count: number }[];
-    newActivities: { date: string; count: number }[];
-    cumulativeParticipants: { date: string; count: number }[];
-    cumulativeActivities: { date: string; count: number }[];
-    participantChange: number;
-    activityChange: number;
+    date: string;
+    newParticipants: number;
+    newActivities: number;
+    cumulativeParticipants: number;
+    cumulativeActivities: number;
+}
+
+export interface GeographicAnalytics {
+    geographicAreaId: string;
+    geographicAreaName: string;
+    areaType: string;
+    totalActivities: number;
+    activeActivities: number;
+    totalParticipants: number;
+    activeParticipants: number;
 }
 
 export interface GeographicAreaStatistics {
-    geographicAreaId: string;
     totalActivities: number;
     totalParticipants: number;
+    totalVenues: number;
     activeActivities: number;
-    ongoingActivities: number;
 }
