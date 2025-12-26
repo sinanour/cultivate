@@ -7,7 +7,6 @@ import Input from '@cloudscape-design/components/input';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Header from '@cloudscape-design/components/header';
-import Alert from '@cloudscape-design/components/alert';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
@@ -107,45 +106,38 @@ export default function LoginPage() {
             }
             errorText={error}
           >
-            <SpaceBetween size="l">
-              {error && (
-                <Alert type="error" dismissible onDismiss={() => setError('')}>
-                  {error}
-                </Alert>
-              )}
-              <FormField
-                label="Email"
-                errorText={emailError}
-              >
-                <Input
-                  value={email}
-                  onChange={({ detail }) => {
-                    setEmail(detail.value);
-                    if (emailError) validateEmail(detail.value);
-                  }}
-                  onBlur={() => validateEmail(email)}
-                  type="email"
-                  placeholder="Enter your email"
-                  disabled={isLoading}
-                />
-              </FormField>
-              <FormField
-                label="Password"
-                errorText={passwordError}
-              >
-                <Input
-                  value={password}
-                  onChange={({ detail }) => {
-                    setPassword(detail.value);
-                    if (passwordError) validatePassword(detail.value);
-                  }}
-                  onBlur={() => validatePassword(password)}
-                  type="password"
-                  placeholder="Enter your password"
-                  disabled={isLoading}
-                />
-              </FormField>
-            </SpaceBetween>
+            <FormField
+              label="Email"
+              errorText={emailError}
+            >
+              <Input
+                value={email}
+                onChange={({ detail }) => {
+                  setEmail(detail.value);
+                  if (emailError) validateEmail(detail.value);
+                }}
+                onBlur={() => validateEmail(email)}
+                type="email"
+                placeholder="Enter your email"
+                disabled={isLoading}
+              />
+            </FormField>
+            <FormField
+              label="Password"
+              errorText={passwordError}
+            >
+              <Input
+                value={password}
+                onChange={({ detail }) => {
+                  setPassword(detail.value);
+                  if (passwordError) validatePassword(detail.value);
+                }}
+                onBlur={() => validatePassword(password)}
+                type="password"
+                placeholder="Enter your password"
+                disabled={isLoading}
+              />
+            </FormField>
           </Form>
         </form>
       </Container>
