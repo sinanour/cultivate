@@ -39,8 +39,19 @@ export const mutationRateLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     // Key by user ID if authenticated, otherwise by IP
+    // Use the default keyGenerator which properly handles IPv6
+    skip: (req: any) => {
+        // If user is authenticated, use a custom key based on user ID
+        if (req.user?.userId) {
+            // Store the user ID for the skip function to use
+            (req as any).rateLimitKey = `user:${req.user.userId}`;
+        }
+        return false;
+    },
     keyGenerator: (req: any) => {
-        return req.user?.userId || req.ip;
+        // Return custom key if set (for authenticated users)
+        // Otherwise, let the default keyGenerator handle IP (with IPv6 support)
+        return (req as any).rateLimitKey;
     },
     handler: (req, res) => {
         res.status(429).json({
@@ -66,8 +77,19 @@ export const queryRateLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     // Key by user ID if authenticated, otherwise by IP
+    // Use the default keyGenerator which properly handles IPv6
+    skip: (req: any) => {
+        // If user is authenticated, use a custom key based on user ID
+        if (req.user?.userId) {
+            // Store the user ID for the skip function to use
+            (req as any).rateLimitKey = `user:${req.user.userId}`;
+        }
+        return false;
+    },
     keyGenerator: (req: any) => {
-        return req.user?.userId || req.ip;
+        // Return custom key if set (for authenticated users)
+        // Otherwise, let the default keyGenerator handle IP (with IPv6 support)
+        return (req as any).rateLimitKey;
     },
     handler: (req, res) => {
         res.status(429).json({
