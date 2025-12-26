@@ -2,12 +2,6 @@ import type { User, AuthTokens, LoginCredentials } from '../../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
-interface LoginResponse {
-    accessToken: string;
-    refreshToken: string;
-    user: User;
-}
-
 export class AuthService {
     private static readonly TOKEN_KEY = 'authTokens';
     private static readonly USER_KEY = 'authUser';
@@ -26,17 +20,29 @@ export class AuthService {
             throw new Error(error.message || 'Login failed');
         }
 
-        const data: LoginResponse = await response.json();
+        const loginData = await response.json();
+
+        // Extract tokens from the response
+        const tokens = loginData.data;
+
+        // Decode the access token to get user info
+        const payload = JSON.parse(atob(tokens.accessToken.split('.')[1]));
+        const user: User = {
+            id: payload.userId,
+            email: payload.email,
+            name: payload.email.split('@')[0], // Use email prefix as name for now
+            role: payload.role,
+        };
 
         // Store tokens and user
-        this.storeTokens(data.accessToken, data.refreshToken);
-        this.storeUser(data.user);
+        this.storeTokens(tokens.accessToken, tokens.refreshToken);
+        this.storeUser(user);
 
         return {
-            user: data.user,
+            user,
             tokens: {
-                accessToken: data.accessToken,
-                refreshToken: data.refreshToken,
+                accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken,
             },
         };
     }
@@ -66,13 +72,14 @@ export class AuthService {
             throw new Error('Token refresh failed');
         }
 
-        const data = await response.json();
+        const refreshData = await response.json();
+        const newTokens = refreshData.data;
 
-        this.storeTokens(data.accessToken, data.refreshToken);
+        this.storeTokens(newTokens.accessToken, newTokens.refreshToken);
 
         return {
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
+            accessToken: newTokens.accessToken,
+            refreshToken: newTokens.refreshToken,
         };
     }
 

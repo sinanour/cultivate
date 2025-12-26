@@ -13,14 +13,20 @@ describe('AuthService', () => {
 
     describe('login', () => {
         it('should successfully login and store tokens', async () => {
+            // Create a valid JWT token with user info
+            const payload = {
+                userId: '1',
+                email: 'test@example.com',
+                role: 'EDITOR',
+                exp: Math.floor(Date.now() / 1000) + 3600,
+            };
+            const mockAccessToken = `header.${btoa(JSON.stringify(payload))}.signature`;
+
             const mockResponse = {
-                accessToken: 'access-token-123',
-                refreshToken: 'refresh-token-456',
-                user: {
-                    id: '1',
-                    email: 'test@example.com',
-                    name: 'Test User',
-                    role: 'EDITOR',
+                success: true,
+                data: {
+                    accessToken: mockAccessToken,
+                    refreshToken: 'refresh-token-456',
                 },
             };
 
@@ -34,8 +40,10 @@ describe('AuthService', () => {
                 password: 'password123',
             });
 
-            expect(result.user).toEqual(mockResponse.user);
-            expect(result.tokens.accessToken).toBe('access-token-123');
+            expect(result.user.id).toBe('1');
+            expect(result.user.email).toBe('test@example.com');
+            expect(result.user.role).toBe('EDITOR');
+            expect(result.tokens.accessToken).toBe(mockAccessToken);
             expect(result.tokens.refreshToken).toBe('refresh-token-456');
 
             // Check localStorage
@@ -86,8 +94,11 @@ describe('AuthService', () => {
             }));
 
             const mockResponse = {
-                accessToken: 'new-access-token',
-                refreshToken: 'new-refresh-token',
+                success: true,
+                data: {
+                    accessToken: 'new-access-token',
+                    refreshToken: 'new-refresh-token',
+                },
             };
 
             (global.fetch as any).mockResolvedValueOnce({

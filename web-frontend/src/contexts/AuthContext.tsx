@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   tokens: AuthTokens | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     tokens,
     isAuthenticated: !!tokens && !!user,
+    isLoading,
     login,
     logout,
     refreshToken,

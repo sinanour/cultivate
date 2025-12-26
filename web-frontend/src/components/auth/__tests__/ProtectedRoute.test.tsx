@@ -12,6 +12,7 @@ describe('ProtectedRoute', () => {
       user: { id: '1', email: 'test@example.com', name: 'Test', role: 'EDITOR' },
       tokens: { accessToken: 'token', refreshToken: 'refresh' },
       isAuthenticated: true,
+      isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
       refreshToken: vi.fn(),
@@ -33,6 +34,7 @@ describe('ProtectedRoute', () => {
       user: null,
       tokens: null,
       isAuthenticated: false,
+      isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
       refreshToken: vi.fn(),
@@ -60,6 +62,7 @@ describe('ProtectedRoute', () => {
       user: { id: '1', email: 'admin@example.com', name: 'Admin', role: 'ADMINISTRATOR' },
       tokens: { accessToken: 'token', refreshToken: 'refresh' },
       isAuthenticated: true,
+      isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
       refreshToken: vi.fn(),
@@ -81,6 +84,7 @@ describe('ProtectedRoute', () => {
       user: { id: '1', email: 'editor@example.com', name: 'Editor', role: 'EDITOR' },
       tokens: { accessToken: 'token', refreshToken: 'refresh' },
       isAuthenticated: true,
+      isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
       refreshToken: vi.fn(),
@@ -101,5 +105,28 @@ describe('ProtectedRoute', () => {
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.queryByText('Admin Content')).not.toBeInTheDocument();
+  });
+
+  it('should show loading state while checking authentication', () => {
+    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
+      user: null,
+      tokens: null,
+      isAuthenticated: false,
+      isLoading: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshToken: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <ProtectedRoute>
+          <div>Protected Content</div>
+        </ProtectedRoute>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
   });
 });
