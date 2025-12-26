@@ -74,7 +74,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 26: Unauthorized Action Error Messages**
     - **Validates: Requirements 9.6**
 
-- [ ] 4. Checkpoint - Verify authentication and routing
+- [x] 4. Checkpoint - Verify authentication and routing
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Implement activity type management UI
@@ -229,7 +229,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 54: Geographic Area Hierarchy Path Display**
     - **Validates: Requirements 6B.11**
 
-- [ ] 10. Checkpoint - Verify core entity management UI
+- [x] 10. Checkpoint - Verify core entity management UI
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 11. Implement activity management UI
@@ -401,7 +401,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Provide splash screen
     - _Requirements: 12.1, 12.2, 12.5_
 
-- [ ] 17. Implement form validation and error handling
+- [x] 17. Implement form validation and error handling
   - [x] 17.1 Create validation utilities
     - Validate all form inputs before submission
     - Display inline error messages
@@ -504,12 +504,12 @@ This implementation plan covers the React-based web application built with TypeS
     - Hide from non-administrators
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6_
 
-- [ ] 20. Checkpoint - Verify error handling and conflict resolution
+- [x] 20. Checkpoint - Verify error handling and conflict resolution
   - Ensure all tests pass, ask the user if questions arise.
   - Verify optimistic locking works correctly
   - Verify rate limiting is handled gracefully
 
-- [ ] 21. Final checkpoint - Ensure all tests pass
+- [x] 21. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
