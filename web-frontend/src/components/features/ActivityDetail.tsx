@@ -31,28 +31,36 @@ export function ActivityDetail() {
   });
 
   const { data: assignments = [] } = useQuery({
-    queryKey: ['assignments', id],
-    queryFn: () => AssignmentService.getAssignments(id!),
+    queryKey: ['activity-participants', id],
+    queryFn: () => ActivityService.getActivityParticipants(id!),
+    enabled: !!id,
+  });
+
+  const { data: venueHistory = [] } = useQuery({
+    queryKey: ['activity-venues', id],
+    queryFn: () => ActivityService.getActivityVenues(id!),
     enabled: !!id,
   });
 
   const queryClient = useQueryClient();
 
-  const markCompleteMutation = useMutation({
-    mutationFn: (activityId: string) => ActivityService.markComplete(activityId),
+  const updateStatusMutation = useMutation({
+    mutationFn: (data: { id: string; status: string; version: number }) =>
+      ActivityService.updateActivity(data.id, { status: data.status as any, version: data.version }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity', id] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
     },
     onError: (err: Error) => {
-      setRemoveError(err.message || 'Failed to mark activity as complete');
+      setRemoveError(err.message || 'Failed to update activity status');
     },
   });
 
   const removeAssignmentMutation = useMutation({
-    mutationFn: (assignmentId: string) => AssignmentService.removeAssignment(assignmentId),
+    mutationFn: (participantId: string) =>
+      AssignmentService.removeParticipant(id!, participantId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assignments', id] });
+      queryClient.invalidateQueries({ queryKey: ['activity-participants', id] });
       setRemoveError('');
     },
     onError: (err: Error) => {
@@ -76,15 +84,19 @@ export function ActivityDetail() {
     );
   }
 
-  const handleMarkComplete = () => {
-    if (window.confirm(`Mark "${activity.name}" as complete?`)) {
-      markCompleteMutation.mutate(activity.id);
+  const handleUpdateStatus = (newStatus: string) => {
+    if (window.confirm(`Update activity status to ${newStatus}?`)) {
+      updateStatusMutation.mutate({
+        id: activity.id,
+        status: newStatus,
+        version: activity.version,
+      });
     }
   };
 
-  const handleRemoveAssignment = (assignmentId: string) => {
+  const handleRemoveAssignment = (participantId: string) => {
     if (window.confirm('Remove this participant assignment?')) {
-      removeAssignmentMutation.mutate(assignmentId);
+      removeAssignmentMutation.mutate(participantId);
     }
   };
 
@@ -105,13 +117,33 @@ export function ActivityDetail() {
             variant="h2"
             actions={
               <SpaceBetween direction="horizontal" size="xs">
-                {!activity.isOngoing && activity.status === 'ACTIVE' && canEdit() && (
-                  <Button
-                    onClick={handleMarkComplete}
-                    loading={markCompleteMutation.isPending}
-                  >
-                    Mark Complete
-                  </Button>
+                {canEdit() && (
+                  <SpaceBetween direction="horizontal" size="xs">
+                    {activity.status !== 'COMPLETED' && (
+                      <Button
+                        onClick={() => handleUpdateStatus('COMPLETED')}
+                        loading={updateStatusMutation.isPending}
+                      >
+                        Mark Complete
+                      </Button>
+                    )}
+                    {activity.status !== 'CANCELLED' && (
+                      <Button
+                        onClick={() => handleUpdateStatus('CANCELLED')}
+                        loading={updateStatusMutation.isPending}
+                      >
+                        Cancel Activity
+                      </Button>
+                    )}
+                    {activity.status !== 'ACTIVE' && (
+                      <Button
+                        onClick={() => handleUpdateStatus('ACTIVE')}
+                        loading={updateStatusMutation.isPending}
+                      >
+                        Set Active
+                      </Button>
+                    )}
+                  </SpaceBetween>
                 )}
                 <Button onClick={() => navigate('/activities')}>
                   Back to Activities
@@ -132,7 +164,17 @@ export function ActivityDetail() {
             <Box variant="awsui-key-label">Status</Box>
             <div>
               <SpaceBetween direction="horizontal" size="xs">
-                <Badge color={activity.status === 'ACTIVE' ? 'green' : 'grey'}>
+                <Badge
+                  color={
+                    activity.status === 'PLANNED'
+                      ? 'blue'
+                      : activity.status === 'ACTIVE'
+                      ? 'green'
+                      : activity.status === 'CANCELLED'
+                      ? 'red'
+                      : 'grey'
+                  }
+                >
                   {activity.status}
                 </Badge>
                 {activity.isOngoing && <Badge color="blue">Ongoing</Badge>}
@@ -156,7 +198,7 @@ export function ActivityDetail() {
         </ColumnLayout>
       </Container>
 
-      {activity.venues && activity.venues.length > 0 && (
+      {venueHistory && venueHistory.length > 0 && (
         <Container header={<Header variant="h3">Venue History</Header>}>
           <Table
             columnDefinitions={[
@@ -181,7 +223,7 @@ export function ActivityDetail() {
                 cell: (item) => item.effectiveTo ? new Date(item.effectiveTo).toLocaleDateString() : 'Current',
               },
             ]}
-            items={activity.venues}
+            items={venueHistory}
             empty={
               <Box textAlign="center" color="inherit">
                 <b>No venue history</b>
@@ -232,7 +274,7 @@ export function ActivityDetail() {
                   canEdit() && (
                     <Button
                       variant="inline-link"
-                      onClick={() => handleRemoveAssignment(item.id)}
+                      onClick={() => handleRemoveAssignment(item.participantId)}
                     >
                       Remove
                     </Button>

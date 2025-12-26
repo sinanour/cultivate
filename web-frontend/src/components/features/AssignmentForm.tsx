@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Select from '@cloudscape-design/components/select';
+import Textarea from '@cloudscape-design/components/textarea';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
@@ -22,6 +23,7 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
   const queryClient = useQueryClient();
   const [participantId, setParticipantId] = useState('');
   const [roleId, setRoleId] = useState('');
+  const [notes, setNotes] = useState('');
   
   const [participantError, setParticipantError] = useState('');
   const [roleError, setRoleError] = useState('');
@@ -52,9 +54,10 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
       activityId: string;
       participantId: string;
       roleId: string;
-    }) => AssignmentService.assignParticipant(data.activityId, data.participantId, data.roleId),
+      notes?: string;
+    }) => AssignmentService.addParticipant(data.activityId, data.participantId, data.roleId, data.notes),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assignments', activityId] });
+      queryClient.invalidateQueries({ queryKey: ['activity-participants', activityId] });
       onSuccess();
     },
     onError: (err: Error) => {
@@ -102,12 +105,16 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
       return;
     }
 
-    // Check for duplicate assignment
     if (!checkDuplicate(participantId, roleId)) {
       return;
     }
 
-    assignMutation.mutate({ activityId, participantId, roleId });
+    assignMutation.mutate({
+      activityId,
+      participantId,
+      roleId,
+      notes: notes.trim() || undefined,
+    });
   };
 
   const isSubmitting = assignMutation.isPending;
@@ -156,6 +163,15 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
               placeholder="Select a role"
               disabled={isSubmitting}
               empty="No roles available"
+            />
+          </FormField>
+          <FormField label="Notes" constraintText="Optional">
+            <Textarea
+              value={notes}
+              onChange={({ detail }) => setNotes(detail.value)}
+              placeholder="Enter any notes about this assignment"
+              disabled={isSubmitting}
+              rows={3}
             />
           </FormField>
         </SpaceBetween>
