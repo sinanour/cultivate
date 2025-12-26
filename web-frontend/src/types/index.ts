@@ -152,3 +152,20 @@ export interface GeographicAreaStatistics {
     totalVenues: number;
     activeActivities: number;
 }
+
+export interface APIResponse<T> {
+    success: boolean;
+    data: T;
+    pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+export interface APIError {
+    code: string;
+    message: string;
+    details?: any;
+}

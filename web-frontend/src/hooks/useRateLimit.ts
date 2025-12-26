@@ -12,10 +12,10 @@ interface UseRateLimitOptions {
 export function useRateLimit({ onRetry }: UseRateLimitOptions = {}) {
     const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(null);
     const [showNotification, setShowNotification] = useState(false);
-    const [retryTimeoutId, setRetryTimeoutId] = useState<NodeJS.Timeout | null>(null);
+    const [retryTimeoutId, setRetryTimeoutId] = useState<ReturnType<typeof setTimeout> | null>(null);
 
     const handleError = useCallback(
-        (error: any): boolean => {
+        (error: Error & { response?: { status: number; headers?: Record<string, string> } }): boolean => {
             if (isRateLimitError(error)) {
                 const info = extractRateLimitInfo(error);
                 if (info) {

@@ -7,12 +7,10 @@ import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import Select from '@cloudscape-design/components/select';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AnalyticsService } from '../../services/api/analytics.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export function EngagementDashboard() {
   const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string } | null>(null);
@@ -109,54 +107,19 @@ export function EngagementDashboard() {
           </Box>
         </Container>
         <Container>
-          <Box variant="awsui-key-label">Ongoing Activities</Box>
+          <Box variant="awsui-key-label">Participation Rate</Box>
           <Box fontSize="display-l" fontWeight="bold">
-            {metrics.ongoingActivities}
+            {(metrics.participationRate * 100).toFixed(1)}%
           </Box>
         </Container>
       </ColumnLayout>
-
-      <Container header={<Header variant="h3">Activities by Type</Header>}>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={metrics.activitiesByType}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="type" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="count" fill="#0088FE" />
-          </BarChart>
-        </ResponsiveContainer>
-      </Container>
-
-      <Container header={<Header variant="h3">Role Distribution</Header>}>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={metrics.roleDistribution}
-              dataKey="count"
-              nameKey="role"
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              label
-            >
-              {metrics.roleDistribution.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </Container>
 
       {metrics.geographicBreakdown && metrics.geographicBreakdown.length > 0 && (
         <Container header={<Header variant="h3">Geographic Breakdown</Header>}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={metrics.geographicBreakdown}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="area" />
+              <XAxis dataKey="geographicAreaName" />
               <YAxis />
               <Tooltip />
               <Legend />

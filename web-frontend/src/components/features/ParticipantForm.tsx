@@ -87,7 +87,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       queryClient.invalidateQueries({ queryKey: ['participants'] });
       onSuccess();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       if (!versionConflict.handleError(err)) {
         setError(err.message || 'Failed to update participant');
       }

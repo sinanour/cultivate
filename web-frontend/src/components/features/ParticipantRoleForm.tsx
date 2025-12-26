@@ -48,7 +48,7 @@ export function ParticipantRoleForm({ role, onSuccess, onCancel }: ParticipantRo
       queryClient.invalidateQueries({ queryKey: ['participantRoles'] });
       onSuccess();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       if (isVersionConflict(err)) {
         const info = extractVersionConflictInfo(err);
         setConflictInfo(info);

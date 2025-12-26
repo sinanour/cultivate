@@ -1,23 +1,7 @@
 import { AuthService } from '../auth/auth.service';
+import type { APIError } from '../../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
-
-interface APIResponse<T> {
-    success: boolean;
-    data: T;
-    pagination?: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
-}
-
-interface APIError {
-    code: string;
-    message: string;
-    details?: any;
-}
 
 export class ApiClient {
     private static async getHeaders(): Promise<HeadersInit> {
@@ -74,7 +58,7 @@ export class ApiClient {
             try {
                 await AuthService.refreshToken();
                 return this.get<T>(endpoint);
-            } catch (error) {
+            } catch {
                 window.location.href = '/login';
                 throw new Error('Authentication failed');
             }
@@ -94,7 +78,7 @@ export class ApiClient {
             try {
                 await AuthService.refreshToken();
                 return this.post<T>(endpoint, data);
-            } catch (error) {
+            } catch {
                 window.location.href = '/login';
                 throw new Error('Authentication failed');
             }
@@ -114,7 +98,7 @@ export class ApiClient {
             try {
                 await AuthService.refreshToken();
                 return this.put<T>(endpoint, data);
-            } catch (error) {
+            } catch {
                 window.location.href = '/login';
                 throw new Error('Authentication failed');
             }
@@ -133,7 +117,7 @@ export class ApiClient {
             try {
                 await AuthService.refreshToken();
                 return this.delete<T>(endpoint);
-            } catch (error) {
+            } catch {
                 window.location.href = '/login';
                 throw new Error('Authentication failed');
             }

@@ -18,12 +18,10 @@ interface UserFormProps {
 
 export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(user?.role || 'READ_ONLY');
   
-  const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
@@ -36,7 +34,6 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
 
   const createMutation = useMutation({
     mutationFn: (data: {
-      name: string;
       email: string;
       password: string;
       role: UserRole;
@@ -53,13 +50,11 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const updateMutation = useMutation({
     mutationFn: (data: {
       id: string;
-      name?: string;
       email?: string;
       password?: string;
       role?: UserRole;
     }) =>
       UserService.updateUser(data.id, {
-        name: data.name,
         email: data.email,
         password: data.password,
         role: data.role,
@@ -72,16 +67,6 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       setError(err.message || 'Failed to update user');
     },
   });
-
-  const validateName = (value: string): boolean => {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setNameError('Name is required');
-      return false;
-    }
-    setNameError('');
-    return true;
-  };
 
   const validateEmail = (value: string): boolean => {
     const trimmed = value.trim();
@@ -123,28 +108,30 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     e.preventDefault();
     setError('');
 
-    const isNameValid = validateName(name);
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password, !!user);
 
-    if (!isNameValid || !isEmailValid || !isPasswordValid) {
+    if (!isEmailValid || !isPasswordValid) {
       return;
     }
 
     if (user) {
-      const updateData: any = {
+      const updateData: {
+        id: string;
+        role: UserRole;
+        email?: string;
+        password?: string;
+      } = {
         id: user.id,
         role,
       };
       
-      if (name !== user.name) updateData.name = name.trim();
       if (email !== user.email) updateData.email = email.trim();
       if (password) updateData.password = password;
       
       updateMutation.mutate(updateData);
     } else {
       createMutation.mutate({
-        name: name.trim(),
         email: email.trim(),
         password,
         role,
@@ -174,18 +161,6 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
               {error}
             </Alert>
           )}
-          <FormField label="Name" errorText={nameError} constraintText="Required">
-            <Input
-              value={name}
-              onChange={({ detail }) => {
-                setName(detail.value);
-                if (nameError) validateName(detail.value);
-              }}
-              onBlur={() => validateName(name)}
-              placeholder="Enter user name"
-              disabled={isSubmitting}
-            />
-          </FormField>
           <FormField label="Email" errorText={emailError} constraintText="Required">
             <Input
               value={email}

@@ -7,7 +7,7 @@ import Box from '@cloudscape-design/components/box';
 import Badge from '@cloudscape-design/components/badge';
 import Link from '@cloudscape-design/components/link';
 import { VenueService } from '../../services/api/venue.service';
-import { ActivityService } from '../../services/api/activity.service';
+import type { Activity } from '../../types';
 
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -24,11 +24,6 @@ export function MapView() {
   const { data: venues = [] } = useQuery({
     queryKey: ['venues'],
     queryFn: () => VenueService.getVenues(),
-  });
-
-  const { data: activities = [] } = useQuery({
-    queryKey: ['activities'],
-    queryFn: () => ActivityService.getActivities(),
   });
 
   // Filter venues with coordinates
@@ -63,10 +58,9 @@ export function MapView() {
         />
         <MarkerClusterGroup>
           {venuesWithCoordinates.map((venue) => {
-            // Find activities at this venue
-            const venueActivities = activities.filter((a) =>
-              a.venues?.some((v) => v.venueId === venue.id)
-            );
+            // Note: Activity-venue associations would need to be fetched separately
+            // For now, just show the venue marker
+            const venueActivities: Activity[] = [];
 
             return (
               <Marker

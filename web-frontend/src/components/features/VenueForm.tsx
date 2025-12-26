@@ -90,7 +90,7 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
       queryClient.invalidateQueries({ queryKey: ['venues'] });
       onSuccess();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       if (!versionConflict.handleError(err)) {
         setError(err.message || 'Failed to update venue');
       }

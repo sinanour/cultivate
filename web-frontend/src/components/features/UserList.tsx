@@ -64,12 +64,6 @@ export function UserList() {
       <Table
         columnDefinitions={[
           {
-            id: 'name',
-            header: 'Name',
-            cell: (item) => item.name,
-            sortingField: 'name',
-          },
-          {
             id: 'email',
             header: 'Email',
             cell: (item) => item.email,

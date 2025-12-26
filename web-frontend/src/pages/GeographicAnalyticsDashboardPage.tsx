@@ -7,21 +7,28 @@ import {
     Table,
     Box,
     DateRangePicker,
-    DateRangePickerProps,
+    type DateRangePickerProps,
 } from '@cloudscape-design/components';
 import { AnalyticsService } from '../services/api/analytics.service';
 import type { GeographicAnalytics } from '../types';
 
-export function GeographicAnalyticsDashboardPage() {
+export default function GeographicAnalyticsDashboardPage() {
     const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(null);
 
     const { data: geographicData, isLoading } = useQuery({
         queryKey: ['geographic-analytics', dateRange],
-        queryFn: () =>
-            AnalyticsService.getGeographicAnalytics(
-                dateRange?.startDate || undefined,
-                dateRange?.endDate || undefined
-            ),
+        queryFn: () => {
+            // Extract dates from the date range value
+            let startDate: string | undefined;
+            let endDate: string | undefined;
+
+            if (dateRange?.type === 'absolute') {
+                startDate = dateRange.startDate;
+                endDate = dateRange.endDate;
+            }
+
+            return AnalyticsService.getGeographicAnalytics(startDate, endDate);
+        },
     });
 
     return (

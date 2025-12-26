@@ -13,6 +13,7 @@ import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import { ActivityService } from '../../services/api/activity.service';
+import type { Activity } from '../../types';
 import { AssignmentService } from '../../services/api/assignment.service';
 import { AssignmentForm } from './AssignmentForm';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -46,7 +47,7 @@ export function ActivityDetail() {
 
   const updateStatusMutation = useMutation({
     mutationFn: (data: { id: string; status: string; version: number }) =>
-      ActivityService.updateActivity(data.id, { status: data.status as any, version: data.version }),
+      ActivityService.updateActivity(data.id, { status: data.status as Activity['status'], version: data.version }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity', id] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });

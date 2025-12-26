@@ -44,13 +44,24 @@ export function GrowthDashboard() {
     return <LoadingSpinner text="Loading growth metrics..." />;
   }
 
-  if (!metrics) {
+  if (!metrics || metrics.length === 0) {
     return (
       <Box textAlign="center" padding="xxl">
         <b>No data available</b>
       </Box>
     );
   }
+
+  // Calculate percentage changes
+  const participantChange = metrics.length >= 2
+    ? ((metrics[metrics.length - 1].newParticipants - metrics[metrics.length - 2].newParticipants) / 
+       (metrics[metrics.length - 2].newParticipants || 1)) * 100
+    : 0;
+
+  const activityChange = metrics.length >= 2
+    ? ((metrics[metrics.length - 1].newActivities - metrics[metrics.length - 2].newActivities) / 
+       (metrics[metrics.length - 2].newActivities || 1)) * 100
+    : 0;
 
   return (
     <SpaceBetween size="l">
@@ -76,21 +87,21 @@ export function GrowthDashboard() {
       <ColumnLayout columns={2} variant="text-grid">
         <Container>
           <Box variant="awsui-key-label">Participant Change</Box>
-          <Box fontSize="display-l" fontWeight="bold" color={metrics.participantChange >= 0 ? 'text-status-success' : 'text-status-error'}>
-            {metrics.participantChange >= 0 ? '+' : ''}{metrics.participantChange}%
+          <Box fontSize="display-l" fontWeight="bold" color={participantChange >= 0 ? 'text-status-success' : 'text-status-error'}>
+            {participantChange >= 0 ? '+' : ''}{participantChange.toFixed(1)}%
           </Box>
         </Container>
         <Container>
           <Box variant="awsui-key-label">Activity Change</Box>
-          <Box fontSize="display-l" fontWeight="bold" color={metrics.activityChange >= 0 ? 'text-status-success' : 'text-status-error'}>
-            {metrics.activityChange >= 0 ? '+' : ''}{metrics.activityChange}%
+          <Box fontSize="display-l" fontWeight="bold" color={activityChange >= 0 ? 'text-status-success' : 'text-status-error'}>
+            {activityChange >= 0 ? '+' : ''}{activityChange.toFixed(1)}%
           </Box>
         </Container>
       </ColumnLayout>
 
       <Container header={<Header variant="h3">New Participants and Activities</Header>}>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart>
+          <LineChart data={metrics}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis />
@@ -98,15 +109,13 @@ export function GrowthDashboard() {
             <Legend />
             <Line
               type="monotone"
-              dataKey="count"
-              data={metrics.newParticipants}
+              dataKey="newParticipants"
               stroke="#0088FE"
               name="New Participants"
             />
             <Line
               type="monotone"
-              dataKey="count"
-              data={metrics.newActivities}
+              dataKey="newActivities"
               stroke="#00C49F"
               name="New Activities"
             />
@@ -116,7 +125,7 @@ export function GrowthDashboard() {
 
       <Container header={<Header variant="h3">Cumulative Growth</Header>}>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart>
+          <AreaChart data={metrics}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis />
@@ -124,8 +133,7 @@ export function GrowthDashboard() {
             <Legend />
             <Area
               type="monotone"
-              dataKey="count"
-              data={metrics.cumulativeParticipants}
+              dataKey="cumulativeParticipants"
               stroke="#0088FE"
               fill="#0088FE"
               fillOpacity={0.6}
@@ -133,8 +141,7 @@ export function GrowthDashboard() {
             />
             <Area
               type="monotone"
-              dataKey="count"
-              data={metrics.cumulativeActivities}
+              dataKey="cumulativeActivities"
               stroke="#00C49F"
               fill="#00C49F"
               fillOpacity={0.6}

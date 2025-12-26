@@ -90,7 +90,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       onSuccess();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       if (!versionConflict.handleError(err)) {
         setError(err.message || 'Failed to update activity');
       }
@@ -217,7 +217,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
             <FormField label="Status" constraintText="Required">
               <Select
                 selectedOption={STATUS_OPTIONS.find((o) => o.value === status) || STATUS_OPTIONS[0]}
-                onChange={({ detail }) => setStatus(detail.selectedOption.value as any)}
+                onChange={({ detail }) => setStatus(detail.selectedOption.value as Activity['status'])}
                 options={STATUS_OPTIONS}
                 disabled={isSubmitting}
               />

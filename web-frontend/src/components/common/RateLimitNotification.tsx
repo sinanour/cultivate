@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Flashbar, FlashbarProps } from '@cloudscape-design/components';
+import { Flashbar, type FlashbarProps } from '@cloudscape-design/components';
 import type { RateLimitInfo } from '../../utils/rate-limit.utils';
 import { formatRetryAfter, getTimeUntilReset } from '../../utils/rate-limit.utils';
 

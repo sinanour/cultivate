@@ -16,7 +16,7 @@ describe('ApiClient', () => {
 
     describe('get', () => {
         it('should make GET request with auth header', async () => {
-            (global.fetch as any).mockResolvedValueOnce({
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ data: 'test' }),
             });

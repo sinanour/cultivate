@@ -48,7 +48,7 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
       queryClient.invalidateQueries({ queryKey: ['activityTypes'] });
       onSuccess();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       if (isVersionConflict(err)) {
         const info = extractVersionConflictInfo(err);
         setConflictInfo(info);

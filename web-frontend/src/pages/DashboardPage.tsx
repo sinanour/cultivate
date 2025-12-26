@@ -13,7 +13,7 @@ export default function DashboardPage() {
     <ContentLayout
       header={
         <Header variant="h1">
-          Welcome, {user?.name || 'User'}
+          Welcome, {user?.email || 'User'}
         </Header>
       }
     >

@@ -114,8 +114,8 @@ export function GeographicAreaDetail() {
               <div>{statistics.totalParticipants}</div>
             </div>
             <div>
-              <Box variant="awsui-key-label">Ongoing Activities</Box>
-              <div>{statistics.ongoingActivities}</div>
+              <Box variant="awsui-key-label">Total Venues</Box>
+              <div>{statistics.totalVenues}</div>
             </div>
           </ColumnLayout>
         </Container>

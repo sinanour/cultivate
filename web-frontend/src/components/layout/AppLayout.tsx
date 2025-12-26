@@ -1,7 +1,7 @@
 import { Suspense, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AppLayoutComponent from '@cloudscape-design/components/app-layout';
-import SideNavigation from '@cloudscape-design/components/side-navigation';
+import SideNavigation, { type SideNavigationProps } from '@cloudscape-design/components/side-navigation';
 import TopNavigation from '@cloudscape-design/components/top-navigation';
 import Spinner from '@cloudscape-design/components/spinner';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,7 +14,7 @@ export function AppLayout() {
   const { isOnline } = useConnectionStatus();
   const [navigationOpen, setNavigationOpen] = useState(true);
 
-  const navigationItems = [
+  const baseNavigationItems: SideNavigationProps['items'] = [
     { type: 'link', text: 'Dashboard', href: '/dashboard' },
     { type: 'divider' },
     {
@@ -56,18 +56,19 @@ export function AppLayout() {
   ];
 
   // Add Users section for administrators
-  if (user?.role === 'ADMINISTRATOR') {
-    navigationItems.push(
-      { type: 'divider' },
-      {
-        type: 'section',
-        text: 'Administration',
-        items: [
-          { type: 'link', text: 'Users', href: '/users' },
-        ],
-      }
-    );
-  }
+  const navigationItems: SideNavigationProps['items'] = user?.role === 'ADMINISTRATOR'
+    ? [
+        ...baseNavigationItems,
+        { type: 'divider' },
+        {
+          type: 'section',
+          text: 'Administration',
+          items: [
+            { type: 'link', text: 'Users', href: '/users' },
+          ],
+        },
+      ]
+    : baseNavigationItems;
 
   return (
     <>
@@ -112,7 +113,7 @@ export function AppLayout() {
         navigation={
           <SideNavigation
             activeHref={location.pathname}
-            items={navigationItems as any}
+            items={navigationItems}
             onFollow={(event) => {
               event.preventDefault();
               navigate(event.detail.href);
@@ -120,7 +121,7 @@ export function AppLayout() {
           />
         }
         navigationOpen={navigationOpen}
-        onNavigationChange={({ detail }: any) => setNavigationOpen(detail.open)}
+        onNavigationChange={({ detail }: { detail: { open: boolean } }) => setNavigationOpen(detail.open)}
         content={
           <Suspense fallback={<Spinner size="large" />}>
             <Outlet />

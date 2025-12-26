@@ -3,14 +3,12 @@ import { ApiClient } from './api.client';
 
 interface CreateUserData {
     email: string;
-    name: string;
     password: string;
     role: UserRole;
 }
 
 interface UpdateUserData {
     email?: string;
-    name?: string;
     password?: string;
     role?: UserRole;
 }

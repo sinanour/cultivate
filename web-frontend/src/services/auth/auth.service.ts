@@ -149,7 +149,7 @@ export class AuthService {
             }
             const exp = payload.exp * 1000;
             return Date.now() >= exp;
-        } catch (error) {
+        } catch {
             return true;
         }
     }

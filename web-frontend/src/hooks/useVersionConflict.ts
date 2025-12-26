@@ -17,7 +17,7 @@ export function useVersionConflict({ queryKey, onRetry, onDiscard }: UseVersionC
     const [conflictInfo, setConflictInfo] = useState<VersionConflictInfo | null>(null);
     const [showConflictModal, setShowConflictModal] = useState(false);
 
-    const handleError = (error: any): boolean => {
+    const handleError = (error: Error & { response?: { status: number; data?: { code?: string } } }): boolean => {
         if (isVersionConflict(error)) {
             const info = extractVersionConflictInfo(error);
             setConflictInfo(info);
