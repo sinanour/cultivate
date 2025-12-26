@@ -16,14 +16,14 @@ describe('RoleService', () => {
     describe('getAllRoles', () => {
         it('should return all roles', async () => {
             const mockRoles = [
-                { id: '1', name: 'Participant', createdAt: new Date(), updatedAt: new Date() },
-                { id: '2', name: 'Organizer', createdAt: new Date(), updatedAt: new Date() },
+                { id: '1', name: 'Participant', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '2', name: 'Organizer', createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
             mockRepository.findAll = jest.fn().mockResolvedValue(mockRoles);
 
             const result = await service.getAllRoles();
 
-            expect(result).toEqual(mockRoles);
+            expect(result).toEqual(mockRoles.map(r => ({ ...r, isPredefined: true })));
             expect(mockRepository.findAll).toHaveBeenCalled();
         });
 
@@ -39,14 +39,14 @@ describe('RoleService', () => {
     describe('createRole', () => {
         it('should create role with valid data', async () => {
             const input = { name: 'Volunteer' };
-            const mockRole = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date() };
+            const mockRole = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
             mockRepository.findByName = jest.fn().mockResolvedValue(null);
             mockRepository.create = jest.fn().mockResolvedValue(mockRole);
 
             const result = await service.createRole(input);
 
-            expect(result).toEqual(mockRole);
+            expect(result).toEqual({ ...mockRole, isPredefined: true });
             expect(mockRepository.findByName).toHaveBeenCalledWith('Volunteer');
             expect(mockRepository.create).toHaveBeenCalledWith(input);
         });
@@ -71,7 +71,7 @@ describe('RoleService', () => {
         it('should update role with valid data', async () => {
             const id = '1';
             const input = { name: 'Updated Volunteer' };
-            const existing = { id, name: 'Volunteer', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Volunteer', createdAt: new Date(), updatedAt: new Date(), version: 1 };
             const updated = { ...existing, ...input };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
@@ -80,7 +80,7 @@ describe('RoleService', () => {
 
             const result = await service.updateRole(id, input);
 
-            expect(result).toEqual(updated);
+            expect(result).toEqual({ ...updated, isPredefined: false });
             expect(mockRepository.update).toHaveBeenCalledWith(id, input);
         });
 

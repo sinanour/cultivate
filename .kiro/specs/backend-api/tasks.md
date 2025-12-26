@@ -101,7 +101,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 46E: Root Administrator Role Assignment**
     - **Validates: Requirements 10.10, 10.11, 10.12, 10.13, 10.14**
 
-- [ ] 4. Checkpoint - Verify authentication and authorization
+- [-] 4. Checkpoint - Verify authentication and authorization
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 5. Implement activity type management
@@ -455,7 +455,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 - [ ] 20. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 21. Align implementation with API contract
+- [x] 21. Align implementation with API contract
   - [x] 21.1 Add missing response wrapper fields
     - Add `isPredefined` field to ActivityType and Role responses
     - Add `version` field to all entity responses for optimistic locking
@@ -494,7 +494,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Add rate limit headers to responses
     - _Requirements: API Contract alignment_
 
-  - [-] 21.7 Add API versioning support
+  - [x] 21.7 Add API versioning support
     - Update base path from /api to /api/v1
     - Update all route registrations
     - Update OpenAPI specification

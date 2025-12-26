@@ -16,14 +16,14 @@ describe('ActivityTypeService', () => {
     describe('getAllActivityTypes', () => {
         it('should return all activity types', async () => {
             const mockTypes = [
-                { id: '1', name: 'Workshop', createdAt: new Date(), updatedAt: new Date() },
-                { id: '2', name: 'Meeting', createdAt: new Date(), updatedAt: new Date() },
+                { id: '1', name: 'Workshop', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '2', name: 'Meeting', createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
             mockRepository.findAll = jest.fn().mockResolvedValue(mockTypes);
 
             const result = await service.getAllActivityTypes();
 
-            expect(result).toEqual(mockTypes);
+            expect(result).toEqual(mockTypes.map(t => ({ ...t, isPredefined: true })));
             expect(mockRepository.findAll).toHaveBeenCalled();
         });
 
@@ -39,14 +39,14 @@ describe('ActivityTypeService', () => {
     describe('createActivityType', () => {
         it('should create activity type with valid data', async () => {
             const input = { name: 'Workshop' };
-            const mockType = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date() };
+            const mockType = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
             mockRepository.findByName = jest.fn().mockResolvedValue(null);
             mockRepository.create = jest.fn().mockResolvedValue(mockType);
 
             const result = await service.createActivityType(input);
 
-            expect(result).toEqual(mockType);
+            expect(result).toEqual({ ...mockType, isPredefined: true });
             expect(mockRepository.findByName).toHaveBeenCalledWith('Workshop');
             expect(mockRepository.create).toHaveBeenCalledWith(input);
         });
@@ -71,7 +71,7 @@ describe('ActivityTypeService', () => {
         it('should update activity type with valid data', async () => {
             const id = '1';
             const input = { name: 'Updated Workshop' };
-            const existing = { id, name: 'Workshop', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Workshop', createdAt: new Date(), updatedAt: new Date(), version: 1 };
             const updated = { ...existing, ...input };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
@@ -80,7 +80,7 @@ describe('ActivityTypeService', () => {
 
             const result = await service.updateActivityType(id, input);
 
-            expect(result).toEqual(updated);
+            expect(result).toEqual({ ...updated, isPredefined: false });
             expect(mockRepository.update).toHaveBeenCalledWith(id, input);
         });
 

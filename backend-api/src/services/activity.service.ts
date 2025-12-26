@@ -46,7 +46,7 @@ export class ActivityService {
   }
 
   async getAllActivitiesPaginated(page?: number, limit?: number): Promise<PaginatedResponse<Activity>> {
-    const { page: validPage, limit: validLimit, skip } = PaginationHelper.validateAndNormalize({ page, limit });
+    const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
     const { data, total } = await this.activityRepository.findAllPaginated(validPage, validLimit);
     const activitiesWithComputed = data.map((a) => this.addComputedFields(a));
     return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);

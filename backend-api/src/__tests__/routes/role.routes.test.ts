@@ -121,8 +121,7 @@ describe('RoleRoutes', () => {
                 .delete(`/api/roles/${id}`)
                 .set('Authorization', 'Bearer valid-token');
 
-            expect(response.status).toBe(200);
-            expect(response.body).toHaveProperty('success', true);
+            expect(response.status).toBe(204);
         });
 
         it('should return 404 for non-existent role', async () => {
