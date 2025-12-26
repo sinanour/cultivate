@@ -105,8 +105,10 @@ export const queryRateLimiter = rateLimit({
  */
 export const addRateLimitHeaders = (_req: any, res: any, next: any) => {
     // The rate limit middleware already adds RateLimit-* headers
-    // We just need to map them to X-RateLimit-* for backward compatibility
-    res.on('finish', () => {
+    // We need to map them to X-RateLimit-* for backward compatibility
+    // Use 'header' event which fires before headers are sent
+    const originalWriteHead = res.writeHead;
+    res.writeHead = function (this: any, ...args: any[]) {
         const limit = res.getHeader('RateLimit-Limit');
         const remaining = res.getHeader('RateLimit-Remaining');
         const reset = res.getHeader('RateLimit-Reset');
@@ -114,7 +116,9 @@ export const addRateLimitHeaders = (_req: any, res: any, next: any) => {
         if (limit) res.setHeader('X-RateLimit-Limit', limit);
         if (remaining) res.setHeader('X-RateLimit-Remaining', remaining);
         if (reset) res.setHeader('X-RateLimit-Reset', reset);
-    });
+
+        return originalWriteHead.apply(this, args);
+    };
 
     next();
 };
