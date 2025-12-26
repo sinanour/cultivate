@@ -1,4 +1,4 @@
-import { expect, afterEach, beforeAll } from 'vitest';
+import { expect, afterEach, beforeAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import 'fake-indexeddb/auto';
@@ -37,6 +37,21 @@ class LocalStorageMock {
 
 beforeAll(() => {
   global.localStorage = new LocalStorageMock() as Storage;
+
+  // Suppress React error boundary console errors in tests
+  // These are expected when testing error conditions
+  const originalError = console.error;
+  vi.spyOn(console, 'error').mockImplementation((...args) => {
+    // Filter out React error boundary messages
+    const message = args[0]?.toString() || '';
+    if (
+      message.includes('Error: useNotification must be used within') ||
+      message.includes('The above error occurred in')
+    ) {
+      return;
+    }
+    originalError(...args);
+  });
 });
 
 afterEach(() => {
