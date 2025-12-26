@@ -30,6 +30,24 @@ export class VenueRepository {
     });
   }
 
+  async findAllPaginated(page: number, limit: number): Promise<{ data: Venue[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.venue.findMany({
+        skip,
+        take: limit,
+        orderBy: { name: 'asc' },
+        include: {
+          geographicArea: true,
+        },
+      }),
+      this.prisma.venue.count(),
+    ]);
+
+    return { data, total };
+  }
+
   async findById(id: string): Promise<Venue | null> {
     return this.prisma.venue.findUnique({
       where: { id },

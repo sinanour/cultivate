@@ -23,6 +23,21 @@ export class ParticipantRepository {
     });
   }
 
+  async findAllPaginated(page: number, limit: number): Promise<{ data: Participant[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.participant.findMany({
+        skip,
+        take: limit,
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.participant.count(),
+    ]);
+
+    return { data, total };
+  }
+
   async findById(id: string): Promise<Participant | null> {
     return this.prisma.participant.findUnique({
       where: { id },

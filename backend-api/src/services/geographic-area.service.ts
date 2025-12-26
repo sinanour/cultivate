@@ -1,5 +1,6 @@
 import { GeographicArea, AreaType, PrismaClient } from '@prisma/client';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
+import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 
 export interface CreateGeographicAreaInput {
     name: string;
@@ -28,6 +29,12 @@ export class GeographicAreaService {
 
     async getAllGeographicAreas(): Promise<GeographicArea[]> {
         return this.geographicAreaRepository.findAll();
+    }
+
+    async getAllGeographicAreasPaginated(page?: number, limit?: number): Promise<PaginatedResponse<GeographicArea>> {
+        const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
+        const { data, total } = await this.geographicAreaRepository.findAllPaginated(validPage, validLimit);
+        return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 
     async getGeographicAreaById(id: string): Promise<GeographicArea> {

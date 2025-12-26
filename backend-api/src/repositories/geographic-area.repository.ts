@@ -24,6 +24,42 @@ export class GeographicAreaRepository {
     });
   }
 
+  async findAllPaginated(page: number, limit: number): Promise<{ data: GeographicArea[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.geographicArea.findMany({
+        skip,
+        take: limit,
+        orderBy: { name: 'asc' },
+        include: {
+          parent: true,
+        },
+      }),
+      this.prisma.geographicArea.count(),
+    ]);
+
+    return { data, total };
+  }
+
+  async findAllPaginated(page: number, limit: number): Promise<{ data: GeographicArea[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.geographicArea.findMany({
+        skip,
+        take: limit,
+        orderBy: { name: 'asc' },
+        include: {
+          parent: true,
+        },
+      }),
+      this.prisma.geographicArea.count(),
+    ]);
+
+    return { data, total };
+  }
+
   async findById(id: string): Promise<GeographicArea | null> {
     return this.prisma.geographicArea.findUnique({
       where: { id },

@@ -28,6 +28,24 @@ export class ActivityRepository {
     });
   }
 
+  async findAllPaginated(page: number, limit: number): Promise<{ data: Activity[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.activity.findMany({
+        skip,
+        take: limit,
+        orderBy: { startDate: 'desc' },
+        include: {
+          activityType: true,
+        },
+      }),
+      this.prisma.activity.count(),
+    ]);
+
+    return { data, total };
+  }
+
   async findById(id: string): Promise<Activity | null> {
     return this.prisma.activity.findUnique({
       where: { id },

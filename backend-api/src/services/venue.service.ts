@@ -1,6 +1,7 @@
 import { Venue, VenueType } from '@prisma/client';
 import { VenueRepository } from '../repositories/venue.repository';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
+import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 
 export interface CreateVenueInput {
     name: string;
@@ -28,6 +29,12 @@ export class VenueService {
 
     async getAllVenues(): Promise<Venue[]> {
         return this.venueRepository.findAll();
+    }
+
+    async getAllVenuesPaginated(page?: number, limit?: number): Promise<PaginatedResponse<Venue>> {
+        const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
+        const { data, total } = await this.venueRepository.findAllPaginated(validPage, validLimit);
+        return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 
     async getVenueById(id: string): Promise<Venue> {

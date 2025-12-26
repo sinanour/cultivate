@@ -3,6 +3,7 @@ import { ActivityRepository } from '../repositories/activity.repository';
 import { ActivityTypeRepository } from '../repositories/activity-type.repository';
 import { ActivityVenueHistoryRepository } from '../repositories/activity-venue-history.repository';
 import { VenueRepository } from '../repositories/venue.repository';
+import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 
 export interface CreateActivityInput {
   name: string;
@@ -41,6 +42,13 @@ export class ActivityService {
   async getAllActivities(): Promise<Activity[]> {
     const activities = await this.activityRepository.findAll();
     return activities.map((a) => this.addComputedFields(a));
+  }
+
+  async getAllActivitiesPaginated(page?: number, limit?: number): Promise<PaginatedResponse<Activity>> {
+    const { page: validPage, limit: validLimit, skip } = PaginationHelper.validateAndNormalize({ page, limit });
+    const { data, total } = await this.activityRepository.findAllPaginated(validPage, validLimit);
+    const activitiesWithComputed = data.map((a) => this.addComputedFields(a));
+    return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);
   }
 
   async getActivityById(id: string): Promise<Activity> {

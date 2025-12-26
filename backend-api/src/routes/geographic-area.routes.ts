@@ -96,11 +96,27 @@ export class GeographicAreaRoutes {
         );
     }
 
-    private async getAll(_req: AuthenticatedRequest, res: Response) {
+    private async getAll(req: AuthenticatedRequest, res: Response) {
         try {
-            const areas = await this.geographicAreaService.getAllGeographicAreas();
-            res.status(200).json({ success: true, data: areas });
+            const page = req.query.page ? parseInt(req.query.page as string) : undefined;
+            const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+
+            if (page !== undefined || limit !== undefined) {
+                const result = await this.geographicAreaService.getAllGeographicAreasPaginated(page, limit);
+                res.status(200).json({ success: true, ...result });
+            } else {
+                const areas = await this.geographicAreaService.getAllGeographicAreas();
+                res.status(200).json({ success: true, data: areas });
+            }
         } catch (error) {
+            if (error instanceof Error && error.message.includes('Page')) {
+                res.status(400).json({
+                    code: 'VALIDATION_ERROR',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while fetching geographic areas',

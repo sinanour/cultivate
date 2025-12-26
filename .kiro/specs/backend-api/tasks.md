@@ -456,14 +456,14 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 21. Align implementation with API contract
-  - [-] 21.1 Add missing response wrapper fields
+  - [x] 21.1 Add missing response wrapper fields
     - Add `isPredefined` field to ActivityType and Role responses
     - Add `version` field to all entity responses for optimistic locking
     - Add `isOngoing` field to Activity responses (computed from endDate)
     - Add `createdBy` field to Activity responses
     - _Requirements: API Contract alignment_
 
-  - [ ] 21.2 Implement pagination support
+  - [-] 21.2 Implement pagination support
     - Add pagination to GET /api/activities endpoint
     - Add pagination to GET /api/participants endpoint
     - Add pagination to GET /api/venues endpoint

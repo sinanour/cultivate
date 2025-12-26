@@ -2,6 +2,7 @@ import { Participant } from '@prisma/client';
 import { ParticipantRepository } from '../repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from '../repositories/participant-address-history.repository';
 import { PrismaClient } from '@prisma/client';
+import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 
 export interface CreateParticipantInput {
     name: string;
@@ -28,6 +29,12 @@ export class ParticipantService {
 
     async getAllParticipants(): Promise<Participant[]> {
         return this.participantRepository.findAll();
+    }
+
+    async getAllParticipantsPaginated(page?: number, limit?: number): Promise<PaginatedResponse<Participant>> {
+        const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
+        const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit);
+        return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 
     async getParticipantById(id: string): Promise<Participant> {

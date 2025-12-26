@@ -89,11 +89,27 @@ export class ActivityRoutes {
       );
   }
 
-    private async getAll(_req: AuthenticatedRequest, res: Response): Promise<void> {
+    private async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const activities = await this.activityService.getAllActivities();
-            res.status(200).json({ success: true, data: activities });
+            const page = req.query.page ? parseInt(req.query.page as string) : undefined;
+            const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+
+            if (page !== undefined || limit !== undefined) {
+                const result = await this.activityService.getAllActivitiesPaginated(page, limit);
+                res.status(200).json({ success: true, ...result });
+            } else {
+                const activities = await this.activityService.getAllActivities();
+                res.status(200).json({ success: true, data: activities });
+            }
         } catch (error) {
+            if (error instanceof Error && error.message.includes('Page')) {
+                res.status(400).json({
+                    code: 'VALIDATION_ERROR',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while fetching activities',
