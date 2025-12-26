@@ -1,6 +1,23 @@
 import { AuthService } from '../auth/auth.service';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+
+interface APIResponse<T> {
+    success: boolean;
+    data: T;
+    pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+interface APIError {
+    code: string;
+    message: string;
+    details?: any;
+}
 
 export class ApiClient {
     private static async getHeaders(): Promise<HeadersInit> {
@@ -16,6 +33,37 @@ export class ApiClient {
         return headers;
     }
 
+    private static async handleResponse<T>(response: Response): Promise<T> {
+        // Handle 204 No Content
+        if (response.status === 204) {
+            return {} as T;
+        }
+
+        // Parse response body
+        const body = await response.json().catch(() => null);
+
+        // Handle errors
+        if (!response.ok) {
+            const error: APIError = body || { code: 'UNKNOWN_ERROR', message: 'Request failed' };
+            const errorObj: any = new Error(error.message);
+            errorObj.response = {
+                status: response.status,
+                data: error,
+                headers: response.headers ? Object.fromEntries(response.headers.entries()) : {},
+            };
+            errorObj.code = error.code;
+            throw errorObj;
+        }
+
+        // Handle success response with wrapper
+        if (body && typeof body === 'object' && 'success' in body && 'data' in body) {
+            return body.data as T;
+        }
+
+        // Fallback for responses without wrapper
+        return body as T;
+    }
+
     static async get<T>(endpoint: string): Promise<T> {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'GET',
@@ -23,24 +71,16 @@ export class ApiClient {
         });
 
         if (response.status === 401) {
-            // Token expired, try to refresh
             try {
                 await AuthService.refreshToken();
-                // Retry the request
                 return this.get<T>(endpoint);
             } catch (error) {
-                // Refresh failed, redirect to login
                 window.location.href = '/login';
                 throw new Error('Authentication failed');
             }
         }
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(error.message || 'Request failed');
-        }
-
-        return response.json();
+        return this.handleResponse<T>(response);
     }
 
     static async post<T>(endpoint: string, data: unknown): Promise<T> {
@@ -60,12 +100,7 @@ export class ApiClient {
             }
         }
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(error.message || 'Request failed');
-        }
-
-        return response.json();
+        return this.handleResponse<T>(response);
     }
 
     static async put<T>(endpoint: string, data: unknown): Promise<T> {
@@ -85,12 +120,7 @@ export class ApiClient {
             }
         }
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(error.message || 'Request failed');
-        }
-
-        return response.json();
+        return this.handleResponse<T>(response);
     }
 
     static async delete<T>(endpoint: string): Promise<T> {
@@ -109,16 +139,6 @@ export class ApiClient {
             }
         }
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(error.message || 'Request failed');
-        }
-
-        // DELETE might return 204 No Content
-        if (response.status === 204) {
-            return {} as T;
-        }
-
-        return response.json();
+        return this.handleResponse<T>(response);
     }
 }

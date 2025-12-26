@@ -1,6 +1,6 @@
 import type { User, AuthTokens, LoginCredentials } from '../../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
 
 export class AuthService {
     private static readonly TOKEN_KEY = 'authTokens';
@@ -22,7 +22,7 @@ export class AuthService {
 
         const loginData = await response.json();
 
-        // Extract tokens from the response
+        // Extract tokens from the response wrapper { success: true, data: { accessToken, refreshToken } }
         const tokens = loginData.data;
 
         // Decode the access token to get user info
@@ -30,8 +30,9 @@ export class AuthService {
         const user: User = {
             id: payload.userId,
             email: payload.email,
-            name: payload.email.split('@')[0], // Use email prefix as name for now
             role: payload.role,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
 
         // Store tokens and user
@@ -73,6 +74,7 @@ export class AuthService {
         }
 
         const refreshData = await response.json();
+        // Extract tokens from response wrapper { success: true, data: { accessToken, refreshToken } }
         const newTokens = refreshData.data;
 
         this.storeTokens(newTokens.accessToken, newTokens.refreshToken);
@@ -81,6 +83,29 @@ export class AuthService {
             accessToken: newTokens.accessToken,
             refreshToken: newTokens.refreshToken,
         };
+    }
+
+    static async fetchCurrentUser(): Promise<User> {
+        const tokens = this.getStoredTokens();
+        if (!tokens?.accessToken) {
+            throw new Error('No access token available');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${tokens.accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch current user');
+        }
+
+        const userData = await response.json();
+        // Extract user from response wrapper { success: true, data: { id, email, role, ... } }
+        return userData.data;
     }
 
     static getCurrentUser(): User | null {
@@ -120,12 +145,26 @@ export class AuthService {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             if (!payload.exp) {
-                return true; // No expiration claim means invalid token
+                return true;
             }
-            const exp = payload.exp * 1000; // Convert to milliseconds
+            const exp = payload.exp * 1000;
             return Date.now() >= exp;
         } catch (error) {
             return true;
+        }
+    }
+
+    static decodeToken(token: string): { userId: string; email: string; role: string } | null {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return {
+                userId: payload.userId,
+                email: payload.email,
+                role: payload.role,
+            };
+        } catch (error) {
+            console.error('Failed to decode token:', error);
+            return null;
         }
     }
 }
