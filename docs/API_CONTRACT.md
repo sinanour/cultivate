@@ -78,14 +78,12 @@ This document defines the complete API contract between the Backend API and all 
 **Endpoint**: `GET /activities`
 
 **Query Parameters**:
-- `status` (optional): Filter by status (Planning, Active, Completed, Archived)
-- `activityTypeId` (optional): Filter by activity type
-- `startDate` (optional): Filter by start date (ISO 8601)
-- `endDate` (optional): Filter by end date (ISO 8601)
 - `page` (optional, default: 1): Page number
-- `limit` (optional, default: 50): Items per page
+- `limit` (optional, default: 50, max: 100): Items per page
 
 **Response** (200 OK):
+
+**Without Pagination** (when page and limit not provided):
 ```json
 {
   "success": true,
@@ -93,28 +91,19 @@ This document defines the complete API contract between the Backend API and all 
     {
       "id": "string (UUID)",
       "name": "string",
-      "description": "string",
+      "activityTypeId": "string (UUID)",
       "activityType": {
         "id": "string (UUID)",
-        "name": "string"
+        "name": "string",
+        "isPredefined": "boolean",
+        "version": "number"
       },
       "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED",
       "startDate": "string (ISO 8601)",
       "endDate": "string | null (ISO 8601)",
-      "venues": [
-        {
-          "id": "string (UUID)",
-          "activityId": "string (UUID)",
-          "venueId": "string (UUID)",
-          "venue": {
-            "id": "string (UUID)",
-            "name": "string",
-            "address": "string"
-          },
-          "effectiveFrom": "string (ISO 8601)",
-          "effectiveTo": "string | null (ISO 8601)"
-        }
-      ],
+      "isOngoing": "boolean",
+      "createdBy": "string | null (UUID)",
+      "version": "number",
       "createdAt": "string (ISO 8601)",
       "updatedAt": "string (ISO 8601)"
     }
@@ -122,15 +111,49 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Note**: Pagination is not currently implemented. The `isOngoing`, `createdBy`, and `version` fields are not included in responses.
+**With Pagination** (when page or limit provided):
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "page": "number",
+    "limit": "number",
+    "total": "number",
+    "totalPages": "number"
+  }
+}
+```
 
 ### Get Activity
 
 **Endpoint**: `GET /activities/:id`
 
-**Response** (200 OK): Single activity object (same structure as list item)
-
-**Note**: Returns `{ success: true, data: {...} }` wrapper
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (UUID)",
+    "name": "string",
+    "activityTypeId": "string (UUID)",
+    "activityType": {
+      "id": "string (UUID)",
+      "name": "string",
+      "isPredefined": "boolean",
+      "version": "number"
+    },
+    "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED",
+    "startDate": "string (ISO 8601)",
+    "endDate": "string | null (ISO 8601)",
+    "isOngoing": "boolean",
+    "createdBy": "string | null (UUID)",
+    "version": "number",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
 
 **Errors**:
 - 404: Activity not found
@@ -143,17 +166,38 @@ This document defines the complete API contract between the Backend API and all 
 ```json
 {
   "name": "string",
-  "description": "string",
   "activityTypeId": "string (UUID)",
-  "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED",
+  "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED (optional, defaults to PLANNED)",
   "startDate": "string (ISO 8601)",
-  "endDate": "string | null (ISO 8601)"
+  "endDate": "string | null (ISO 8601, optional)"
 }
 ```
 
-**Response** (201 Created): Activity object wrapped in `{ success: true, data: {...} }`
-
-**Note**: Status values use uppercase (PLANNED not Planning). The `isOngoing` field is not used in requests.
+**Response** (201 Created):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (UUID)",
+    "name": "string",
+    "activityTypeId": "string (UUID)",
+    "activityType": {
+      "id": "string (UUID)",
+      "name": "string",
+      "isPredefined": "boolean",
+      "version": "number"
+    },
+    "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED",
+    "startDate": "string (ISO 8601)",
+    "endDate": "string | null (ISO 8601)",
+    "isOngoing": "boolean",
+    "createdBy": "string | null (UUID)",
+    "version": "number",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
 
 **Errors**:
 - 400: Validation error
@@ -163,33 +207,58 @@ This document defines the complete API contract between the Backend API and all 
 
 **Endpoint**: `PUT /activities/:id`
 
-**Request**: Same as create (no version field required)
-
-**Response** (200 OK): Updated activity object wrapped in `{ success: true, data: {...} }`
-
-**Errors**:
-- 404: Activity not found
-- 403: Insufficient permissions
-
-**Note**: Optimistic locking with version field is not currently implemented.
-
-### Delete Activity
-
-**Endpoint**: `DELETE /activities/:id`
+**Request**:
+```json
+{
+  "name": "string (optional)",
+  "activityTypeId": "string (UUID, optional)",
+  "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED (optional)",
+  "startDate": "string (ISO 8601, optional)",
+  "endDate": "string | null (ISO 8601, optional)",
+  "version": "number (optional, for optimistic locking)"
+}
+```
 
 **Response** (200 OK):
 ```json
 {
   "success": true,
-  "message": "Activity deleted successfully"
+  "data": {
+    "id": "string (UUID)",
+    "name": "string",
+    "activityTypeId": "string (UUID)",
+    "activityType": {
+      "id": "string (UUID)",
+      "name": "string",
+      "isPredefined": "boolean",
+      "version": "number"
+    },
+    "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED",
+    "startDate": "string (ISO 8601)",
+    "endDate": "string | null (ISO 8601)",
+    "isOngoing": "boolean",
+    "createdBy": "string | null (UUID)",
+    "version": "number",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
 }
 ```
 
 **Errors**:
 - 404: Activity not found
+- 409: Version conflict (when version provided doesn't match current version)
 - 403: Insufficient permissions
 
-**Note**: Returns 200 with JSON body, not 204 No Content
+### Delete Activity
+
+**Endpoint**: `DELETE /activities/:id`
+
+**Response** (204 No Content)
+
+**Errors**:
+- 404: Activity not found
+- 403: Insufficient permissions
 
 ### Get Activity Venues
 
@@ -237,15 +306,7 @@ This document defines the complete API contract between the Backend API and all 
 
 **Endpoint**: `DELETE /activities/:id/venues/:venueId`
 
-**Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Venue association removed successfully"
-}
-```
-
-**Note**: The `effectiveTo` query parameter is not required. The association is automatically closed with the current timestamp.
+**Response** (204 No Content)
 
 ## Participants
 
@@ -254,11 +315,12 @@ This document defines the complete API contract between the Backend API and all 
 **Endpoint**: `GET /participants`
 
 **Query Parameters**:
-- `search` (optional): Search by name or email
-- `page` (optional, default: 1)
-- `limit` (optional, default: 50)
+- `page` (optional, default: 1): Page number
+- `limit` (optional, default: 50, max: 100): Items per page
 
 **Response** (200 OK):
+
+**Without Pagination**:
 ```json
 {
   "success": true,
@@ -266,10 +328,10 @@ This document defines the complete API contract between the Backend API and all 
     {
       "id": "string (UUID)",
       "name": "string",
-      "email": "string | null",
+      "email": "string",
       "phone": "string | null",
-      "notes": "string",
-      "homeVenueId": "string | null (UUID)",
+      "notes": "string | null",
+      "version": "number",
       "createdAt": "string (ISO 8601)",
       "updatedAt": "string (ISO 8601)"
     }
@@ -277,13 +339,40 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Note**: Pagination is not currently implemented. The `version` field is not included in responses.
+**With Pagination**:
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "page": "number",
+    "limit": "number",
+    "total": "number",
+    "totalPages": "number"
+  }
+}
+```
 
 ### Get Participant
 
 **Endpoint**: `GET /participants/:id`
 
-**Response** (200 OK): Single participant object wrapped in `{ success: true, data: {...} }`
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (UUID)",
+    "name": "string",
+    "email": "string",
+    "phone": "string | null",
+    "notes": "string | null",
+    "version": "number",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
 
 ### Create Participant
 
@@ -293,10 +382,10 @@ This document defines the complete API contract between the Backend API and all 
 ```json
 {
   "name": "string",
-  "email": "string | null",
-  "phone": "string | null",
-  "notes": "string",
-  "homeVenueId": "string | null (UUID)"
+  "email": "string",
+  "phone": "string (optional)",
+  "notes": "string (optional)",
+  "homeVenueId": "string (UUID, optional)"
 }
 ```
 
@@ -306,21 +395,29 @@ This document defines the complete API contract between the Backend API and all 
 
 **Endpoint**: `PUT /participants/:id`
 
-**Request**: Same as create (no version field required)
+**Request**:
+```json
+{
+  "name": "string (optional)",
+  "email": "string (optional)",
+  "phone": "string (optional)",
+  "notes": "string (optional)",
+  "homeVenueId": "string (UUID, optional)",
+  "version": "number (optional, for optimistic locking)"
+}
+```
 
 **Response** (200 OK): Updated participant object wrapped in `{ success: true, data: {...} }`
+
+**Errors**:
+- 404: Participant not found
+- 409: Version conflict
 
 ### Delete Participant
 
 **Endpoint**: `DELETE /participants/:id`
 
-**Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Participant deleted successfully"
-}
-```
+**Response** (204 No Content)
 
 ### Get Participant Address History
 
@@ -354,12 +451,12 @@ This document defines the complete API contract between the Backend API and all 
 **Endpoint**: `GET /venues`
 
 **Query Parameters**:
-- `geographicAreaId` (optional): Filter by geographic area
-- `search` (optional): Search by name or address
-- `page` (optional, default: 1)
-- `limit` (optional, default: 50)
+- `page` (optional, default: 1): Page number
+- `limit` (optional, default: 50, max: 100): Items per page
 
 **Response** (200 OK):
+
+**Without Pagination**:
 ```json
 {
   "success": true,
@@ -377,6 +474,7 @@ This document defines the complete API contract between the Backend API and all 
       "latitude": "number | null",
       "longitude": "number | null",
       "venueType": "PUBLIC_BUILDING | PRIVATE_RESIDENCE | null",
+      "version": "number",
       "createdAt": "string (ISO 8601)",
       "updatedAt": "string (ISO 8601)"
     }
@@ -384,7 +482,19 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Note**: Pagination is not currently implemented.
+**With Pagination**:
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "page": "number",
+    "limit": "number",
+    "total": "number",
+    "totalPages": "number"
+  }
+}
+```
 
 ### Get Venue
 
@@ -414,24 +524,34 @@ This document defines the complete API contract between the Backend API and all 
 
 **Endpoint**: `PUT /venues/:id`
 
-**Request**: Same as create
+**Request**:
+```json
+{
+  "name": "string (optional)",
+  "address": "string (optional)",
+  "geographicAreaId": "string (UUID, optional)",
+  "latitude": "number (optional)",
+  "longitude": "number (optional)",
+  "venueType": "PUBLIC_BUILDING | PRIVATE_RESIDENCE (optional)",
+  "version": "number (optional, for optimistic locking)"
+}
+```
 
 **Response** (200 OK): Updated venue object wrapped in `{ success: true, data: {...} }`
+
+**Errors**:
+- 404: Venue not found
+- 409: Version conflict
 
 ### Delete Venue
 
 **Endpoint**: `DELETE /venues/:id`
 
-**Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Venue deleted successfully"
-}
-```
+**Response** (204 No Content)
 
 **Errors**:
-- 409: Venue is referenced by activities or participants (returns 400 with code REFERENCED_ENTITY)
+- 404: Venue not found
+- 400: Venue is referenced by activities or participants (code: REFERENCED_ENTITY)
 
 ### Search Venues
 
@@ -463,12 +583,12 @@ This document defines the complete API contract between the Backend API and all 
 **Endpoint**: `GET /geographic-areas`
 
 **Query Parameters**:
-- `parentId` (optional): Filter by parent area
-- `areaType` (optional): Filter by area type
-- `page` (optional, default: 1)
-- `limit` (optional, default: 50)
+- `page` (optional, default: 1): Page number
+- `limit` (optional, default: 50, max: 100): Items per page
 
 **Response** (200 OK):
+
+**Without Pagination**:
 ```json
 {
   "success": true,
@@ -483,6 +603,7 @@ This document defines the complete API contract between the Backend API and all 
         "name": "string",
         "areaType": "string"
       } | null,
+      "version": "number",
       "createdAt": "string (ISO 8601)",
       "updatedAt": "string (ISO 8601)"
     }
@@ -490,7 +611,19 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Note**: Pagination is not currently implemented.
+**With Pagination**:
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "page": "number",
+    "limit": "number",
+    "total": "number",
+    "totalPages": "number"
+  }
+}
+```
 
 ### Get Geographic Area
 
@@ -520,24 +653,32 @@ This document defines the complete API contract between the Backend API and all 
 
 **Endpoint**: `PUT /geographic-areas/:id`
 
-**Request**: Same as create
+**Request**:
+```json
+{
+  "name": "string (optional)",
+  "areaType": "NEIGHBOURHOOD | COMMUNITY | CITY | CLUSTER | COUNTY | PROVINCE | STATE | COUNTRY | CUSTOM (optional)",
+  "parentGeographicAreaId": "string | null (UUID, optional)",
+  "version": "number (optional, for optimistic locking)"
+}
+```
 
 **Response** (200 OK): Updated geographic area object wrapped in `{ success: true, data: {...} }`
+
+**Errors**:
+- 404: Geographic area not found
+- 409: Version conflict
+- 400: Circular relationship detected
 
 ### Delete Geographic Area
 
 **Endpoint**: `DELETE /geographic-areas/:id`
 
-**Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Geographic area deleted successfully"
-}
-```
+**Response** (204 No Content)
 
 **Errors**:
-- 409: Area is referenced by venues or child areas (returns 400 with code REFERENCED_ENTITY)
+- 404: Geographic area not found
+- 400: Area is referenced by venues or child areas (code: REFERENCED_ENTITY)
 
 ### Get Geographic Area Children
 
@@ -561,24 +702,20 @@ This document defines the complete API contract between the Backend API and all 
 
 **Endpoint**: `GET /geographic-areas/:id/statistics`
 
-**Query Parameters**:
-- `includeDescendants` (optional, default: true): Include statistics from child areas
-
 **Response** (200 OK):
 ```json
 {
   "success": true,
   "data": {
-    "geographicAreaId": "string (UUID)",
     "totalActivities": "number",
     "totalParticipants": "number",
-    "activeActivities": "number",
-    "ongoingActivities": "number"
+    "totalVenues": "number",
+    "activeActivities": "number"
   }
 }
 ```
 
-**Note**: The `includeDescendants` parameter is not currently implemented. Statistics always include descendants.
+**Note**: Statistics always include descendants. The `includeDescendants` parameter and `ongoingActivities` field are not currently implemented.
 
 ## Activity Participants
 
@@ -595,22 +732,24 @@ This document defines the complete API contract between the Backend API and all 
       "id": "string (UUID)",
       "activityId": "string (UUID)",
       "participantId": "string (UUID)",
+      "roleId": "string (UUID)",
+      "notes": "string | null",
       "participant": {
         "id": "string (UUID)",
         "name": "string",
-        "email": "string | null"
+        "email": "string"
       },
       "role": {
         "id": "string (UUID)",
-        "name": "string"
+        "name": "string",
+        "isPredefined": "boolean",
+        "version": "number"
       },
       "createdAt": "string (ISO 8601)"
     }
   ]
 }
 ```
-
-**Note**: The `joinedAt` and `notes` fields are not currently included in responses. The `isPredefined` field is not included in role objects.
 
 ### Add Participant to Activity
 
@@ -620,33 +759,35 @@ This document defines the complete API contract between the Backend API and all 
 ```json
 {
   "participantId": "string (UUID)",
-  "roleId": "string (UUID)"
+  "roleId": "string (UUID)",
+  "notes": "string (optional)"
 }
 ```
 
 **Response** (201 Created): Activity participant object wrapped in `{ success: true, data: {...} }`
 
-**Note**: The `notes` field is not currently supported in requests.
-
 ### Update Activity Participant
 
 **Endpoint**: `PUT /activities/:activityId/participants/:participantId`
 
-**Status**: NOT IMPLEMENTED
+**Request**:
+```json
+{
+  "roleId": "string (UUID, optional)",
+  "notes": "string (optional)"
+}
+```
 
-**Note**: This endpoint is documented in the contract but not yet implemented in the backend.
+**Response** (200 OK): Updated activity participant object wrapped in `{ success: true, data: {...} }`
+
+**Errors**:
+- 404: Activity or participant not found
 
 ### Remove Participant from Activity
 
 **Endpoint**: `DELETE /activities/:activityId/participants/:participantId`
 
-**Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Participant removed from activity successfully"
-}
-```
+**Response** (204 No Content)
 
 ## Activity Types
 
@@ -662,14 +803,14 @@ This document defines the complete API contract between the Backend API and all 
     {
       "id": "string (UUID)",
       "name": "string",
+      "isPredefined": "boolean",
+      "version": "number",
       "createdAt": "string (ISO 8601)",
       "updatedAt": "string (ISO 8601)"
     }
   ]
 }
 ```
-
-**Note**: The `isPredefined` field is not currently included in responses.
 
 ### Create Activity Type
 
@@ -691,25 +832,25 @@ This document defines the complete API contract between the Backend API and all 
 **Request**:
 ```json
 {
-  "name": "string"
+  "name": "string",
+  "version": "number (optional, for optimistic locking)"
 }
 ```
 
 **Response** (200 OK): Updated activity type object wrapped in `{ success: true, data: {...} }`
 
+**Errors**:
+- 404: Activity type not found
+- 409: Version conflict
+
 ### Delete Activity Type
 
 **Endpoint**: `DELETE /activity-types/:id`
 
-**Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Activity type deleted successfully"
-}
-```
+**Response** (204 No Content)
 
 **Errors**:
+- 404: Activity type not found
 - 400: Activity type is referenced by activities (code: REFERENCED_ENTITY)
 
 ## Participant Roles
@@ -726,6 +867,8 @@ This document defines the complete API contract between the Backend API and all 
     {
       "id": "string (UUID)",
       "name": "string",
+      "isPredefined": "boolean",
+      "version": "number",
       "createdAt": "string (ISO 8601)",
       "updatedAt": "string (ISO 8601)"
     }
@@ -733,7 +876,7 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Note**: The endpoint is `/roles` not `/participant-roles`. The `isPredefined` field is not currently included in responses.
+**Note**: The endpoint is `/roles` not `/participant-roles`.
 
 ### Create Participant Role
 
@@ -755,25 +898,25 @@ This document defines the complete API contract between the Backend API and all 
 **Request**:
 ```json
 {
-  "name": "string"
+  "name": "string",
+  "version": "number (optional, for optimistic locking)"
 }
 ```
 
 **Response** (200 OK): Updated participant role object wrapped in `{ success: true, data: {...} }`
 
+**Errors**:
+- 404: Role not found
+- 409: Version conflict
+
 ### Delete Participant Role
 
 **Endpoint**: `DELETE /roles/:id`
 
-**Response** (200 OK):
-```json
-{
-  "success": true,
-  "message": "Role deleted successfully"
-}
-```
+**Response** (204 No Content)
 
 **Errors**:
+- 404: Role not found
 - 400: Role is referenced by assignments (code: REFERENCED_ENTITY)
 
 ## Analytics
@@ -941,9 +1084,14 @@ All errors follow this format:
 - `AUTHENTICATION_REQUIRED`: Missing or invalid token
 - `INSUFFICIENT_PERMISSIONS`: User lacks required permissions
 - `NOT_FOUND`: Resource not found
-- `VERSION_CONFLICT`: Optimistic locking conflict
+- `VERSION_CONFLICT`: Optimistic locking conflict (version mismatch)
 - `CIRCULAR_REFERENCE`: Circular relationship detected
 - `REFERENCED_ENTITY`: Entity is referenced and cannot be deleted
+- `DUPLICATE_EMAIL`: Email already exists
+- `DUPLICATE_NAME`: Name already exists
+- `DUPLICATE_ASSIGNMENT`: Assignment already exists
+- `INVALID_REFERENCE`: Referenced entity does not exist
+- `RATE_LIMIT_EXCEEDED`: Too many requests
 - `INTERNAL_ERROR`: Unexpected server error
 
 ## Rate Limits
@@ -1008,12 +1156,15 @@ All timestamps use ISO 8601 format with UTC timezone:
 ## Implementation Checklist
 
 ### Backend API
-- [ ] Implement all endpoints
-- [ ] Add request validation with Zod
-- [ ] Implement JWT authentication
-- [ ] Add rate limiting
-- [ ] Generate OpenAPI specification
-- [ ] Add integration tests
+- [x] Implement all endpoints
+- [x] Add request validation with Zod
+- [x] Implement JWT authentication
+- [x] Add rate limiting
+- [x] Generate OpenAPI specification
+- [x] Add integration tests
+- [x] Implement pagination
+- [x] Implement optimistic locking
+- [x] Add API versioning
 
 ### Web Frontend
 - [ ] Generate TypeScript types from OpenAPI spec
@@ -1021,6 +1172,9 @@ All timestamps use ISO 8601 format with UTC timezone:
 - [ ] Add authentication interceptors
 - [ ] Implement offline queue
 - [ ] Add error handling
+- [ ] Handle pagination
+- [ ] Handle optimistic locking (version conflicts)
+- [ ] Handle rate limiting (429 responses)
 
 ### iOS Mobile App
 - [ ] Generate Swift models from OpenAPI spec
@@ -1028,6 +1182,9 @@ All timestamps use ISO 8601 format with UTC timezone:
 - [ ] Add Keychain token storage
 - [ ] Implement offline queue
 - [ ] Add error handling
+- [ ] Handle pagination
+- [ ] Handle optimistic locking
+- [ ] Handle rate limiting
 
 ### Android Mobile App
 - [ ] Generate Kotlin models from OpenAPI spec
@@ -1035,3 +1192,71 @@ All timestamps use ISO 8601 format with UTC timezone:
 - [ ] Add encrypted token storage
 - [ ] Implement offline queue with WorkManager
 - [ ] Add error handling
+- [ ] Handle pagination
+- [ ] Handle optimistic locking
+- [ ] Handle rate limiting
+
+## Key Implementation Notes
+
+### Optimistic Locking
+
+All entities (Activity, Participant, Venue, GeographicArea, ActivityType, Role) support optimistic locking:
+
+1. **Version Field**: All entities include a `version` field (integer, starts at 1)
+2. **Update Requests**: Optionally include `version` field in PUT requests
+3. **Version Check**: If version provided, server validates it matches current version
+4. **Conflict Response**: Returns 409 Conflict if version mismatch
+5. **Version Increment**: Server increments version on successful update
+
+**Example Update with Optimistic Locking**:
+```json
+PUT /api/v1/activities/123
+
+{
+  "name": "Updated Activity",
+  "version": 3
+}
+
+// Success: Returns updated activity with version: 4
+// Conflict: Returns 409 with VERSION_CONFLICT code
+```
+
+### Pagination
+
+All list endpoints support optional pagination:
+
+1. **Optional**: Pagination is opt-in via query parameters
+2. **Without Pagination**: Returns all results in `data` array
+3. **With Pagination**: Include `page` or `limit` parameter to get paginated response
+4. **Metadata**: Paginated responses include `pagination` object with page, limit, total, totalPages
+5. **Limits**: Default limit is 50, maximum is 100
+
+**Example Paginated Request**:
+```
+GET /api/v1/activities?page=2&limit=25
+```
+
+### Rate Limiting
+
+Rate limits are enforced per endpoint type:
+
+1. **Authentication**: 5 requests/minute per IP address
+2. **Mutations** (POST, PUT, DELETE): 100 requests/minute per user
+3. **Queries** (GET): 1000 requests/minute per user
+4. **Headers**: All responses include X-RateLimit-* headers
+5. **Exceeded**: Returns 429 Too Many Requests with RATE_LIMIT_EXCEEDED code
+
+### Computed Fields
+
+Some fields are computed by the server and not stored in the database:
+
+1. **isPredefined** (ActivityType, Role): True if the entity is a seeded predefined value
+2. **isOngoing** (Activity): True if endDate is null
+
+### Authentication Flow
+
+1. **Login**: POST /api/v1/auth/login with email/password
+2. **Token**: Receive JWT access token (15 min expiry) and refresh token (7 day expiry)
+3. **Requests**: Include `Authorization: Bearer <token>` header
+4. **Refresh**: POST /api/v1/auth/refresh with refresh token before access token expires
+5. **Logout**: POST /api/v1/auth/logout (client-side token removal)
