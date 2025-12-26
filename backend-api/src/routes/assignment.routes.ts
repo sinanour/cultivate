@@ -3,7 +3,7 @@ import { AssignmentService } from '../services/assignment.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
-import { AssignmentCreateSchema } from '../utils/validation.schemas';
+import { AssignmentCreateSchema, AssignmentUpdateSchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
 
 export class AssignmentRoutes {
@@ -34,6 +34,15 @@ export class AssignmentRoutes {
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateBody(AssignmentCreateSchema),
             this.assignParticipant.bind(this)
+        );
+
+        // PUT /api/activities/:id/participants/:participantId
+        this.router.put(
+            '/:participantId',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateBody(AssignmentUpdateSchema),
+            this.updateParticipant.bind(this)
         );
 
         // DELETE /api/activities/:id/participants/:participantId
@@ -91,6 +100,29 @@ export class AssignmentRoutes {
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while assigning participant',
+                details: {},
+            });
+        }
+    }
+
+    private async updateParticipant(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id, participantId } = req.params;
+            const assignment = await this.assignmentService.updateAssignment(id, participantId, req.body);
+            res.status(200).json({ success: true, data: assignment });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('not found')) {
+                    return res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while updating assignment',
                 details: {},
             });
         }

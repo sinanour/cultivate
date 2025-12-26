@@ -133,6 +133,12 @@ export const ActivityVenueAssociationSchema = z.object({
 export const AssignmentCreateSchema = z.object({
   participantId: z.string().uuid('Invalid participant ID format'),
   roleId: z.string().uuid('Invalid role ID format'),
+  notes: z.string().max(1000, 'Notes must be at most 1000 characters').optional(),
+});
+
+export const AssignmentUpdateSchema = z.object({
+  roleId: z.string().uuid('Invalid role ID format').optional(),
+  notes: z.string().max(1000, 'Notes must be at most 1000 characters').optional(),
 });
 
 // Analytics schemas
@@ -186,6 +192,7 @@ export type ActivityCreateInput = z.infer<typeof ActivityCreateSchema>;
 export type ActivityUpdateInput = z.infer<typeof ActivityUpdateSchema>;
 export type ActivityVenueAssociationInput = z.infer<typeof ActivityVenueAssociationSchema>;
 export type AssignmentCreateInput = z.infer<typeof AssignmentCreateSchema>;
+export type AssignmentUpdateInput = z.infer<typeof AssignmentUpdateSchema>;
 export type EngagementQuery = z.infer<typeof EngagementQuerySchema>;
 export type GrowthQuery = z.infer<typeof GrowthQuerySchema>;
 export type SyncOperationInput = z.infer<typeof SyncOperationSchema>;

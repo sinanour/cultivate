@@ -4,6 +4,12 @@ export interface CreateAssignmentData {
   activityId: string;
   participantId: string;
   roleId: string;
+  notes?: string;
+}
+
+export interface UpdateAssignmentData {
+  roleId?: string;
+  notes?: string;
 }
 
 export class AssignmentRepository {
@@ -51,6 +57,35 @@ export class AssignmentRepository {
 
   async create(data: CreateAssignmentData): Promise<Assignment> {
     return this.prisma.assignment.create({
+      data,
+      include: {
+        participant: true,
+        role: true,
+        activity: {
+          include: {
+            activityType: true,
+          },
+        },
+      },
+    });
+  }
+
+  async update(activityId: string, participantId: string, data: UpdateAssignmentData): Promise<Assignment> {
+    // Find the assignment to update (there might be multiple with different roles)
+    // We'll update the first one found, or if roleId is provided, find by that role
+    const existing = await this.prisma.assignment.findFirst({
+      where: {
+        activityId,
+        participantId,
+      },
+    });
+
+    if (!existing) {
+      throw new Error('Assignment not found');
+    }
+
+    return this.prisma.assignment.update({
+      where: { id: existing.id },
       data,
       include: {
         participant: true,

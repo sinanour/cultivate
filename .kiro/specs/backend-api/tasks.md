@@ -463,7 +463,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Add `createdBy` field to Activity responses
     - _Requirements: API Contract alignment_
 
-  - [-] 21.2 Implement pagination support
+  - [x] 21.2 Implement pagination support
     - Add pagination to GET /api/activities endpoint
     - Add pagination to GET /api/participants endpoint
     - Add pagination to GET /api/venues endpoint
@@ -471,7 +471,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Return pagination metadata in responses
     - _Requirements: API Contract alignment_
 
-  - [ ] 21.3 Add missing assignment endpoints
+  - [-] 21.3 Add missing assignment endpoints
     - Implement PUT /api/activities/:activityId/participants/:participantId
     - Add `notes` field support to assignment creation and updates
     - Add `joinedAt` field to assignment responses

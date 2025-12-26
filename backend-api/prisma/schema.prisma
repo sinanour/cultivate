@@ -199,6 +199,7 @@ model Assignment {
   activityId    String
   participantId String
   roleId        String
+  notes         String?
   createdAt     DateTime    @default(now())
   activity      Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
   participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)

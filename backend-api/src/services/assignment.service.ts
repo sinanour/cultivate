@@ -7,6 +7,12 @@ import { RoleRepository } from '../repositories/role.repository';
 export interface CreateAssignmentInput {
     participantId: string;
     roleId: string;
+    notes?: string;
+}
+
+export interface UpdateAssignmentInput {
+    roleId?: string;
+    notes?: string;
 }
 
 export class AssignmentService {
@@ -59,7 +65,32 @@ export class AssignmentService {
             activityId,
             participantId: data.participantId,
             roleId: data.roleId,
+            notes: data.notes,
         });
+    }
+
+    async updateAssignment(activityId: string, participantId: string, data: UpdateAssignmentInput): Promise<Assignment> {
+        // Validate activity exists
+        const activityExists = await this.activityRepository.exists(activityId);
+        if (!activityExists) {
+            throw new Error('Activity not found');
+        }
+
+        // Validate participant exists
+        const participantExists = await this.participantRepository.exists(participantId);
+        if (!participantExists) {
+            throw new Error('Participant not found');
+        }
+
+        // Validate role exists if provided
+        if (data.roleId) {
+            const roleExists = await this.roleRepository.exists(data.roleId);
+            if (!roleExists) {
+                throw new Error('Role not found');
+            }
+        }
+
+        return this.assignmentRepository.update(activityId, participantId, data);
     }
 
     async removeParticipant(activityId: string, participantId: string): Promise<void> {
