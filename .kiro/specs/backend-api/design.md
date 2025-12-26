@@ -159,7 +159,7 @@ Services implement business logic and coordinate operations:
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics
 - **AnalyticsService**: Calculates engagement and growth metrics, applies date and geographic filters, aggregates data by geographic area
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
-- **AuthService**: Handles authentication, token generation, password hashing and validation
+- **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
 - **AuditService**: Logs user actions, stores audit records
 
 ### 3. Repository Layer
@@ -628,6 +628,26 @@ The API uses Prisma to define the following database models:
 **Property 46: Refresh token expiration**
 *For any* refresh token older than 7 days, the API should reject it with a 401 error.
 **Validates: Requirements 10.9**
+
+**Property 46A: Root administrator environment variable extraction**
+*For any* system startup, the root administrator username should be extracted from the SRP_ROOT_ADMIN_EMAIL environment variable.
+**Validates: Requirements 10.10**
+
+**Property 46B: Root administrator password extraction**
+*For any* system startup, the root administrator password should be extracted from the SRP_ROOT_ADMIN_PASSWORD environment variable.
+**Validates: Requirements 10.11**
+
+**Property 46C: Root administrator database seeding**
+*For any* database seed operation, a user record should be created with the email from SRP_ROOT_ADMIN_EMAIL and hashed password from SRP_ROOT_ADMIN_PASSWORD.
+**Validates: Requirements 10.12, 10.13**
+
+**Property 46D: Root administrator password hashing**
+*For any* root administrator user creation during seeding, the password should be hashed using bcrypt before storage.
+**Validates: Requirements 10.13**
+
+**Property 46E: Root administrator role assignment**
+*For any* root administrator user created during seeding, the user should be assigned the ADMINISTRATOR system role.
+**Validates: Requirements 10.14**
 
 ### Authorization Properties
 

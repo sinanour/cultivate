@@ -222,6 +222,11 @@ The Backend API package provides the RESTful API service that implements all bus
 7. WHEN authenticating, THE API SHALL hash passwords using bcrypt
 8. THE API SHALL expire access tokens after 15 minutes
 9. THE API SHALL expire refresh tokens after 7 days
+10. THE API SHALL recognize a root administrator whose username is extracted from the SRP_ROOT_ADMIN_EMAIL environment variable
+11. THE API SHALL recognize a root administrator whose password is extracted from the SRP_ROOT_ADMIN_PASSWORD environment variable
+12. WHEN the database is seeded, THE API SHALL populate the users table with a root administrator user
+13. WHEN creating the root administrator user, THE API SHALL hash the password from SRP_ROOT_ADMIN_PASSWORD using bcrypt
+14. WHEN creating the root administrator user, THE API SHALL assign the ADMINISTRATOR system role
 
 ### Requirement 11: Authorize User Actions
 
