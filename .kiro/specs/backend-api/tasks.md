@@ -482,13 +482,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Remove JSON body from DELETE responses
     - _Requirements: API Contract alignment_
 
-  - [-] 21.5 Add optimistic locking support
+  - [x] 21.5 Add optimistic locking support
     - Add version field validation to PUT endpoints
     - Return 409 Conflict for version mismatches
     - Increment version on each update
     - _Requirements: API Contract alignment_
 
-  - [ ] 21.6 Implement rate limiting
+  - [-] 21.6 Implement rate limiting
     - Add rate limiting middleware
     - Configure limits per endpoint type (auth, mutation, query)
     - Add rate limit headers to responses

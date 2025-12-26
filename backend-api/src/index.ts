@@ -27,6 +27,11 @@ import { SyncService } from './services/sync.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
+import {
+  authRateLimiter,
+  smartRateLimiter,
+  addRateLimitHeaders,
+} from './middleware/rate-limit.middleware';
 import { AuthRoutes } from './routes/auth.routes';
 import { ActivityTypeRoutes } from './routes/activity-type.routes';
 import { RoleRoutes } from './routes/role.routes';
@@ -132,6 +137,9 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Add rate limit headers to all responses
+app.use(addRateLimitHeaders);
+
 // Health check endpoint
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', message: 'API is running' });
@@ -144,16 +152,16 @@ app.get('/api/docs/openapi.json', (_req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authRoutes.getRouter());
-app.use('/api/activity-types', activityTypeRoutes.getRouter());
-app.use('/api/roles', roleRoutes.getRouter());
-app.use('/api/participants', participantRoutes.getRouter());
-app.use('/api/geographic-areas', geographicAreaRoutes.getRouter());
-app.use('/api/venues', venueRoutes.getRouter());
-app.use('/api/activities', activityRoutes.getRouter());
-app.use('/api/activities/:id/participants', assignmentRoutes.getRouter());
-app.use('/api/analytics', analyticsRoutes.getRouter());
-app.use('/api/sync', syncRoutes.getRouter());
+app.use('/api/auth', authRateLimiter, authRoutes.getRouter());
+app.use('/api/activity-types', smartRateLimiter, activityTypeRoutes.getRouter());
+app.use('/api/roles', smartRateLimiter, roleRoutes.getRouter());
+app.use('/api/participants', smartRateLimiter, participantRoutes.getRouter());
+app.use('/api/geographic-areas', smartRateLimiter, geographicAreaRoutes.getRouter());
+app.use('/api/venues', smartRateLimiter, venueRoutes.getRouter());
+app.use('/api/activities', smartRateLimiter, activityRoutes.getRouter());
+app.use('/api/activities/:id/participants', smartRateLimiter, assignmentRoutes.getRouter());
+app.use('/api/analytics', smartRateLimiter, analyticsRoutes.getRouter());
+app.use('/api/sync', smartRateLimiter, syncRoutes.getRouter());
 
 // 404 handler for undefined routes
 app.use(ErrorHandlerMiddleware.notFound());
