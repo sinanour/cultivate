@@ -193,36 +193,34 @@ export class ActivityService {
       throw new Error('Venue not found');
     }
 
-    // Check if venue is already currently associated
-    const currentVenues = await this.venueHistoryRepository.getCurrentVenues(activityId);
-    const alreadyAssociated = currentVenues.some((v) => v.venueId === venueId);
-    if (alreadyAssociated) {
-      throw new Error('Venue is already associated with this activity');
+    // Check if a duplicate effectiveFrom exists (same date)
+    const now = new Date();
+    const hasDuplicate = await this.venueHistoryRepository.hasDuplicateEffectiveFrom(
+      activityId,
+      now
+    );
+    if (hasDuplicate) {
+      throw new Error('A venue association already exists with this effective date');
     }
 
     return this.venueHistoryRepository.create({
       activityId,
       venueId,
-      effectiveFrom: new Date(),
+      effectiveFrom: now,
     });
   }
 
-  async removeVenueAssociation(activityId: string, venueId: string) {
+  async removeVenueAssociation(activityId: string, venueHistoryId: string) {
     const activity = await this.activityRepository.findById(activityId);
     if (!activity) {
       throw new Error('Activity not found');
     }
 
-    const result = await this.venueHistoryRepository.closeVenueAssociation(
-      activityId,
-      venueId,
-      new Date()
-    );
-
-    if (!result) {
-      throw new Error('Venue association not found or already closed');
+    const venueHistory = await this.venueHistoryRepository.findById(venueHistoryId);
+    if (!venueHistory || venueHistory.activityId !== activityId) {
+      throw new Error('Venue association not found');
     }
 
-    return result;
+    await this.venueHistoryRepository.delete(venueHistoryId);
   }
 }

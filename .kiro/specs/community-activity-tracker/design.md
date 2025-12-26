@@ -606,7 +606,6 @@ interface ParticipantAddressHistory {
   venueId: string;
   venue: Venue;
   effectiveFrom: Date;
-  effectiveTo: Date | null; // null for current address
 }
 ```
 
@@ -689,7 +688,6 @@ interface ActivityVenueHistory {
   venueId: string;
   venue: Venue;
   effectiveFrom: Date;
-  effectiveTo: Date | null; // null for current venue
 }
 ```
 
@@ -949,13 +947,13 @@ CREATE INDEX idx_activity_participants_participant ON activity_participants(part
 
 ### Property 17: Participant Address History Temporal Consistency
 
-*For any* participant with multiple address history records, the effective date ranges should not overlap, and exactly one record should have a null effectiveTo (current address).
+*For any* participant with multiple address history records, no two records should have the same effectiveFrom date, and the most recent record (by effectiveFrom) represents the current address.
 
 **Validates: Requirements 7A.5**
 
 ### Property 18: Activity Venue Association Temporal Tracking
 
-*For any* activity with venue associations, the venue history should track all venue changes over time with effective date ranges.
+*For any* activity with venue associations, the venue history should track all venue changes over time with effective start dates, where the most recent record represents the current venue.
 
 **Validates: Requirements 7A.6, 7A.7**
 

@@ -180,6 +180,17 @@ export const UuidParamSchema = z.object({
     id: z.string().uuid('Invalid ID format'),
 });
 
+// Participant Address History schemas
+export const ParticipantAddressHistoryCreateSchema = z.object({
+  venueId: z.string().uuid('Invalid venue ID format'),
+  effectiveFrom: z.string().datetime('Invalid effectiveFrom date format'),
+});
+
+export const ParticipantAddressHistoryUpdateSchema = z.object({
+  venueId: z.string().uuid('Invalid venue ID format').optional(),
+  effectiveFrom: z.string().datetime('Invalid effectiveFrom date format').optional(),
+});
+
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
 export type ActivityTypeCreateInput = z.infer<typeof ActivityTypeCreateSchema>;
@@ -204,3 +215,5 @@ export type GrowthQuery = z.infer<typeof GrowthQuerySchema>;
 export type SyncOperationInput = z.infer<typeof SyncOperationSchema>;
 export type BatchSyncInput = z.infer<typeof BatchSyncSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;
+export type ParticipantAddressHistoryCreateInput = z.infer<typeof ParticipantAddressHistoryCreateSchema>;
+export type ParticipantAddressHistoryUpdateInput = z.infer<typeof ParticipantAddressHistoryUpdateSchema>;

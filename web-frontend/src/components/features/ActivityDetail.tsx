@@ -215,13 +215,8 @@ export function ActivityDetail() {
               },
               {
                 id: 'effectiveFrom',
-                header: 'From',
+                header: 'Effective From',
                 cell: (item) => new Date(item.effectiveFrom).toLocaleDateString(),
-              },
-              {
-                id: 'effectiveTo',
-                header: 'To',
-                cell: (item) => item.effectiveTo ? new Date(item.effectiveTo).toLocaleDateString() : 'Current',
               },
             ]}
             items={venueHistory}

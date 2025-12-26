@@ -76,8 +76,16 @@ describe('ActivityService', () => {
 
     describe('createActivity', () => {
         it('should create activity with valid data', async () => {
-            const input = { name: 'Workshop', activityTypeId: 'type-1', startDate: new Date() };
-            const mockActivity = { id: '1', ...input, endDate: null, status: 'PLANNED' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
+            const now = new Date();
+            const input = { name: 'Workshop', activityTypeId: 'type-1', startDate: now };
+            const mockActivity = {
+                id: '1',
+                ...input,
+                endDate: null,
+                status: 'PLANNED' as ActivityStatus,
+                createdAt: now,
+                updatedAt: now
+            };
 
             mockActivityTypeRepo.exists = jest.fn().mockResolvedValue(true);
             mockActivityRepo.create = jest.fn().mockResolvedValue(mockActivity);
@@ -168,7 +176,7 @@ describe('ActivityService', () => {
             const activityId = 'activity-1';
             const mockActivity = { id: activityId, name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
             const mockVenueHistory = [
-                { id: '1', activityId, venueId: 'venue-1', effectiveFrom: new Date(), effectiveTo: null, createdAt: new Date() },
+                { id: '1', activityId, venueId: 'venue-1', effectiveFrom: new Date(), createdAt: new Date() },
             ];
 
             mockActivityRepo.findById = jest.fn().mockResolvedValue(mockActivity);
@@ -191,11 +199,11 @@ describe('ActivityService', () => {
             const activityId = 'activity-1';
             const venueId = 'venue-1';
             const mockActivity = { id: activityId, name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
-            const mockHistory = { id: '1', activityId, venueId, effectiveFrom: new Date(), effectiveTo: null, createdAt: new Date() };
+            const mockHistory = { id: '1', activityId, venueId, effectiveFrom: new Date(), createdAt: new Date() };
 
             mockActivityRepo.findById = jest.fn().mockResolvedValue(mockActivity);
             mockVenueRepo.exists = jest.fn().mockResolvedValue(true);
-            mockVenueHistoryRepo.getCurrentVenues = jest.fn().mockResolvedValue([]);
+            mockVenueHistoryRepo.hasDuplicateEffectiveFrom = jest.fn().mockResolvedValue(false);
             mockVenueHistoryRepo.create = jest.fn().mockResolvedValue(mockHistory);
 
             const result = await service.associateVenue(activityId, venueId);
@@ -218,48 +226,58 @@ describe('ActivityService', () => {
             await expect(service.associateVenue('activity-1', 'invalid-venue')).rejects.toThrow('Venue not found');
         });
 
-        it('should throw error for duplicate association', async () => {
+        it('should throw error for duplicate effective date', async () => {
             const activityId = 'activity-1';
             const venueId = 'venue-1';
             const mockActivity = { id: activityId, name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
-            const existingAssociation = { id: '1', activityId, venueId, effectiveFrom: new Date(), effectiveTo: null, createdAt: new Date() };
 
             mockActivityRepo.findById = jest.fn().mockResolvedValue(mockActivity);
             mockVenueRepo.exists = jest.fn().mockResolvedValue(true);
-            mockVenueHistoryRepo.getCurrentVenues = jest.fn().mockResolvedValue([existingAssociation]);
+            mockVenueHistoryRepo.hasDuplicateEffectiveFrom = jest.fn().mockResolvedValue(true);
 
-            await expect(service.associateVenue(activityId, venueId)).rejects.toThrow('already associated');
+            await expect(service.associateVenue(activityId, venueId)).rejects.toThrow('already exists with this effective date');
         });
     });
 
     describe('removeVenueAssociation', () => {
         it('should remove venue association', async () => {
             const activityId = 'activity-1';
-            const venueId = 'venue-1';
+            const venueHistoryId = 'history-1';
             const mockActivity = { id: activityId, name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
-            const mockHistory = { id: '1', activityId, venueId, effectiveFrom: new Date(), effectiveTo: new Date(), createdAt: new Date() };
+            const mockHistory = { id: venueHistoryId, activityId, venueId: 'venue-1', effectiveFrom: new Date(), createdAt: new Date() };
 
             mockActivityRepo.findById = jest.fn().mockResolvedValue(mockActivity);
-            mockVenueHistoryRepo.closeVenueAssociation = jest.fn().mockResolvedValue(mockHistory);
+            mockVenueHistoryRepo.findById = jest.fn().mockResolvedValue(mockHistory);
+            mockVenueHistoryRepo.delete = jest.fn().mockResolvedValue(undefined);
 
-            const result = await service.removeVenueAssociation(activityId, venueId);
+            await service.removeVenueAssociation(activityId, venueHistoryId);
 
-            expect(result).toEqual(mockHistory);
+            expect(mockVenueHistoryRepo.delete).toHaveBeenCalledWith(venueHistoryId);
         });
 
         it('should throw error for non-existent activity', async () => {
             mockActivityRepo.findById = jest.fn().mockResolvedValue(null);
 
-            await expect(service.removeVenueAssociation('invalid-activity', 'venue-1')).rejects.toThrow('not found');
+            await expect(service.removeVenueAssociation('invalid-activity', 'history-1')).rejects.toThrow('Activity not found');
         });
 
-        it('should throw error when no active association exists', async () => {
+        it('should throw error when venue history not found', async () => {
             const mockActivity = { id: 'activity-1', name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
 
             mockActivityRepo.findById = jest.fn().mockResolvedValue(mockActivity);
-            mockVenueHistoryRepo.closeVenueAssociation = jest.fn().mockResolvedValue(null);
+            mockVenueHistoryRepo.findById = jest.fn().mockResolvedValue(null);
 
-            await expect(service.removeVenueAssociation('activity-1', 'venue-1')).rejects.toThrow('not found');
+            await expect(service.removeVenueAssociation('activity-1', 'history-1')).rejects.toThrow('Venue association not found');
+        });
+
+        it('should throw error when venue history belongs to different activity', async () => {
+            const mockActivity = { id: 'activity-1', name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
+            const mockHistory = { id: 'history-1', activityId: 'different-activity', venueId: 'venue-1', effectiveFrom: new Date(), createdAt: new Date() };
+
+            mockActivityRepo.findById = jest.fn().mockResolvedValue(mockActivity);
+            mockVenueHistoryRepo.findById = jest.fn().mockResolvedValue(mockHistory);
+
+            await expect(service.removeVenueAssociation('activity-1', 'history-1')).rejects.toThrow('Venue association not found');
         });
     });
 });

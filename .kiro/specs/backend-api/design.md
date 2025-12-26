@@ -174,8 +174,8 @@ Repositories encapsulate Prisma database access:
 - **AssignmentRepository**: CRUD operations for participant assignments
 - **VenueRepository**: CRUD operations and search for venues, queries for associated activities and participants
 - **GeographicAreaRepository**: CRUD operations for geographic areas, hierarchical queries for ancestors and descendants, statistics aggregation
-- **ParticipantAddressHistoryRepository**: Type 2 SCD operations for tracking participant home address changes
-- **ActivityVenueHistoryRepository**: Temporal tracking of activity-venue associations
+- **ParticipantAddressHistoryRepository**: Temporal tracking operations for participant home address changes
+- **ActivityVenueHistoryRepository**: Temporal tracking operations for activity-venue associations
 - **UserRepository**: User authentication and management
 - **AuditLogRepository**: Audit log storage and retrieval
 
@@ -323,7 +323,6 @@ The API uses Prisma to define the following database models:
 - participantId: UUID (foreign key)
 - venueId: UUID (foreign key)
 - effectiveFrom: DateTime
-- effectiveTo: DateTime (optional, null for current address)
 - createdAt: DateTime
 - participant: Participant (relation)
 - venue: Venue (relation)
@@ -371,7 +370,6 @@ The API uses Prisma to define the following database models:
 - activityId: UUID (foreign key)
 - venueId: UUID (foreign key)
 - effectiveFrom: DateTime
-- effectiveTo: DateTime (optional, null for current venue)
 - createdAt: DateTime
 - activity: Activity (relation)
 - venue: Venue (relation)
@@ -838,35 +836,35 @@ The API uses Prisma to define the following database models:
 *For any* participant whose home venue is updated, a new ParticipantAddressHistory record should be created with the new venue and current timestamp as effectiveFrom.
 **Validates: Requirements 3.11**
 
-**Property 90: Address history effective date closure**
-*For any* participant whose home venue is updated, the previous ParticipantAddressHistory record should have its effectiveTo set to the current timestamp.
-**Validates: Requirements 3.11**
-
-**Property 91: Address history retrieval**
-*For any* participant, retrieving their address history should return all ParticipantAddressHistory records ordered by effectiveFrom descending.
+**Property 90: Address history retrieval**
+*For any* participant, retrieving their address history should return all ParticipantAddressHistory records ordered by effectiveFrom descending (most recent first).
 **Validates: Requirements 3.12**
 
-**Property 92: Current address identification**
-*For any* participant with address history, the current address should be the record with null effectiveTo.
+**Property 91: Current address identification**
+*For any* participant with address history, the current address should be the record with the most recent effectiveFrom date.
 **Validates: Requirements 3.11**
+
+**Property 92: Address history duplicate prevention**
+*For any* participant, attempting to create an address history record with the same effectiveFrom date as an existing record should be rejected with a 400 error.
+**Validates: Requirements 3.17**
 
 ### Activity Venue Association Properties
 
 **Property 93: Activity venue association creation**
-*For any* activity and valid venue ID, associating the venue via POST should result in an ActivityVenueHistory record being created.
+*For any* activity and valid venue ID, associating the venue via POST should result in an ActivityVenueHistory record being created with the current timestamp as effectiveFrom.
 **Validates: Requirements 4.11, 4.13**
 
-**Property 94: Activity venue association removal**
-*For any* activity-venue association, removing it should set the effectiveTo timestamp on the ActivityVenueHistory record.
-**Validates: Requirements 4.14**
-
-**Property 95: Activity venue history retrieval**
-*For any* activity, retrieving its venues should return all current and historical venue associations with their effective date ranges.
+**Property 94: Activity venue history retrieval**
+*For any* activity, retrieving its venues should return all ActivityVenueHistory records ordered by effectiveFrom descending (most recent first).
 **Validates: Requirements 4.12, 4.15**
 
-**Property 96: Multiple venue support**
-*For any* activity, it should be possible to associate multiple venues simultaneously, each with its own effective date range.
+**Property 95: Current venue identification**
+*For any* activity with venue history, the current venue should be the record with the most recent effectiveFrom date.
 **Validates: Requirements 4.11**
+
+**Property 96: Activity venue duplicate prevention**
+*For any* activity, attempting to create a venue association with the same effectiveFrom date as an existing record should be rejected with a 400 error.
+**Validates: Requirements 4.15**
 
 ### Geographic Analytics Properties
 

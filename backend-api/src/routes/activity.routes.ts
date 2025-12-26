@@ -82,7 +82,7 @@ export class ActivityRoutes {
       );
 
       this.router.delete(
-          '/:id/venues/:venueId',
+          '/:id/venue-history/:venueHistoryId',
           this.authMiddleware.authenticate(),
           this.authorizationMiddleware.requireEditor(),
           this.removeVenue.bind(this)
@@ -309,8 +309,8 @@ export class ActivityRoutes {
 
     private async removeVenue(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { id, venueId } = req.params;
-            await this.activityService.removeVenueAssociation(id, venueId);
+            const { id, venueHistoryId } = req.params;
+            await this.activityService.removeVenueAssociation(id, venueHistoryId);
             res.status(204).send();
         } catch (error) {
         if (error instanceof Error && error.message.includes('not found')) {

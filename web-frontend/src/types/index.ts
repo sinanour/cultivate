@@ -87,7 +87,6 @@ export interface ActivityVenueHistory {
     venueId: string;
     venue?: Venue;
     effectiveFrom: string;
-    effectiveTo?: string;
 }
 
 export interface ParticipantAddressHistory {
@@ -96,7 +95,6 @@ export interface ParticipantAddressHistory {
     venueId: string;
     venue?: Venue;
     effectiveFrom: string;
-    effectiveTo?: string;
 }
 
 export interface Assignment {

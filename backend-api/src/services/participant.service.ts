@@ -21,6 +21,16 @@ export interface UpdateParticipantInput {
     version?: number;
 }
 
+export interface CreateAddressHistoryInput {
+    venueId: string;
+    effectiveFrom: Date;
+}
+
+export interface UpdateAddressHistoryInput {
+    venueId?: string;
+    effectiveFrom?: Date;
+}
+
 export class ParticipantService {
     constructor(
         private participantRepository: ParticipantRepository,
@@ -130,7 +140,7 @@ export class ParticipantService {
             }
         }
 
-        // Handle home venue update with Type 2 SCD
+        // Handle home venue update with simplified temporal tracking
         if (data.homeVenueId !== undefined) {
             // Validate venue exists
             if (data.homeVenueId) {
@@ -147,20 +157,18 @@ export class ParticipantService {
 
             // Only update if venue is different
             if (!currentAddress || currentAddress.venueId !== data.homeVenueId) {
-                await this.prisma.$transaction(async (tx) => {
+                // Create new address history if new venue provided
+                if (data.homeVenueId) {
                     const now = new Date();
 
-                    // Close current address if exists
-                    if (currentAddress) {
-                        await tx.participantAddressHistory.update({
-                            where: { id: currentAddress.id },
-                            data: { effectiveTo: now },
-                        });
-                    }
+                    // Check for duplicate effectiveFrom
+                    const hasDuplicate = await this.addressHistoryRepository.hasDuplicateEffectiveFrom(
+                        id,
+                        now
+                    );
 
-                    // Create new address history if new venue provided
-                    if (data.homeVenueId) {
-                        await tx.participantAddressHistory.create({
+                    if (!hasDuplicate) {
+                        await this.prisma.participantAddressHistory.create({
                             data: {
                                 participantId: id,
                                 venueId: data.homeVenueId,
@@ -168,7 +176,7 @@ export class ParticipantService {
                             },
                         });
                     }
-                });
+                }
             }
         }
 
@@ -206,5 +214,100 @@ export class ParticipantService {
         }
 
         return this.addressHistoryRepository.findByParticipantId(participantId);
+    }
+
+    async createAddressHistory(participantId: string, data: CreateAddressHistoryInput) {
+        // Validate participant exists
+        const participant = await this.participantRepository.findById(participantId);
+        if (!participant) {
+            throw new Error('Participant not found');
+        }
+
+        // Validate venue exists
+        const venue = await this.prisma.venue.findUnique({
+            where: { id: data.venueId },
+        });
+        if (!venue) {
+            throw new Error('Venue not found');
+        }
+
+        // Check for duplicate effectiveFrom
+        const hasDuplicate = await this.addressHistoryRepository.hasDuplicateEffectiveFrom(
+            participantId,
+            data.effectiveFrom
+        );
+        if (hasDuplicate) {
+            throw new Error('An address history record with this effectiveFrom date already exists for this participant');
+        }
+
+        return this.addressHistoryRepository.create({
+            participantId,
+            venueId: data.venueId,
+            effectiveFrom: data.effectiveFrom,
+        });
+    }
+
+    async updateAddressHistory(
+        participantId: string,
+        historyId: string,
+        data: UpdateAddressHistoryInput
+    ) {
+        // Validate participant exists
+        const participant = await this.participantRepository.findById(participantId);
+        if (!participant) {
+            throw new Error('Participant not found');
+        }
+
+        // Validate address history record exists and belongs to participant
+        const history = await this.addressHistoryRepository.findById(historyId);
+        if (!history) {
+            throw new Error('Address history record not found');
+        }
+        if (history.participantId !== participantId) {
+            throw new Error('Address history record does not belong to this participant');
+        }
+
+        // Validate venue if provided
+        if (data.venueId) {
+            const venue = await this.prisma.venue.findUnique({
+                where: { id: data.venueId },
+            });
+            if (!venue) {
+                throw new Error('Venue not found');
+            }
+        }
+
+        // Check for duplicate effectiveFrom if updating effectiveFrom
+        if (data.effectiveFrom) {
+            const hasDuplicate = await this.addressHistoryRepository.hasDuplicateEffectiveFrom(
+                participantId,
+                data.effectiveFrom,
+                historyId
+            );
+            if (hasDuplicate) {
+                throw new Error('An address history record with this effectiveFrom date already exists for this participant');
+            }
+        }
+
+        return this.addressHistoryRepository.update(historyId, data);
+    }
+
+    async deleteAddressHistory(participantId: string, historyId: string) {
+        // Validate participant exists
+        const participant = await this.participantRepository.findById(participantId);
+        if (!participant) {
+            throw new Error('Participant not found');
+        }
+
+        // Validate address history record exists and belongs to participant
+        const history = await this.addressHistoryRepository.findById(historyId);
+        if (!history) {
+            throw new Error('Address history record not found');
+        }
+        if (history.participantId !== participantId) {
+            throw new Error('Address history record does not belong to this participant');
+        }
+
+        await this.addressHistoryRepository.delete(historyId);
     }
 }

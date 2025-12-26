@@ -204,18 +204,27 @@ export class GeographicAreaService {
         });
 
         // Count unique participants with home addresses in these venues
-        const participantCount = await this.prisma.participantAddressHistory.findMany({
+        // Get the most recent address for each participant
+        const participantAddresses = await this.prisma.participantAddressHistory.findMany({
             where: {
                 venueId: { in: venueIds },
-                effectiveTo: null, // Current address only
             },
-            distinct: ['participantId'],
-            select: { participantId: true },
+            orderBy: {
+                effectiveFrom: 'desc',
+            },
         });
+
+        // Get unique participants by taking the most recent address for each
+        const uniqueParticipants = new Map<string, boolean>();
+        for (const address of participantAddresses) {
+            if (!uniqueParticipants.has(address.participantId)) {
+                uniqueParticipants.set(address.participantId, true);
+            }
+        }
 
         return {
             totalActivities,
-            totalParticipants: participantCount.length,
+            totalParticipants: uniqueParticipants.size,
             totalVenues: venues.length,
             activeActivities,
         };

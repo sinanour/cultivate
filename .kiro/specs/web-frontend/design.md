@@ -140,6 +140,23 @@ src/
 - Shows participant information in detail view
 - Lists all activities the participant is assigned to
 - Displays roles for each activity assignment
+- Shows address history table in reverse chronological order
+- Provides interface to add new address history records
+- Provides interface to edit existing address history records
+- Provides interface to delete address history records
+
+**AddressHistoryTable**
+- Displays participant's home address history in reverse chronological order
+- Shows venue name and effective start date for each record
+- Provides edit and delete buttons for each record
+- Highlights the most recent address (first record in the list)
+
+**AddressHistoryForm**
+- Modal form for adding/editing address history records
+- Requires venue selection from dropdown
+- Requires effective start date using CloudScape DatePicker
+- Validates that effective start date is provided
+- Prevents duplicate records with the same effective start date for the same participant
 
 #### 6. Activity Management
 
@@ -160,7 +177,23 @@ src/
 - Shows activity information in detail view
 - Lists all assigned participants with their roles
 - Provides interface to add/remove participant assignments
+- Shows venue history table in reverse chronological order
+- Provides interface to add venue associations
+- Provides interface to remove venue associations
 - Shows "Mark Complete" button for finite activities
+
+**ActivityVenueHistoryTable**
+- Displays activity's venue history in reverse chronological order
+- Shows venue name and effective start date for each record
+- Provides delete button for each record
+- Highlights the most recent venue (first record in the list)
+
+**ActivityVenueHistoryForm**
+- Modal form for adding venue associations
+- Requires venue selection from dropdown
+- Requires effective start date using CloudScape DatePicker
+- Validates that effective start date is provided
+- Prevents duplicate records with the same effective start date for the same activity
 
 #### 7. Assignment Management
 
@@ -303,10 +336,15 @@ src/
 **ParticipantService**
 - `getParticipants(page?, limit?)`: Fetches all participants with optional pagination
 - `getParticipant(id)`: Fetches single participant
-- `createParticipant(data)`: Creates new participant with optional homeVenueId
+- `createParticipant(data)`: Creates new participant
 - `updateParticipant(id, data, version?)`: Updates existing participant with optional version for optimistic locking
 - `deleteParticipant(id)`: Deletes participant
-- `getAddressHistory(id)`: Fetches participant's home address history from `/participants/:id/address-history`
+
+**ParticipantAddressHistoryService**
+- `getAddressHistory(participantId)`: Fetches participant's home address history from `/participants/:id/address-history`
+- `createAddressHistory(participantId, data)`: Creates new address history record via `/participants/:id/address-history`
+- `updateAddressHistory(participantId, historyId, data)`: Updates existing address history record via `/participants/:id/address-history/:historyId`
+- `deleteAddressHistory(participantId, historyId)`: Deletes address history record via `/participants/:id/address-history/:historyId`
 
 **ActivityService**
 - `getActivities(page?, limit?)`: Fetches all activities with optional pagination
@@ -315,9 +353,9 @@ src/
 - `updateActivity(id, data, version?)`: Updates existing activity with optional version for optimistic locking
 - `deleteActivity(id)`: Deletes activity
 - `getActivityParticipants(id)`: Fetches participants assigned to activity from `/activities/:id/participants`
-- `getActivityVenues(id)`: Fetches venue history for activity from `/activities/:id/venues`
-- `addActivityVenue(activityId, venueId)`: Associates venue with activity
-- `removeActivityVenue(activityId, venueId)`: Removes venue association
+- `getActivityVenues(id)`: Fetches venue history for activity from `/activities/:id/venues` ordered by effectiveFrom descending
+- `addActivityVenue(activityId, venueId, effectiveFrom)`: Associates venue with activity with effective start date
+- `removeActivityVenue(activityId, venueId)`: Removes venue association (true deletion)
 
 **AssignmentService**
 - `addParticipant(activityId, participantId, roleId, notes?)`: Creates assignment via `/activities/:activityId/participants`
@@ -435,7 +473,6 @@ interface ParticipantAddressHistory {
   venueId: string;
   venue?: Venue;
   effectiveFrom: string;
-  effectiveTo?: string;
 }
 
 interface Venue {
@@ -492,7 +529,6 @@ interface ActivityVenueHistory {
   venueId: string;
   venue?: Venue;
   effectiveFrom: string;
-  effectiveTo?: string;
 }
 
 interface Assignment {
@@ -695,305 +731,317 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 4.10**
 
-### Property 11: Activity List Display
+### Property 11: Address History Display Order
+
+*For any* participant with address history, the address history table should display records in reverse chronological order by effective start date (most recent first).
+
+**Validates: Requirements 4.11**
+
+### Property 12: Address History Required Fields
+
+*For any* address history record submission without venue or effective start date, the validation should fail and prevent creation.
+
+**Validates: Requirements 4.15**
+
+### Property 13: Address History Duplicate Prevention
+
+*For any* participant, attempting to create an address history record with the same effective start date as an existing record should be prevented.
+
+**Validates: Requirements 4.16**
+
+### Property 14: Activity List Display
 
 *For any* activity, the list view should include the activity type, dates, and status in the rendered output.
 
 **Validates: Requirements 5.1**
 
-### Property 12: Activity Filtering
+### Property 15: Activity Filtering
 
 *For any* filter criteria (activity type or status) and activity list, the filtered results should only include activities matching the criteria.
 
 **Validates: Requirements 5.2**
 
-### Property 13: Finite vs Ongoing Activity Distinction
+### Property 16: Finite vs Ongoing Activity Distinction
 
 *For any* activity list containing both finite and ongoing activities, the rendered output should visually distinguish between the two types.
 
 **Validates: Requirements 5.4**
 
-### Property 14: Finite Activity End Date Requirement
+### Property 17: Finite Activity End Date Requirement
 
 *For any* finite activity submission without an end date, the validation should fail and prevent creation.
 
 **Validates: Requirements 5.8**
 
-### Property 15: Ongoing Activity Null End Date
+### Property 18: Ongoing Activity Null End Date
 
 *For any* ongoing activity submission with null end date, the validation should succeed if all other required fields are valid.
 
 **Validates: Requirements 5.9**
 
-### Property 16: Activity Detail View Completeness
+### Property 19: Activity Detail View Completeness
 
 *For any* activity, the detail view should display the activity information and all assigned participants with their roles.
 
 **Validates: Requirements 5.12**
 
-### Property 17: Assignment Role Requirement
+### Property 20: Assignment Role Requirement
 
 *For any* participant assignment attempt without a role selected, the validation should fail and prevent assignment.
 
 **Validates: Requirements 6.2, 6.5**
 
-### Property 18: Assignment Display Completeness
+### Property 21: Assignment Display Completeness
 
 *For any* activity with assignments, the detail view should display all assigned participants along with their roles.
 
 **Validates: Requirements 6.3**
 
-### Property 19: Duplicate Assignment Prevention
+### Property 22: Duplicate Assignment Prevention
 
 *For any* attempt to create an assignment with the same participant and role combination that already exists for an activity, the operation should be prevented.
 
 **Validates: Requirements 6.6**
 
-### Property 20: Engagement Metrics Accuracy
+### Property 23: Engagement Metrics Accuracy
 
 *For any* dataset, the engagement metrics should correctly calculate total participants, total activities, active activities, and ongoing activities counts.
 
 **Validates: Requirements 7.2, 7.3**
 
-### Property 21: Chart Data Aggregation
+### Property 24: Chart Data Aggregation
 
 *For any* dataset, the chart data for activities by type and role distribution should correctly aggregate counts for each category.
 
 **Validates: Requirements 7.4, 7.5**
 
-### Property 22: Time-Series Data Calculation
+### Property 25: Time-Series Data Calculation
 
 *For any* time period and dataset, the time-series charts should correctly calculate new participants and activities for each time unit.
 
 **Validates: Requirements 7.8**
 
-### Property 23: Percentage Change Calculation
+### Property 26: Percentage Change Calculation
 
 *For any* two time periods, the percentage change calculation should correctly compute the relative change between periods.
 
 **Validates: Requirements 7.10**
 
-### Property 24: Cumulative Count Calculation
+### Property 27: Cumulative Count Calculation
 
 *For any* time series data, the cumulative counts should correctly sum all previous values up to each point in time.
 
 **Validates: Requirements 7.11**
 
-### Property 25: Unauthenticated Access Protection
+### Property 30: Unauthenticated Access Protection
 
 *For any* protected route, attempting to access it without authentication should redirect to the login page.
 
 **Validates: Requirements 9.1, 9.2**
 
-### Property 26: Unauthorized Action Error Messages
+### Property 31: Unauthorized Action Error Messages
 
 *For any* unauthorized action attempt, the application should display an appropriate error message.
 
 **Validates: Requirements 9.6**
 
-### Property 27: Offline Data Caching
+### Property 32: Offline Data Caching
 
 *For any* user data loaded from the API, the data should be stored in IndexedDB for offline access.
 
 **Validates: Requirements 10.2**
 
-### Property 28: Offline Operation Queueing
+### Property 33: Offline Operation Queueing
 
 *For any* create, update, or delete operation performed while offline, the operation should be added to the local sync queue.
 
 **Validates: Requirements 10.3**
 
-### Property 29: Offline Feature Indication
+### Property 34: Offline Feature Indication
 
 *For any* feature that requires connectivity, when offline, the feature should be visually indicated as unavailable and disabled.
 
 **Validates: Requirements 10.6, 10.7**
 
-### Property 30: Sync Queue Processing
+### Property 35: Sync Queue Processing
 
 *For any* queued operations when connectivity is restored, all operations should be sent to the backend and the queue should be cleared upon success.
 
 **Validates: Requirements 11.2, 11.3**
 
-### Property 31: Sync Retry with Exponential Backoff
+### Property 36: Sync Retry with Exponential Backoff
 
 *For any* failed synchronization attempt, the retry delay should increase exponentially with each subsequent failure.
 
 **Validates: Requirements 11.4**
 
-### Property 32: Pending Operation Count Display
+### Property 37: Pending Operation Count Display
 
 *For any* number of pending operations in the sync queue, the displayed count should match the actual queue length.
 
 **Validates: Requirements 11.6**
 
-### Property 33: Active Navigation Highlighting
+### Property 38: Active Navigation Highlighting
 
 *For any* current route, the corresponding navigation item should be visually highlighted.
 
 **Validates: Requirements 13.2**
 
-### Property 34: Navigation State Persistence
+### Property 39: Navigation State Persistence
 
 *For any* navigation between sections, the navigation state (expanded/collapsed items, scroll position) should be preserved.
 
 **Validates: Requirements 13.3**
 
-### Property 35: Form Validation Error Display
+### Property 40: Form Validation Error Display
 
 *For any* invalid form field, the field should be visually highlighted and display an inline error message.
 
 **Validates: Requirements 14.2, 14.3**
 
-### Property 36: Invalid Form Submission Prevention
+### Property 41: Invalid Form Submission Prevention
 
 *For any* form with validation errors, the submit button should be disabled or submission should be prevented.
 
 **Validates: Requirements 14.4**
 
-### Property 37: Valid Field Value Preservation
+### Property 42: Valid Field Value Preservation
 
 *For any* form with validation errors, all valid field values should remain unchanged after validation fails.
 
 **Validates: Requirements 14.5**
 
-### Property 38: Error Notification Type
+### Property 43: Error Notification Type
 
 *For any* error, transient errors should display toast notifications while critical errors should display modal dialogs.
 
 **Validates: Requirements 15.2, 15.3**
 
-### Property 39: Error State Preservation
+### Property 44: Error State Preservation
 
 *For any* error occurrence, the application state should remain unchanged (no data loss or corruption).
 
 **Validates: Requirements 15.5**
 
-### Property 40: Error Console Logging
+### Property 45: Error Console Logging
 
 *For any* error, detailed error information should be logged to the browser console.
 
 **Validates: Requirements 15.6**
 
-### Property 41: Loading State Indicators
+### Property 46: Loading State Indicators
 
 *For any* asynchronous operation (API request, data loading, long operation), appropriate loading indicators should be displayed (spinners, skeleton screens, or progress bars).
 
 **Validates: Requirements 16.1, 16.3, 16.4**
 
-### Property 42: Form Button Disabling During Submission
+### Property 47: Form Button Disabling During Submission
 
 *For any* form submission in progress, the submit button should be disabled to prevent duplicate submissions.
 
 **Validates: Requirements 16.2**
 
-### Property 43: Success Message Display
+### Property 48: Success Message Display
 
 *For any* successful operation (create, update, delete), a success message should be displayed to the user.
 
 **Validates: Requirements 16.5**
 
-### Property 44: Venue List Display
+### Property 49: Venue List Display
 
 *For any* venue, the list view should include the venue's name, address, and geographic area in the rendered output.
 
 **Validates: Requirements 6A.1**
 
-### Property 45: Venue Search Functionality
+### Property 50: Venue Search Functionality
 
 *For any* search query and venue list, the search results should only include venues whose name or address contains the search term (case-insensitive).
 
 **Validates: Requirements 6A.2**
 
-### Property 46: Venue Required Field Validation
+### Property 51: Venue Required Field Validation
 
 *For any* venue form submission with missing required fields (name, address, or geographic area), the validation should fail and prevent submission.
 
 **Validates: Requirements 6A.7**
 
-### Property 47: Venue Optional Field Acceptance
+### Property 52: Venue Optional Field Acceptance
 
 *For any* venue form submission with or without optional latitude, longitude, and venue type fields, the submission should succeed if all required fields are valid.
 
 **Validates: Requirements 6A.8**
 
-### Property 48: Venue Deletion Prevention
+### Property 53: Venue Deletion Prevention
 
 *For any* venue referenced by activities or participants, attempting to delete it should be prevented and display an error message explaining which entities reference it.
 
 **Validates: Requirements 6A.10, 6A.11**
 
-### Property 49: Venue Detail View Completeness
+### Property 54: Venue Detail View Completeness
 
 *For any* venue, the detail view should display the venue information, associated activities, and participants using it as home address.
 
 **Validates: Requirements 6A.9**
 
-### Property 50: Geographic Area Hierarchical Display
+### Property 55: Geographic Area Hierarchical Display
 
 *For any* set of geographic areas, the list view should display them in a hierarchical tree structure showing parent-child relationships.
 
 **Validates: Requirements 6B.1**
 
-### Property 51: Geographic Area Required Field Validation
+### Property 56: Geographic Area Required Field Validation
 
 *For any* geographic area form submission with missing required fields (name or area type), the validation should fail and prevent submission.
 
 **Validates: Requirements 6B.5**
 
-### Property 52: Circular Relationship Prevention
+### Property 57: Circular Relationship Prevention
 
 *For any* geographic area, attempting to set its parent to itself or to one of its descendants should be prevented with a validation error.
 
 **Validates: Requirements 6B.7**
 
-### Property 53: Geographic Area Deletion Prevention
+### Property 58: Geographic Area Deletion Prevention
 
 *For any* geographic area referenced by venues or child geographic areas, attempting to delete it should be prevented and display an error message explaining which entities reference it.
 
 **Validates: Requirements 6B.9, 6B.10**
 
-### Property 54: Geographic Area Hierarchy Path Display
+### Property 59: Geographic Area Hierarchy Path Display
 
 *For any* geographic area, the detail view should display the full hierarchy path from root to the current area.
 
 **Validates: Requirements 6B.11**
 
-### Property 55: Map Venue Marker Display
+### Property 60: Map Venue Marker Display
 
 *For any* venue with latitude and longitude coordinates, a marker should be displayed on the map at the correct location.
 
 **Validates: Requirements 6C.2**
 
-### Property 56: Map Marker Activity Information
+### Property 61: Map Marker Activity Information
 
 *For any* venue marker clicked on the map, a popup should display showing activity information for that venue.
 
 **Validates: Requirements 6C.3**
 
-### Property 57: Map Marker Color Coding
+### Property 62: Map Marker Color Coding
 
 *For any* set of venues on the map, markers should be color-coded based on activity type or status to visually distinguish them.
 
 **Validates: Requirements 6C.4**
 
-### Property 58: Map Filter Application
+### Property 63: Map Filter Application
 
 *For any* filter criteria (activity type, status, or date range) applied to the map, only venues with activities matching the criteria should display markers.
 
 **Validates: Requirements 6C.5**
 
-### Property 59: Map Legend Display
+### Property 64: Map Legend Display
 
 *For any* map view, a legend should be displayed explaining the meaning of marker colors and symbols.
 
 **Validates: Requirements 6C.8**
-
-### Property 60: Participant Home Address Display
-
-*For any* participant with a home venue, the detail view should display their current home address and address history when the venue has changed over time.
-
-**Validates: Requirements 4.11, 4.12**
 
 ### Property 61: Activity Venue Display
 
@@ -1001,19 +1049,19 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 5.13, 5.14**
 
-### Property 62: Geographic Area Filter Application
+### Property 65: Geographic Area Filter Application
 
 *For any* analytics dashboard with a geographic area filter applied, only activities and participants associated with venues in that geographic area or its descendants should be included in the metrics.
 
 **Validates: Requirements 7.12**
 
-### Property 63: Geographic Breakdown Chart Display
+### Property 66: Geographic Breakdown Chart Display
 
 *For any* engagement metrics, the geographic breakdown chart should correctly display engagement data grouped by geographic area.
 
 **Validates: Requirements 7.13**
 
-### Property 64: Geographic Area Drill-Down
+### Property 67: Geographic Area Drill-Down
 
 *For any* geographic area in the breakdown chart, clicking it should allow drilling down into child geographic areas to view more detailed statistics.
 

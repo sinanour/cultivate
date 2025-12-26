@@ -127,21 +127,20 @@ model Participant {
   @@map("participants")
 }
 
-// Participant Address History for Type 2 SCD tracking
+// Participant Address History for simplified temporal tracking
 model ParticipantAddressHistory {
   id            String      @id @default(uuid())
   participantId String
   venueId       String
   effectiveFrom DateTime    @default(now())
-  effectiveTo   DateTime?
   createdAt     DateTime    @default(now())
   participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   venue         Venue       @relation(fields: [venueId], references: [id])
 
+  @@unique([participantId, effectiveFrom])
   @@index([participantId])
   @@index([venueId])
   @@index([effectiveFrom])
-  @@index([effectiveTo])
   @@map("participant_address_history")
 }
 
@@ -175,21 +174,20 @@ enum ActivityStatus {
   CANCELLED
 }
 
-// Activity Venue History for temporal tracking
+// Activity Venue History for simplified temporal tracking
 model ActivityVenueHistory {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   activityId    String
   venueId       String
-  effectiveFrom DateTime  @default(now())
-  effectiveTo   DateTime?
-  createdAt     DateTime  @default(now())
-  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  venue         Venue     @relation(fields: [venueId], references: [id])
+  effectiveFrom DateTime @default(now())
+  createdAt     DateTime @default(now())
+  activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  venue         Venue    @relation(fields: [venueId], references: [id])
 
+  @@unique([activityId, effectiveFrom])
   @@index([activityId])
   @@index([venueId])
   @@index([effectiveFrom])
-  @@index([effectiveTo])
   @@map("activity_venue_history")
 }
 

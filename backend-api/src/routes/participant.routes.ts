@@ -7,9 +7,12 @@ import {
     ParticipantCreateSchema,
     ParticipantUpdateSchema,
     ParticipantSearchSchema,
+    ParticipantAddressHistoryCreateSchema,
+    ParticipantAddressHistoryUpdateSchema,
     UuidParamSchema,
 } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
+import { z } from 'zod';
 
 export class ParticipantRoutes {
     private router: Router;
@@ -53,6 +56,38 @@ export class ParticipantRoutes {
             this.authorizationMiddleware.requireAuthenticated(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             this.getAddressHistory.bind(this)
+        );
+
+        this.router.post(
+            '/:id/address-history',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateParams(UuidParamSchema),
+            ValidationMiddleware.validateBody(ParticipantAddressHistoryCreateSchema),
+            this.createAddressHistory.bind(this)
+        );
+
+        this.router.put(
+            '/:id/address-history/:historyId',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateParams(z.object({
+                id: z.string().uuid('Invalid ID format'),
+                historyId: z.string().uuid('Invalid history ID format'),
+            })),
+            ValidationMiddleware.validateBody(ParticipantAddressHistoryUpdateSchema),
+            this.updateAddressHistory.bind(this)
+        );
+
+        this.router.delete(
+            '/:id/address-history/:historyId',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateParams(z.object({
+                id: z.string().uuid('Invalid ID format'),
+                historyId: z.string().uuid('Invalid history ID format'),
+            })),
+            this.deleteAddressHistory.bind(this)
         );
 
         this.router.post(
@@ -269,6 +304,123 @@ export class ParticipantRoutes {
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while fetching address history',
+                details: {},
+            });
+        }
+    }
+
+    private async createAddressHistory(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const { venueId, effectiveFrom } = req.body;
+            const history = await this.participantService.createAddressHistory(id, {
+                venueId,
+                effectiveFrom: new Date(effectiveFrom),
+            });
+            res.status(201).json({ success: true, data: history });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message === 'Participant not found' || error.message === 'Venue not found') {
+                    return res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('already exists')) {
+                    return res.status(400).json({
+                        code: 'DUPLICATE_EFFECTIVE_FROM',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while creating address history',
+                details: {},
+            });
+        }
+    }
+
+    private async updateAddressHistory(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id, historyId } = req.params;
+            const updateData: { venueId?: string; effectiveFrom?: Date } = {};
+
+            if (req.body.venueId) {
+                updateData.venueId = req.body.venueId;
+            }
+            if (req.body.effectiveFrom) {
+                updateData.effectiveFrom = new Date(req.body.effectiveFrom);
+            }
+
+            const history = await this.participantService.updateAddressHistory(id, historyId, updateData);
+            res.status(200).json({ success: true, data: history });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (
+                    error.message === 'Participant not found' ||
+                    error.message === 'Venue not found' ||
+                    error.message === 'Address history record not found'
+                ) {
+                    return res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('does not belong')) {
+                    return res.status(400).json({
+                        code: 'INVALID_REFERENCE',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('already exists')) {
+                    return res.status(400).json({
+                        code: 'DUPLICATE_EFFECTIVE_FROM',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while updating address history',
+                details: {},
+            });
+        }
+    }
+
+    private async deleteAddressHistory(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id, historyId } = req.params;
+            await this.participantService.deleteAddressHistory(id, historyId);
+            res.status(204).send();
+        } catch (error) {
+            if (error instanceof Error) {
+                if (
+                    error.message === 'Participant not found' ||
+                    error.message === 'Address history record not found'
+                ) {
+                    return res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('does not belong')) {
+                    return res.status(400).json({
+                        code: 'INVALID_REFERENCE',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while deleting address history',
                 details: {},
             });
         }

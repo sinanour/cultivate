@@ -16,7 +16,6 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Audit_Log**: A record of user actions for security and compliance
 - **Venue**: A physical location where activities occur, representing either a public building or private residence with an address
 - **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, county, province, state, country, etc.)
-- **Type_2_SCD**: Type 2 Slowly Changing Dimension - a data warehousing technique that tracks historical changes by creating new records with effective date ranges
 
 ## Requirements
 
@@ -64,8 +63,13 @@ The Backend API package provides the RESTful API service that implements all bus
 8. WHEN creating a participant, THE API SHALL validate email format and uniqueness
 9. WHEN creating a participant, THE API SHALL accept optional phone and notes fields
 10. WHEN creating a participant, THE API SHALL accept an optional home venue ID
-11. WHEN updating a participant's home venue, THE API SHALL create a new Type 2 SCD record with effective date range
-12. THE API SHALL provide a GET /api/participants/:id/address-history endpoint that returns the participant's home address history
+11. WHEN updating a participant's home venue, THE API SHALL create a new address history record with the venue and effective start date
+12. THE API SHALL provide a GET /api/participants/:id/address-history endpoint that returns the participant's home address history ordered by effective start date descending
+13. THE API SHALL provide a POST /api/participants/:id/address-history endpoint that creates a new address history record
+14. THE API SHALL provide a PUT /api/participants/:id/address-history/:historyId endpoint that updates an existing address history record
+15. THE API SHALL provide a DELETE /api/participants/:id/address-history/:historyId endpoint that deletes an address history record
+16. WHEN creating an address history record, THE API SHALL require venue ID and effective start date
+17. WHEN creating an address history record, THE API SHALL prevent duplicate records with the same effective start date for the same participant
 
 ### Requirement 4: Create and Manage Activities
 
@@ -84,10 +88,11 @@ The Backend API package provides the RESTful API service that implements all bus
 9. WHEN creating an activity, THE API SHALL set status to PLANNED by default
 10. THE API SHALL support activity statuses: PLANNED, ACTIVE, COMPLETED, CANCELLED
 11. WHEN creating or updating an activity, THE API SHALL accept one or more venue IDs
-12. THE API SHALL provide a GET /api/activities/:id/venues endpoint that returns all venues associated with an activity
+12. THE API SHALL provide a GET /api/activities/:id/venues endpoint that returns all venues associated with an activity ordered by effective start date descending
 13. THE API SHALL provide a POST /api/activities/:id/venues endpoint that associates a venue with an activity
 14. THE API SHALL provide a DELETE /api/activities/:id/venues/:venueId endpoint that removes a venue association
-15. THE API SHALL track the effective date range for each activity-venue association to support venue changes over time
+15. THE API SHALL track the effective start date for each activity-venue association to support venue changes over time
+16. WHEN creating an activity-venue association, THE API SHALL prevent duplicate records with the same effective start date for the same activity
 
 ### Requirement 5: Assign Participants to Activities
 

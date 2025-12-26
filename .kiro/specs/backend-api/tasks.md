@@ -168,7 +168,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Validate required fields (name, email)
     - Validate email format and uniqueness
     - Handle optional fields (phone, notes, home venue)
-    - Implement Type 2 SCD for home venue changes
+    - Implement simplified temporal tracking for home venue changes
     - _Requirements: 3.7, 3.8, 3.9, 3.10, 3.11_
 
   - [ ]* 7.3 Write property tests for participant operations
@@ -188,7 +188,23 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - PUT /api/participants/:id
     - DELETE /api/participants/:id
     - GET /api/participants/:id/address-history
-    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.12_
+    - POST /api/participants/:id/address-history
+    - PUT /api/participants/:id/address-history/:historyId
+    - DELETE /api/participants/:id/address-history/:historyId
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.12, 3.13, 3.14, 3.15_
+
+  - [x] 7.5 Create participant address history repository
+    - Implement CRUD operations for address history
+    - Implement ordering by effectiveFrom descending
+    - Implement duplicate effectiveFrom prevention
+    - _Requirements: 3.12, 3.13, 3.14, 3.15, 3.16, 3.17_
+
+  - [ ]* 7.6 Write property tests for address history operations
+    - **Property 89: Address History Creation on Venue Update**
+    - **Property 90: Address History Retrieval**
+    - **Property 91: Current Address Identification**
+    - **Property 92: Address History Duplicate Prevention**
+    - **Validates: Requirements 3.11, 3.12, 3.17**
 
 - [x] 8. Implement venue management
   - [x] 8.1 Create venue repository
@@ -272,7 +288,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Allow null end date for ongoing activities
     - Set default status to PLANNED
     - Support status transitions
-    - Manage venue associations with temporal tracking
+    - Manage venue associations with simplified temporal tracking
     - _Requirements: 4.6, 4.7, 4.8, 4.9, 4.10, 4.11, 4.12, 4.13, 4.14, 4.15_
 
   - [ ]* 11.3 Write property tests for activity operations
@@ -293,6 +309,19 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - POST /api/activities/:id/venues
     - DELETE /api/activities/:id/venues/:venueId
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.12, 4.13, 4.14_
+
+  - [ ] 11.5 Create activity venue history repository
+    - Implement CRUD operations for venue history
+    - Implement ordering by effectiveFrom descending
+    - Implement duplicate effectiveFrom prevention
+    - _Requirements: 4.12, 4.13, 4.14, 4.15, 4.16_
+
+  - [ ]* 11.6 Write property tests for venue history operations
+    - **Property 93: Activity Venue Association Creation**
+    - **Property 94: Activity Venue History Retrieval**
+    - **Property 95: Current Venue Identification**
+    - **Property 96: Activity Venue Duplicate Prevention**
+    - **Validates: Requirements 4.11, 4.12, 4.13, 4.15, 4.16**
 
 - [x] 12. Implement activity-participant assignments
   - [x] 12.1 Create assignment repository and service

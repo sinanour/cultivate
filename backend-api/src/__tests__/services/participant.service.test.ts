@@ -213,7 +213,7 @@ describe('ParticipantService', () => {
             const participantId = '1';
             const mockParticipant = { id: '1', name: 'John Doe', email: 'john@example.com', phone: null, notes: null, createdAt: new Date(), updatedAt: new Date() };
             const mockHistory = [
-                { id: '1', participantId, venueId: 'venue-1', effectiveFrom: new Date('2024-01-01'), effectiveTo: null, createdAt: new Date() },
+                { id: '1', participantId, venueId: 'venue-1', effectiveFrom: new Date('2024-01-01'), createdAt: new Date() },
             ];
 
             mockParticipantRepo.findById = jest.fn().mockResolvedValue(mockParticipant);

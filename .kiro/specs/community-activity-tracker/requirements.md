@@ -23,7 +23,6 @@ This document defines the overall system requirements and references detailed sp
 - **Infrastructure**: The AWS cloud resources that host the system
 - **Venue**: A physical location where activities occur, representing either a public building or private residence with an address
 - **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, county, province, state, country, etc.) used to organize venues and report statistics
-- **Type_2_SCD**: Type 2 Slowly Changing Dimension - tracks historical changes by creating new records with effective date ranges
 
 ## System Architecture
 
@@ -159,9 +158,9 @@ The Community Activity Tracker system is organized into five independent package
 2. THE System SHALL require each venue to have a name, address, and associated geographic area
 3. THE System SHALL support optional latitude and longitude coordinates for venues
 4. THE System SHALL distinguish between public buildings and private residences
-5. THE System SHALL track participant home addresses as venues using Type 2 SCD to maintain address history
+5. THE System SHALL track participant home addresses as venues with temporal history to maintain address changes over time
 6. THE System SHALL allow activities to be associated with one or more venues
-7. THE System SHALL track venue associations over time to support venue changes for activities
+7. THE System SHALL track venue associations over time with effective start dates to support venue changes for activities
 8. THE System SHALL prevent deletion of venues that are referenced by activities or participants
 9. THE System SHALL provide search and filtering capabilities for venues
 
@@ -225,7 +224,7 @@ All packages implement equivalent data models:
 - ActivityParticipant
 - Venue, VenueType
 - GeographicArea, GeographicAreaType
-- ParticipantAddressHistory (Type 2 SCD)
+- ParticipantAddressHistory (temporal address tracking)
 - ActivityVenueHistory (temporal venue associations)
 - EngagementMetrics, GrowthData
 - SyncOperation, SyncState

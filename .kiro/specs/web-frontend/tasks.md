@@ -149,12 +149,44 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 7.3 Create ParticipantDetail component
     - Show participant information
     - List all activities with roles
-    - Display address history from /participants/:id/address-history endpoint
-    - _Requirements: 4.10, 4.12_
+    - Display address history table in reverse chronological order
+    - _Requirements: 4.10, 4.11_
 
   - [ ]* 7.5 Write property test for participant detail view
     - **Property 10: Participant Detail View Completeness**
     - **Validates: Requirements 4.10**
+
+  - [ ] 7.4 Create AddressHistoryTable component
+    - Display address history in reverse chronological order by effective start date
+    - Show venue name and effective start date
+    - Highlight most recent address (first record)
+    - Provide edit and delete buttons for each record
+    - _Requirements: 4.11_
+
+  - [ ]* 7.6 Write property test for address history display order
+    - **Property 11: Address History Display Order**
+    - **Validates: Requirements 4.11**
+
+  - [ ] 7.5 Create AddressHistoryForm component
+    - Modal form for add/edit address history
+    - Require venue selection from dropdown
+    - Require effective start date using CloudScape DatePicker
+    - Validate effective start date is provided
+    - Prevent duplicate records with same effective start date
+    - _Requirements: 4.12, 4.13, 4.14, 4.15, 4.16_
+
+  - [ ]* 7.7 Write property tests for address history validation
+    - **Property 12: Address History Required Fields**
+    - **Property 13: Address History Duplicate Prevention**
+    - **Validates: Requirements 4.15, 4.16**
+
+  - [ ] 7.6 Implement ParticipantAddressHistoryService
+    - Implement getAddressHistory(participantId)
+    - Implement createAddressHistory(participantId, data)
+    - Implement updateAddressHistory(participantId, historyId, data)
+    - Implement deleteAddressHistory(participantId, historyId)
+    - Use /participants/:id/address-history endpoints
+    - _Requirements: 4.12, 4.13, 4.14_
 
 - [x] 8. Implement venue management UI
   - [x] 8.1 Create VenueList component
@@ -263,7 +295,7 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 11.3 Create ActivityDetail component
     - Show activity information with all status values
     - List assigned participants with roles from /activities/:id/participants endpoint
-    - Display venue history from /activities/:id/venues endpoint
+    - Display venue history table in reverse chronological order
     - Provide status update button (not just "Mark Complete")
     - Support adding/removing venues via /activities/:id/venues endpoints
     - _Requirements: 5.11, 5.12, 5.13, 5.14_
@@ -271,6 +303,28 @@ This implementation plan covers the React-based web application built with TypeS
   - [ ]* 11.4 Write property test for activity detail view
     - **Property 16: Activity Detail View Completeness**
     - **Validates: Requirements 5.12**
+
+  - [ ] 11.4 Create ActivityVenueHistoryTable component
+    - Display venue history in reverse chronological order by effective start date
+    - Show venue name and effective start date
+    - Highlight most recent venue (first record)
+    - Provide delete button for each record
+    - _Requirements: 5.14_
+
+  - [ ] 11.5 Create ActivityVenueHistoryForm component
+    - Modal form for adding venue associations
+    - Require venue selection from dropdown
+    - Require effective start date using CloudScape DatePicker
+    - Validate effective start date is provided
+    - Prevent duplicate records with same effective start date
+    - _Requirements: 5.13, 5.14_
+
+  - [ ] 11.6 Implement ActivityVenueHistoryService
+    - Implement getActivityVenues(activityId)
+    - Implement addActivityVenue(activityId, venueId, effectiveFrom)
+    - Implement deleteActivityVenue(activityId, venueId)
+    - Use /activities/:id/venues endpoints
+    - _Requirements: 5.13, 5.14_
 
 - [x] 12. Implement assignment management UI
   - [x] 12.1 Create AssignmentForm component

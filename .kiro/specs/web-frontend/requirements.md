@@ -75,8 +75,12 @@ The Web Frontend package provides a responsive React-based web application that 
 8. THE Web_App SHALL validate email format
 9. THE Web_App SHALL allow optional phone and notes fields
 10. THE Web_App SHALL display a detail view showing participant information and their activities
-11. THE Web_App SHALL allow selection of a home venue for each participant
-12. THE Web_App SHALL display the participant's home address history when a home venue has changed over time
+11. THE Web_App SHALL display a table of the participant's home address history in reverse chronological order
+12. THE Web_App SHALL provide an interface to add new address history records with venue and effective start date
+13. THE Web_App SHALL provide an interface to edit existing address history records
+14. THE Web_App SHALL provide an interface to delete address history records
+15. THE Web_App SHALL validate that address history records have a venue and effective start date
+16. THE Web_App SHALL prevent duplicate address history records with the same effective start date for the same participant
 
 ### Requirement 5: Activity Management UI
 
@@ -98,7 +102,7 @@ The Web Frontend package provides a responsive React-based web application that 
 12. THE Web_App SHALL provide a button to update activity status
 13. THE Web_App SHALL display a detail view showing activity information and assigned participants
 14. THE Web_App SHALL allow selection of one or more venues for each activity
-15. THE Web_App SHALL display the activity's venue history when venues have changed over time
+15. THE Web_App SHALL display the activity's venue history in reverse chronological order when venues have changed over time
 
 ### Requirement 6: Activity-Participant Assignment UI
 

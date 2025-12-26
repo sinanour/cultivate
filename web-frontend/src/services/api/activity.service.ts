@@ -50,7 +50,7 @@ export class ActivityService {
         return ApiClient.post<any>(`/activities/${activityId}/venues`, { venueId });
     }
 
-    static async removeActivityVenue(activityId: string, venueId: string): Promise<void> {
-        return ApiClient.delete<void>(`/activities/${activityId}/venues/${venueId}`);
+    static async removeActivityVenue(activityId: string, venueHistoryId: string): Promise<void> {
+        return ApiClient.delete<void>(`/activities/${activityId}/venue-history/${venueHistoryId}`);
     }
 }
