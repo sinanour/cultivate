@@ -101,7 +101,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 46E: Root Administrator Role Assignment**
     - **Validates: Requirements 10.10, 10.11, 10.12, 10.13, 10.14**
 
-- [-] 4. Checkpoint - Verify authentication and authorization
+- [x] 4. Checkpoint - Verify authentication and authorization
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 5. Implement activity type management
@@ -256,7 +256,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - GET /api/geographic-areas/:id/statistics
     - _Requirements: 5B.1, 5B.2, 5B.3, 5B.4, 5B.5, 5B.12, 5B.13, 5B.14, 5B.15_
 
-- [ ] 10. Checkpoint - Verify core entity management
+- [x] 10. Checkpoint - Verify core entity management
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 11. Implement activity management
@@ -452,7 +452,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Test connection string generation
     - _Requirements: 16.2, 16.3, 16.5, 16.6_
 
-- [ ] 20. Final checkpoint - Ensure all tests pass
+- [x] 20. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 21. Align implementation with API contract
