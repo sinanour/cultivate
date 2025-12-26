@@ -11,6 +11,9 @@ import Alert from '@cloudscape-design/components/alert';
 import type { Participant } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { VenueService } from '../../services/api/venue.service';
+import { VersionConflictModal } from '../common/VersionConflictModal';
+import { useVersionConflict } from '../../hooks/useVersionConflict';
+import { getEntityVersion } from '../../utils/version-conflict.utils';
 
 interface ParticipantFormProps {
   participant: Participant | null;
@@ -24,11 +27,16 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const [email, setEmail] = useState(participant?.email || '');
   const [phone, setPhone] = useState(participant?.phone || '');
   const [notes, setNotes] = useState(participant?.notes || '');
-  const [homeVenueId, setHomeVenueId] = useState(participant?.homeVenueId || '');
+  const [homeVenueId, setHomeVenueId] = useState('');
   
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [error, setError] = useState('');
+
+  const versionConflict = useVersionConflict({
+    queryKey: ['participants'],
+    onDiscard: onCancel,
+  });
 
   const { data: venues = [] } = useQuery({
     queryKey: ['venues'],
@@ -65,6 +73,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       phone?: string;
       notes?: string;
       homeVenueId?: string;
+      version?: number;
     }) =>
       ParticipantService.updateParticipant(data.id, {
         name: data.name,
@@ -72,13 +81,16 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
         phone: data.phone,
         notes: data.notes,
         homeVenueId: data.homeVenueId,
+        version: data.version,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['participants'] });
       onSuccess();
     },
-    onError: (err: Error) => {
-      setError(err.message || 'Failed to update participant');
+    onError: (err: any) => {
+      if (!versionConflict.handleError(err)) {
+        setError(err.message || 'Failed to update participant');
+      }
     },
   });
 
@@ -127,7 +139,11 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     };
 
     if (participant) {
-      updateMutation.mutate({ id: participant.id, ...data });
+      updateMutation.mutate({
+        id: participant.id,
+        ...data,
+        version: getEntityVersion(participant),
+      });
     } else {
       createMutation.mutate(data);
     }
@@ -136,77 +152,86 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Form
-        actions={
-          <SpaceBetween direction="horizontal" size="xs">
-            <Button variant="link" onClick={onCancel} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button variant="primary" loading={isLoading} disabled={isLoading} formAction="submit">
-              {participant ? 'Update' : 'Create'}
-            </Button>
+    <>
+      <form onSubmit={handleSubmit}>
+        <Form
+          actions={
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={onCancel} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button variant="primary" loading={isLoading} disabled={isLoading} formAction="submit">
+                {participant ? 'Update' : 'Create'}
+              </Button>
+            </SpaceBetween>
+          }
+        >
+          <SpaceBetween size="l">
+            {error && (
+              <Alert type="error" dismissible onDismiss={() => setError('')}>
+                {error}
+              </Alert>
+            )}
+            <FormField label="Name" errorText={nameError} constraintText="Required">
+              <Input
+                value={name}
+                onChange={({ detail }) => {
+                  setName(detail.value);
+                  if (nameError) validateName(detail.value);
+                }}
+                onBlur={() => validateName(name)}
+                placeholder="Enter participant name"
+                disabled={isLoading}
+              />
+            </FormField>
+            <FormField label="Email" errorText={emailError} constraintText="Required">
+              <Input
+                value={email}
+                onChange={({ detail }) => {
+                  setEmail(detail.value);
+                  if (emailError) validateEmail(detail.value);
+                }}
+                onBlur={() => validateEmail(email)}
+                type="email"
+                placeholder="Enter email address"
+                disabled={isLoading}
+              />
+            </FormField>
+            <FormField label="Phone" constraintText="Optional">
+              <Input
+                value={phone}
+                onChange={({ detail }) => setPhone(detail.value)}
+                placeholder="Enter phone number"
+                disabled={isLoading}
+              />
+            </FormField>
+            <FormField label="Home Venue" constraintText="Optional">
+              <Select
+                selectedOption={venueOptions.find((o) => o.value === homeVenueId) || venueOptions[0]}
+                onChange={({ detail }) => setHomeVenueId(detail.selectedOption.value || '')}
+                options={venueOptions}
+                disabled={isLoading}
+              />
+            </FormField>
+            <FormField label="Notes" constraintText="Optional">
+              <Textarea
+                value={notes}
+                onChange={({ detail }) => setNotes(detail.value)}
+                placeholder="Enter any additional notes"
+                disabled={isLoading}
+                rows={4}
+              />
+            </FormField>
           </SpaceBetween>
-        }
-      >
-        <SpaceBetween size="l">
-          {error && (
-            <Alert type="error" dismissible onDismiss={() => setError('')}>
-              {error}
-            </Alert>
-          )}
-          <FormField label="Name" errorText={nameError} constraintText="Required">
-            <Input
-              value={name}
-              onChange={({ detail }) => {
-                setName(detail.value);
-                if (nameError) validateName(detail.value);
-              }}
-              onBlur={() => validateName(name)}
-              placeholder="Enter participant name"
-              disabled={isLoading}
-            />
-          </FormField>
-          <FormField label="Email" errorText={emailError} constraintText="Required">
-            <Input
-              value={email}
-              onChange={({ detail }) => {
-                setEmail(detail.value);
-                if (emailError) validateEmail(detail.value);
-              }}
-              onBlur={() => validateEmail(email)}
-              type="email"
-              placeholder="Enter email address"
-              disabled={isLoading}
-            />
-          </FormField>
-          <FormField label="Phone" constraintText="Optional">
-            <Input
-              value={phone}
-              onChange={({ detail }) => setPhone(detail.value)}
-              placeholder="Enter phone number"
-              disabled={isLoading}
-            />
-          </FormField>
-          <FormField label="Home Venue" constraintText="Optional">
-            <Select
-              selectedOption={venueOptions.find((o) => o.value === homeVenueId) || venueOptions[0]}
-              onChange={({ detail }) => setHomeVenueId(detail.selectedOption.value || '')}
-              options={venueOptions}
-              disabled={isLoading}
-            />
-          </FormField>
-          <FormField label="Notes" constraintText="Optional">
-            <Textarea
-              value={notes}
-              onChange={({ detail }) => setNotes(detail.value)}
-              placeholder="Enter any additional notes"
-              disabled={isLoading}
-              rows={4}
-            />
-          </FormField>
-        </SpaceBetween>
-      </Form>
-    </form>
+        </Form>
+      </form>
+
+      <VersionConflictModal
+        visible={versionConflict.showConflictModal}
+        conflictInfo={versionConflict.conflictInfo}
+        onRetryWithLatest={versionConflict.handleRetryWithLatest}
+        onDiscardChanges={versionConflict.handleDiscardChanges}
+      />
+    </>
   );
 }

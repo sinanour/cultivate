@@ -10,6 +10,9 @@ import Alert from '@cloudscape-design/components/alert';
 import type { Venue } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
+import { VersionConflictModal } from '../common/VersionConflictModal';
+import { useVersionConflict } from '../../hooks/useVersionConflict';
+import { getEntityVersion } from '../../utils/version-conflict.utils';
 
 interface VenueFormProps {
   venue: Venue | null;
@@ -32,6 +35,11 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const [latitudeError, setLatitudeError] = useState('');
   const [longitudeError, setLongitudeError] = useState('');
   const [error, setError] = useState('');
+
+  const versionConflict = useVersionConflict({
+    queryKey: ['venues'],
+    onDiscard: onCancel,
+  });
 
   const { data: geographicAreas = [] } = useQuery({
     queryKey: ['geographicAreas'],
@@ -70,27 +78,22 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const updateMutation = useMutation({
     mutationFn: (data: {
       id: string;
-      name: string;
-      address: string;
-      geographicAreaId: string;
+      name?: string;
+      address?: string;
+      geographicAreaId?: string;
       latitude?: number;
       longitude?: number;
       venueType?: 'PUBLIC_BUILDING' | 'PRIVATE_RESIDENCE';
-    }) =>
-      VenueService.updateVenue(data.id, {
-        name: data.name,
-        address: data.address,
-        geographicAreaId: data.geographicAreaId,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        venueType: data.venueType,
-      }),
+      version?: number;
+    }) => VenueService.updateVenue(data.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['venues'] });
       onSuccess();
     },
-    onError: (err: Error) => {
-      setError(err.message || 'Failed to update venue');
+    onError: (err: any) => {
+      if (!versionConflict.handleError(err)) {
+        setError(err.message || 'Failed to update venue');
+      }
     },
   });
 
@@ -126,7 +129,7 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const validateLatitude = (value: string): boolean => {
     if (!value) {
       setLatitudeError('');
-      return true; // Optional field
+      return true;
     }
     const num = parseFloat(value);
     if (isNaN(num) || num < -90 || num > 90) {
@@ -140,7 +143,7 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const validateLongitude = (value: string): boolean => {
     if (!value) {
       setLongitudeError('');
-      return true; // Optional field
+      return true;
     }
     const num = parseFloat(value);
     if (isNaN(num) || num < -180 || num > 180) {
@@ -175,7 +178,11 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
     };
 
     if (venue) {
-      updateMutation.mutate({ id: venue.id, ...data });
+      updateMutation.mutate({
+        id: venue.id,
+        ...data,
+        version: getEntityVersion(venue),
+      });
     } else {
       createMutation.mutate(data);
     }
@@ -184,100 +191,109 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Form
-        actions={
-          <SpaceBetween direction="horizontal" size="xs">
-            <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
-              {venue ? 'Update' : 'Create'}
-            </Button>
+    <>
+      <form onSubmit={handleSubmit}>
+        <Form
+          actions={
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
+                {venue ? 'Update' : 'Create'}
+              </Button>
+            </SpaceBetween>
+          }
+        >
+          <SpaceBetween size="l">
+            {error && (
+              <Alert type="error" dismissible onDismiss={() => setError('')}>
+                {error}
+              </Alert>
+            )}
+            <FormField label="Name" errorText={nameError} constraintText="Required">
+              <Input
+                value={name}
+                onChange={({ detail }) => {
+                  setName(detail.value);
+                  if (nameError) validateName(detail.value);
+                }}
+                onBlur={() => validateName(name)}
+                placeholder="Enter venue name"
+                disabled={isSubmitting}
+              />
+            </FormField>
+            <FormField label="Address" errorText={addressError} constraintText="Required">
+              <Input
+                value={address}
+                onChange={({ detail }) => {
+                  setAddress(detail.value);
+                  if (addressError) validateAddress(detail.value);
+                }}
+                onBlur={() => validateAddress(address)}
+                placeholder="Enter venue address"
+                disabled={isSubmitting}
+              />
+            </FormField>
+            <FormField label="Geographic Area" errorText={geographicAreaError} constraintText="Required">
+              <Select
+                selectedOption={geographicAreaOptions.find((o) => o.value === geographicAreaId) || null}
+                onChange={({ detail }) => {
+                  setGeographicAreaId(detail.selectedOption.value || '');
+                  if (geographicAreaError) validateGeographicArea(detail.selectedOption.value || '');
+                }}
+                options={geographicAreaOptions}
+                placeholder="Select a geographic area"
+                disabled={isSubmitting}
+                empty="No geographic areas available"
+              />
+            </FormField>
+            <FormField label="Latitude" errorText={latitudeError} constraintText="Optional (-90 to 90)">
+              <Input
+                value={latitude}
+                onChange={({ detail }) => {
+                  setLatitude(detail.value);
+                  if (latitudeError) validateLatitude(detail.value);
+                }}
+                onBlur={() => validateLatitude(latitude)}
+                placeholder="Enter latitude"
+                disabled={isSubmitting}
+                type="number"
+                inputMode="decimal"
+              />
+            </FormField>
+            <FormField label="Longitude" errorText={longitudeError} constraintText="Optional (-180 to 180)">
+              <Input
+                value={longitude}
+                onChange={({ detail }) => {
+                  setLongitude(detail.value);
+                  if (longitudeError) validateLongitude(detail.value);
+                }}
+                onBlur={() => validateLongitude(longitude)}
+                placeholder="Enter longitude"
+                disabled={isSubmitting}
+                type="number"
+                inputMode="decimal"
+              />
+            </FormField>
+            <FormField label="Venue Type" constraintText="Optional">
+              <Select
+                selectedOption={venueTypeOptions.find((o) => o.value === venueType) || venueTypeOptions[0]}
+                onChange={({ detail }) => setVenueType(detail.selectedOption.value || '')}
+                options={venueTypeOptions}
+                disabled={isSubmitting}
+              />
+            </FormField>
           </SpaceBetween>
-        }
-      >
-        <SpaceBetween size="l">
-          {error && (
-            <Alert type="error" dismissible onDismiss={() => setError('')}>
-              {error}
-            </Alert>
-          )}
-          <FormField label="Name" errorText={nameError} constraintText="Required">
-            <Input
-              value={name}
-              onChange={({ detail }) => {
-                setName(detail.value);
-                if (nameError) validateName(detail.value);
-              }}
-              onBlur={() => validateName(name)}
-              placeholder="Enter venue name"
-              disabled={isSubmitting}
-            />
-          </FormField>
-          <FormField label="Address" errorText={addressError} constraintText="Required">
-            <Input
-              value={address}
-              onChange={({ detail }) => {
-                setAddress(detail.value);
-                if (addressError) validateAddress(detail.value);
-              }}
-              onBlur={() => validateAddress(address)}
-              placeholder="Enter venue address"
-              disabled={isSubmitting}
-            />
-          </FormField>
-          <FormField label="Geographic Area" errorText={geographicAreaError} constraintText="Required">
-            <Select
-              selectedOption={geographicAreaOptions.find((o) => o.value === geographicAreaId) || null}
-              onChange={({ detail }) => {
-                setGeographicAreaId(detail.selectedOption.value || '');
-                if (geographicAreaError) validateGeographicArea(detail.selectedOption.value || '');
-              }}
-              options={geographicAreaOptions}
-              placeholder="Select a geographic area"
-              disabled={isSubmitting}
-              empty="No geographic areas available"
-            />
-          </FormField>
-          <FormField label="Latitude" errorText={latitudeError} constraintText="Optional (-90 to 90)">
-            <Input
-              value={latitude}
-              onChange={({ detail }) => {
-                setLatitude(detail.value);
-                if (latitudeError) validateLatitude(detail.value);
-              }}
-              onBlur={() => validateLatitude(latitude)}
-              placeholder="Enter latitude"
-              disabled={isSubmitting}
-              type="number"
-              inputMode="decimal"
-            />
-          </FormField>
-          <FormField label="Longitude" errorText={longitudeError} constraintText="Optional (-180 to 180)">
-            <Input
-              value={longitude}
-              onChange={({ detail }) => {
-                setLongitude(detail.value);
-                if (longitudeError) validateLongitude(detail.value);
-              }}
-              onBlur={() => validateLongitude(longitude)}
-              placeholder="Enter longitude"
-              disabled={isSubmitting}
-              type="number"
-              inputMode="decimal"
-            />
-          </FormField>
-          <FormField label="Venue Type" constraintText="Optional">
-            <Select
-              selectedOption={venueTypeOptions.find((o) => o.value === venueType) || venueTypeOptions[0]}
-              onChange={({ detail }) => setVenueType(detail.selectedOption.value || '')}
-              options={venueTypeOptions}
-              disabled={isSubmitting}
-            />
-          </FormField>
-        </SpaceBetween>
-      </Form>
-    </form>
+        </Form>
+      </form>
+
+      <VersionConflictModal
+        visible={versionConflict.showConflictModal}
+        conflictInfo={versionConflict.conflictInfo}
+        onRetryWithLatest={versionConflict.handleRetryWithLatest}
+        onDiscardChanges={versionConflict.handleDiscardChanges}
+      />
+    </>
   );
 }

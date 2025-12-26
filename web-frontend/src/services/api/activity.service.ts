@@ -4,17 +4,22 @@ import { ApiClient } from './api.client';
 interface CreateActivityData {
     name: string;
     activityTypeId: string;
+    status?: 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
     startDate: string;
     endDate?: string;
-    isOngoing: boolean;
-    venueIds?: string[];
 }
 
-interface UpdateActivityData extends CreateActivityData { }
+interface UpdateActivityData extends Partial<CreateActivityData> {
+    version?: number;
+}
 
 export class ActivityService {
-    static async getActivities(): Promise<Activity[]> {
-        return ApiClient.get<Activity[]>('/activities');
+    static async getActivities(page?: number, limit?: number): Promise<Activity[]> {
+        const params = new URLSearchParams();
+        if (page) params.append('page', page.toString());
+        if (limit) params.append('limit', limit.toString());
+        const query = params.toString();
+        return ApiClient.get<Activity[]>(`/activities${query ? `?${query}` : ''}`);
     }
 
     static async getActivity(id: string): Promise<Activity> {
@@ -33,7 +38,19 @@ export class ActivityService {
         return ApiClient.delete<void>(`/activities/${id}`);
     }
 
-    static async markComplete(id: string): Promise<Activity> {
-        return ApiClient.post<Activity>(`/activities/${id}/complete`, {});
+    static async getActivityParticipants(id: string): Promise<any[]> {
+        return ApiClient.get<any[]>(`/activities/${id}/participants`);
+    }
+
+    static async getActivityVenues(id: string): Promise<any[]> {
+        return ApiClient.get<any[]>(`/activities/${id}/venues`);
+    }
+
+    static async addActivityVenue(activityId: string, venueId: string): Promise<any> {
+        return ApiClient.post<any>(`/activities/${activityId}/venues`, { venueId });
+    }
+
+    static async removeActivityVenue(activityId: string, venueId: string): Promise<void> {
+        return ApiClient.delete<void>(`/activities/${activityId}/venues/${venueId}`);
     }
 }

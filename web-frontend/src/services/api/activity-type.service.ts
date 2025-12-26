@@ -10,7 +10,10 @@ export class ActivityTypeService {
         return ApiClient.post<ActivityType>('/activity-types', data);
     }
 
-    static async updateActivityType(id: string, data: { name: string }): Promise<ActivityType> {
+    static async updateActivityType(
+        id: string,
+        data: { name: string; version?: number }
+    ): Promise<ActivityType> {
         return ApiClient.put<ActivityType>(`/activity-types/${id}`, data);
     }
 

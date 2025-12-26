@@ -9,11 +9,17 @@ interface CreateParticipantData {
     homeVenueId?: string;
 }
 
-interface UpdateParticipantData extends CreateParticipantData { }
+interface UpdateParticipantData extends CreateParticipantData {
+    version?: number;
+}
 
 export class ParticipantService {
-    static async getParticipants(): Promise<Participant[]> {
-        return ApiClient.get<Participant[]>('/participants');
+    static async getParticipants(page?: number, limit?: number): Promise<Participant[]> {
+        const params = new URLSearchParams();
+        if (page) params.append('page', page.toString());
+        if (limit) params.append('limit', limit.toString());
+        const query = params.toString();
+        return ApiClient.get<Participant[]>(`/participants${query ? `?${query}` : ''}`);
     }
 
     static async getParticipant(id: string): Promise<Participant> {
@@ -30,5 +36,9 @@ export class ParticipantService {
 
     static async deleteParticipant(id: string): Promise<void> {
         return ApiClient.delete<void>(`/participants/${id}`);
+    }
+
+    static async getAddressHistory(id: string): Promise<any[]> {
+        return ApiClient.get<any[]>(`/participants/${id}/address-history`);
     }
 }

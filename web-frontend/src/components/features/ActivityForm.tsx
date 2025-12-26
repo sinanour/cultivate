@@ -6,14 +6,15 @@ import Input from '@cloudscape-design/components/input';
 import Select from '@cloudscape-design/components/select';
 import DatePicker from '@cloudscape-design/components/date-picker';
 import Checkbox from '@cloudscape-design/components/checkbox';
-import Multiselect from '@cloudscape-design/components/multiselect';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
 import type { Activity } from '../../types';
 import { ActivityService } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
-import { VenueService } from '../../services/api/venue.service';
+import { VersionConflictModal } from '../common/VersionConflictModal';
+import { useVersionConflict } from '../../hooks/useVersionConflict';
+import { getEntityVersion } from '../../utils/version-conflict.utils';
 
 interface ActivityFormProps {
   activity: Activity | null;
@@ -21,14 +22,21 @@ interface ActivityFormProps {
   onCancel: () => void;
 }
 
+const STATUS_OPTIONS = [
+  { label: 'Planned', value: 'PLANNED' },
+  { label: 'Active', value: 'ACTIVE' },
+  { label: 'Completed', value: 'COMPLETED' },
+  { label: 'Cancelled', value: 'CANCELLED' },
+];
+
 export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProps) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(activity?.name || '');
   const [activityTypeId, setActivityTypeId] = useState(activity?.activityTypeId || '');
+  const [status, setStatus] = useState(activity?.status || 'PLANNED');
   const [startDate, setStartDate] = useState(activity?.startDate?.split('T')[0] || '');
   const [endDate, setEndDate] = useState(activity?.endDate?.split('T')[0] || '');
   const [isOngoing, setIsOngoing] = useState(activity?.isOngoing || false);
-  const [selectedVenues, setSelectedVenues] = useState<string[]>([]);
   
   const [nameError, setNameError] = useState('');
   const [activityTypeError, setActivityTypeError] = useState('');
@@ -36,14 +44,14 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const [endDateError, setEndDateError] = useState('');
   const [error, setError] = useState('');
 
+  const versionConflict = useVersionConflict({
+    queryKey: ['activities'],
+    onDiscard: onCancel,
+  });
+
   const { data: activityTypes = [] } = useQuery({
     queryKey: ['activityTypes'],
     queryFn: () => ActivityTypeService.getActivityTypes(),
-  });
-
-  const { data: venues = [] } = useQuery({
-    queryKey: ['venues'],
-    queryFn: () => VenueService.getVenues(),
   });
 
   const activityTypeOptions = activityTypes.map((t) => ({
@@ -51,19 +59,13 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     value: t.id,
   }));
 
-  const venueOptions = venues.map((v) => ({
-    label: v.name,
-    value: v.id,
-  }));
-
   const createMutation = useMutation({
     mutationFn: (data: {
       name: string;
       activityTypeId: string;
+      status?: 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
       startDate: string;
       endDate?: string;
-      isOngoing: boolean;
-      venueIds?: string[];
     }) => ActivityService.createActivity(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
@@ -77,27 +79,21 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const updateMutation = useMutation({
     mutationFn: (data: {
       id: string;
-      name: string;
-      activityTypeId: string;
-      startDate: string;
+      name?: string;
+      activityTypeId?: string;
+      status?: 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+      startDate?: string;
       endDate?: string;
-      isOngoing: boolean;
-      venueIds?: string[];
-    }) =>
-      ActivityService.updateActivity(data.id, {
-        name: data.name,
-        activityTypeId: data.activityTypeId,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        isOngoing: data.isOngoing,
-        venueIds: data.venueIds,
-      }),
+      version?: number;
+    }) => ActivityService.updateActivity(data.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       onSuccess();
     },
-    onError: (err: Error) => {
-      setError(err.message || 'Failed to update activity');
+    onError: (err: any) => {
+      if (!versionConflict.handleError(err)) {
+        setError(err.message || 'Failed to update activity');
+      }
     },
   });
 
@@ -154,14 +150,17 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     const data = {
       name: name.trim(),
       activityTypeId,
+      status: status as 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED',
       startDate: new Date(startDate).toISOString(),
       endDate: !isOngoing && endDate ? new Date(endDate).toISOString() : undefined,
-      isOngoing,
-      venueIds: selectedVenues.length > 0 ? selectedVenues : undefined,
     };
 
     if (activity) {
-      updateMutation.mutate({ id: activity.id, ...data });
+      updateMutation.mutate({
+        id: activity.id,
+        ...data,
+        version: getEntityVersion(activity),
+      });
     } else {
       createMutation.mutate(data);
     }
@@ -170,105 +169,110 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Form
-        actions={
-          <SpaceBetween direction="horizontal" size="xs">
-            <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
-              {activity ? 'Update' : 'Create'}
-            </Button>
-          </SpaceBetween>
-        }
-      >
-        <SpaceBetween size="l">
-          {error && (
-            <Alert type="error" dismissible onDismiss={() => setError('')}>
-              {error}
-            </Alert>
-          )}
-          <FormField label="Name" errorText={nameError} constraintText="Required">
-            <Input
-              value={name}
-              onChange={({ detail }) => {
-                setName(detail.value);
-                if (nameError) validateName(detail.value);
-              }}
-              onBlur={() => validateName(name)}
-              placeholder="Enter activity name"
-              disabled={isSubmitting}
-            />
-          </FormField>
-          <FormField label="Activity Type" errorText={activityTypeError} constraintText="Required">
-            <Select
-              selectedOption={activityTypeOptions.find((o) => o.value === activityTypeId) || null}
-              onChange={({ detail }) => {
-                setActivityTypeId(detail.selectedOption.value || '');
-                if (activityTypeError) validateActivityType(detail.selectedOption.value || '');
-              }}
-              options={activityTypeOptions}
-              placeholder="Select an activity type"
-              disabled={isSubmitting}
-              empty="No activity types available"
-            />
-          </FormField>
-          <FormField label="Start Date" errorText={startDateError} constraintText="Required">
-            <DatePicker
-              value={startDate}
-              onChange={({ detail }) => {
-                setStartDate(detail.value);
-                if (startDateError) validateStartDate(detail.value);
-              }}
-              placeholder="YYYY-MM-DD"
-              disabled={isSubmitting}
-            />
-          </FormField>
-          <FormField>
-            <Checkbox
-              checked={isOngoing}
-              onChange={({ detail }) => {
-                setIsOngoing(detail.checked);
-                if (detail.checked) {
-                  setEndDate('');
-                  setEndDateError('');
-                } else {
-                  validateEndDate(endDate, detail.checked);
-                }
-              }}
-              disabled={isSubmitting}
-            >
-              This is an ongoing activity (no end date)
-            </Checkbox>
-          </FormField>
-          {!isOngoing && (
-            <FormField label="End Date" errorText={endDateError} constraintText="Required for finite activities">
-              <DatePicker
-                value={endDate}
+    <>
+      <form onSubmit={handleSubmit}>
+        <Form
+          actions={
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
+                {activity ? 'Update' : 'Create'}
+              </Button>
+            </SpaceBetween>
+          }
+        >
+          <SpaceBetween size="l">
+            {error && (
+              <Alert type="error" dismissible onDismiss={() => setError('')}>
+                {error}
+              </Alert>
+            )}
+            <FormField label="Name" errorText={nameError} constraintText="Required">
+              <Input
+                value={name}
                 onChange={({ detail }) => {
-                  setEndDate(detail.value);
-                  if (endDateError) validateEndDate(detail.value, isOngoing);
+                  setName(detail.value);
+                  if (nameError) validateName(detail.value);
+                }}
+                onBlur={() => validateName(name)}
+                placeholder="Enter activity name"
+                disabled={isSubmitting}
+              />
+            </FormField>
+            <FormField label="Activity Type" errorText={activityTypeError} constraintText="Required">
+              <Select
+                selectedOption={activityTypeOptions.find((o) => o.value === activityTypeId) || null}
+                onChange={({ detail }) => {
+                  setActivityTypeId(detail.selectedOption.value || '');
+                  if (activityTypeError) validateActivityType(detail.selectedOption.value || '');
+                }}
+                options={activityTypeOptions}
+                placeholder="Select an activity type"
+                disabled={isSubmitting}
+                empty="No activity types available"
+              />
+            </FormField>
+            <FormField label="Status" constraintText="Required">
+              <Select
+                selectedOption={STATUS_OPTIONS.find((o) => o.value === status) || STATUS_OPTIONS[0]}
+                onChange={({ detail }) => setStatus(detail.selectedOption.value as any)}
+                options={STATUS_OPTIONS}
+                disabled={isSubmitting}
+              />
+            </FormField>
+            <FormField label="Start Date" errorText={startDateError} constraintText="Required">
+              <DatePicker
+                value={startDate}
+                onChange={({ detail }) => {
+                  setStartDate(detail.value);
+                  if (startDateError) validateStartDate(detail.value);
                 }}
                 placeholder="YYYY-MM-DD"
                 disabled={isSubmitting}
               />
             </FormField>
-          )}
-          <FormField label="Venues" constraintText="Optional - select one or more venues">
-            <Multiselect
-              selectedOptions={venueOptions.filter((o) => selectedVenues.includes(o.value))}
-              onChange={({ detail }) => {
-                setSelectedVenues(detail.selectedOptions.map((o) => o.value || ''));
-              }}
-              options={venueOptions}
-              placeholder="Select venues"
-              disabled={isSubmitting}
-              empty="No venues available"
-            />
-          </FormField>
-        </SpaceBetween>
-      </Form>
-    </form>
+            <FormField>
+              <Checkbox
+                checked={isOngoing}
+                onChange={({ detail }) => {
+                  setIsOngoing(detail.checked);
+                  if (detail.checked) {
+                    setEndDate('');
+                    setEndDateError('');
+                  } else {
+                    validateEndDate(endDate, detail.checked);
+                  }
+                }}
+                disabled={isSubmitting}
+              >
+                This is an ongoing activity (no end date)
+              </Checkbox>
+            </FormField>
+            {!isOngoing && (
+              <FormField label="End Date" errorText={endDateError} constraintText="Required for finite activities">
+                <DatePicker
+                  value={endDate}
+                  onChange={({ detail }) => {
+                    setEndDate(detail.value);
+                    if (endDateError) validateEndDate(detail.value, isOngoing);
+                  }}
+                  placeholder="YYYY-MM-DD"
+                  disabled={isSubmitting}
+                />
+              </FormField>
+            )}
+          </SpaceBetween>
+        </Form>
+      </form>
+
+      <VersionConflictModal
+        visible={versionConflict.showConflictModal}
+        conflictInfo={versionConflict.conflictInfo}
+        onRetryWithLatest={versionConflict.handleRetryWithLatest}
+        onDiscardChanges={versionConflict.handleDiscardChanges}
+      />
+    </>
   );
 }

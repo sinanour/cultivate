@@ -7,11 +7,17 @@ interface CreateGeographicAreaData {
   parentGeographicAreaId?: string;
 }
 
-interface UpdateGeographicAreaData extends CreateGeographicAreaData {}
+interface UpdateGeographicAreaData extends Partial<CreateGeographicAreaData> {
+  version?: number;
+}
 
 export class GeographicAreaService {
-  static async getGeographicAreas(): Promise<GeographicArea[]> {
-    return ApiClient.get<GeographicArea[]>('/geographic-areas');
+  static async getGeographicAreas(page?: number, limit?: number): Promise<GeographicArea[]> {
+    const params = new URLSearchParams();
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
+    const query = params.toString();
+    return ApiClient.get<GeographicArea[]>(`/geographic-areas${query ? `?${query}` : ''}`);
   }
 
   static async getGeographicArea(id: string): Promise<GeographicArea> {

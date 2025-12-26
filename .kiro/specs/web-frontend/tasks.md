@@ -434,19 +434,19 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 15.2, 15.3, 15.5, 15.6**
 
 - [ ] 17A. Implement optimistic locking and conflict resolution
-  - [ ] 17A.1 Create version conflict detection utility
+  - [x] 17A.1 Create version conflict detection utility
     - Detect 409 errors with VERSION_CONFLICT code
     - Extract version information from error response
     - _Requirements: 18.2_
 
-  - [ ] 17A.2 Create conflict resolution UI component
+  - [x] 17A.2 Create conflict resolution UI component
     - Display conflict notification modal
     - Show current vs server version differences
     - Provide options: retry with latest, discard changes, view details
     - Refetch latest entity data on conflict
     - _Requirements: 18.2, 18.3, 18.4_
 
-  - [ ] 17A.3 Update all entity forms to include version
+  - [x] 17A.3 Update all entity forms to include version
     - Pass version field in all update requests
     - Handle version conflicts gracefully
     - _Requirements: 18.1_

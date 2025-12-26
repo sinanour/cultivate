@@ -10,11 +10,17 @@ interface CreateVenueData {
     venueType?: 'PUBLIC_BUILDING' | 'PRIVATE_RESIDENCE';
 }
 
-interface UpdateVenueData extends CreateVenueData { }
+interface UpdateVenueData extends Partial<CreateVenueData> {
+    version?: number;
+}
 
 export class VenueService {
-  static async getVenues(): Promise<Venue[]> {
-    return ApiClient.get<Venue[]>('/venues');
+    static async getVenues(page?: number, limit?: number): Promise<Venue[]> {
+        const params = new URLSearchParams();
+        if (page) params.append('page', page.toString());
+        if (limit) params.append('limit', limit.toString());
+        const query = params.toString();
+        return ApiClient.get<Venue[]>(`/venues${query ? `?${query}` : ''}`);
   }
 
   static async getVenue(id: string): Promise<Venue> {
