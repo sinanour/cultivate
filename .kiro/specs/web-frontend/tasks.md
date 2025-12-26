@@ -156,7 +156,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 10: Participant Detail View Completeness**
     - **Validates: Requirements 4.10**
 
-  - [ ] 7.4 Create AddressHistoryTable component
+  - [x] 7.4 Create AddressHistoryTable component
     - Display address history in reverse chronological order by effective start date
     - Show venue name and effective start date
     - Highlight most recent address (first record)
@@ -167,7 +167,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 11: Address History Display Order**
     - **Validates: Requirements 4.11**
 
-  - [ ] 7.5 Create AddressHistoryForm component
+  - [x] 7.5 Create AddressHistoryForm component
     - Modal form for add/edit address history
     - Require venue selection from dropdown
     - Require effective start date using CloudScape DatePicker
@@ -180,7 +180,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 13: Address History Duplicate Prevention**
     - **Validates: Requirements 4.15, 4.16**
 
-  - [ ] 7.6 Implement ParticipantAddressHistoryService
+  - [x] 7.6 Implement ParticipantAddressHistoryService
     - Implement getAddressHistory(participantId)
     - Implement createAddressHistory(participantId, data)
     - Implement updateAddressHistory(participantId, historyId, data)
@@ -304,14 +304,14 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 16: Activity Detail View Completeness**
     - **Validates: Requirements 5.12**
 
-  - [ ] 11.4 Create ActivityVenueHistoryTable component
+  - [x] 11.4 Create ActivityVenueHistoryTable component
     - Display venue history in reverse chronological order by effective start date
     - Show venue name and effective start date
     - Highlight most recent venue (first record)
     - Provide delete button for each record
     - _Requirements: 5.14_
 
-  - [ ] 11.5 Create ActivityVenueHistoryForm component
+  - [x] 11.5 Create ActivityVenueHistoryForm component
     - Modal form for adding venue associations
     - Require venue selection from dropdown
     - Require effective start date using CloudScape DatePicker
@@ -319,7 +319,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Prevent duplicate records with same effective start date
     - _Requirements: 5.13, 5.14_
 
-  - [ ] 11.6 Implement ActivityVenueHistoryService
+  - [x] 11.6 Implement ActivityVenueHistoryService
     - Implement getActivityVenues(activityId)
     - Implement addActivityVenue(activityId, venueId, effectiveFrom)
     - Implement deleteActivityVenue(activityId, venueId)

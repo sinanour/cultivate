@@ -13,19 +13,25 @@ import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import { ActivityService } from '../../services/api/activity.service';
+import { VenueService } from '../../services/api/venue.service';
 import type { Activity } from '../../types';
 import { AssignmentService } from '../../services/api/assignment.service';
 import { AssignmentForm } from './AssignmentForm';
+import { ActivityVenueHistoryTable } from './ActivityVenueHistoryTable';
+import { ActivityVenueHistoryForm } from './ActivityVenueHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
 
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
+  const queryClient = useQueryClient();
+  
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
-  const [removeError, setRemoveError] = useState('');
+  const [isVenueFormOpen, setIsVenueFormOpen] = useState(false);
+  const [error, setError] = useState('');
 
-  const { data: activity, isLoading, error } = useQuery({
+  const { data: activity, isLoading, error: loadError } = useQuery({
     queryKey: ['activity', id],
     queryFn: () => ActivityService.getActivity(id!),
     enabled: !!id,
@@ -37,13 +43,16 @@ export function ActivityDetail() {
     enabled: !!id,
   });
 
-  const { data: venueHistory = [] } = useQuery({
+  const { data: venueHistory = [], isLoading: isLoadingVenues } = useQuery({
     queryKey: ['activity-venues', id],
     queryFn: () => ActivityService.getActivityVenues(id!),
     enabled: !!id,
   });
 
-  const queryClient = useQueryClient();
+  const { data: venues = [] } = useQuery({
+    queryKey: ['venues'],
+    queryFn: () => VenueService.getVenues(),
+  });
 
   const updateStatusMutation = useMutation({
     mutationFn: (data: { id: string; status: string; version: number }) =>
@@ -51,9 +60,10 @@ export function ActivityDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity', id] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      setError('');
     },
     onError: (err: Error) => {
-      setRemoveError(err.message || 'Failed to update activity status');
+      setError(err.message || 'Failed to update activity status');
     },
   });
 
@@ -62,35 +72,44 @@ export function ActivityDetail() {
       AssignmentService.removeParticipant(id!, participantId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity-participants', id] });
-      setRemoveError('');
+      setError('');
     },
     onError: (err: Error) => {
-      setRemoveError(err.message || 'Failed to remove assignment');
+      setError(err.message || 'Failed to remove assignment');
     },
   });
 
-  if (isLoading) {
-    return (
-      <Box textAlign="center" padding="xxl">
-        <Spinner size="large" />
-      </Box>
-    );
-  }
+  const addVenueMutation = useMutation({
+    mutationFn: (data: { venueId: string; effectiveFrom: string }) =>
+      ActivityService.addActivityVenue(id!, data.venueId, data.effectiveFrom),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activity-venues', id] });
+      setIsVenueFormOpen(false);
+      setError('');
+    },
+    onError: (err: Error) => {
+      setError(err.message || 'Failed to add venue association');
+    },
+  });
 
-  if (error || !activity) {
-    return (
-      <Alert type="error">
-        Failed to load activity details. {error instanceof Error ? error.message : ''}
-      </Alert>
-    );
-  }
+  const deleteVenueMutation = useMutation({
+    mutationFn: (venueId: string) =>
+      ActivityService.deleteActivityVenue(id!, venueId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activity-venues', id] });
+      setError('');
+    },
+    onError: (err: Error) => {
+      setError(err.message || 'Failed to delete venue association');
+    },
+  });
 
   const handleUpdateStatus = (newStatus: string) => {
     if (window.confirm(`Update activity status to ${newStatus}?`)) {
       updateStatusMutation.mutate({
-        id: activity.id,
+        id: activity!.id,
         status: newStatus,
-        version: activity.version,
+        version: activity!.version,
       });
     }
   };
@@ -101,17 +120,50 @@ export function ActivityDetail() {
     }
   };
 
+  const handleAddVenue = () => {
+    setIsVenueFormOpen(true);
+  };
+
+  const handleDeleteVenue = (venueId: string) => {
+    if (window.confirm('Are you sure you want to remove this venue association?')) {
+      deleteVenueMutation.mutate(venueId);
+    }
+  };
+
+  const handleSubmitVenue = async (data: { venueId: string; effectiveFrom: string }) => {
+    await addVenueMutation.mutateAsync(data);
+  };
+
+  if (isLoading) {
+    return (
+      <Box textAlign="center" padding="xxl">
+        <Spinner size="large" />
+      </Box>
+    );
+  }
+
+  if (loadError || !activity) {
+    return (
+      <Alert type="error">
+        Failed to load activity details. {loadError instanceof Error ? loadError.message : ''}
+      </Alert>
+    );
+  }
+
+  const existingDates = venueHistory.map(v => v.effectiveFrom);
+
   return (
     <SpaceBetween size="l">
-      {removeError && (
+      {error && (
         <Alert
           type="error"
           dismissible
-          onDismiss={() => setRemoveError('')}
+          onDismiss={() => setError('')}
         >
-          {removeError}
+          {error}
         </Alert>
       )}
+      
       <Container
         header={
           <Header
@@ -199,35 +251,28 @@ export function ActivityDetail() {
         </ColumnLayout>
       </Container>
 
-      {venueHistory && venueHistory.length > 0 && (
-        <Container header={<Header variant="h3">Venue History</Header>}>
-          <Table
-            columnDefinitions={[
-              {
-                id: 'venue',
-                header: 'Venue',
-                cell: (item) => item.venue?.name || 'Unknown',
-              },
-              {
-                id: 'address',
-                header: 'Address',
-                cell: (item) => item.venue?.address || '-',
-              },
-              {
-                id: 'effectiveFrom',
-                header: 'Effective From',
-                cell: (item) => new Date(item.effectiveFrom).toLocaleDateString(),
-              },
-            ]}
-            items={venueHistory}
-            empty={
-              <Box textAlign="center" color="inherit">
-                <b>No venue history</b>
-              </Box>
+      <Container
+        header={
+          <Header
+            variant="h3"
+            actions={
+              canEdit() && (
+                <Button onClick={handleAddVenue}>
+                  Add Venue
+                </Button>
+              )
             }
-          />
-        </Container>
-      )}
+          >
+            Venue History
+          </Header>
+        }
+      >
+        <ActivityVenueHistoryTable
+          venueHistory={venueHistory}
+          onDelete={handleDeleteVenue}
+          loading={isLoadingVenues}
+        />
+      </Container>
 
       <Container
         header={
@@ -314,6 +359,15 @@ export function ActivityDetail() {
           />
         )}
       </Modal>
+
+      <ActivityVenueHistoryForm
+        visible={isVenueFormOpen}
+        onDismiss={() => setIsVenueFormOpen(false)}
+        onSubmit={handleSubmitVenue}
+        venues={venues}
+        existingDates={existingDates}
+        loading={addVenueMutation.isPending}
+      />
     </SpaceBetween>
   );
 }

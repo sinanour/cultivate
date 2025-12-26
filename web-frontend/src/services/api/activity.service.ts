@@ -46,11 +46,11 @@ export class ActivityService {
         return ApiClient.get<any[]>(`/activities/${id}/venues`);
     }
 
-    static async addActivityVenue(activityId: string, venueId: string): Promise<any> {
-        return ApiClient.post<any>(`/activities/${activityId}/venues`, { venueId });
+    static async addActivityVenue(activityId: string, venueId: string, effectiveFrom: string): Promise<any> {
+        return ApiClient.post<any>(`/activities/${activityId}/venues`, { venueId, effectiveFrom });
     }
 
-    static async removeActivityVenue(activityId: string, venueHistoryId: string): Promise<void> {
-        return ApiClient.delete<void>(`/activities/${activityId}/venue-history/${venueHistoryId}`);
+    static async deleteActivityVenue(activityId: string, venueId: string): Promise<void> {
+        return ApiClient.delete<void>(`/activities/${activityId}/venues/${venueId}`);
     }
 }
