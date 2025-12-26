@@ -68,6 +68,42 @@ export function GeographicAreaList() {
 
   const renderTreeNode = (node: TreeNode, level = 0): React.JSX.Element => {
     const area = node.data;
+    
+    // Build action buttons array with keys
+    const actionButtons = [
+      <Button
+        key="view"
+        variant="inline-link"
+        onClick={() => handleViewDetails(area)}
+      >
+        View
+      </Button>
+    ];
+    
+    if (canEdit()) {
+      actionButtons.push(
+        <Button
+          key="edit"
+          variant="inline-link"
+          onClick={() => handleEdit(area)}
+        >
+          Edit
+        </Button>
+      );
+    }
+    
+    if (canDelete()) {
+      actionButtons.push(
+        <Button
+          key="delete"
+          variant="inline-link"
+          onClick={() => handleDelete(area)}
+        >
+          Delete
+        </Button>
+      );
+    }
+    
     return (
       <div key={node.id} style={{ marginLeft: `${level * 24}px` }}>
         <Box padding={{ vertical: 'xs' }}>
@@ -77,33 +113,12 @@ export function GeographicAreaList() {
             </span>
             <Badge>{area.areaType}</Badge>
             <SpaceBetween direction="horizontal" size="xs">
-              <Button
-                variant="inline-link"
-                onClick={() => handleViewDetails(area)}
-              >
-                View
-              </Button>
-              {canEdit() && (
-                <Button
-                  variant="inline-link"
-                  onClick={() => handleEdit(area)}
-                >
-                  Edit
-                </Button>
-              )}
-              {canDelete() && (
-                <Button
-                  variant="inline-link"
-                  onClick={() => handleDelete(area)}
-                >
-                  Delete
-                </Button>
-              )}
+              {actionButtons}
             </SpaceBetween>
           </SpaceBetween>
         </Box>
         {node.children && node.children.length > 0 && (
-          <div>
+          <div key={`${node.id}-children`}>
             {node.children.map((child) => renderTreeNode(child, level + 1))}
           </div>
         )}
@@ -112,53 +127,57 @@ export function GeographicAreaList() {
   };
 
   return (
-    <SpaceBetween size="l">
-      {deleteError && (
-        <Alert
-          type="error"
-          dismissible
-          onDismiss={() => setDeleteError('')}
-        >
-          {deleteError}
-        </Alert>
-      )}
-      <Container
-        header={
-          <Header
-            variant="h2"
-            counter={`(${geographicAreas.length})`}
-            actions={
-              canCreate() && (
-                <Button variant="primary" onClick={handleCreate}>
-                  Create geographic area
-                </Button>
-              )
-            }
+    <>
+      <SpaceBetween size="l">
+        {deleteError ? (
+          <Alert
+            key="error-alert"
+            type="error"
+            dismissible
+            onDismiss={() => setDeleteError('')}
           >
-            Geographic Areas
-          </Header>
-        }
-      >
-        {isLoading ? (
-          <Box textAlign="center" padding="l">
-            Loading geographic areas...
-          </Box>
-        ) : treeData.length > 0 ? (
-          <div>
-            {treeData.map((node) => renderTreeNode(node))}
-          </div>
-        ) : (
-          <Box textAlign="center" color="inherit">
-            <b>No geographic areas</b>
-            <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-              No geographic areas to display.
+            {deleteError}
+          </Alert>
+        ) : null}
+        <Container
+          key="container"
+          header={
+            <Header
+              variant="h2"
+              counter={`(${geographicAreas.length})`}
+              actions={
+                canCreate() && (
+                  <Button variant="primary" onClick={handleCreate}>
+                    Create geographic area
+                  </Button>
+                )
+              }
+            >
+              Geographic Areas
+            </Header>
+          }
+        >
+          {isLoading ? (
+            <Box key="loading" textAlign="center" padding="l">
+              Loading geographic areas...
             </Box>
-            {canCreate() && (
-              <Button onClick={handleCreate}>Create geographic area</Button>
-            )}
-          </Box>
-        )}
-      </Container>
+          ) : treeData.length > 0 ? (
+            <div key="tree-data">
+              {treeData.map((node) => renderTreeNode(node))}
+            </div>
+          ) : (
+            <Box key="empty-state" textAlign="center" color="inherit">
+              <b>No geographic areas</b>
+              <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+                No geographic areas to display.
+              </Box>
+              {canCreate() && (
+                <Button onClick={handleCreate}>Create geographic area</Button>
+              )}
+            </Box>
+          )}
+        </Container>
+      </SpaceBetween>
       <Modal
         visible={isFormOpen}
         onDismiss={handleFormClose}
@@ -171,6 +190,6 @@ export function GeographicAreaList() {
           onCancel={handleFormClose}
         />
       </Modal>
-    </SpaceBetween>
+    </>
   );
 }

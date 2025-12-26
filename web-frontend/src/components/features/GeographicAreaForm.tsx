@@ -178,12 +178,12 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
           }
         >
           <SpaceBetween size="l">
-            {error && (
-              <Alert type="error" dismissible onDismiss={() => setError('')}>
+            {error ? (
+              <Alert key="error-alert" type="error" dismissible onDismiss={() => setError('')}>
                 {error}
               </Alert>
-            )}
-            <FormField label="Name" errorText={nameError} constraintText="Required">
+            ) : null}
+            <FormField key="name-field" label="Name" errorText={nameError} constraintText="Required">
               <Input
                 value={name}
                 onChange={({ detail }) => {
@@ -195,7 +195,7 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
                 disabled={isSubmitting}
               />
             </FormField>
-            <FormField label="Area Type" errorText={areaTypeError} constraintText="Required">
+            <FormField key="area-type-field" label="Area Type" errorText={areaTypeError} constraintText="Required">
               <Select
                 selectedOption={areaTypeOptions.find((o) => o.value === areaType) || null}
                 onChange={({ detail }) => {
@@ -207,7 +207,7 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
                 disabled={isSubmitting}
               />
             </FormField>
-            <FormField label="Parent Geographic Area" errorText={parentError} constraintText="Optional">
+            <FormField key="parent-field" label="Parent Geographic Area" errorText={parentError} constraintText="Optional">
               <Select
                 selectedOption={parentOptions.find((o) => o.value === parentGeographicAreaId) || parentOptions[0]}
                 onChange={({ detail }) => {
