@@ -12,6 +12,35 @@ This document defines the complete API contract between the Backend API and all 
 
 ## Authentication
 
+All protected endpoints require a valid JWT token in the Authorization header:
+
+```
+Authorization: Bearer <access_token>
+```
+
+### JWT Token Payload
+
+Access tokens contain the following payload:
+
+```json
+{
+  "userId": "string (UUID)",
+  "email": "string",
+  "role": "ADMINISTRATOR | EDITOR | READ_ONLY",
+  "iat": "number (issued at timestamp)",
+  "exp": "number (expiration timestamp)"
+}
+```
+
+Clients should decode the JWT token to extract user information. The token is signed and should not be modified.
+
+### Token Expiration
+
+- **Access Token**: 15 minutes (900 seconds)
+- **Refresh Token**: 7 days (604800 seconds)
+
+Clients should refresh the access token before it expires using the refresh token.
+
 ### Login
 
 **Endpoint**: `POST /auth/login`
@@ -29,20 +58,13 @@ This document defines the complete API contract between the Backend API and all 
 {
   "success": true,
   "data": {
-    "token": "string (JWT)",
-    "refreshToken": "string",
-    "user": {
-      "id": "string (UUID)",
-      "email": "string",
-      "name": "string",
-      "systemRole": "ADMINISTRATOR | EDITOR | READ_ONLY"
-    },
-    "expiresIn": 900
+    "accessToken": "string (JWT)",
+    "refreshToken": "string"
   }
 }
 ```
 
-**Note**: `expiresIn` is in seconds (900 = 15 minutes for access tokens)
+**Note**: The JWT access token contains the user information (userId, email, role) in its payload. Clients should decode the token to extract user details. Access tokens expire after 15 minutes (900 seconds).
 
 **Errors**:
 - 401: Invalid credentials
@@ -64,12 +86,56 @@ This document defines the complete API contract between the Backend API and all 
 {
   "success": true,
   "data": {
-    "token": "string (JWT)",
-    "refreshToken": "string",
-    "expiresIn": 900
+    "accessToken": "string (JWT)",
+    "refreshToken": "string"
   }
 }
 ```
+
+**Note**: Returns new access token and refresh token. Refresh tokens expire after 7 days.
+
+**Errors**:
+- 401: Invalid or expired refresh token
+
+### Logout
+
+**Endpoint**: `POST /auth/logout`
+
+**Request**: None (requires authentication)
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+**Note**: JWT tokens are stateless, so logout is primarily handled client-side by removing tokens from storage. This endpoint is provided for consistency and potential future server-side token invalidation.
+
+### Get Current User
+
+**Endpoint**: `GET /auth/me`
+
+**Request**: None (requires authentication)
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (UUID)",
+    "email": "string",
+    "role": "ADMINISTRATOR | EDITOR | READ_ONLY",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
+
+**Errors**:
+- 401: Not authenticated
+- 404: User not found
 
 ## Activities
 
