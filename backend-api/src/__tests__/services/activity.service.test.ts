@@ -47,7 +47,7 @@ describe('ActivityService', () => {
     describe('getAllActivities', () => {
         it('should return all activities', async () => {
             const mockActivities = [
-                { id: '1', name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() },
+                { id: '1', name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date(), isOngoing: true },
             ];
             mockActivityRepo.findAll = jest.fn().mockResolvedValue(mockActivities);
 
@@ -59,7 +59,7 @@ describe('ActivityService', () => {
 
     describe('getActivityById', () => {
         it('should return activity by ID', async () => {
-            const mockActivity = { id: '1', name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
+            const mockActivity = { id: '1', name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date(), isOngoing: true };
             mockActivityRepo.findById = jest.fn().mockResolvedValue(mockActivity);
 
             const result = await service.getActivityById('1');
@@ -125,7 +125,7 @@ describe('ActivityService', () => {
         it('should update activity with valid data', async () => {
             const id = '1';
             const input = { name: 'Updated Workshop' };
-            const existing = { id, name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Workshop', activityTypeId: 'type-1', startDate: new Date(), endDate: null, status: 'ACTIVE' as ActivityStatus, createdAt: new Date(), updatedAt: new Date(), isOngoing: true };
             const updated = { ...existing, ...input };
 
             mockActivityRepo.findById = jest.fn().mockResolvedValue(existing);

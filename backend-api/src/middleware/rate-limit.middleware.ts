@@ -15,7 +15,7 @@ export const authRateLimiter = rateLimit({
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     // Use custom header names to match API contract
-    handler: (req, res) => {
+    handler: (_req, res) => {
         res.status(429).json({
             code: 'RATE_LIMIT_EXCEEDED',
             message: 'Too many authentication requests. Please try again later.',
@@ -53,7 +53,7 @@ export const mutationRateLimiter = rateLimit({
         // Otherwise, let the default keyGenerator handle IP (with IPv6 support)
         return (req as any).rateLimitKey;
     },
-    handler: (req, res) => {
+    handler: (_req, res) => {
         res.status(429).json({
             code: 'RATE_LIMIT_EXCEEDED',
             message: 'Too many mutation requests. Please try again later.',
@@ -91,7 +91,7 @@ export const queryRateLimiter = rateLimit({
         // Otherwise, let the default keyGenerator handle IP (with IPv6 support)
         return (req as any).rateLimitKey;
     },
-    handler: (req, res) => {
+    handler: (_req, res) => {
         res.status(429).json({
             code: 'RATE_LIMIT_EXCEEDED',
             message: 'Too many query requests. Please try again later.',
@@ -103,7 +103,7 @@ export const queryRateLimiter = rateLimit({
 /**
  * Helper to add custom rate limit headers matching API contract
  */
-export const addRateLimitHeaders = (req: any, res: any, next: any) => {
+export const addRateLimitHeaders = (_req: any, res: any, next: any) => {
     // The rate limit middleware already adds RateLimit-* headers
     // We just need to map them to X-RateLimit-* for backward compatibility
     res.on('finish', () => {
