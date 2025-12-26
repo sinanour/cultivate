@@ -975,3 +975,76 @@ Integration tests verify end-to-end API behavior:
 - Property tests handle comprehensive input coverage
 - Integration tests handle end-to-end flows
 - Together they provide comprehensive coverage without excessive redundancy
+
+## Local Development Database Setup
+
+### Finch-Based PostgreSQL Script
+
+The API package includes an optional sidecar script for local development and integration testing:
+
+**Purpose**: Automate PostgreSQL database setup using Finch for local testing without manual configuration
+
+**Container Runtime**: Uses **Finch** (not Docker Desktop) for maximum compatibility and open-source availability. Finch is an open-source container development tool that provides a Docker-compatible CLI.
+
+**Location**: `scripts/setup-local-db.js` (Node.js for cross-platform compatibility)
+
+**Functionality**:
+1. **Finch Detection**: Checks if Finch is installed and running
+2. **Finch Installation**: Automatically installs Finch if missing using platform-specific package managers:
+   - macOS: Homebrew (`brew install finch`)
+   - RHEL/CentOS: yum (download and install from GitHub releases)
+   - Debian/Ubuntu: apt (download and install from GitHub releases)
+   - Linux: Direct binary installation from GitHub releases
+3. **PostgreSQL Image**: Pulls the latest official PostgreSQL container image
+4. **Container Management**: 
+   - Creates and starts a PostgreSQL container using Finch
+   - Exposes port 5432 for API connection
+   - Configures environment variables (database name, username, password)
+   - Sets up persistent volume for data
+5. **Output**: Provides connection string and status information
+
+**Configuration**:
+```bash
+# Default container configuration
+CONTAINER_NAME=srp-postgres-local
+POSTGRES_DB=srp_dev
+POSTGRES_USER=srp_user
+POSTGRES_PASSWORD=srp_dev_password
+POSTGRES_PORT=5432
+```
+
+**Usage**:
+```bash
+# Run the setup script
+npm run setup-local-db
+
+# Or directly
+node scripts/setup-local-db.js
+```
+
+**Connection String Output**:
+```
+postgresql://srp_user:srp_dev_password@localhost:5432/srp_dev
+```
+
+**Design Rationale**:
+- **Open Source**: Finch is fully open-source and freely available without licensing restrictions
+- **Docker Compatibility**: Finch provides a Docker-compatible CLI, making it a drop-in replacement
+- **Developer Experience**: Eliminates manual database setup steps
+- **Consistency**: Ensures all developers use the same database configuration
+- **Isolation**: Containers prevent conflicts with other PostgreSQL installations
+- **CI/CD Ready**: Can be used in continuous integration pipelines
+- **Non-Production**: Clearly separated from production deployment artifacts
+
+**Why Finch over Docker Desktop**:
+- Freely available without commercial licensing concerns
+- Open-source and community-driven
+- Lighter weight and faster startup
+- Native integration with containerd
+- Better suited for development and testing workflows
+
+**Exclusions**:
+- NOT included in production Docker images
+- NOT part of the API service deployment
+- Located in development utilities directory
+- Documented as development-only tooling

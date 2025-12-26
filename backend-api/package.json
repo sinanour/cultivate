@@ -14,7 +14,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "db:setup": "bash scripts/setup-local-db.sh"
   },
   "keywords": [
     "api",

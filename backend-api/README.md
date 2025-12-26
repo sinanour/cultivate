@@ -35,7 +35,7 @@ backend-api/
 ### Prerequisites
 
 - Node.js 18 or higher
-- PostgreSQL 14 or higher
+- PostgreSQL 14 or higher (or use the automated local setup script)
 - npm or yarn
 
 ### Installation
@@ -45,11 +45,30 @@ backend-api/
 npm install
 ```
 
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your database credentials and configuration
-```
+2. Set up your database:
+
+   **Option A: Automated Local Setup (Recommended for Development)**
+   
+   Use our automated script to set up a local PostgreSQL database using Finch:
+   ```bash
+   npm run db:setup
+   ```
+   
+   This script will:
+   - Install Finch container runtime if not already installed (open-source, no licensing restrictions)
+   - Pull and start a PostgreSQL container
+   - Create a persistent volume for your data
+   - Output the connection string for your `.env` file
+   
+   See `scripts/README.md` for detailed documentation about the setup script.
+   
+   **Option B: Use Your Own PostgreSQL Instance**
+   
+   If you already have PostgreSQL installed or prefer to use your own instance:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your database credentials
+   ```
 
 3. Initialize Prisma:
 ```bash
@@ -123,6 +142,24 @@ Once the server is running, API documentation is available at:
 - `npm run prisma:generate` - Generate Prisma client
 - `npm run prisma:migrate` - Run database migrations
 - `npm run prisma:studio` - Open Prisma Studio
+- `npm run db:setup` - Set up local PostgreSQL database using Finch (development only)
+
+## Local Database Setup
+
+For local development, we provide an automated script that sets up PostgreSQL using Finch container runtime:
+
+```bash
+npm run db:setup
+```
+
+**Why Finch?**
+- Open-source (Apache 2.0 license) with no licensing restrictions
+- Docker-compatible CLI
+- Lightweight and efficient
+- Works on macOS, Linux, and Windows (WSL2)
+- Maintained by AWS and the open-source community
+
+For detailed documentation about the database setup script, see `scripts/README.md`.
 
 ## License
 

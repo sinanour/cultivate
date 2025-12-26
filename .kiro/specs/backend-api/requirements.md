@@ -292,3 +292,21 @@ The Backend API package provides the RESTful API service that implements all bus
 3. THE API SHALL return detailed validation errors for invalid input
 4. THE API SHALL use Zod for schema validation
 5. THE API SHALL sanitize input to prevent injection attacks
+
+### Requirement 16: Provide Local Database Setup Script
+
+**User Story:** As a developer, I want an optional script to set up a local PostgreSQL database using Finch, so that I can easily run integration tests without manual database configuration using freely available open-source tools.
+
+#### Acceptance Criteria
+
+1. THE API package SHALL include an optional sidecar script for local database setup
+2. WHEN the script is executed, THE script SHALL detect if Finch is properly installed on the system
+3. WHEN Finch is not installed, THE script SHALL install Finch using the appropriate platform-specific package manager (brew for macOS, yum for RHEL/CentOS, apt for Debian/Ubuntu)
+4. THE script SHALL use Finch (not Docker Desktop) as the container runtime for maximum compatibility and open-source availability
+5. WHEN Finch is installed or after installation, THE script SHALL download the latest PostgreSQL container image
+6. WHEN the PostgreSQL image is downloaded, THE script SHALL start a PostgreSQL container with the database port exposed for API connection
+7. THE script SHALL configure the container with appropriate environment variables for database name, username, and password
+8. THE script SHALL provide clear console output indicating the progress and completion status of each step
+9. THE script SHALL NOT be included in the production deployment of the API service
+10. THE script SHALL be located in a development utilities directory within the backend-api package
+11. WHEN the container is running, THE script SHALL output the connection string for the API to use
