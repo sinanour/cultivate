@@ -17,6 +17,7 @@ export const ActivityTypeCreateSchema = z.object({
 
 export const ActivityTypeUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
+  version: z.number().int().positive().optional(),
 });
 
 // Role schemas
@@ -26,6 +27,7 @@ export const RoleCreateSchema = z.object({
 
 export const RoleUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
+  version: z.number().int().positive().optional(),
 });
 
 // Participant schemas
@@ -43,6 +45,7 @@ export const ParticipantUpdateSchema = z.object({
   phone: z.string().max(20, 'Phone must be at most 20 characters').optional(),
   notes: z.string().max(1000, 'Notes must be at most 1000 characters').optional(),
   homeVenueId: z.string().uuid('Invalid venue ID format').optional().nullable(),
+  version: z.number().int().positive().optional(),
 });
 
 export const ParticipantSearchSchema = z.object({
@@ -82,6 +85,7 @@ export const GeographicAreaUpdateSchema = z.object({
     ])
     .optional(),
   parentGeographicAreaId: z.string().uuid('Invalid parent ID format').optional().nullable(),
+  version: z.number().int().positive().optional(),
 });
 
 // Venue schemas
@@ -101,6 +105,7 @@ export const VenueUpdateSchema = z.object({
   latitude: z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90').optional().nullable(),
   longitude: z.number().min(-180, 'Longitude must be >= -180').max(180, 'Longitude must be <= 180').optional().nullable(),
   venueType: z.enum(['PUBLIC_BUILDING', 'PRIVATE_RESIDENCE']).optional().nullable(),
+  version: z.number().int().positive().optional(),
 });
 
 export const VenueSearchSchema = z.object({
@@ -123,6 +128,7 @@ export const ActivityUpdateSchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional().nullable(),
   status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional(),
+  version: z.number().int().positive().optional(),
 });
 
 export const ActivityVenueAssociationSchema = z.object({

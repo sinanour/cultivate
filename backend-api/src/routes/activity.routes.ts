@@ -219,6 +219,14 @@ export class ActivityRoutes {
             });
             return;
           }
+                if (error.message === 'VERSION_CONFLICT') {
+                    res.status(409).json({
+                        code: 'VERSION_CONFLICT',
+                        message: 'The activity has been modified by another user. Please refresh and try again.',
+                        details: {},
+                    });
+                    return;
+                }
           if (error.message.includes('must be after')) {
             res.status(400).json({
                 code: 'VALIDATION_ERROR',

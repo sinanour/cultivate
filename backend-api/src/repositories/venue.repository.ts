@@ -16,6 +16,7 @@ export interface UpdateVenueData {
   latitude?: number;
   longitude?: number;
   venueType?: VenueType;
+  version?: number;
 }
 
 export class VenueRepository {
@@ -82,9 +83,30 @@ export class VenueRepository {
   }
 
   async update(id: string, data: UpdateVenueData): Promise<Venue> {
+    const { version, ...updateData } = data;
+
+    // If version is provided, check for conflicts
+    if (version !== undefined) {
+      const current = await this.prisma.venue.findUnique({
+        where: { id },
+        select: { version: true },
+      });
+
+      if (!current) {
+        throw new Error('Venue not found');
+      }
+
+      if (current.version !== version) {
+        throw new Error('VERSION_CONFLICT');
+      }
+    }
+
     return this.prisma.venue.update({
       where: { id },
-      data,
+      data: {
+        ...updateData,
+        version: { increment: 1 },
+      },
       include: {
         geographicArea: true,
       },

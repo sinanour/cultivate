@@ -49,7 +49,7 @@ export class RoleService {
     return this.addComputedFields(created);
   }
 
-  async updateRole(id: string, data: { name: string }): Promise<Role> {
+  async updateRole(id: string, data: { name: string; version?: number }): Promise<Role> {
     const existing = await this.roleRepository.findById(id);
     if (!existing) {
       throw new Error('Role not found');
@@ -64,8 +64,15 @@ export class RoleService {
       throw new Error('Role name is required');
     }
 
-    const updated = await this.roleRepository.update(id, data);
-    return this.addComputedFields(updated);
+    try {
+      const updated = await this.roleRepository.update(id, data);
+      return this.addComputedFields(updated);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
+        throw new Error('VERSION_CONFLICT');
+      }
+      throw error;
+    }
   }
 
   async deleteRole(id: string): Promise<void> {

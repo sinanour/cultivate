@@ -14,6 +14,7 @@ export interface UpdateActivityData {
   startDate?: Date;
   endDate?: Date;
   status?: ActivityStatus;
+  version?: number;
 }
 
 export class ActivityRepository {
@@ -85,9 +86,30 @@ export class ActivityRepository {
   }
 
   async update(id: string, data: UpdateActivityData): Promise<Activity> {
+    const { version, ...updateData } = data;
+
+    // If version is provided, check for conflicts
+    if (version !== undefined) {
+      const current = await this.prisma.activity.findUnique({
+        where: { id },
+        select: { version: true },
+      });
+
+      if (!current) {
+        throw new Error('Activity not found');
+      }
+
+      if (current.version !== version) {
+        throw new Error('VERSION_CONFLICT');
+      }
+    }
+
     return this.prisma.activity.update({
       where: { id },
-      data,
+      data: {
+        ...updateData,
+        version: { increment: 1 },
+      },
       include: {
         activityType: true,
       },

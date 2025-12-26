@@ -273,6 +273,13 @@ export class GeographicAreaRoutes {
                         details: {},
                     });
                 }
+                if (error.message === 'VERSION_CONFLICT') {
+                    return res.status(409).json({
+                        code: 'VERSION_CONFLICT',
+                        message: 'The geographic area has been modified by another user. Please refresh and try again.',
+                        details: {},
+                    });
+                }
                 if (error.message.includes('circular') || error.message.includes('own parent')) {
                     return res.status(400).json({
                         code: 'CIRCULAR_REFERENCE',

@@ -21,6 +21,7 @@ export interface UpdateActivityInput {
   startDate?: Date;
   endDate?: Date;
   status?: ActivityStatus;
+  version?: number;
 }
 
 export class ActivityService {
@@ -152,8 +153,15 @@ export class ActivityService {
       }
     }
 
-    const updated = await this.activityRepository.update(id, data);
-    return this.addComputedFields(updated);
+    try {
+      const updated = await this.activityRepository.update(id, data);
+      return this.addComputedFields(updated);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
+        throw new Error('VERSION_CONFLICT');
+      }
+      throw error;
+    }
   }
 
   async deleteActivity(id: string): Promise<void> {

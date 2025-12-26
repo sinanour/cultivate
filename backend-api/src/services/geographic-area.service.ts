@@ -12,6 +12,7 @@ export interface UpdateGeographicAreaInput {
     name?: string;
     areaType?: AreaType;
     parentGeographicAreaId?: string;
+    version?: number;
 }
 
 export interface GeographicAreaStatistics {
@@ -100,7 +101,14 @@ export class GeographicAreaService {
             }
         }
 
-        return this.geographicAreaRepository.update(id, data);
+        try {
+            return await this.geographicAreaRepository.update(id, data);
+        } catch (error) {
+            if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
+                throw new Error('VERSION_CONFLICT');
+            }
+            throw error;
+        }
     }
 
     async deleteGeographicArea(id: string): Promise<void> {

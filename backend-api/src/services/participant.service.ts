@@ -18,6 +18,7 @@ export interface UpdateParticipantInput {
     phone?: string;
     notes?: string;
     homeVenueId?: string;
+    version?: number;
 }
 
 export class ParticipantService {
@@ -172,13 +173,21 @@ export class ParticipantService {
         }
 
         // Update participant basic fields
-        const updateData: { name?: string; email?: string; phone?: string; notes?: string } = {};
+        const updateData: { name?: string; email?: string; phone?: string; notes?: string; version?: number } = {};
         if (data.name !== undefined) updateData.name = data.name;
         if (data.email !== undefined) updateData.email = data.email;
         if (data.phone !== undefined) updateData.phone = data.phone;
         if (data.notes !== undefined) updateData.notes = data.notes;
+        if (data.version !== undefined) updateData.version = data.version;
 
-        return this.participantRepository.update(id, updateData);
+        try {
+            return await this.participantRepository.update(id, updateData);
+        } catch (error) {
+            if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
+                throw new Error('VERSION_CONFLICT');
+            }
+            throw error;
+        }
     }
 
     async deleteParticipant(id: string): Promise<void> {

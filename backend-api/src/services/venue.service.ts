@@ -19,6 +19,7 @@ export interface UpdateVenueInput {
     latitude?: number;
     longitude?: number;
     venueType?: VenueType;
+    version?: number;
 }
 
 export class VenueService {
@@ -108,7 +109,14 @@ export class VenueService {
             throw new Error('Longitude must be between -180 and 180');
         }
 
-        return this.venueRepository.update(id, data);
+        try {
+            return await this.venueRepository.update(id, data);
+        } catch (error) {
+            if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
+                throw new Error('VERSION_CONFLICT');
+            }
+            throw error;
+        }
     }
 
     async deleteVenue(id: string): Promise<void> {

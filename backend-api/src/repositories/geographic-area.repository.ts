@@ -10,6 +10,7 @@ export interface UpdateGeographicAreaData {
   name?: string;
   areaType?: AreaType;
   parentGeographicAreaId?: string;
+  version?: number;
 }
 
 export class GeographicAreaRepository {
@@ -79,9 +80,30 @@ export class GeographicAreaRepository {
   }
 
   async update(id: string, data: UpdateGeographicAreaData): Promise<GeographicArea> {
+    const { version, ...updateData } = data;
+
+    // If version is provided, check for conflicts
+    if (version !== undefined) {
+      const current = await this.prisma.geographicArea.findUnique({
+        where: { id },
+        select: { version: true },
+      });
+
+      if (!current) {
+        throw new Error('Geographic area not found');
+      }
+
+      if (current.version !== version) {
+        throw new Error('VERSION_CONFLICT');
+      }
+    }
+
     return this.prisma.geographicArea.update({
       where: { id },
-      data,
+      data: {
+        ...updateData,
+        version: { increment: 1 },
+      },
       include: {
         parent: true,
       },

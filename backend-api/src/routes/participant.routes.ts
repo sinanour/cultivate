@@ -195,6 +195,13 @@ export class ParticipantRoutes {
                         details: {},
                     });
                 }
+                if (error.message === 'VERSION_CONFLICT') {
+                    return res.status(409).json({
+                        code: 'VERSION_CONFLICT',
+                        message: 'The participant has been modified by another user. Please refresh and try again.',
+                        details: {},
+                    });
+                }
                 if (error.message.includes('already exists')) {
                     return res.status(400).json({
                         code: 'DUPLICATE_EMAIL',

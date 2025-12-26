@@ -64,7 +64,7 @@ export class ActivityTypeService {
     /**
      * Update an activity type
      */
-    async updateActivityType(id: string, data: { name: string }): Promise<ActivityType> {
+    async updateActivityType(id: string, data: { name: string; version?: number }): Promise<ActivityType> {
         // Check if activity type exists
         const existing = await this.activityTypeRepository.findById(id);
         if (!existing) {
@@ -82,8 +82,15 @@ export class ActivityTypeService {
             throw new Error('Activity type name is required');
         }
 
-        const updated = await this.activityTypeRepository.update(id, data);
-        return this.addComputedFields(updated);
+        try {
+            const updated = await this.activityTypeRepository.update(id, data);
+            return this.addComputedFields(updated);
+        } catch (error) {
+            if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
+                throw new Error('VERSION_CONFLICT');
+            }
+            throw error;
+        }
     }
 
     /**

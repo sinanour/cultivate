@@ -477,12 +477,12 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Add `joinedAt` field to assignment responses
     - _Requirements: API Contract alignment_
 
-  - [-] 21.4 Standardize DELETE response codes
+  - [x] 21.4 Standardize DELETE response codes
     - Update all DELETE endpoints to return 204 No Content instead of 200 OK
     - Remove JSON body from DELETE responses
     - _Requirements: API Contract alignment_
 
-  - [ ] 21.5 Add optimistic locking support
+  - [-] 21.5 Add optimistic locking support
     - Add version field validation to PUT endpoints
     - Return 409 Conflict for version mismatches
     - Increment version on each update

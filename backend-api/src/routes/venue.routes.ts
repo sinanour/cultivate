@@ -238,6 +238,13 @@ export class VenueRoutes {
                         details: {},
                     });
                 }
+                if (error.message === 'VERSION_CONFLICT') {
+                    return res.status(409).json({
+                        code: 'VERSION_CONFLICT',
+                        message: 'The venue has been modified by another user. Please refresh and try again.',
+                        details: {},
+                    });
+                }
                 if (error.message.includes('must be between')) {
                     return res.status(400).json({
                         code: 'VALIDATION_ERROR',

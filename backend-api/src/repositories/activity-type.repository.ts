@@ -42,10 +42,31 @@ export class ActivityTypeRepository {
   /**
    * Update an activity type
    */
-  async update(id: string, data: { name: string }): Promise<ActivityType> {
+  async update(id: string, data: { name: string; version?: number }): Promise<ActivityType> {
+    const { version, ...updateData } = data;
+
+    // If version is provided, check for conflicts
+    if (version !== undefined) {
+      const current = await this.prisma.activityType.findUnique({
+        where: { id },
+        select: { version: true },
+      });
+
+      if (!current) {
+        throw new Error('Activity type not found');
+      }
+
+      if (current.version !== version) {
+        throw new Error('VERSION_CONFLICT');
+      }
+    }
+
     return this.prisma.activityType.update({
       where: { id },
-      data,
+      data: {
+        ...updateData,
+        version: { increment: 1 },
+      },
     });
   }
 

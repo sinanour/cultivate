@@ -12,6 +12,7 @@ export interface UpdateParticipantData {
   email?: string;
   phone?: string;
   notes?: string;
+  version?: number;
 }
 
 export class ParticipantRepository {
@@ -69,9 +70,30 @@ export class ParticipantRepository {
   }
 
   async update(id: string, data: UpdateParticipantData): Promise<Participant> {
+    const { version, ...updateData } = data;
+
+    // If version is provided, check for conflicts
+    if (version !== undefined) {
+      const current = await this.prisma.participant.findUnique({
+        where: { id },
+        select: { version: true },
+      });
+
+      if (!current) {
+        throw new Error('Participant not found');
+      }
+
+      if (current.version !== version) {
+        throw new Error('VERSION_CONFLICT');
+      }
+    }
+
     return this.prisma.participant.update({
       where: { id },
-      data,
+      data: {
+        ...updateData,
+        version: { increment: 1 },
+      },
     });
   }
 
