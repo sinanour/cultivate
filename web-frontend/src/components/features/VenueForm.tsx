@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -22,12 +22,12 @@ interface VenueFormProps {
 
 export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState(venue?.name || '');
-  const [address, setAddress] = useState(venue?.address || '');
-  const [geographicAreaId, setGeographicAreaId] = useState(venue?.geographicAreaId || '');
-  const [latitude, setLatitude] = useState(venue?.latitude?.toString() || '');
-  const [longitude, setLongitude] = useState(venue?.longitude?.toString() || '');
-  const [venueType, setVenueType] = useState(venue?.venueType || '');
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [geographicAreaId, setGeographicAreaId] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [venueType, setVenueType] = useState('');
   
   const [nameError, setNameError] = useState('');
   const [addressError, setAddressError] = useState('');
@@ -35,6 +35,33 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const [latitudeError, setLatitudeError] = useState('');
   const [longitudeError, setLongitudeError] = useState('');
   const [error, setError] = useState('');
+
+  // Update form state when venue prop changes
+  useEffect(() => {
+    if (venue) {
+      setName(venue.name || '');
+      setAddress(venue.address || '');
+      setGeographicAreaId(venue.geographicAreaId || '');
+      setLatitude(venue.latitude?.toString() || '');
+      setLongitude(venue.longitude?.toString() || '');
+      setVenueType(venue.venueType || '');
+    } else {
+      // Reset to defaults for create mode
+      setName('');
+      setAddress('');
+      setGeographicAreaId('');
+      setLatitude('');
+      setLongitude('');
+      setVenueType('');
+    }
+    // Clear errors when switching modes
+    setNameError('');
+    setAddressError('');
+    setGeographicAreaError('');
+    setLatitudeError('');
+    setLongitudeError('');
+    setError('');
+  }, [venue]);
 
   const versionConflict = useVersionConflict({
     queryKey: ['venues'],

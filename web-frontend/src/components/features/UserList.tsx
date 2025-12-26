@@ -123,11 +123,13 @@ export function UserList() {
         size="medium"
         header={selectedUser ? 'Edit User' : 'Create User'}
       >
-        <UserForm
-          user={selectedUser}
-          onSuccess={handleFormClose}
-          onCancel={handleFormClose}
-        />
+        {isFormOpen && (
+          <UserForm
+            user={selectedUser}
+            onSuccess={handleFormClose}
+            onCancel={handleFormClose}
+          />
+        )}
       </Modal>
     </SpaceBetween>
   );

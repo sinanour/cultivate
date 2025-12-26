@@ -310,12 +310,14 @@ export function ActivityDetail() {
         onDismiss={() => setIsAssignmentFormOpen(false)}
         header="Assign Participant"
       >
-        <AssignmentForm
-          activityId={activity.id}
-          existingAssignments={assignments}
-          onSuccess={() => setIsAssignmentFormOpen(false)}
-          onCancel={() => setIsAssignmentFormOpen(false)}
-        />
+        {isAssignmentFormOpen && (
+          <AssignmentForm
+            activityId={activity.id}
+            existingAssignments={assignments}
+            onSuccess={() => setIsAssignmentFormOpen(false)}
+            onCancel={() => setIsAssignmentFormOpen(false)}
+          />
+        )}
       </Modal>
     </SpaceBetween>
   );

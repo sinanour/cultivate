@@ -144,11 +144,13 @@ export function ParticipantRoleList() {
         onDismiss={handleFormClose}
         header={selectedRole ? 'Edit Participant Role' : 'Create Participant Role'}
       >
-        <ParticipantRoleForm
-          role={selectedRole}
-          onSuccess={handleFormClose}
-          onCancel={handleFormClose}
-        />
+        {isFormOpen && (
+          <ParticipantRoleForm
+            role={selectedRole}
+            onSuccess={handleFormClose}
+            onCancel={handleFormClose}
+          />
+        )}
       </Modal>
     </SpaceBetween>
   );

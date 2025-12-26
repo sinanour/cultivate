@@ -201,11 +201,13 @@ export function VenueList() {
         size="large"
         header={selectedVenue ? 'Edit Venue' : 'Create Venue'}
       >
-        <VenueForm
-          venue={selectedVenue}
-          onSuccess={handleFormClose}
-          onCancel={handleFormClose}
-        />
+        {isFormOpen && (
+          <VenueForm
+            venue={selectedVenue}
+            onSuccess={handleFormClose}
+            onCancel={handleFormClose}
+          />
+        )}
       </Modal>
     </SpaceBetween>
   );

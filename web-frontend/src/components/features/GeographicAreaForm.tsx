@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -22,14 +22,33 @@ interface GeographicAreaFormProps {
 
 export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: GeographicAreaFormProps) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState(geographicArea?.name || '');
-  const [areaType, setAreaType] = useState(geographicArea?.areaType || '');
-  const [parentGeographicAreaId, setParentGeographicAreaId] = useState(geographicArea?.parentGeographicAreaId || '');
+  const [name, setName] = useState('');
+  const [areaType, setAreaType] = useState('');
+  const [parentGeographicAreaId, setParentGeographicAreaId] = useState('');
   
   const [nameError, setNameError] = useState('');
   const [areaTypeError, setAreaTypeError] = useState('');
   const [parentError, setParentError] = useState('');
   const [error, setError] = useState('');
+
+  // Update form state when geographicArea prop changes
+  useEffect(() => {
+    if (geographicArea) {
+      setName(geographicArea.name || '');
+      setAreaType(geographicArea.areaType || '');
+      setParentGeographicAreaId(geographicArea.parentGeographicAreaId || '');
+    } else {
+      // Reset to defaults for create mode
+      setName('');
+      setAreaType('');
+      setParentGeographicAreaId('');
+    }
+    // Clear errors when switching modes
+    setNameError('');
+    setAreaTypeError('');
+    setParentError('');
+    setError('');
+  }, [geographicArea]);
 
   const versionConflict = useVersionConflict({
     queryKey: ['geographicAreas'],

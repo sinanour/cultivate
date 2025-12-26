@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -23,15 +23,38 @@ interface ParticipantFormProps {
 
 export function ParticipantForm({ participant, onSuccess, onCancel }: ParticipantFormProps) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState(participant?.name || '');
-  const [email, setEmail] = useState(participant?.email || '');
-  const [phone, setPhone] = useState(participant?.phone || '');
-  const [notes, setNotes] = useState(participant?.notes || '');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [notes, setNotes] = useState('');
   const [homeVenueId, setHomeVenueId] = useState('');
   
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [error, setError] = useState('');
+
+  // Update form state when participant prop changes
+  useEffect(() => {
+    if (participant) {
+      setName(participant.name || '');
+      setEmail(participant.email || '');
+      setPhone(participant.phone || '');
+      setNotes(participant.notes || '');
+      // Note: homeVenueId is not on the Participant type directly, need to fetch from address history
+      setHomeVenueId(''); // Will be populated from address history if needed
+    } else {
+      // Reset to defaults for create mode
+      setName('');
+      setEmail('');
+      setPhone('');
+      setNotes('');
+      setHomeVenueId('');
+    }
+    // Clear errors when switching modes
+    setNameError('');
+    setEmailError('');
+    setError('');
+  }, [participant]);
 
   const versionConflict = useVersionConflict({
     queryKey: ['participants'],

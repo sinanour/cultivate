@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -24,11 +24,24 @@ interface ActivityTypeFormProps {
 
 export function ActivityTypeForm({ activityType, onSuccess, onCancel }: ActivityTypeFormProps) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState(activityType?.name || '');
+  const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
   const [error, setError] = useState('');
   const [conflictInfo, setConflictInfo] = useState<VersionConflictInfo | null>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
+
+  // Update form state when activityType prop changes
+  useEffect(() => {
+    if (activityType) {
+      setName(activityType.name || '');
+    } else {
+      // Reset to defaults for create mode
+      setName('');
+    }
+    // Clear errors when switching modes
+    setNameError('');
+    setError('');
+  }, [activityType]);
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string }) => ActivityTypeService.createActivityType(data),

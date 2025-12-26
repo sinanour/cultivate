@@ -257,11 +257,13 @@ export function ActivityList() {
         size="large"
         header={selectedActivity ? 'Edit Activity' : 'Create Activity'}
       >
-        <ActivityForm
-          activity={selectedActivity}
-          onSuccess={handleFormClose}
-          onCancel={handleFormClose}
-        />
+        {isFormOpen && (
+          <ActivityForm
+            activity={selectedActivity}
+            onSuccess={handleFormClose}
+            onCancel={handleFormClose}
+          />
+        )}
       </Modal>
     </SpaceBetween>
   );

@@ -184,11 +184,13 @@ export function GeographicAreaList() {
         size="large"
         header={selectedArea ? 'Edit Geographic Area' : 'Create Geographic Area'}
       >
-        <GeographicAreaForm
-          geographicArea={selectedArea}
-          onSuccess={handleFormClose}
-          onCancel={handleFormClose}
-        />
+        {isFormOpen && (
+          <GeographicAreaForm
+            geographicArea={selectedArea}
+            onSuccess={handleFormClose}
+            onCancel={handleFormClose}
+          />
+        )}
       </Modal>
     </>
   );

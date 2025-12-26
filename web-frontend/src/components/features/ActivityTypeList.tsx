@@ -144,11 +144,13 @@ export function ActivityTypeList() {
         onDismiss={handleFormClose}
         header={selectedType ? 'Edit Activity Type' : 'Create Activity Type'}
       >
-        <ActivityTypeForm
-          activityType={selectedType}
-          onSuccess={handleFormClose}
-          onCancel={handleFormClose}
-        />
+        {isFormOpen && (
+          <ActivityTypeForm
+            activityType={selectedType}
+            onSuccess={handleFormClose}
+            onCancel={handleFormClose}
+          />
+        )}
       </Modal>
     </SpaceBetween>
   );

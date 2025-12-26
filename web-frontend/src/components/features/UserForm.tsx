@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -18,13 +18,32 @@ interface UserFormProps {
 
 export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState(user?.email || '');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>(user?.role || 'READ_ONLY');
+  const [role, setRole] = useState<UserRole>('READ_ONLY');
   
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
+
+  // Update form state when user prop changes
+  useEffect(() => {
+    if (user) {
+      setEmail(user.email || '');
+      setRole(user.role || 'READ_ONLY');
+      // Password always starts empty for security (optional on edit)
+      setPassword('');
+    } else {
+      // Reset to defaults for create mode
+      setEmail('');
+      setPassword('');
+      setRole('READ_ONLY');
+    }
+    // Clear errors when switching modes
+    setEmailError('');
+    setPasswordError('');
+    setError('');
+  }, [user]);
 
   const roleOptions = [
     { label: 'Administrator', value: 'ADMINISTRATOR' },

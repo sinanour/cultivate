@@ -201,11 +201,13 @@ export function ParticipantList() {
         size="large"
         header={selectedParticipant ? 'Edit Participant' : 'Create Participant'}
       >
-        <ParticipantForm
-          participant={selectedParticipant}
-          onSuccess={handleFormClose}
-          onCancel={handleFormClose}
-        />
+        {isFormOpen && (
+          <ParticipantForm
+            participant={selectedParticipant}
+            onSuccess={handleFormClose}
+            onCancel={handleFormClose}
+          />
+        )}
       </Modal>
     </SpaceBetween>
   );

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -24,11 +24,24 @@ interface ParticipantRoleFormProps {
 
 export function ParticipantRoleForm({ role, onSuccess, onCancel }: ParticipantRoleFormProps) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState(role?.name || '');
+  const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
   const [error, setError] = useState('');
   const [conflictInfo, setConflictInfo] = useState<VersionConflictInfo | null>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
+
+  // Update form state when role prop changes
+  useEffect(() => {
+    if (role) {
+      setName(role.name || '');
+    } else {
+      // Reset to defaults for create mode
+      setName('');
+    }
+    // Clear errors when switching modes
+    setNameError('');
+    setError('');
+  }, [role]);
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string }) => ParticipantRoleService.createRole(data),

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -31,18 +31,44 @@ const STATUS_OPTIONS = [
 
 export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProps) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState(activity?.name || '');
-  const [activityTypeId, setActivityTypeId] = useState(activity?.activityTypeId || '');
-  const [status, setStatus] = useState(activity?.status || 'PLANNED');
-  const [startDate, setStartDate] = useState(activity?.startDate?.split('T')[0] || '');
-  const [endDate, setEndDate] = useState(activity?.endDate?.split('T')[0] || '');
-  const [isOngoing, setIsOngoing] = useState(activity?.isOngoing || false);
+  const [name, setName] = useState('');
+  const [activityTypeId, setActivityTypeId] = useState('');
+  const [status, setStatus] = useState<Activity['status']>('PLANNED');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [isOngoing, setIsOngoing] = useState(false);
   
   const [nameError, setNameError] = useState('');
   const [activityTypeError, setActivityTypeError] = useState('');
   const [startDateError, setStartDateError] = useState('');
   const [endDateError, setEndDateError] = useState('');
   const [error, setError] = useState('');
+
+  // Update form state when activity prop changes
+  useEffect(() => {
+    if (activity) {
+      setName(activity.name || '');
+      setActivityTypeId(activity.activityTypeId || '');
+      setStatus(activity.status || 'PLANNED');
+      setStartDate(activity.startDate?.split('T')[0] || '');
+      setEndDate(activity.endDate?.split('T')[0] || '');
+      setIsOngoing(activity.isOngoing || false);
+    } else {
+      // Reset to defaults for create mode
+      setName('');
+      setActivityTypeId('');
+      setStatus('PLANNED');
+      setStartDate('');
+      setEndDate('');
+      setIsOngoing(false);
+    }
+    // Clear errors when switching modes
+    setNameError('');
+    setActivityTypeError('');
+    setStartDateError('');
+    setEndDateError('');
+    setError('');
+  }, [activity]);
 
   const versionConflict = useVersionConflict({
     queryKey: ['activities'],
