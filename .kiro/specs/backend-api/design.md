@@ -67,83 +67,84 @@ Route handlers define API endpoints and delegate to service layer:
 
 ```typescript
 // Activity Type Routes
-GET    /api/activity-types          -> List all activity types
-POST   /api/activity-types          -> Create activity type
-PUT    /api/activity-types/:id      -> Update activity type
-DELETE /api/activity-types/:id      -> Delete activity type
+GET    /api/v1/activity-types          -> List all activity types
+POST   /api/v1/activity-types          -> Create activity type
+PUT    /api/v1/activity-types/:id      -> Update activity type
+DELETE /api/v1/activity-types/:id      -> Delete activity type
 
 // Role Routes
-GET    /api/roles                   -> List all roles
-POST   /api/roles                   -> Create role
-PUT    /api/roles/:id               -> Update role
-DELETE /api/roles/:id               -> Delete role
+GET    /api/v1/roles                   -> List all roles
+POST   /api/v1/roles                   -> Create role
+PUT    /api/v1/roles/:id               -> Update role
+DELETE /api/v1/roles/:id               -> Delete role
 
 // Participant Routes
-GET    /api/participants            -> List all participants
-GET    /api/participants/:id        -> Get participant by ID
-GET    /api/participants/search     -> Search participants
-POST   /api/participants            -> Create participant
-PUT    /api/participants/:id        -> Update participant
-DELETE /api/participants/:id        -> Delete participant
+GET    /api/v1/participants            -> List all participants
+GET    /api/v1/participants/:id        -> Get participant by ID
+GET    /api/v1/participants/search     -> Search participants
+POST   /api/v1/participants            -> Create participant
+PUT    /api/v1/participants/:id        -> Update participant
+DELETE /api/v1/participants/:id        -> Delete participant
 
 // Activity Routes
-GET    /api/activities              -> List all activities
-GET    /api/activities/:id          -> Get activity by ID
-POST   /api/activities              -> Create activity
-PUT    /api/activities/:id          -> Update activity
-DELETE /api/activities/:id          -> Delete activity
+GET    /api/v1/activities              -> List all activities
+GET    /api/v1/activities/:id          -> Get activity by ID
+POST   /api/v1/activities              -> Create activity
+PUT    /api/v1/activities/:id          -> Update activity
+DELETE /api/v1/activities/:id          -> Delete activity
 
 // Activity Participant Assignment Routes
-GET    /api/activities/:id/participants           -> List activity participants
-POST   /api/activities/:id/participants           -> Assign participant
-DELETE /api/activities/:id/participants/:participantId -> Remove participant
+GET    /api/v1/activities/:id/participants           -> List activity participants
+POST   /api/v1/activities/:id/participants           -> Assign participant
+PUT    /api/v1/activities/:id/participants/:participantId -> Update participant assignment
+DELETE /api/v1/activities/:id/participants/:participantId -> Remove participant
 
 // Activity Venue Association Routes
-GET    /api/activities/:id/venues                 -> List activity venues
-POST   /api/activities/:id/venues                 -> Associate venue with activity
-DELETE /api/activities/:id/venues/:venueId        -> Remove venue association
+GET    /api/v1/activities/:id/venues                 -> List activity venues
+POST   /api/v1/activities/:id/venues                 -> Associate venue with activity
+DELETE /api/v1/activities/:id/venues/:venueId        -> Remove venue association
 
 // Venue Routes
-GET    /api/venues                  -> List all venues
-GET    /api/venues/:id              -> Get venue by ID
-GET    /api/venues/search           -> Search venues
-POST   /api/venues                  -> Create venue
-PUT    /api/venues/:id              -> Update venue
-DELETE /api/venues/:id              -> Delete venue
-GET    /api/venues/:id/activities   -> List activities at venue
-GET    /api/venues/:id/participants -> List participants with venue as home
+GET    /api/v1/venues                  -> List all venues
+GET    /api/v1/venues/:id              -> Get venue by ID
+GET    /api/v1/venues/search           -> Search venues
+POST   /api/v1/venues                  -> Create venue
+PUT    /api/v1/venues/:id              -> Update venue
+DELETE /api/v1/venues/:id              -> Delete venue
+GET    /api/v1/venues/:id/activities   -> List activities at venue
+GET    /api/v1/venues/:id/participants -> List participants with venue as home
 
 // Geographic Area Routes
-GET    /api/geographic-areas        -> List all geographic areas
-GET    /api/geographic-areas/:id    -> Get geographic area by ID
-POST   /api/geographic-areas        -> Create geographic area
-PUT    /api/geographic-areas/:id    -> Update geographic area
-DELETE /api/geographic-areas/:id    -> Delete geographic area
-GET    /api/geographic-areas/:id/children   -> List child geographic areas
-GET    /api/geographic-areas/:id/ancestors  -> Get hierarchy path to root
-GET    /api/geographic-areas/:id/venues     -> List venues in geographic area
-GET    /api/geographic-areas/:id/statistics -> Get statistics for geographic area
+GET    /api/v1/geographic-areas        -> List all geographic areas
+GET    /api/v1/geographic-areas/:id    -> Get geographic area by ID
+POST   /api/v1/geographic-areas        -> Create geographic area
+PUT    /api/v1/geographic-areas/:id    -> Update geographic area
+DELETE /api/v1/geographic-areas/:id    -> Delete geographic area
+GET    /api/v1/geographic-areas/:id/children   -> List child geographic areas
+GET    /api/v1/geographic-areas/:id/ancestors  -> Get hierarchy path to root
+GET    /api/v1/geographic-areas/:id/venues     -> List venues in geographic area
+GET    /api/v1/geographic-areas/:id/statistics -> Get statistics for geographic area
 
 // Participant Address History Routes
-GET    /api/participants/:id/address-history -> Get participant's home address history
+GET    /api/v1/participants/:id/address-history -> Get participant's home address history
 
 // Analytics Routes
-GET    /api/analytics/engagement    -> Get engagement metrics (supports geographic filter)
-GET    /api/analytics/growth        -> Get growth metrics (supports geographic filter)
-GET    /api/analytics/geographic    -> Get engagement metrics by geographic area
+GET    /api/v1/analytics/engagement    -> Get engagement metrics (supports geographic filter)
+GET    /api/v1/analytics/growth        -> Get growth metrics (supports geographic filter)
+GET    /api/v1/analytics/geographic    -> Get engagement metrics by geographic area
 
 // Sync Routes
-POST   /api/sync/batch              -> Batch sync operations
+POST   /api/v1/sync/batch              -> Batch sync operations
 
 // Auth Routes
-POST   /api/auth/login              -> Authenticate user
-POST   /api/auth/logout             -> Invalidate token
-POST   /api/auth/refresh            -> Refresh access token
-GET    /api/auth/me                 -> Get current user
+POST   /api/v1/auth/login              -> Authenticate user
+POST   /api/v1/auth/logout             -> Invalidate token
+POST   /api/v1/auth/refresh            -> Refresh access token
+GET    /api/v1/auth/me                 -> Get current user
 
 // Documentation Routes
-GET    /api/docs                    -> Swagger UI
-GET    /api/docs/openapi.json       -> OpenAPI specification
+GET    /api/v1/docs                    -> Swagger UI
+GET    /api/v1/docs/openapi.json       -> OpenAPI specification
 ```
 
 ### 2. Service Layer

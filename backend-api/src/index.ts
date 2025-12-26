@@ -146,22 +146,22 @@ app.get('/health', (_req, res) => {
 });
 
 // API Documentation
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
-app.get('/api/docs/openapi.json', (_req, res) => {
+app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+app.get('/api/v1/docs/openapi.json', (_req, res) => {
   res.status(200).json(openApiSpec);
 });
 
-// API Routes
-app.use('/api/auth', authRateLimiter, authRoutes.getRouter());
-app.use('/api/activity-types', smartRateLimiter, activityTypeRoutes.getRouter());
-app.use('/api/roles', smartRateLimiter, roleRoutes.getRouter());
-app.use('/api/participants', smartRateLimiter, participantRoutes.getRouter());
-app.use('/api/geographic-areas', smartRateLimiter, geographicAreaRoutes.getRouter());
-app.use('/api/venues', smartRateLimiter, venueRoutes.getRouter());
-app.use('/api/activities', smartRateLimiter, activityRoutes.getRouter());
-app.use('/api/activities/:id/participants', smartRateLimiter, assignmentRoutes.getRouter());
-app.use('/api/analytics', smartRateLimiter, analyticsRoutes.getRouter());
-app.use('/api/sync', smartRateLimiter, syncRoutes.getRouter());
+// API Routes (v1)
+app.use('/api/v1/auth', authRateLimiter, authRoutes.getRouter());
+app.use('/api/v1/activity-types', smartRateLimiter, activityTypeRoutes.getRouter());
+app.use('/api/v1/roles', smartRateLimiter, roleRoutes.getRouter());
+app.use('/api/v1/participants', smartRateLimiter, participantRoutes.getRouter());
+app.use('/api/v1/geographic-areas', smartRateLimiter, geographicAreaRoutes.getRouter());
+app.use('/api/v1/venues', smartRateLimiter, venueRoutes.getRouter());
+app.use('/api/v1/activities', smartRateLimiter, activityRoutes.getRouter());
+app.use('/api/v1/activities/:id/participants', smartRateLimiter, assignmentRoutes.getRouter());
+app.use('/api/v1/analytics', smartRateLimiter, analyticsRoutes.getRouter());
+app.use('/api/v1/sync', smartRateLimiter, syncRoutes.getRouter());
 
 // 404 handler for undefined routes
 app.use(ErrorHandlerMiddleware.notFound());

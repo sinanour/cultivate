@@ -26,10 +26,10 @@ The Backend API package provides the RESTful API service that implements all bus
 
 #### Acceptance Criteria
 
-1. THE API SHALL provide a GET /api/activity-types endpoint that returns all activity types
-2. THE API SHALL provide a POST /api/activity-types endpoint that creates a new activity type
-3. THE API SHALL provide a PUT /api/activity-types/:id endpoint that updates an activity type
-4. THE API SHALL provide a DELETE /api/activity-types/:id endpoint that deletes an activity type
+1. THE API SHALL provide a GET /api/v1/activity-types endpoint that returns all activity types
+2. THE API SHALL provide a POST /api/v1/activity-types endpoint that creates a new activity type
+3. THE API SHALL provide a PUT /api/v1/activity-types/:id endpoint that updates an activity type
+4. THE API SHALL provide a DELETE /api/v1/activity-types/:id endpoint that deletes an activity type
 5. WHEN creating an activity type, THE API SHALL validate that the name is provided and unique
 6. WHEN deleting an activity type, THE API SHALL prevent deletion if activities reference it
 7. THE API SHALL seed predefined activity types on initial database setup

@@ -488,13 +488,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Increment version on each update
     - _Requirements: API Contract alignment_
 
-  - [-] 21.6 Implement rate limiting
+  - [x] 21.6 Implement rate limiting
     - Add rate limiting middleware
     - Configure limits per endpoint type (auth, mutation, query)
     - Add rate limit headers to responses
     - _Requirements: API Contract alignment_
 
-  - [ ] 21.7 Add API versioning support
+  - [-] 21.7 Add API versioning support
     - Update base path from /api to /api/v1
     - Update all route registrations
     - Update OpenAPI specification

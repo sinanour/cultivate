@@ -5,12 +5,10 @@
 This document defines the complete API contract between the Backend API and all client applications (Web Frontend, iOS Mobile App, Android Mobile App). All clients must implement this contract to ensure interoperability and data consistency.
 
 **Version**: 1.0.0  
-**Base URL**: `https://api.community-tracker.example.com/api`  
+**Base URL**: `https://api.community-tracker.example.com/api/v1`  
 **Protocol**: HTTPS only  
 **Format**: JSON  
 **Authentication**: JWT Bearer tokens
-
-**Note**: API versioning is not currently implemented in the URL path. Future versions will use `/api/v2/...` for breaking changes.
 
 ## Authentication
 
@@ -950,27 +948,22 @@ All errors follow this format:
 
 ## Rate Limits
 
-**Status**: NOT IMPLEMENTED
+Rate limiting is implemented on all API endpoints:
 
-Rate limiting is planned but not currently implemented in the API.
-
-Planned rate limits:
 - Authentication endpoints: 5 requests/minute per IP
 - Mutation endpoints: 100 requests/minute per user
 - Query endpoints: 1000 requests/minute per user
 
-Planned rate limit headers:
+Rate limit headers:
 - `X-RateLimit-Limit`: Request limit
 - `X-RateLimit-Remaining`: Remaining requests
 - `X-RateLimit-Reset`: Reset timestamp (Unix)
 
 ## Versioning
 
-**Status**: NOT IMPLEMENTED
+API version is included in the URL path: `/api/v1/...`
 
-API versioning in the URL path is not currently implemented. All endpoints use `/api/...` without a version number.
-
-Future breaking changes will increment the major version: `/api/v2/...`
+Breaking changes will increment the major version: `/api/v2/...`
 
 ## CORS
 
@@ -984,11 +977,7 @@ Production CORS policy:
 
 ## Pagination
 
-**Status**: NOT IMPLEMENTED
-
-Pagination is planned but not currently implemented. All list endpoints return complete result sets without pagination.
-
-Planned pagination format:
+Pagination is implemented on all list endpoints:
 
 **Query Parameters**:
 - `page` (default: 1): Page number
@@ -1007,6 +996,8 @@ Planned pagination format:
   }
 }
 ```
+
+**Note**: Pagination is optional. If `page` or `limit` parameters are not provided, all results are returned without pagination metadata.
 
 ## Timestamps
 
