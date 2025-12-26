@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   SpaceBetween,
-  Header,
   Badge,
 } from '@cloudscape-design/components';
 import type { ParticipantAddressHistory } from '../../types';
@@ -97,14 +96,6 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
             No address history records found for this participant.
           </Box>
         </Box>
-      }
-      header={
-        <Header
-          variant="h3"
-          description="Home address history in reverse chronological order"
-        >
-          Address History
-        </Header>
       }
     />
   );

@@ -3,7 +3,6 @@ import {
   Table,
   Box,
   Button,
-  Header,
   Badge,
 } from '@cloudscape-design/components';
 
@@ -97,14 +96,6 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
             No venue history records found for this activity.
           </Box>
         </Box>
-      }
-      header={
-        <Header
-          variant="h3"
-          description="Venue history in reverse chronological order"
-        >
-          Venue History
-        </Header>
       }
     />
   );
