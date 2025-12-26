@@ -2,10 +2,29 @@ import { Role } from '@prisma/client';
 import { RoleRepository } from '../repositories/role.repository';
 
 export class RoleService {
+  // Predefined roles that are seeded
+  private readonly PREDEFINED_ROLES = [
+    'Facilitator',
+    'Animator',
+    'Host',
+    'Teacher',
+    'Participant',
+    'Organizer',
+    'Volunteer',
+  ];
+
   constructor(private roleRepository: RoleRepository) {}
 
+  private addComputedFields(role: Role) {
+    return {
+      ...role,
+      isPredefined: this.PREDEFINED_ROLES.includes(role.name),
+    };
+  }
+
   async getAllRoles(): Promise<Role[]> {
-    return this.roleRepository.findAll();
+    const roles = await this.roleRepository.findAll();
+    return roles.map((r) => this.addComputedFields(r));
   }
 
   async getRoleById(id: string): Promise<Role> {
@@ -13,7 +32,7 @@ export class RoleService {
     if (!role) {
       throw new Error('Role not found');
     }
-    return role;
+    return this.addComputedFields(role);
   }
 
   async createRole(data: { name: string }): Promise<Role> {
@@ -26,7 +45,8 @@ export class RoleService {
       throw new Error('Role name is required');
     }
 
-    return this.roleRepository.create(data);
+    const created = await this.roleRepository.create(data);
+    return this.addComputedFields(created);
   }
 
   async updateRole(id: string, data: { name: string }): Promise<Role> {
@@ -44,7 +64,8 @@ export class RoleService {
       throw new Error('Role name is required');
     }
 
-    return this.roleRepository.update(id, data);
+    const updated = await this.roleRepository.update(id, data);
+    return this.addComputedFields(updated);
   }
 
   async deleteRole(id: string): Promise<void> {

@@ -33,6 +33,7 @@ enum UserRole {
 model ActivityType {
   id         String     @id @default(uuid())
   name       String     @unique
+  version    Int        @default(1)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   activities Activity[]
@@ -44,6 +45,7 @@ model ActivityType {
 model Role {
   id          String       @id @default(uuid())
   name        String       @unique
+  version     Int          @default(1)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assignments Assignment[]
@@ -57,6 +59,7 @@ model GeographicArea {
   name                   String
   areaType               AreaType
   parentGeographicAreaId String?
+  version                Int              @default(1)
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
   parent                 GeographicArea?  @relation("GeographicAreaHierarchy", fields: [parentGeographicAreaId], references: [id])
@@ -88,6 +91,7 @@ model Venue {
   latitude                  Decimal?                    @db.Decimal(10, 8)
   longitude                 Decimal?                    @db.Decimal(11, 8)
   venueType                 VenueType?
+  version                   Int                         @default(1)
   createdAt                 DateTime                    @default(now())
   updatedAt                 DateTime                    @updatedAt
   geographicArea            GeographicArea              @relation(fields: [geographicAreaId], references: [id])
@@ -112,6 +116,7 @@ model Participant {
   email          String                      @unique
   phone          String?
   notes          String?
+  version        Int                         @default(1)
   createdAt      DateTime                    @default(now())
   updatedAt      DateTime                    @updatedAt
   assignments    Assignment[]
@@ -148,6 +153,8 @@ model Activity {
   startDate            DateTime
   endDate              DateTime?
   status               ActivityStatus         @default(PLANNED)
+  createdBy            String?
+  version              Int                    @default(1)
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   activityType         ActivityType           @relation(fields: [activityTypeId], references: [id])

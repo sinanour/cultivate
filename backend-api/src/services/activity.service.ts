@@ -11,6 +11,7 @@ export interface CreateActivityInput {
   endDate?: Date;
   status?: ActivityStatus;
   venueIds?: string[];
+  createdBy?: string;
 }
 
 export interface UpdateActivityInput {
@@ -30,8 +31,16 @@ export class ActivityService {
     private prisma: PrismaClient
   ) {}
 
+  private addComputedFields(activity: Activity) {
+    return {
+      ...activity,
+      isOngoing: activity.endDate === null,
+    };
+  }
+
   async getAllActivities(): Promise<Activity[]> {
-    return this.activityRepository.findAll();
+    const activities = await this.activityRepository.findAll();
+    return activities.map((a) => this.addComputedFields(a));
   }
 
   async getActivityById(id: string): Promise<Activity> {
@@ -39,7 +48,7 @@ export class ActivityService {
     if (!activity) {
       throw new Error('Activity not found');
     }
-    return activity;
+    return this.addComputedFields(activity);
   }
 
   async createActivity(data: CreateActivityInput): Promise<Activity> {
@@ -88,6 +97,7 @@ export class ActivityService {
           startDate: data.startDate,
           endDate: data.endDate,
           status: data.status || ActivityStatus.PLANNED,
+          createdBy: data.createdBy,
         },
         include: {
           activityType: true,
@@ -134,7 +144,8 @@ export class ActivityService {
       }
     }
 
-    return this.activityRepository.update(id, data);
+    const updated = await this.activityRepository.update(id, data);
+    return this.addComputedFields(updated);
   }
 
   async deleteActivity(id: string): Promise<void> {

@@ -2,13 +2,33 @@ import { ActivityType } from '@prisma/client';
 import { ActivityTypeRepository } from '../repositories/activity-type.repository';
 
 export class ActivityTypeService {
+    // Predefined activity types that are seeded
+    private readonly PREDEFINED_TYPES = [
+        'Workshop',
+        'Meeting',
+        'Social Event',
+        'Training',
+        'Conference',
+        'Volunteer Activity',
+        'Community Service',
+        'Educational Program',
+    ];
+
     constructor(private activityTypeRepository: ActivityTypeRepository) { }
+
+    private addComputedFields(activityType: ActivityType) {
+        return {
+            ...activityType,
+            isPredefined: this.PREDEFINED_TYPES.includes(activityType.name),
+        };
+    }
 
     /**
      * Get all activity types
      */
     async getAllActivityTypes(): Promise<ActivityType[]> {
-        return this.activityTypeRepository.findAll();
+        const types = await this.activityTypeRepository.findAll();
+        return types.map((t) => this.addComputedFields(t));
     }
 
     /**
@@ -19,7 +39,7 @@ export class ActivityTypeService {
         if (!activityType) {
             throw new Error('Activity type not found');
         }
-        return activityType;
+        return this.addComputedFields(activityType);
     }
 
     /**
@@ -37,7 +57,8 @@ export class ActivityTypeService {
             throw new Error('Activity type name is required');
         }
 
-        return this.activityTypeRepository.create(data);
+        const created = await this.activityTypeRepository.create(data);
+        return this.addComputedFields(created);
     }
 
     /**
@@ -61,7 +82,8 @@ export class ActivityTypeService {
             throw new Error('Activity type name is required');
         }
 
-        return this.activityTypeRepository.update(id, data);
+        const updated = await this.activityTypeRepository.update(id, data);
+        return this.addComputedFields(updated);
     }
 
     /**

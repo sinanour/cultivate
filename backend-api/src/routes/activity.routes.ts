@@ -152,6 +152,7 @@ export class ActivityRoutes {
                 ...req.body,
                 startDate: new Date(req.body.startDate),
                 endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+                createdBy: req.user?.userId,
             };
             const activity = await this.activityService.createActivity(activityData);
             res.status(201).json({ success: true, data: activity });

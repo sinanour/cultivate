@@ -14,7 +14,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
   - Create project directory structure (routes, services, repositories, middleware)
   - _Requirements: Overview_
 
-- [ ] 2. Set up Prisma ORM and database schema
+- [x] 2. Set up Prisma ORM and database schema
   - [x] 2.1 Initialize Prisma with PostgreSQL
     - Configure Prisma schema with database connection
     - Define all entity models (User, ActivityType, Role, Participant, Activity, etc.)
@@ -31,7 +31,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 34: Foreign Key Constraint Enforcement**
     - **Validates: Requirements 8.4**
 
-- [ ] 3. Implement authentication system
+- [x] 3. Implement authentication system
   - [x] 3.1 Create authentication service
     - Implement password hashing with bcrypt
     - Implement JWT token generation and validation
@@ -104,7 +104,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 - [ ] 4. Checkpoint - Verify authentication and authorization
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Implement activity type management
+- [x] 5. Implement activity type management
   - [x] 5.1 Create activity type repository
     - Implement CRUD operations using Prisma
     - Implement reference counting for deletion validation
@@ -136,7 +136,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - ActivityTypeUpdateSchema
     - _Requirements: 15.1, 15.4_
 
-- [ ] 6. Implement participant role management
+- [x] 6. Implement participant role management
   - [x] 6.1 Create participant role repository and service
     - Implement CRUD operations
     - Validate name uniqueness
@@ -158,7 +158,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - DELETE /api/roles/:id
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 7. Implement participant management
+- [x] 7. Implement participant management
   - [x] 7.1 Create participant repository
     - Implement CRUD operations
     - Implement search by name or email
@@ -190,7 +190,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - GET /api/participants/:id/address-history
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.12_
 
-- [ ] 8. Implement venue management
+- [x] 8. Implement venue management
   - [x] 8.1 Create venue repository
     - Implement CRUD operations
     - Implement search by name or address
@@ -222,7 +222,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - GET /api/venues/:id/participants
     - _Requirements: 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.12, 5A.13_
 
-- [ ] 9. Implement geographic area management
+- [x] 9. Implement geographic area management
   - [x] 9.1 Create geographic area repository
     - Implement CRUD operations
     - Implement hierarchical queries (children, ancestors)
@@ -259,7 +259,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 - [ ] 10. Checkpoint - Verify core entity management
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Implement activity management
+- [x] 11. Implement activity management
   - [x] 11.1 Create activity repository
     - Implement CRUD operations
     - Implement filtering by type and status
@@ -294,7 +294,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - DELETE /api/activities/:id/venues/:venueId
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.12, 4.13, 4.14_
 
-- [ ] 12. Implement activity-participant assignments
+- [x] 12. Implement activity-participant assignments
   - [x] 12.1 Create assignment repository and service
     - Implement assignment creation and deletion
     - Validate activity, participant, and role exist
@@ -313,7 +313,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - DELETE /api/activities/:id/participants/:participantId
     - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 13. Implement analytics engine
+- [x] 13. Implement analytics engine
   - [x] 13.1 Create analytics service
     - Implement engagement metrics calculation
     - Implement growth metrics calculation
@@ -343,7 +343,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - GET /api/analytics/geographic
     - _Requirements: 6.1, 7.1_
 
-- [ ] 14. Implement offline synchronization
+- [x] 14. Implement offline synchronization
   - [x] 14.1 Create sync service
     - Process batch sync operations in transactions
     - Map local IDs to server IDs for new entities
@@ -365,7 +365,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - POST /api/sync/batch
     - _Requirements: 9.1_
 
-- [ ] 15. Implement audit logging
+- [x] 15. Implement audit logging
   - [x] 15.1 Create audit logging middleware
     - Log authentication events
     - Log role changes
@@ -383,7 +383,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 58: Audit Log Access Restriction**
     - **Validates: Requirements 12.1, 12.2, 12.3, 12.4, 12.5, 12.6**
 
-- [ ] 16. Implement error handling
+- [x] 16. Implement error handling
   - [x] 16.1 Create error handling middleware
     - Format consistent error responses
     - Map error types to HTTP status codes
@@ -400,7 +400,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 65: Error Logging with Stack Traces**
     - **Validates: Requirements 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7**
 
-- [ ] 17. Implement input validation
+- [x] 17. Implement input validation
   - [x] 17.1 Create validation middleware
     - Validate request bodies against Zod schemas
     - Validate query parameters and path parameters
@@ -413,7 +413,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 6: Email Format Validation**
     - **Validates: Requirements 15.1, 15.2, 15.3**
 
-- [ ] 18. Implement API documentation
+- [x] 18. Implement API documentation
   - [x] 18.1 Generate OpenAPI 3.0 specification
     - Document all endpoints with parameters and responses
     - Include example requests and responses
@@ -454,6 +454,51 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 
 - [ ] 20. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 21. Align implementation with API contract
+  - [-] 21.1 Add missing response wrapper fields
+    - Add `isPredefined` field to ActivityType and Role responses
+    - Add `version` field to all entity responses for optimistic locking
+    - Add `isOngoing` field to Activity responses (computed from endDate)
+    - Add `createdBy` field to Activity responses
+    - _Requirements: API Contract alignment_
+
+  - [ ] 21.2 Implement pagination support
+    - Add pagination to GET /api/activities endpoint
+    - Add pagination to GET /api/participants endpoint
+    - Add pagination to GET /api/venues endpoint
+    - Add pagination to GET /api/geographic-areas endpoint
+    - Return pagination metadata in responses
+    - _Requirements: API Contract alignment_
+
+  - [ ] 21.3 Add missing assignment endpoints
+    - Implement PUT /api/activities/:activityId/participants/:participantId
+    - Add `notes` field support to assignment creation and updates
+    - Add `joinedAt` field to assignment responses
+    - _Requirements: API Contract alignment_
+
+  - [ ] 21.4 Standardize DELETE response codes
+    - Update all DELETE endpoints to return 204 No Content instead of 200 OK
+    - Remove JSON body from DELETE responses
+    - _Requirements: API Contract alignment_
+
+  - [ ] 21.5 Add optimistic locking support
+    - Add version field validation to PUT endpoints
+    - Return 409 Conflict for version mismatches
+    - Increment version on each update
+    - _Requirements: API Contract alignment_
+
+  - [ ] 21.6 Implement rate limiting
+    - Add rate limiting middleware
+    - Configure limits per endpoint type (auth, mutation, query)
+    - Add rate limit headers to responses
+    - _Requirements: API Contract alignment_
+
+  - [ ] 21.7 Add API versioning support
+    - Update base path from /api to /api/v1
+    - Update all route registrations
+    - Update OpenAPI specification
+    - _Requirements: API Contract alignment_
 
 ## Notes
 

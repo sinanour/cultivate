@@ -5,10 +5,12 @@
 This document defines the complete API contract between the Backend API and all client applications (Web Frontend, iOS Mobile App, Android Mobile App). All clients must implement this contract to ensure interoperability and data consistency.
 
 **Version**: 1.0.0  
-**Base URL**: `https://api.community-tracker.example.com/api/v1`  
+**Base URL**: `https://api.community-tracker.example.com/api`  
 **Protocol**: HTTPS only  
 **Format**: JSON  
 **Authentication**: JWT Bearer tokens
+
+**Note**: API versioning is not currently implemented in the URL path. Future versions will use `/api/v2/...` for breaking changes.
 
 ## Authentication
 
@@ -27,17 +29,22 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
-  "token": "string (JWT)",
-  "refreshToken": "string",
-  "user": {
-    "id": "string (UUID)",
-    "email": "string",
-    "name": "string",
-    "systemRole": "Administrator | Editor | ReadOnly"
-  },
-  "expiresIn": 86400
+  "success": true,
+  "data": {
+    "token": "string (JWT)",
+    "refreshToken": "string",
+    "user": {
+      "id": "string (UUID)",
+      "email": "string",
+      "name": "string",
+      "systemRole": "ADMINISTRATOR | EDITOR | READ_ONLY"
+    },
+    "expiresIn": 900
+  }
 }
 ```
+
+**Note**: `expiresIn` is in seconds (900 = 15 minutes for access tokens)
 
 **Errors**:
 - 401: Invalid credentials
@@ -57,9 +64,12 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
-  "token": "string (JWT)",
-  "refreshToken": "string",
-  "expiresIn": 86400
+  "success": true,
+  "data": {
+    "token": "string (JWT)",
+    "refreshToken": "string",
+    "expiresIn": 900
+  }
 }
 ```
 
@@ -80,6 +90,7 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "string (UUID)",
@@ -87,13 +98,11 @@ This document defines the complete API contract between the Backend API and all 
       "description": "string",
       "activityType": {
         "id": "string (UUID)",
-        "name": "string",
-        "isPredefined": "boolean"
+        "name": "string"
       },
-      "status": "Planning | Active | Completed | Archived",
+      "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED",
       "startDate": "string (ISO 8601)",
       "endDate": "string | null (ISO 8601)",
-      "isOngoing": "boolean",
       "venues": [
         {
           "id": "string (UUID)",
@@ -108,26 +117,22 @@ This document defines the complete API contract between the Backend API and all 
           "effectiveTo": "string | null (ISO 8601)"
         }
       ],
-      "createdBy": "string (UUID)",
       "createdAt": "string (ISO 8601)",
-      "updatedAt": "string (ISO 8601)",
-      "version": "number"
+      "updatedAt": "string (ISO 8601)"
     }
-  ],
-  "pagination": {
-    "page": "number",
-    "limit": "number",
-    "total": "number",
-    "totalPages": "number"
-  }
+  ]
 }
 ```
+
+**Note**: Pagination is not currently implemented. The `isOngoing`, `createdBy`, and `version` fields are not included in responses.
 
 ### Get Activity
 
 **Endpoint**: `GET /activities/:id`
 
 **Response** (200 OK): Single activity object (same structure as list item)
+
+**Note**: Returns `{ success: true, data: {...} }` wrapper
 
 **Errors**:
 - 404: Activity not found
@@ -142,14 +147,15 @@ This document defines the complete API contract between the Backend API and all 
   "name": "string",
   "description": "string",
   "activityTypeId": "string (UUID)",
-  "status": "Planning | Active | Completed | Archived",
+  "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED",
   "startDate": "string (ISO 8601)",
-  "endDate": "string | null (ISO 8601)",
-  "isOngoing": "boolean"
+  "endDate": "string | null (ISO 8601)"
 }
 ```
 
-**Response** (201 Created): Activity object
+**Response** (201 Created): Activity object wrapped in `{ success: true, data: {...} }`
+
+**Note**: Status values use uppercase (PLANNED not Planning). The `isOngoing` field is not used in requests.
 
 **Errors**:
 - 400: Validation error
@@ -159,29 +165,33 @@ This document defines the complete API contract between the Backend API and all 
 
 **Endpoint**: `PUT /activities/:id`
 
-**Request**: Same as create, plus:
-```json
-{
-  "version": "number"
-}
-```
+**Request**: Same as create (no version field required)
 
-**Response** (200 OK): Updated activity object
+**Response** (200 OK): Updated activity object wrapped in `{ success: true, data: {...} }`
 
 **Errors**:
 - 404: Activity not found
-- 409: Version conflict
 - 403: Insufficient permissions
+
+**Note**: Optimistic locking with version field is not currently implemented.
 
 ### Delete Activity
 
 **Endpoint**: `DELETE /activities/:id`
 
-**Response** (204 No Content)
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Activity deleted successfully"
+}
+```
 
 **Errors**:
 - 404: Activity not found
 - 403: Insufficient permissions
+
+**Note**: Returns 200 with JSON body, not 204 No Content
 
 ### Get Activity Venues
 
@@ -190,6 +200,7 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "string (UUID)",
@@ -216,21 +227,27 @@ This document defines the complete API contract between the Backend API and all 
 **Request**:
 ```json
 {
-  "venueId": "string (UUID)",
-  "effectiveFrom": "string (ISO 8601)"
+  "venueId": "string (UUID)"
 }
 ```
 
-**Response** (201 Created): Activity venue association object
+**Response** (201 Created): Activity venue association object wrapped in `{ success: true, data: {...} }`
+
+**Note**: The `effectiveFrom` field is automatically set to the current timestamp and is not included in the request.
 
 ### Remove Activity Venue
 
 **Endpoint**: `DELETE /activities/:id/venues/:venueId`
 
-**Query Parameters**:
-- `effectiveTo` (required): End date for the association (ISO 8601)
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Venue association removed successfully"
+}
+```
 
-**Response** (204 No Content)
+**Note**: The `effectiveTo` query parameter is not required. The association is automatically closed with the current timestamp.
 
 ## Participants
 
@@ -246,6 +263,7 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "string (UUID)",
@@ -255,24 +273,19 @@ This document defines the complete API contract between the Backend API and all 
       "notes": "string",
       "homeVenueId": "string | null (UUID)",
       "createdAt": "string (ISO 8601)",
-      "updatedAt": "string (ISO 8601)",
-      "version": "number"
+      "updatedAt": "string (ISO 8601)"
     }
-  ],
-  "pagination": {
-    "page": "number",
-    "limit": "number",
-    "total": "number",
-    "totalPages": "number"
-  }
+  ]
 }
 ```
+
+**Note**: Pagination is not currently implemented. The `version` field is not included in responses.
 
 ### Get Participant
 
 **Endpoint**: `GET /participants/:id`
 
-**Response** (200 OK): Single participant object
+**Response** (200 OK): Single participant object wrapped in `{ success: true, data: {...} }`
 
 ### Create Participant
 
@@ -289,21 +302,27 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Response** (201 Created): Participant object
+**Response** (201 Created): Participant object wrapped in `{ success: true, data: {...} }`
 
 ### Update Participant
 
 **Endpoint**: `PUT /participants/:id`
 
-**Request**: Same as create, plus version
+**Request**: Same as create (no version field required)
 
-**Response** (200 OK): Updated participant object
+**Response** (200 OK): Updated participant object wrapped in `{ success: true, data: {...} }`
 
 ### Delete Participant
 
 **Endpoint**: `DELETE /participants/:id`
 
-**Response** (204 No Content)
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Participant deleted successfully"
+}
+```
 
 ### Get Participant Address History
 
@@ -312,6 +331,7 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "string (UUID)",
@@ -344,6 +364,7 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "string (UUID)",
@@ -361,21 +382,17 @@ This document defines the complete API contract between the Backend API and all 
       "createdAt": "string (ISO 8601)",
       "updatedAt": "string (ISO 8601)"
     }
-  ],
-  "pagination": {
-    "page": "number",
-    "limit": "number",
-    "total": "number",
-    "totalPages": "number"
-  }
+  ]
 }
 ```
+
+**Note**: Pagination is not currently implemented.
 
 ### Get Venue
 
 **Endpoint**: `GET /venues/:id`
 
-**Response** (200 OK): Single venue object
+**Response** (200 OK): Single venue object wrapped in `{ success: true, data: {...} }`
 
 ### Create Venue
 
@@ -393,7 +410,7 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Response** (201 Created): Venue object
+**Response** (201 Created): Venue object wrapped in `{ success: true, data: {...} }`
 
 ### Update Venue
 
@@ -401,16 +418,22 @@ This document defines the complete API contract between the Backend API and all 
 
 **Request**: Same as create
 
-**Response** (200 OK): Updated venue object
+**Response** (200 OK): Updated venue object wrapped in `{ success: true, data: {...} }`
 
 ### Delete Venue
 
 **Endpoint**: `DELETE /venues/:id`
 
-**Response** (204 No Content)
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Venue deleted successfully"
+}
+```
 
 **Errors**:
-- 409: Venue is referenced by activities or participants
+- 409: Venue is referenced by activities or participants (returns 400 with code REFERENCED_ENTITY)
 
 ### Search Venues
 
@@ -418,21 +441,22 @@ This document defines the complete API contract between the Backend API and all 
 
 **Query Parameters**:
 - `q` (required): Search query
-- `limit` (optional, default: 20)
 
-**Response** (200 OK): Array of venue objects
+**Response** (200 OK): Array of venue objects wrapped in `{ success: true, data: [...] }`
+
+**Note**: The `limit` parameter is not currently implemented.
 
 ### Get Venue Activities
 
 **Endpoint**: `GET /venues/:id/activities`
 
-**Response** (200 OK): Array of activities associated with venue
+**Response** (200 OK): Array of activities associated with venue wrapped in `{ success: true, data: [...] }`
 
 ### Get Venue Participants
 
 **Endpoint**: `GET /venues/:id/participants`
 
-**Response** (200 OK): Array of participants with this venue as home
+**Response** (200 OK): Array of participants with this venue as home wrapped in `{ success: true, data: [...] }`
 
 ## Geographic Areas
 
@@ -449,6 +473,7 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "string (UUID)",
@@ -463,21 +488,17 @@ This document defines the complete API contract between the Backend API and all 
       "createdAt": "string (ISO 8601)",
       "updatedAt": "string (ISO 8601)"
     }
-  ],
-  "pagination": {
-    "page": "number",
-    "limit": "number",
-    "total": "number",
-    "totalPages": "number"
-  }
+  ]
 }
 ```
+
+**Note**: Pagination is not currently implemented.
 
 ### Get Geographic Area
 
 **Endpoint**: `GET /geographic-areas/:id`
 
-**Response** (200 OK): Single geographic area object
+**Response** (200 OK): Single geographic area object wrapped in `{ success: true, data: {...} }`
 
 ### Create Geographic Area
 
@@ -492,7 +513,7 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Response** (201 Created): Geographic area object
+**Response** (201 Created): Geographic area object wrapped in `{ success: true, data: {...} }`
 
 **Errors**:
 - 400: Circular relationship detected
@@ -503,34 +524,40 @@ This document defines the complete API contract between the Backend API and all 
 
 **Request**: Same as create
 
-**Response** (200 OK): Updated geographic area object
+**Response** (200 OK): Updated geographic area object wrapped in `{ success: true, data: {...} }`
 
 ### Delete Geographic Area
 
 **Endpoint**: `DELETE /geographic-areas/:id`
 
-**Response** (204 No Content)
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Geographic area deleted successfully"
+}
+```
 
 **Errors**:
-- 409: Area is referenced by venues or child areas
+- 409: Area is referenced by venues or child areas (returns 400 with code REFERENCED_ENTITY)
 
 ### Get Geographic Area Children
 
 **Endpoint**: `GET /geographic-areas/:id/children`
 
-**Response** (200 OK): Array of child geographic areas
+**Response** (200 OK): Array of child geographic areas wrapped in `{ success: true, data: [...] }`
 
 ### Get Geographic Area Ancestors
 
 **Endpoint**: `GET /geographic-areas/:id/ancestors`
 
-**Response** (200 OK): Array of ancestor geographic areas (from parent to root)
+**Response** (200 OK): Array of ancestor geographic areas (from parent to root) wrapped in `{ success: true, data: [...] }`
 
 ### Get Geographic Area Venues
 
 **Endpoint**: `GET /geographic-areas/:id/venues`
 
-**Response** (200 OK): Array of venues in this geographic area
+**Response** (200 OK): Array of venues in this geographic area wrapped in `{ success: true, data: [...] }`
 
 ### Get Geographic Area Statistics
 
@@ -542,13 +569,18 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
-  "geographicAreaId": "string (UUID)",
-  "totalActivities": "number",
-  "totalParticipants": "number",
-  "activeActivities": "number",
-  "ongoingActivities": "number"
+  "success": true,
+  "data": {
+    "geographicAreaId": "string (UUID)",
+    "totalActivities": "number",
+    "totalParticipants": "number",
+    "activeActivities": "number",
+    "ongoingActivities": "number"
+  }
 }
 ```
+
+**Note**: The `includeDescendants` parameter is not currently implemented. Statistics always include descendants.
 
 ## Activity Participants
 
@@ -559,6 +591,7 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "string (UUID)",
@@ -571,15 +604,15 @@ This document defines the complete API contract between the Backend API and all 
       },
       "role": {
         "id": "string (UUID)",
-        "name": "string",
-        "isPredefined": "boolean"
+        "name": "string"
       },
-      "joinedAt": "string (ISO 8601)",
-      "notes": "string"
+      "createdAt": "string (ISO 8601)"
     }
   ]
 }
 ```
+
+**Note**: The `joinedAt` and `notes` fields are not currently included in responses. The `isPredefined` field is not included in role objects.
 
 ### Add Participant to Activity
 
@@ -589,32 +622,33 @@ This document defines the complete API contract between the Backend API and all 
 ```json
 {
   "participantId": "string (UUID)",
-  "roleId": "string (UUID)",
-  "notes": "string"
+  "roleId": "string (UUID)"
 }
 ```
 
-**Response** (201 Created): Activity participant object
+**Response** (201 Created): Activity participant object wrapped in `{ success: true, data: {...} }`
+
+**Note**: The `notes` field is not currently supported in requests.
 
 ### Update Activity Participant
 
 **Endpoint**: `PUT /activities/:activityId/participants/:participantId`
 
-**Request**:
-```json
-{
-  "roleId": "string (UUID)",
-  "notes": "string"
-}
-```
+**Status**: NOT IMPLEMENTED
 
-**Response** (200 OK): Updated activity participant object
+**Note**: This endpoint is documented in the contract but not yet implemented in the backend.
 
 ### Remove Participant from Activity
 
 **Endpoint**: `DELETE /activities/:activityId/participants/:participantId`
 
-**Response** (204 No Content)
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Participant removed from activity successfully"
+}
+```
 
 ## Activity Types
 
@@ -625,16 +659,19 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "string (UUID)",
       "name": "string",
-      "isPredefined": "boolean",
-      "createdAt": "string (ISO 8601)"
+      "createdAt": "string (ISO 8601)",
+      "updatedAt": "string (ISO 8601)"
     }
   ]
 }
 ```
+
+**Note**: The `isPredefined` field is not currently included in responses.
 
 ### Create Activity Type
 
@@ -647,31 +684,11 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Response** (201 Created): Activity type object
+**Response** (201 Created): Activity type object wrapped in `{ success: true, data: {...} }`
 
-## Participant Roles
+### Update Activity Type
 
-### List Participant Roles
-
-**Endpoint**: `GET /participant-roles`
-
-**Response** (200 OK):
-```json
-{
-  "data": [
-    {
-      "id": "string (UUID)",
-      "name": "string",
-      "isPredefined": "boolean",
-      "createdAt": "string (ISO 8601)"
-    }
-  ]
-}
-```
-
-### Create Participant Role
-
-**Endpoint**: `POST /participant-roles`
+**Endpoint**: `PUT /activity-types/:id`
 
 **Request**:
 ```json
@@ -680,7 +697,86 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
-**Response** (201 Created): Participant role object
+**Response** (200 OK): Updated activity type object wrapped in `{ success: true, data: {...} }`
+
+### Delete Activity Type
+
+**Endpoint**: `DELETE /activity-types/:id`
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Activity type deleted successfully"
+}
+```
+
+**Errors**:
+- 400: Activity type is referenced by activities (code: REFERENCED_ENTITY)
+
+## Participant Roles
+
+### List Participant Roles
+
+**Endpoint**: `GET /roles`
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (UUID)",
+      "name": "string",
+      "createdAt": "string (ISO 8601)",
+      "updatedAt": "string (ISO 8601)"
+    }
+  ]
+}
+```
+
+**Note**: The endpoint is `/roles` not `/participant-roles`. The `isPredefined` field is not currently included in responses.
+
+### Create Participant Role
+
+**Endpoint**: `POST /roles`
+
+**Request**:
+```json
+{
+  "name": "string"
+}
+```
+
+**Response** (201 Created): Participant role object wrapped in `{ success: true, data: {...} }`
+
+### Update Participant Role
+
+**Endpoint**: `PUT /roles/:id`
+
+**Request**:
+```json
+{
+  "name": "string"
+}
+```
+
+**Response** (200 OK): Updated participant role object wrapped in `{ success: true, data: {...} }`
+
+### Delete Participant Role
+
+**Endpoint**: `DELETE /roles/:id`
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Role deleted successfully"
+}
+```
+
+**Errors**:
+- 400: Role is referenced by assignments (code: REFERENCED_ENTITY)
 
 ## Analytics
 
@@ -689,46 +785,52 @@ This document defines the complete API contract between the Backend API and all 
 **Endpoint**: `GET /analytics/engagement`
 
 **Query Parameters**:
-- `startDate` (required): Period start (ISO 8601)
-- `endDate` (required): Period end (ISO 8601)
+- `startDate` (optional): Period start (ISO 8601)
+- `endDate` (optional): Period end (ISO 8601)
 - `geographicAreaId` (optional): Filter by geographic area
 
 **Response** (200 OK):
 ```json
 {
-  "totalActivities": "number",
-  "activeActivities": "number",
-  "totalParticipants": "number",
-  "activeParticipants": "number",
-  "participationRate": "number",
-  "retentionRate": "number",
-  "averageActivitySize": "number",
-  "geographicBreakdown": [
-    {
-      "geographicAreaId": "string (UUID)",
-      "geographicAreaName": "string",
-      "activityCount": "number",
-      "participantCount": "number"
-    }
-  ],
-  "periodStart": "string (ISO 8601)",
-  "periodEnd": "string (ISO 8601)"
+  "success": true,
+  "data": {
+    "totalActivities": "number",
+    "activeActivities": "number",
+    "totalParticipants": "number",
+    "activeParticipants": "number",
+    "participationRate": "number",
+    "retentionRate": "number",
+    "averageActivitySize": "number",
+    "geographicBreakdown": [
+      {
+        "geographicAreaId": "string (UUID)",
+        "geographicAreaName": "string",
+        "activityCount": "number",
+        "participantCount": "number"
+      }
+    ],
+    "periodStart": "string (ISO 8601)",
+    "periodEnd": "string (ISO 8601)"
+  }
 }
 ```
+
+**Note**: Date parameters are optional, not required.
 
 ### Get Growth Data
 
 **Endpoint**: `GET /analytics/growth`
 
 **Query Parameters**:
-- `startDate` (required): Period start (ISO 8601)
-- `endDate` (required): Period end (ISO 8601)
-- `interval` (optional, default: "day"): Grouping interval (day, week, month)
+- `startDate` (optional): Period start (ISO 8601)
+- `endDate` (optional): Period end (ISO 8601)
+- `period` (optional, default: "DAY"): Grouping interval (DAY, WEEK, MONTH, YEAR)
 - `geographicAreaId` (optional): Filter by geographic area
 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "date": "string (ISO 8601)",
@@ -741,6 +843,8 @@ This document defines the complete API contract between the Backend API and all 
 }
 ```
 
+**Note**: The parameter is `period` not `interval`, and date parameters are optional.
+
 ### Get Geographic Analytics
 
 **Endpoint**: `GET /analytics/geographic`
@@ -748,11 +852,11 @@ This document defines the complete API contract between the Backend API and all 
 **Query Parameters**:
 - `startDate` (optional): Period start (ISO 8601)
 - `endDate` (optional): Period end (ISO 8601)
-- `geographicAreaId` (optional): Root geographic area
 
 **Response** (200 OK):
 ```json
 {
+  "success": true,
   "data": [
     {
       "geographicAreaId": "string (UUID)",
@@ -766,6 +870,8 @@ This document defines the complete API contract between the Backend API and all 
   ]
 }
 ```
+
+**Note**: The `geographicAreaId` filter parameter is not currently implemented for this endpoint.
 
 ## Synchronization
 
@@ -794,22 +900,25 @@ This document defines the complete API contract between the Backend API and all 
 **Response** (200 OK):
 ```json
 {
-  "results": [
-    {
-      "operationId": "string (UUID)",
-      "success": "boolean",
-      "error": {
-        "code": "string",
-        "message": "string"
-      } | null,
-      "entity": {} | null
+  "success": true,
+  "data": {
+    "results": [
+      {
+        "operationId": "string (UUID)",
+        "success": "boolean",
+        "error": {
+          "code": "string",
+          "message": "string"
+        } | null,
+        "entity": {} | null
+      }
+    ],
+    "syncState": {
+      "clientId": "string (UUID)",
+      "lastSyncTimestamp": "string (ISO 8601)",
+      "pendingOperations": "number",
+      "conflictCount": "number"
     }
-  ],
-  "syncState": {
-    "clientId": "string (UUID)",
-    "lastSyncTimestamp": "string (ISO 8601)",
-    "pendingOperations": "number",
-    "conflictCount": "number"
   }
 }
 ```
@@ -820,15 +929,13 @@ All errors follow this format:
 
 ```json
 {
-  "error": {
-    "code": "string",
-    "message": "string",
-    "details": {},
-    "timestamp": "string (ISO 8601)",
-    "requestId": "string (UUID)"
-  }
+  "code": "string",
+  "message": "string",
+  "details": {}
 }
 ```
+
+**Note**: The `timestamp` and `requestId` fields are not currently included in error responses.
 
 ### Error Codes
 
@@ -843,20 +950,27 @@ All errors follow this format:
 
 ## Rate Limits
 
+**Status**: NOT IMPLEMENTED
+
+Rate limiting is planned but not currently implemented in the API.
+
+Planned rate limits:
 - Authentication endpoints: 5 requests/minute per IP
 - Mutation endpoints: 100 requests/minute per user
 - Query endpoints: 1000 requests/minute per user
 
-Rate limit headers:
+Planned rate limit headers:
 - `X-RateLimit-Limit`: Request limit
 - `X-RateLimit-Remaining`: Remaining requests
 - `X-RateLimit-Reset`: Reset timestamp (Unix)
 
 ## Versioning
 
-API version is included in the URL path: `/api/v1/...`
+**Status**: NOT IMPLEMENTED
 
-Breaking changes will increment the major version: `/api/v2/...`
+API versioning in the URL path is not currently implemented. All endpoints use `/api/...` without a version number.
+
+Future breaking changes will increment the major version: `/api/v2/...`
 
 ## CORS
 
@@ -870,7 +984,11 @@ Production CORS policy:
 
 ## Pagination
 
-All list endpoints support pagination:
+**Status**: NOT IMPLEMENTED
+
+Pagination is planned but not currently implemented. All list endpoints return complete result sets without pagination.
+
+Planned pagination format:
 
 **Query Parameters**:
 - `page` (default: 1): Page number
@@ -879,6 +997,7 @@ All list endpoints support pagination:
 **Response**:
 ```json
 {
+  "success": true,
   "data": [],
   "pagination": {
     "page": 1,

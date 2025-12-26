@@ -885,6 +885,66 @@ The API uses Prisma to define the following database models:
 *For any* geographic area, statistics should include data from all descendant geographic areas in the hierarchy.
 **Validates: Requirements 5B.15**
 
+### Pagination Properties
+
+**Property 101: Page parameter validation**
+*For any* paginated list request with an invalid page number (less than 1), the API should reject it with a 400 error.
+**Validates: Requirements 17.5**
+
+**Property 102: Limit parameter validation**
+*For any* paginated list request with a limit greater than 100, the API should reject it with a 400 error.
+**Validates: Requirements 17.7**
+
+**Property 103: Pagination metadata accuracy**
+*For any* paginated list response, the pagination metadata should correctly reflect the total count, current page, limit, and total pages.
+**Validates: Requirements 17.8**
+
+**Property 104: Pagination data consistency**
+*For any* paginated list request, the returned data should contain exactly the items for the requested page based on the limit.
+**Validates: Requirements 17.9**
+
+### Optimistic Locking Properties
+
+**Property 105: Version field inclusion**
+*For any* entity response (Activity, Participant, Venue, GeographicArea, ActivityType, Role), it should include a version field.
+**Validates: Requirements 18.1**
+
+**Property 106: Version mismatch rejection**
+*For any* update request with a version that doesn't match the current entity version, the API should return 409 Conflict.
+**Validates: Requirements 18.2, 18.3**
+
+**Property 107: Version increment on update**
+*For any* successful update operation, the entity's version number should be incremented by 1.
+**Validates: Requirements 18.4**
+
+### Rate Limiting Properties
+
+**Property 108: Authentication rate limit enforcement**
+*For any* IP address making more than 5 authentication requests per minute, the API should return 429 Too Many Requests.
+**Validates: Requirements 19.1**
+
+**Property 109: Mutation rate limit enforcement**
+*For any* authenticated user making more than 100 mutation requests per minute, the API should return 429 Too Many Requests.
+**Validates: Requirements 19.2**
+
+**Property 110: Query rate limit enforcement**
+*For any* authenticated user making more than 1000 query requests per minute, the API should return 429 Too Many Requests.
+**Validates: Requirements 19.3**
+
+**Property 111: Rate limit header inclusion**
+*For any* API response, it should include X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset headers.
+**Validates: Requirements 19.5**
+
+### API Versioning Properties
+
+**Property 112: Version path inclusion**
+*For any* API endpoint, it should be accessible via the /api/v1/... path.
+**Validates: Requirements 20.1**
+
+**Property 113: Backward compatibility within version**
+*For any* endpoint within the same major version, changes should maintain backward compatibility.
+**Validates: Requirements 20.2**
+
 ## Error Handling
 
 ### Error Response Format

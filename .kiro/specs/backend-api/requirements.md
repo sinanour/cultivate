@@ -40,7 +40,7 @@ The Backend API package provides the RESTful API service that implements all bus
 
 #### Acceptance Criteria
 
-1. THE API SHALL provide a GET /api/roles endpoint that returns all participant roles
+1. THE API SHALL provide a GET /api/roles endpoint that returns all participant roles (note: endpoint is /roles not /participant-roles)
 2. THE API SHALL provide a POST /api/roles endpoint that creates a new role
 3. THE API SHALL provide a PUT /api/roles/:id endpoint that updates a role
 4. THE API SHALL provide a DELETE /api/roles/:id endpoint that deletes a role
@@ -310,3 +310,56 @@ The Backend API package provides the RESTful API service that implements all bus
 9. THE script SHALL NOT be included in the production deployment of the API service
 10. THE script SHALL be located in a development utilities directory within the backend-api package
 11. WHEN the container is running, THE script SHALL output the connection string for the API to use
+
+### Requirement 17: Implement Pagination
+
+**User Story:** As a client developer, I want paginated list endpoints, so that I can efficiently load large datasets without overwhelming the client or network.
+
+#### Acceptance Criteria
+
+1. THE API SHALL support pagination on GET /api/activities endpoint
+2. THE API SHALL support pagination on GET /api/participants endpoint
+3. THE API SHALL support pagination on GET /api/venues endpoint
+4. THE API SHALL support pagination on GET /api/geographic-areas endpoint
+5. WHEN pagination is requested, THE API SHALL accept page and limit query parameters
+6. THE API SHALL default to page 1 and limit 50 if not specified
+7. THE API SHALL enforce a maximum limit of 100 items per page
+8. WHEN returning paginated results, THE API SHALL include pagination metadata with page, limit, total, and totalPages
+9. THE API SHALL wrap paginated data in a consistent response format with data and pagination fields
+
+### Requirement 18: Support Optimistic Locking
+
+**User Story:** As a client developer, I want optimistic locking on updates, so that I can prevent lost updates when multiple users edit the same resource.
+
+#### Acceptance Criteria
+
+1. THE API SHALL include a version field in all entity responses
+2. WHEN updating an entity, THE API SHALL require the current version number in the request
+3. WHEN the provided version does not match the current version, THE API SHALL return 409 Conflict
+4. WHEN an update succeeds, THE API SHALL increment the version number
+5. THE API SHALL apply optimistic locking to Activity, Participant, Venue, GeographicArea, ActivityType, and Role entities
+
+### Requirement 19: Implement Rate Limiting
+
+**User Story:** As a system administrator, I want rate limiting on API endpoints, so that I can prevent abuse and ensure fair resource usage.
+
+#### Acceptance Criteria
+
+1. THE API SHALL limit authentication endpoints to 5 requests per minute per IP address
+2. THE API SHALL limit mutation endpoints to 100 requests per minute per authenticated user
+3. THE API SHALL limit query endpoints to 1000 requests per minute per authenticated user
+4. WHEN rate limits are exceeded, THE API SHALL return 429 Too Many Requests
+5. THE API SHALL include X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset headers in all responses
+6. THE API SHALL reset rate limit counters at the specified reset time
+
+### Requirement 20: Version API Endpoints
+
+**User Story:** As a client developer, I want versioned API endpoints, so that I can rely on stable contracts and migrate to new versions when ready.
+
+#### Acceptance Criteria
+
+1. THE API SHALL include version number in the URL path as /api/v1/...
+2. THE API SHALL maintain backward compatibility within the same major version
+3. WHEN breaking changes are introduced, THE API SHALL increment the major version to /api/v2/...
+4. THE API SHALL document version changes in the OpenAPI specification
+5. THE API SHALL support multiple API versions simultaneously during transition periods
