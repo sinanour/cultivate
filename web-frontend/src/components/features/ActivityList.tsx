@@ -79,8 +79,10 @@ export function ActivityList() {
 
   const statusFilterOptions = [
     { label: 'All statuses', value: '' },
+    { label: 'Planned', value: 'PLANNED' },
     { label: 'Active', value: 'ACTIVE' },
     { label: 'Completed', value: 'COMPLETED' },
+    { label: 'Cancelled', value: 'CANCELLED' },
   ];
 
   const handleEdit = (activity: Activity) => {
@@ -144,14 +146,22 @@ export function ActivityList() {
           {
             id: 'status',
             header: 'Status',
-            cell: (item) => (
-              <SpaceBetween direction="horizontal" size="xs">
-                <Badge color={item.status === 'ACTIVE' ? 'green' : 'grey'}>
-                  {item.status}
-                </Badge>
-                {item.isOngoing && <Badge color="blue">Ongoing</Badge>}
-              </SpaceBetween>
-            ),
+            cell: (item) => {
+              const statusColors: Record<string, 'green' | 'grey' | 'blue' | 'red'> = {
+                PLANNED: 'blue',
+                ACTIVE: 'green',
+                COMPLETED: 'grey',
+                CANCELLED: 'red',
+              };
+              return (
+                <SpaceBetween direction="horizontal" size="xs">
+                  <Badge color={statusColors[item.status] || 'grey'}>
+                    {item.status}
+                  </Badge>
+                  {item.isOngoing && <Badge color="blue">Ongoing</Badge>}
+                </SpaceBetween>
+              );
+            },
           },
           {
             id: 'actions',

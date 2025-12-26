@@ -433,7 +433,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 40: Error Console Logging**
     - **Validates: Requirements 15.2, 15.3, 15.5, 15.6**
 
-- [ ] 17A. Implement optimistic locking and conflict resolution
+- [x] 17A. Implement optimistic locking and conflict resolution
   - [x] 17A.1 Create version conflict detection utility
     - Detect 409 errors with VERSION_CONFLICT code
     - Extract version information from error response
@@ -457,7 +457,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Test version field inclusion in updates
     - **Validates: Requirements 18.1, 18.2, 18.3, 18.4**
 
-- [ ] 17B. Implement rate limiting handling
+- [x] 17B. Implement rate limiting handling
   - [x] 17B.1 Create rate limit detection utility
     - Detect 429 errors with RATE_LIMIT_EXCEEDED code
     - Parse X-RateLimit-* headers from responses
