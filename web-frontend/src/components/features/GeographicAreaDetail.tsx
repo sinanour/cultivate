@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -11,12 +12,17 @@ import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
+import Modal from '@cloudscape-design/components/modal';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
+import { GeographicAreaForm } from './GeographicAreaForm';
+import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/date.utils';
 
 export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { canEdit } = usePermissions();
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
 
   const { data: geographicArea, isLoading, error } = useQuery({
     queryKey: ['geographicArea', id],
@@ -82,9 +88,16 @@ export function GeographicAreaDetail() {
           <Header
             variant="h2"
             actions={
-              <Button onClick={() => navigate('/geographic-areas')}>
-                Back to Geographic Areas
-              </Button>
+              <SpaceBetween direction="horizontal" size="xs">
+                {canEdit() && (
+                  <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                    Edit
+                  </Button>
+                )}
+                <Button onClick={() => navigate('/geographic-areas')}>
+                  Back to Geographic Areas
+                </Button>
+              </SpaceBetween>
             }
           >
             {geographicArea.name}
@@ -194,6 +207,22 @@ export function GeographicAreaDetail() {
           </Box>
         )}
       </Container>
+      
+      <Modal
+        visible={isEditFormOpen}
+        onDismiss={() => setIsEditFormOpen(false)}
+        header="Edit Geographic Area"
+      >
+        {isEditFormOpen && (
+          <GeographicAreaForm
+            geographicArea={geographicArea}
+            onSuccess={() => {
+              setIsEditFormOpen(false);
+            }}
+            onCancel={() => setIsEditFormOpen(false)}
+          />
+        )}
+      </Modal>
     </SpaceBetween>
   );
 }

@@ -394,3 +394,16 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL use CloudScape Link component for all hyperlinked primary column values
 6. THE Web_App SHALL maintain consistent link styling across all tables using CloudScape design patterns
 7. THE Web_App SHALL preserve Edit and Delete action buttons in the Actions column where appropriate based on user permissions
+
+### Requirement 23: Edit Action Buttons on Detail Pages
+
+**User Story:** As a user, I want to quickly edit records from their detail pages, so that I can make changes without navigating back to the list view.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display an edit action button in the header section of all entity detail pages (participants, activities, venues, geographic areas)
+2. THE Web_App SHALL position the edit button as the right-most action in the header when multiple actions are present
+3. THE Web_App SHALL use CloudScape Button component with variant="primary" for all detail page edit buttons
+4. WHEN a user clicks the edit button, THE Web_App SHALL open the edit form for the current entity
+5. THE Web_App SHALL hide the edit button when the user has READ_ONLY role
+6. THE Web_App SHALL display the edit button when the user has EDITOR or ADMINISTRATOR role

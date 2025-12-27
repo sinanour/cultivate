@@ -147,6 +147,11 @@ src/
 
 **ParticipantDetail**
 - Shows participant information in detail view
+- Displays primary edit button in header section using CloudScape Button with variant="primary"
+- Positions edit button as right-most action in header
+- Opens ParticipantForm when edit button is clicked
+- Hides edit button when user has READ_ONLY role
+- Shows edit button when user has EDITOR or ADMINISTRATOR role
 - Lists all activities the participant is assigned to in a table
 - Displays activity name (with link to detail), type, role, status, dates, and notes for each assignment
 - Shows loading state while fetching activities
@@ -195,6 +200,11 @@ src/
 
 **ActivityDetail**
 - Shows activity information in detail view
+- Displays primary edit button in header section using CloudScape Button with variant="primary"
+- Positions edit button as right-most action in header
+- Opens ActivityForm when edit button is clicked
+- Hides edit button when user has READ_ONLY role
+- Shows edit button when user has EDITOR or ADMINISTRATOR role
 - Lists all assigned participants with their roles
 - Provides interface to add/remove participant assignments
 - Shows venue history table in reverse chronological order
@@ -255,6 +265,11 @@ src/
 
 **VenueDetail**
 - Shows venue information in detail view
+- Displays primary edit button in header section using CloudScape Button with variant="primary"
+- Positions edit button as right-most action in header
+- Opens VenueForm when edit button is clicked
+- Hides edit button when user has READ_ONLY role
+- Shows edit button when user has EDITOR or ADMINISTRATOR role
 - Lists all activities associated with the venue (current and historical) with activity names hyperlinked to /activities/:id
 - Lists all participants with this venue as their home address with participant names hyperlinked to /participants/:id
 - Displays geographic area hierarchy path
@@ -291,6 +306,11 @@ src/
 
 **GeographicAreaDetail**
 - Shows geographic area information in detail view
+- Displays primary edit button in header section using CloudScape Button with variant="primary"
+- Positions edit button as right-most action in header
+- Opens GeographicAreaForm when edit button is clicked
+- Hides edit button when user has READ_ONLY role
+- Shows edit button when user has EDITOR or ADMINISTRATOR role
 - Displays full hierarchy path from root to current area
 - Lists all child geographic areas
 - Lists all venues in the geographic area and all descendant areas (recursive aggregation)
@@ -1203,6 +1223,18 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* table in the application (list views or detail page tables), the primary column should use the CloudScape Link component with consistent styling.
 
 **Validates: Requirements 22.5, 22.6**
+
+### Property 79: Edit Button on Detail Pages
+
+*For any* entity detail page (participants, activities, venues, geographic areas), when the user has EDITOR or ADMINISTRATOR role, an edit button should be displayed in the header section as the right-most action using CloudScape Button with variant="primary".
+
+**Validates: Requirements 23.1, 23.2, 23.3, 23.5, 23.6**
+
+### Property 80: Edit Button Opens Edit Form
+
+*For any* entity detail page with an edit button, clicking the edit button should open the edit form for the current entity.
+
+**Validates: Requirements 23.4**
 
 ## Error Handling
 

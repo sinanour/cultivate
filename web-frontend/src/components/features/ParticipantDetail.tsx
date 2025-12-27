@@ -17,9 +17,11 @@ import { ParticipantAddressHistoryService } from '../../services/api/participant
 import { VenueService } from '../../services/api/venue.service';
 import { AddressHistoryTable } from './AddressHistoryTable';
 import { AddressHistoryForm } from './AddressHistoryForm';
+import { ParticipantForm } from './ParticipantForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
+import Modal from '@cloudscape-design/components/modal';
 
 export function ParticipantDetail() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +30,7 @@ export function ParticipantDetail() {
   const queryClient = useQueryClient();
   
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<ParticipantAddressHistory | undefined>();
   const [error, setError] = useState('');
 
@@ -169,9 +172,16 @@ export function ParticipantDetail() {
           <Header
             variant="h2"
             actions={
-              <Button onClick={() => navigate('/participants')}>
-                Back to Participants
-              </Button>
+              <SpaceBetween direction="horizontal" size="xs">
+                {canEdit() && (
+                  <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                    Edit
+                  </Button>
+                )}
+                <Button onClick={() => navigate('/participants')}>
+                  Back to Participants
+                </Button>
+              </SpaceBetween>
             }
           >
             {participant.name}
@@ -309,6 +319,23 @@ export function ParticipantDetail() {
         existingDates={existingDates}
         loading={createAddressMutation.isPending || updateAddressMutation.isPending}
       />
+
+      <Modal
+        visible={isEditFormOpen}
+        onDismiss={() => setIsEditFormOpen(false)}
+        header="Edit Participant"
+      >
+        {isEditFormOpen && (
+          <ParticipantForm
+            participant={participant}
+            onSuccess={() => {
+              setIsEditFormOpen(false);
+              queryClient.invalidateQueries({ queryKey: ['participant', id] });
+            }}
+            onCancel={() => setIsEditFormOpen(false)}
+          />
+        )}
+      </Modal>
     </SpaceBetween>
   );
 }

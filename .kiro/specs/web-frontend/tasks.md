@@ -669,6 +669,48 @@ This implementation plan covers the React-based web application built with TypeS
     - Test that Edit and Delete buttons are preserved
     - **Validates: Requirements 22.1, 22.2, 22.3, 22.7**
 
+- [x] 23. Implement edit action buttons on detail pages
+  - [x] 23.1 Update ParticipantDetail component
+    - Add primary edit button to header section using CloudScape Button with variant="primary"
+    - Position edit button as right-most action in header
+    - Open ParticipantForm when edit button is clicked
+    - Hide edit button when user has READ_ONLY role
+    - Show edit button when user has EDITOR or ADMINISTRATOR role
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
+
+  - [x] 23.2 Update ActivityDetail component
+    - Add primary edit button to header section using CloudScape Button with variant="primary"
+    - Position edit button as right-most action in header
+    - Open ActivityForm when edit button is clicked
+    - Hide edit button when user has READ_ONLY role
+    - Show edit button when user has EDITOR or ADMINISTRATOR role
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
+
+  - [x] 23.3 Update VenueDetail component
+    - Add primary edit button to header section using CloudScape Button with variant="primary"
+    - Position edit button as right-most action in header
+    - Open VenueForm when edit button is clicked
+    - Hide edit button when user has READ_ONLY role
+    - Show edit button when user has EDITOR or ADMINISTRATOR role
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
+
+  - [x] 23.4 Update GeographicAreaDetail component
+    - Add primary edit button to header section using CloudScape Button with variant="primary"
+    - Position edit button as right-most action in header
+    - Open GeographicAreaForm when edit button is clicked
+    - Hide edit button when user has READ_ONLY role
+    - Show edit button when user has EDITOR or ADMINISTRATOR role
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
+
+  - [ ]* 23.5 Write property tests for edit buttons on detail pages
+    - **Property 79: Edit Button on Detail Pages**
+    - **Property 80: Edit Button Opens Edit Form**
+    - Test that edit button is displayed in header for EDITOR and ADMINISTRATOR roles
+    - Test that edit button is hidden for READ_ONLY role
+    - Test that edit button is positioned as right-most action
+    - Test that clicking edit button opens the edit form
+    - **Validates: Requirements 23.1, 23.2, 23.3, 23.4, 23.5, 23.6**
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

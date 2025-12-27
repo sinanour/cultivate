@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -11,13 +12,18 @@ import Link from '@cloudscape-design/components/link';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
+import Modal from '@cloudscape-design/components/modal';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
+import { VenueForm } from './VenueForm';
+import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/date.utils';
 
 export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { canEdit } = usePermissions();
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
 
   const { data: venue, isLoading, error } = useQuery({
     queryKey: ['venue', id],
@@ -68,9 +74,16 @@ export function VenueDetail() {
           <Header
             variant="h2"
             actions={
-              <Button onClick={() => navigate('/venues')}>
-                Back to Venues
-              </Button>
+              <SpaceBetween direction="horizontal" size="xs">
+                {canEdit() && (
+                  <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                    Edit
+                  </Button>
+                )}
+                <Button onClick={() => navigate('/venues')}>
+                  Back to Venues
+                </Button>
+              </SpaceBetween>
             }
           >
             {venue.name}
@@ -191,6 +204,22 @@ export function VenueDetail() {
           </Box>
         )}
       </Container>
+      
+      <Modal
+        visible={isEditFormOpen}
+        onDismiss={() => setIsEditFormOpen(false)}
+        header="Edit Venue"
+      >
+        {isEditFormOpen && (
+          <VenueForm
+            venue={venue}
+            onSuccess={() => {
+              setIsEditFormOpen(false);
+            }}
+            onCancel={() => setIsEditFormOpen(false)}
+          />
+        )}
+      </Modal>
     </SpaceBetween>
   );
 }
