@@ -93,13 +93,13 @@ export default function DashboardPage() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '48px', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '48px', cursor: 'pointer', color: '#0972d3' }}>
                     <Icon name={link.icon as any} size="big" />
                   </div>
                   <SpaceBetween size="xs">
-                    <Box fontSize="heading-m" fontWeight="bold">
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0972d3' }}>
                       {link.title}
-                    </Box>
+                    </div>
                     <Box variant="small" color="text-body-secondary">
                       {link.description}
                     </Box>

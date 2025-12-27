@@ -158,9 +158,7 @@ export function GeographicAreaList() {
             padding: '8px 0', // Vertical padding moved here for full-height clickability
           }}
           onMouseEnter={(e) => {
-            if (hasChildren) {
-              e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
-            }
+            e.currentTarget.style.backgroundColor = 'rgba(9, 114, 211, 0.2)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
