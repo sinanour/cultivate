@@ -247,7 +247,18 @@ src/
 #### 9. Geographic Area Management
 
 **GeographicAreaList**
-- Displays hierarchical tree view of geographic areas using CloudScape Tree component
+- Displays hierarchical tree view of geographic areas using CloudScape TreeView component
+- Uses TreeView with items prop containing hierarchical data structure
+- Manages expanded state with expandedItems and onExpandedItemsChange
+- Shows vertical connector lines to visualize hierarchy relationships
+- Renders area type badges for each node with increased vertical spacing
+- Automatically expands all nodes when page loads for immediate visibility
+- Supports click-to-toggle expansion on any row with children
+- Provides hover highlighting with smooth transitions for interactive feedback
+- Shows pointer cursor for expandable rows, default cursor for leaf nodes
+- Provides View, Edit, and Delete actions per node based on user permissions
+- Prevents action button clicks from triggering row toggle using event propagation control
+- Handles delete validation (prevents deletion if referenced by venues or child areas)
 - Shows area type badges for each geographic area
 - Provides expand/collapse functionality for hierarchy navigation
 - Provides actions for edit, delete, and view details

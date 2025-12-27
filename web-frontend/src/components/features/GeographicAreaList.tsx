@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
@@ -9,6 +9,7 @@ import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import Box from '@cloudscape-design/components/box';
+import TreeView, { type TreeViewProps } from '@cloudscape-design/components/tree-view';
 import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeographicAreaForm } from './GeographicAreaForm';
@@ -22,6 +23,7 @@ export function GeographicAreaList() {
   const [selectedArea, setSelectedArea] = useState<GeographicArea | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const { data: geographicAreas = [], isLoading } = useQuery({
     queryKey: ['geographicAreas'],
@@ -40,6 +42,25 @@ export function GeographicAreaList() {
   });
 
   const treeData = buildGeographicAreaTree(geographicAreas);
+
+  // Expand all nodes by default when data loads
+  useEffect(() => {
+    if (geographicAreas.length > 0 && expandedItems.length === 0) {
+      const getAllNodeIds = (nodes: TreeNode[]): string[] => {
+        const ids: string[] = [];
+        const traverse = (node: TreeNode) => {
+          if (node.children && node.children.length > 0) {
+            ids.push(node.id);
+            node.children.forEach(traverse);
+          }
+        };
+        nodes.forEach(traverse);
+        return ids;
+      };
+      
+      setExpandedItems(getAllNodeIds(treeData));
+    }
+  }, [geographicAreas, treeData, expandedItems.length]);
 
   const handleEdit = (area: GeographicArea) => {
     setSelectedArea(area);
@@ -66,15 +87,32 @@ export function GeographicAreaList() {
     navigate(`/geographic-areas/${area.id}`);
   };
 
-  const renderTreeNode = (node: TreeNode, level = 0): React.JSX.Element => {
+  // TreeView callback functions
+  const getItemId = (node: TreeNode) => node.id;
+
+  const getItemChildren = (node: TreeNode) => node.children || [];
+
+  const handleToggleItem = (nodeId: string) => {
+    setExpandedItems(prev => 
+      prev.includes(nodeId)
+        ? prev.filter(id => id !== nodeId)
+        : [...prev, nodeId]
+    );
+  };
+
+  const renderItem = (node: TreeNode): TreeViewProps.TreeItem => {
     const area = node.data;
+    const hasChildren = node.children && node.children.length > 0;
     
-    // Build action buttons array with keys
+    // Build action buttons
     const actionButtons = [
       <Button
         key="view"
         variant="inline-link"
-        onClick={() => handleViewDetails(area)}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleViewDetails(area);
+        }}
       >
         View
       </Button>
@@ -85,7 +123,10 @@ export function GeographicAreaList() {
         <Button
           key="edit"
           variant="inline-link"
-          onClick={() => handleEdit(area)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEdit(area);
+          }}
         >
           Edit
         </Button>
@@ -97,33 +138,47 @@ export function GeographicAreaList() {
         <Button
           key="delete"
           variant="inline-link"
-          onClick={() => handleDelete(area)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete(area);
+          }}
         >
           Delete
         </Button>
       );
     }
-    
-    return (
-      <div key={node.id} style={{ marginLeft: `${level * 24}px` }}>
-        <Box padding={{ vertical: 'xs' }}>
-          <SpaceBetween direction="horizontal" size="s">
-            <span style={{ fontWeight: level === 0 ? 'bold' : 'normal' }}>
-              {node.text}
-            </span>
-            <Badge>{area.areaType}</Badge>
-            <SpaceBetween direction="horizontal" size="xs">
-              {actionButtons}
+
+    return {
+      content: (
+        <Box padding={{ vertical: 's' }}>
+          <div
+            onClick={() => hasChildren && handleToggleItem(node.id)}
+            style={{
+              cursor: hasChildren ? 'pointer' : 'default',
+              transition: 'background-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (hasChildren) {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <SpaceBetween direction="horizontal" size="s">
+              <span>{node.text}</span>
+              <Badge>{area.areaType}</Badge>
             </SpaceBetween>
-          </SpaceBetween>
-        </Box>
-        {node.children && node.children.length > 0 && (
-          <div key={`${node.id}-children`}>
-            {node.children.map((child) => renderTreeNode(child, level + 1))}
           </div>
-        )}
-      </div>
-    );
+        </Box>
+      ),
+      actions: (
+        <SpaceBetween direction="horizontal" size="xs">
+          {actionButtons}
+        </SpaceBetween>
+      ),
+    };
   };
 
   return (
@@ -162,9 +217,23 @@ export function GeographicAreaList() {
               Loading geographic areas...
             </Box>
           ) : treeData.length > 0 ? (
-            <div key="tree-data">
-              {treeData.map((node) => renderTreeNode(node))}
-            </div>
+            <TreeView
+              items={treeData}
+              getItemId={getItemId}
+              getItemChildren={getItemChildren}
+              renderItem={renderItem}
+              expandedItems={expandedItems}
+              onItemToggle={(event) => {
+                const { id, expanded } = event.detail;
+                setExpandedItems(prev => 
+                  expanded 
+                    ? [...prev, id]
+                    : prev.filter(itemId => itemId !== id)
+                );
+              }}
+              connectorLines="vertical"
+              ariaLabel="Geographic areas hierarchy"
+            />
           ) : (
             <Box key="empty-state" textAlign="center" color="inherit">
               <b>No geographic areas</b>

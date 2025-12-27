@@ -242,9 +242,17 @@ This implementation plan covers the React-based web application built with TypeS
 
 - [x] 9. Implement geographic area management UI
   - [x] 9.1 Create GeographicAreaList component
-    - Display hierarchical tree view using CloudScape Tree
-    - Show area type badges
-    - Provide expand/collapse functionality
+    - Display hierarchical tree view using CloudScape TreeView component
+    - Use TreeView with items prop containing hierarchical data structure
+    - Manage expanded state with expandedItems and onExpandedItemsChange props
+    - Enable vertical connector lines with connectorLines="vertical" prop
+    - Show area type badges for each node with increased vertical spacing
+    - Auto-expand all nodes on page load using useEffect to collect all node IDs
+    - Implement click-to-toggle expansion on row click for nodes with children
+    - Add hover highlighting with smooth background color transitions
+    - Show pointer cursor for expandable rows, default cursor for leaf nodes
+    - Prevent action button clicks from triggering row toggle with stopPropagation
+    - Provide View, Edit, and Delete actions per node based on permissions
     - Support optional pagination
     - Handle delete validation (REFERENCED_ENTITY error)
     - _Requirements: 6B.1, 6B.4, 6B.9, 6B.10_
