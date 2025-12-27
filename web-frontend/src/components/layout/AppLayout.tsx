@@ -6,6 +6,7 @@ import TopNavigation from '@cloudscape-design/components/top-navigation';
 import Spinner from '@cloudscape-design/components/spinner';
 import { useAuth } from '../../hooks/useAuth';
 import { useConnectionStatus } from '../../hooks/useConnectionStatus';
+import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { GeographicAreaFilterSelector } from './GeographicAreaFilterSelector';
 
 export function AppLayout() {
@@ -13,6 +14,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isOnline } = useConnectionStatus();
+  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [navigationOpen, setNavigationOpen] = useState(true);
 
   const baseNavigationItems: SideNavigationProps['items'] = [
@@ -113,8 +115,9 @@ export function AppLayout() {
       <div style={{ 
         padding: '8px 20px', 
         borderBottom: '2px solid #e9ebed', 
-        backgroundColor: '#ffffff',
+        backgroundColor: selectedGeographicAreaId ? '#f1fdf6' : '#ffffff',
         boxShadow: '0 1px 1px 0 rgba(0,28,36,0.3)',
+        transition: 'background-color 0.2s ease',
       }}>
         <GeographicAreaFilterSelector />
       </div>

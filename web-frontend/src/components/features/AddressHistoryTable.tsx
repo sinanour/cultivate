@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Table,
   Box,
@@ -23,7 +23,6 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
   onDelete,
   loading = false,
 }) => {
-  const [selectedItems, setSelectedItems] = useState<ParticipantAddressHistory[]>([]);
 
   // Sort by effective start date in reverse chronological order (most recent first)
   const sortedHistory = [...addressHistory].sort((a, b) => {
@@ -85,11 +84,6 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
       items={sortedHistory}
       loading={loading}
       loadingText="Loading address history"
-      selectionType="single"
-      selectedItems={selectedItems}
-      onSelectionChange={({ detail }) =>
-        setSelectedItems(detail.selectedItems)
-      }
       empty={
         <Box textAlign="center" color="inherit">
           <b>No address history</b>
