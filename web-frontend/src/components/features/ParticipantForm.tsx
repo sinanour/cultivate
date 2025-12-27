@@ -33,7 +33,6 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
-  const [homeVenueId, setHomeVenueId] = useState('');
   
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -64,15 +63,12 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       setEmail(participant.email || '');
       setPhone(participant.phone || '');
       setNotes(participant.notes || '');
-      // Note: homeVenueId is not on the Participant type directly, need to fetch from address history
-      setHomeVenueId(''); // Will be populated from address history if needed
     } else {
       // Reset to defaults for create mode
       setName('');
       setEmail('');
       setPhone('');
       setNotes('');
-      setHomeVenueId('');
       setAddressHistory([]);
     }
     // Clear errors when switching modes
@@ -100,10 +96,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     queryFn: () => VenueService.getVenues(),
   });
 
-  const venueOptions = [
-    { label: 'No home venue', value: '' },
-    ...venues.map((v) => ({ label: v.name, value: v.id })),
-  ];
+  const venueOptions = venues.map((v) => ({ label: `${v.name} - ${v.address}`, value: v.id }));
 
   const createMutation = useMutation({
     mutationFn: (data: {
@@ -111,7 +104,6 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       email: string;
       phone?: string;
       notes?: string;
-      homeVenueId?: string;
     }) => ParticipantService.createParticipant(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['participants'] });
@@ -129,7 +121,6 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       email: string;
       phone?: string;
       notes?: string;
-      homeVenueId?: string;
       version?: number;
     }) =>
       ParticipantService.updateParticipant(data.id, {
@@ -137,7 +128,6 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
         email: data.email,
         phone: data.phone,
         notes: data.notes,
-        homeVenueId: data.homeVenueId,
         version: data.version,
       }),
     onSuccess: () => {
@@ -310,7 +300,6 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       email: email.trim(),
       phone: phone.trim() || undefined,
       notes: notes.trim() || undefined,
-      homeVenueId: homeVenueId || undefined,
     };
 
     if (participant) {
@@ -403,14 +392,6 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                 disabled={isSubmitting}
               />
             </FormField>
-            <FormField label="Home Venue" constraintText="Optional">
-              <Select
-                selectedOption={venueOptions.find((o) => o.value === homeVenueId) || venueOptions[0]}
-                onChange={({ detail }) => setHomeVenueId(detail.selectedOption.value || '')}
-                options={venueOptions}
-                disabled={isSubmitting}
-              />
-            </FormField>
             <FormField label="Notes" constraintText="Optional">
               <Textarea
                 value={notes}
@@ -458,7 +439,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                             setNewAddressVenueId(detail.selectedOption.value || '');
                             setAddressFormErrors({ ...addressFormErrors, venue: undefined, duplicate: undefined });
                           }}
-                          options={venueOptions.filter(o => o.value !== '')}
+                          options={venueOptions}
                           placeholder="Choose a venue"
                           filteringType="auto"
                         />
