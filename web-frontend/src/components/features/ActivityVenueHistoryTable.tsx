@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Table,
   Box,
@@ -31,7 +31,6 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
   onDelete,
   loading = false,
 }) => {
-  const [selectedItems, setSelectedItems] = useState<ActivityVenueHistoryRecord[]>([]);
 
   // Sort by effective start date in reverse chronological order (most recent first)
   const sortedHistory = [...venueHistory].sort((a, b) => {
@@ -85,11 +84,6 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
       items={sortedHistory}
       loading={loading}
       loadingText="Loading venue history"
-      selectionType="single"
-      selectedItems={selectedItems}
-      onSelectionChange={({ detail }) =>
-        setSelectedItems(detail.selectedItems)
-      }
       empty={
         <Box textAlign="center" color="inherit">
           <b>No venue history</b>
