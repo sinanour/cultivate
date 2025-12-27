@@ -10,6 +10,7 @@ import Table from '@cloudscape-design/components/table';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
+import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { formatDate } from '../../utils/date.utils';
 
@@ -63,7 +64,16 @@ export function GeographicAreaDetail() {
     );
   }
 
-  const hierarchyPath = [...ancestors, geographicArea].map((a) => a.name).join(' > ');
+  const breadcrumbItems = [
+    ...[...ancestors].reverse().map((ancestor) => ({
+      text: ancestor.name,
+      href: `/geographic-areas/${ancestor.id}`,
+    })),
+    {
+      text: geographicArea.name,
+      href: `/geographic-areas/${geographicArea.id}`,
+    },
+  ];
 
   return (
     <SpaceBetween size="l">
@@ -90,7 +100,13 @@ export function GeographicAreaDetail() {
           </div>
           <div>
             <Box variant="awsui-key-label">Hierarchy Path</Box>
-            <div>{hierarchyPath}</div>
+            <BreadcrumbGroup
+              items={breadcrumbItems}
+              onFollow={(event) => {
+                event.preventDefault();
+                navigate(event.detail.href);
+              }}
+            />
           </div>
           <div>
             <Box variant="awsui-key-label">Created</Box>
