@@ -1,5 +1,4 @@
 import ContentLayout from '@cloudscape-design/components/content-layout';
-import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Box from '@cloudscape-design/components/box';
@@ -64,57 +63,46 @@ export default function DashboardPage() {
         </Header>
       }
     >
-      <SpaceBetween size="l">
-        <Container>
-          <Box variant="p">
-            Welcome to the Community Activity Tracker. Use the navigation menu to manage activities,
-            participants, venues, and view analytics.
-          </Box>
-        </Container>
-
-        <Container header={<Header variant="h2">Quick Links</Header>}>
-          <SpaceBetween size="m">
-            {quickLinks.map((link) => (
-              <div
-                key={link.href}
-                onClick={() => navigate(link.href)}
-                style={{
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  borderRadius: '8px',
-                  border: '1px solid #e9ebed',
-                  backgroundColor: '#ffffff',
-                  padding: '20px',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.cursor = 'pointer';
-                  e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#ffffff';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '48px', cursor: 'pointer', color: '#0972d3' }}>
-                    <Icon name={link.icon as any} size="big" />
-                  </div>
-                  <SpaceBetween size="xs">
-                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0972d3' }}>
-                      {link.title}
-                    </div>
-                    <Box variant="small" color="text-body-secondary">
-                      {link.description}
-                    </Box>
-                  </SpaceBetween>
-                </div>
+      <SpaceBetween size="m">
+        {quickLinks.map((link) => (
+          <div
+            key={link.href}
+            onClick={() => navigate(link.href)}
+            style={{
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              borderRadius: '8px',
+              border: '1px solid #e9ebed',
+              backgroundColor: '#ffffff',
+              padding: '20px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.cursor = 'pointer';
+              e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '48px', cursor: 'pointer', color: '#0972d3' }}>
+                <Icon name={link.icon as any} size="big" />
               </div>
-            ))}
-          </SpaceBetween>
-        </Container>
+              <SpaceBetween size="xs">
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0972d3' }}>
+                  {link.title}
+                </div>
+                <Box variant="small" color="text-body-secondary">
+                  {link.description}
+                </Box>
+              </SpaceBetween>
+            </div>
+          </div>
+        ))}
       </SpaceBetween>
     </ContentLayout>
   );
