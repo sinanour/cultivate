@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import Badge from '@cloudscape-design/components/badge';
+import Link from '@cloudscape-design/components/link';
 import Select from '@cloudscape-design/components/select';
 import Pagination from '@cloudscape-design/components/pagination';
 import Modal from '@cloudscape-design/components/modal';
@@ -22,7 +22,6 @@ const ITEMS_PER_PAGE = 10;
 
 export function ActivityList() {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -107,10 +106,6 @@ export function ActivityList() {
     setSelectedActivity(null);
   };
 
-  const handleViewDetails = (activity: Activity) => {
-    navigate(`/activities/${activity.id}`);
-  };
-
   return (
     <SpaceBetween size="l">
       {deleteError && (
@@ -127,7 +122,11 @@ export function ActivityList() {
           {
             id: 'name',
             header: 'Name',
-            cell: (item) => item.name,
+            cell: (item) => (
+              <Link href={`/activities/${item.id}`}>
+                {item.name}
+              </Link>
+            ),
             sortingField: 'name',
           },
           {
@@ -169,12 +168,6 @@ export function ActivityList() {
             header: 'Actions',
             cell: (item) => (
               <SpaceBetween direction="horizontal" size="xs">
-                <Button
-                  variant="inline-link"
-                  onClick={() => handleViewDetails(item)}
-                >
-                  View
-                </Button>
                 {canEdit() && (
                   <Button
                     variant="inline-link"

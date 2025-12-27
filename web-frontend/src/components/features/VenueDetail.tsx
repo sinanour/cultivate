@@ -7,6 +7,7 @@ import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
 import Table from '@cloudscape-design/components/table';
+import Link from '@cloudscape-design/components/link';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
@@ -121,7 +122,11 @@ export function VenueDetail() {
               {
                 id: 'name',
                 header: 'Activity Name',
-                cell: (item) => item.name || 'Unknown',
+                cell: (item) => (
+                  <Link href={`/activities/${item.id}`}>
+                    {item.name || 'Unknown'}
+                  </Link>
+                ),
               },
               {
                 id: 'type',
@@ -158,7 +163,11 @@ export function VenueDetail() {
               {
                 id: 'name',
                 header: 'Name',
-                cell: (item) => item.name || 'Unknown',
+                cell: (item) => (
+                  <Link href={`/participants/${item.id}`}>
+                    {item.name || 'Unknown'}
+                  </Link>
+                ),
               },
               {
                 id: 'email',

@@ -5,6 +5,7 @@ import {
   Button,
   SpaceBetween,
   Badge,
+  Link,
 } from '@cloudscape-design/components';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
@@ -37,7 +38,9 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
           header: 'Venue',
           cell: (item: ParticipantAddressHistory) => (
             <Box>
-              {item.venue?.name || 'Unknown Venue'}
+              <Link href={`/venues/${item.venueId}`}>
+                {item.venue?.name || 'Unknown Venue'}
+              </Link>
               {sortedHistory.indexOf(item) === 0 && (
                 <Box margin={{ left: 'xs' }} display="inline-block">
                   <Badge color="green">Current</Badge>

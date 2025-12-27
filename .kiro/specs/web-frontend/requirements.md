@@ -380,3 +380,17 @@ The Web Frontend package provides a responsive React-based web application that 
 8. THE Web_App SHALL allow users to manually override geocoded coordinates
 9. THE Web_App SHALL respect Nominatim usage policy by including appropriate User-Agent header and rate limiting
 10. WHEN offline, THE Web_App SHALL disable the geocode button and display a message that geocoding requires connectivity
+
+### Requirement 22: Hyperlinked Primary Columns in Tables
+
+**User Story:** As a user, I want to click on entity names in tables to view their details, so that I can navigate quickly without needing separate action buttons.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL render the primary column value as a hyperlink in all entity list tables (activities, participants, venues, geographic areas, activity types, participant roles, users)
+2. WHEN a user clicks on a hyperlinked primary column value, THE Web_App SHALL navigate to the detail view for that entity
+3. THE Web_App SHALL NOT include a separate "View" action button in the Actions column when the primary column is hyperlinked
+4. THE Web_App SHALL apply hyperlinked primary column treatment to tables on detail pages showing associated records (address history venues, venue history venues, activity participants, venue activities, venue participants)
+5. THE Web_App SHALL use CloudScape Link component for all hyperlinked primary column values
+6. THE Web_App SHALL maintain consistent link styling across all tables using CloudScape design patterns
+7. THE Web_App SHALL preserve Edit and Delete action buttons in the Actions column where appropriate based on user permissions

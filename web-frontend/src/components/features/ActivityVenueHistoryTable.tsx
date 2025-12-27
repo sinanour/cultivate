@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Badge,
+  Link,
 } from '@cloudscape-design/components';
 import { formatDate } from '../../utils/date.utils';
 
@@ -45,7 +46,9 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
           header: 'Venue',
           cell: (item: ActivityVenueHistoryRecord) => (
             <Box>
-              {item.venue?.name || 'Unknown Venue'}
+              <Link href={`/venues/${item.venueId}`}>
+                {item.venue?.name || 'Unknown Venue'}
+              </Link>
               {sortedHistory.indexOf(item) === 0 && (
                 <Box margin={{ left: 'xs' }} display="inline-block">
                   <Badge color="green">Current</Badge>

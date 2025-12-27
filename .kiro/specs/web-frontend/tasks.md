@@ -638,6 +638,37 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 21. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
+- [x] 22. Implement hyperlinked primary columns in tables
+  - [x] 22.1 Update primary entity list components
+    - Update ActivityList: Make activity name column hyperlinked to /activities/:id
+    - Update ParticipantList: Make participant name column hyperlinked to /participants/:id
+    - Update VenueList: Make venue name column hyperlinked to /venues/:id
+    - Update ActivityTypeList: Make activity type name column hyperlinked (to edit form or detail)
+    - Update ParticipantRoleList: Make role name column hyperlinked (to edit form or detail)
+    - Update UserList: Make user email column hyperlinked (to edit form, admin only)
+    - Remove "View" action buttons from Actions column in all list components
+    - Use CloudScape Link component for all hyperlinks
+    - Preserve Edit and Delete action buttons where appropriate
+    - _Requirements: 22.1, 22.2, 22.3, 22.5, 22.6, 22.7_
+
+  - [x] 22.2 Update detail page associated record tables
+    - Update AddressHistoryTable: Make venue name column hyperlinked to /venues/:id
+    - Update ActivityVenueHistoryTable: Make venue name column hyperlinked to /venues/:id
+    - Update AssignmentList (on ActivityDetail): Make participant name column hyperlinked to /participants/:id
+    - Update VenueDetail activity table: Make activity name column hyperlinked to /activities/:id
+    - Update VenueDetail participant table: Make participant name column hyperlinked to /participants/:id
+    - Update ParticipantDetail activity table: Already implemented with hyperlinked activity names
+    - Remove "View" action buttons from these tables where present
+    - Use CloudScape Link component for all hyperlinks
+    - _Requirements: 22.4, 22.5, 22.6_
+
+  - [ ]* 22.3 Write property test for hyperlinked primary columns
+    - **Property 76: Hyperlinked Primary Column Navigation**
+    - Test that clicking hyperlinked primary column navigates to correct detail view
+    - Test that View buttons are not present when primary column is hyperlinked
+    - Test that Edit and Delete buttons are preserved
+    - **Validates: Requirements 22.1, 22.2, 22.3, 22.7**
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

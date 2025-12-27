@@ -101,7 +101,8 @@ src/
 **ActivityTypeList**
 - Displays table of activity types using CloudScape Table
 - Distinguishes predefined vs custom types with badges
-- Provides edit and delete actions per row
+- Renders activity type name as hyperlink in primary column (links to edit form or detail view)
+- Provides edit and delete actions per row (no separate View button)
 - Handles delete validation (prevents deletion if referenced)
 
 **ActivityTypeForm**
@@ -114,7 +115,8 @@ src/
 **ParticipantRoleList**
 - Displays table of roles using CloudScape Table
 - Distinguishes predefined vs custom roles with badges
-- Provides edit and delete actions per row
+- Renders role name as hyperlink in primary column (links to edit form or detail view)
+- Provides edit and delete actions per row (no separate View button)
 - Handles delete validation (prevents deletion if referenced)
 
 **ParticipantRoleForm**
@@ -127,7 +129,8 @@ src/
 **ParticipantList**
 - Displays table with search, sort, and filter capabilities
 - Uses CloudScape Table with pagination
-- Provides actions for edit, delete, and view details
+- Renders participant name as hyperlink in primary column (links to /participants/:id)
+- Provides actions for edit and delete (no separate View button)
 - Implements client-side search across name and email
 
 **ParticipantForm**
@@ -155,8 +158,9 @@ src/
 
 **AddressHistoryTable**
 - Displays participant's home address history in reverse chronological order
-- Shows venue name and effective start date for each record
-- Provides edit and delete buttons for each record
+- Renders venue name as hyperlink in primary column (links to /venues/:id)
+- Shows effective start date for each record
+- Provides edit and delete buttons for each record (no separate View button)
 - Highlights the most recent address (first record in the list)
 
 **AddressHistoryForm**
@@ -170,8 +174,10 @@ src/
 
 **ActivityList**
 - Displays table with filtering by type and status
+- Renders activity name as hyperlink in primary column (links to /activities/:id)
 - Visually distinguishes finite vs ongoing activities
 - Provides sort capabilities
+- Provides edit and delete actions per row (no separate View button)
 - Shows activity dates and status badges
 
 **ActivityForm**
@@ -198,8 +204,9 @@ src/
 
 **ActivityVenueHistoryTable**
 - Displays activity's venue history in reverse chronological order
-- Shows venue name and effective start date for each record
-- Provides delete button for each record
+- Renders venue name as hyperlink in primary column (links to /venues/:id)
+- Shows effective start date for each record
+- Provides delete button for each record (no separate View button)
 - Highlights the most recent venue (first record in the list)
 
 **ActivityVenueHistoryForm**
@@ -219,15 +226,17 @@ src/
 
 **AssignmentList**
 - Displays assigned participants on activity detail
-- Shows participant name and role
-- Provides remove button for each assignment
+- Renders participant name as hyperlink in primary column (links to /participants/:id)
+- Shows role and notes for each assignment
+- Provides remove button for each assignment (no separate View button)
 
 #### 8. Venue Management
 
 **VenueList**
 - Displays table of venues with name, address, and geographic area
 - Uses CloudScape Table with search, sort, and filter capabilities
-- Provides actions for edit, delete, and view details
+- Renders venue name as hyperlink in primary column (links to /venues/:id)
+- Provides actions for edit and delete (no separate View button)
 - Implements client-side search across name and address
 
 **VenueForm**
@@ -246,8 +255,8 @@ src/
 
 **VenueDetail**
 - Shows venue information in detail view
-- Lists all activities associated with the venue (current and historical)
-- Lists all participants with this venue as their home address
+- Lists all activities associated with the venue (current and historical) with activity names hyperlinked to /activities/:id
+- Lists all participants with this venue as their home address with participant names hyperlinked to /participants/:id
 - Displays geographic area hierarchy path
 
 #### 9. Geographic Area Management
@@ -258,17 +267,18 @@ src/
 - Manages expanded state with expandedItems and onExpandedItemsChange
 - Shows vertical connector lines to visualize hierarchy relationships
 - Renders area type badges for each node with increased vertical spacing
+- Renders geographic area name as hyperlink in tree nodes (links to /geographic-areas/:id)
 - Applies padding directly to interactive elements for full-height clickability and hover treatment
 - Automatically expands all nodes when page loads for immediate visibility
 - Supports click-to-toggle expansion on any row with children
 - Provides hover highlighting with smooth transitions for interactive feedback
 - Shows pointer cursor for expandable rows, default cursor for leaf nodes
-- Provides View, Edit, and Delete actions per node based on user permissions
+- Provides Edit and Delete actions per node based on user permissions (no separate View button)
 - Prevents action button clicks from triggering row toggle using event propagation control
 - Handles delete validation (prevents deletion if referenced by venues or child areas)
 - Shows area type badges for each geographic area
 - Provides expand/collapse functionality for hierarchy navigation
-- Provides actions for edit, delete, and view details
+- Provides actions for edit and delete (no separate View button)
 - Handles delete validation (prevents deletion if referenced)
 
 **GeographicAreaForm**
@@ -335,8 +345,9 @@ src/
 
 **UserList**
 - Displays table of all users (admin only)
-- Shows email, name, and role
-- Provides edit action per row
+- Renders user email as hyperlink in primary column (links to edit form)
+- Shows email and role
+- Provides edit action per row (no separate View button)
 
 **UserForm**
 - Modal form for creating/editing users
@@ -1174,6 +1185,24 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* offline state, the geocode button should be disabled and display a message that geocoding requires connectivity.
 
 **Validates: Requirements 21.10**
+
+### Property 76: Hyperlinked Primary Column Navigation
+
+*For any* entity list table, clicking the hyperlinked primary column value should navigate to the detail view for that entity.
+
+**Validates: Requirements 22.1, 22.2**
+
+### Property 77: View Button Exclusion with Hyperlinked Primary Column
+
+*For any* table with a hyperlinked primary column, the Actions column should NOT include a separate "View" action button.
+
+**Validates: Requirements 22.3**
+
+### Property 78: Hyperlinked Primary Column Consistency
+
+*For any* table in the application (list views or detail page tables), the primary column should use the CloudScape Link component with consistent styling.
+
+**Validates: Requirements 22.5, 22.6**
 
 ## Error Handling
 

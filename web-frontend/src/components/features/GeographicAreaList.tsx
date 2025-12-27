@@ -6,6 +6,7 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Badge from '@cloudscape-design/components/badge';
+import Link from '@cloudscape-design/components/link';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import Box from '@cloudscape-design/components/box';
@@ -83,10 +84,6 @@ export function GeographicAreaList() {
     setSelectedArea(null);
   };
 
-  const handleViewDetails = (area: GeographicArea) => {
-    navigate(`/geographic-areas/${area.id}`);
-  };
-
   // TreeView callback functions
   const getItemId = (node: TreeNode) => node.id;
 
@@ -104,19 +101,8 @@ export function GeographicAreaList() {
     const area = node.data;
     const hasChildren = node.children && node.children.length > 0;
     
-    // Build action buttons
-    const actionButtons = [
-      <Button
-        key="view"
-        variant="inline-link"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleViewDetails(area);
-        }}
-      >
-        View
-      </Button>
-    ];
+    // Build action buttons - no View button
+    const actionButtons = [];
     
     if (canEdit()) {
       actionButtons.push(
@@ -155,17 +141,27 @@ export function GeographicAreaList() {
           style={{
             cursor: hasChildren ? 'pointer' : 'default',
             transition: 'background-color 0.15s ease',
-            padding: '8px 0', // Vertical padding moved here for full-height clickability
+            padding: '8px 0',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(9, 114, 211, 0.2)';
+            if (hasChildren) {
+              e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
+            }
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <SpaceBetween direction="horizontal" size="s">
-            <span>{node.text}</span>
+            <Link
+              href={`/geographic-areas/${area.id}`}
+              onFollow={(e) => {
+                e.preventDefault();
+                navigate(`/geographic-areas/${area.id}`);
+              }}
+            >
+              {node.text}
+            </Link>
             <Badge>{area.areaType}</Badge>
           </SpaceBetween>
         </div>

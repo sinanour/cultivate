@@ -8,6 +8,7 @@ import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
 import Table from '@cloudscape-design/components/table';
+import Link from '@cloudscape-design/components/link';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
@@ -297,7 +298,11 @@ export function ActivityDetail() {
               {
                 id: 'participant',
                 header: 'Participant',
-                cell: (item) => item.participant?.name || 'Unknown',
+                cell: (item) => (
+                  <Link href={`/participants/${item.participantId}`}>
+                    {item.participant?.name || 'Unknown'}
+                  </Link>
+                ),
               },
               {
                 id: 'email',

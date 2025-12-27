@@ -73,7 +73,14 @@ export function ActivityTypeList() {
           {
             id: 'name',
             header: 'Name',
-            cell: (item) => item.name,
+            cell: (item) => (
+              <Button
+                variant="inline-link"
+                onClick={() => handleEdit(item)}
+              >
+                {item.name}
+              </Button>
+            ),
             sortingField: 'name',
           },
           {

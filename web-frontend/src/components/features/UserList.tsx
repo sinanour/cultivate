@@ -66,7 +66,14 @@ export function UserList() {
           {
             id: 'email',
             header: 'Email',
-            cell: (item) => item.email,
+            cell: (item) => (
+              <Button
+                variant="inline-link"
+                onClick={() => handleEdit(item)}
+              >
+                {item.email}
+              </Button>
+            ),
             sortingField: 'email',
           },
           {
