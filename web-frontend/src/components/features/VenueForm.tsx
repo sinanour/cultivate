@@ -375,6 +375,7 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
                     loading={isGeocoding}
                     disabled={!address || !isOnline || isGeocoding || isSubmitting}
                     iconName="search"
+                    formAction="none"
                   >
                     Geocode Address
                   </Button>
