@@ -168,3 +168,17 @@ export interface APIError {
     message: string;
     details?: any;
 }
+
+export interface GeocodingResult {
+    latitude: number;
+    longitude: number;
+    displayName: string;
+    address: {
+        road?: string;
+        city?: string;
+        state?: string;
+        country?: string;
+        postcode?: string;
+    };
+    boundingBox?: [number, number, number, number];
+}

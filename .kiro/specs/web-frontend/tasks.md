@@ -240,6 +240,38 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 49: Venue Detail View Completeness**
     - **Validates: Requirements 6A.9**
 
+  - [ ] 8.5 Implement Nominatim geocoding integration
+    - [ ] 8.5.1 Create GeocodingService
+      - Implement geocodeAddress(address) method to query Nominatim API
+      - Use Nominatim search endpoint: https://nominatim.openstreetmap.org/search
+      - Include User-Agent header as required by Nominatim usage policy
+      - Implement rate limiting (max 1 request per second)
+      - Parse Nominatim response to extract coordinates and display names
+      - Cache recent geocoding results to reduce API calls
+      - Handle API errors and network failures gracefully
+      - _Requirements: 21.1, 21.3, 21.9_
+
+    - [ ] 8.5.2 Update VenueForm component with geocoding
+      - Add "Geocode Address" button next to latitude/longitude fields
+      - Disable geocode button when address field is empty
+      - Disable geocode button when offline
+      - Display loading indicator during geocoding request
+      - On single result: automatically populate latitude and longitude fields
+      - On multiple results: display selection dialog with result list
+      - On no results: display error message
+      - Allow manual editing of geocoded coordinates
+      - _Requirements: 21.2, 21.4, 21.5, 21.6, 21.7, 21.8, 21.10_
+
+    - [ ]* 8.5.3 Write property tests for geocoding
+      - **Property 69: Geocoding Request Success**
+      - **Property 70: Geocoding Coordinate Population**
+      - **Property 71: Geocoding Multiple Results Handling**
+      - **Property 72: Geocoding Error Handling**
+      - **Property 73: Geocoding Loading State**
+      - **Property 74: Geocoding Manual Override**
+      - **Property 75: Geocoding Offline Behavior**
+      - **Validates: Requirements 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.10**
+
 - [x] 9. Implement geographic area management UI
   - [x] 9.1 Create GeographicAreaList component
     - Display hierarchical tree view using CloudScape TreeView component

@@ -7,9 +7,12 @@ import Select from '@cloudscape-design/components/select';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
-import type { Venue } from '../../types';
+import Modal from '@cloudscape-design/components/modal';
+import Box from '@cloudscape-design/components/box';
+import type { Venue, GeocodingResult } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
+import { GeocodingService } from '../../services/geocoding.service';
 import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
@@ -35,6 +38,26 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const [latitudeError, setLatitudeError] = useState('');
   const [longitudeError, setLongitudeError] = useState('');
   const [error, setError] = useState('');
+
+  // Geocoding state
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
+  const [showResultsDialog, setShowResultsDialog] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Update form state when venue prop changes
   useEffect(() => {
@@ -215,6 +238,47 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
     }
   };
 
+  const handleGeocode = async () => {
+    if (!address || address.trim().length === 0) {
+      setAddressError('Address is required for geocoding');
+      return;
+    }
+
+    setIsGeocoding(true);
+    setError('');
+
+    try {
+      const results = await GeocodingService.geocodeAddress(address);
+
+      if (results.length === 0) {
+        // No results found
+        setError('Address could not be geocoded. Please check the address or enter coordinates manually.');
+      } else if (results.length === 1) {
+        // Single result - auto-populate
+        setLatitude(results[0].latitude.toString());
+        setLongitude(results[0].longitude.toString());
+        setError('');
+      } else {
+        // Multiple results - show selection dialog
+        setGeocodingResults(results);
+        setShowResultsDialog(true);
+      }
+    } catch (err) {
+      setError('Geocoding failed. Please try again or enter coordinates manually.');
+      console.error('Geocoding error:', err);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const handleSelectResult = (result: GeocodingResult) => {
+    setLatitude(result.latitude.toString());
+    setLongitude(result.longitude.toString());
+    setShowResultsDialog(false);
+    setGeocodingResults([]);
+    setError('');
+  };
+
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
@@ -275,33 +339,49 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
                 empty="No geographic areas available"
               />
             </FormField>
-            <FormField label="Latitude" errorText={latitudeError} constraintText="Optional (-90 to 90)">
-              <Input
-                value={latitude}
-                onChange={({ detail }) => {
-                  setLatitude(detail.value);
-                  if (latitudeError) validateLatitude(detail.value);
-                }}
-                onBlur={() => validateLatitude(latitude)}
-                placeholder="Enter latitude"
-                disabled={isSubmitting}
-                type="number"
-                inputMode="decimal"
-              />
-            </FormField>
-            <FormField label="Longitude" errorText={longitudeError} constraintText="Optional (-180 to 180)">
-              <Input
-                value={longitude}
-                onChange={({ detail }) => {
-                  setLongitude(detail.value);
-                  if (longitudeError) validateLongitude(detail.value);
-                }}
-                onBlur={() => validateLongitude(longitude)}
-                placeholder="Enter longitude"
-                disabled={isSubmitting}
-                type="number"
-                inputMode="decimal"
-              />
+            <FormField 
+              label="Coordinates" 
+              description="Optional - can be geocoded from address"
+              info={!isOnline ? 'Geocoding requires internet connection' : undefined}
+            >
+              <SpaceBetween direction="vertical" size="xs">
+                <SpaceBetween direction="horizontal" size="s">
+                  <Input
+                    value={latitude}
+                    onChange={({ detail }) => {
+                      setLatitude(detail.value);
+                      if (latitudeError) validateLatitude(detail.value);
+                    }}
+                    onBlur={() => validateLatitude(latitude)}
+                    placeholder="Latitude"
+                    disabled={isSubmitting}
+                    type="number"
+                    inputMode="decimal"
+                  />
+                  <Input
+                    value={longitude}
+                    onChange={({ detail }) => {
+                      setLongitude(detail.value);
+                      if (longitudeError) validateLongitude(detail.value);
+                    }}
+                    onBlur={() => validateLongitude(longitude)}
+                    placeholder="Longitude"
+                    disabled={isSubmitting}
+                    type="number"
+                    inputMode="decimal"
+                  />
+                  <Button
+                    onClick={handleGeocode}
+                    loading={isGeocoding}
+                    disabled={!address || !isOnline || isGeocoding || isSubmitting}
+                    iconName="search"
+                  >
+                    Geocode Address
+                  </Button>
+                </SpaceBetween>
+                {latitudeError && <Box color="text-status-error">{latitudeError}</Box>}
+                {longitudeError && <Box color="text-status-error">{longitudeError}</Box>}
+              </SpaceBetween>
             </FormField>
             <FormField label="Venue Type" constraintText="Optional">
               <Select
@@ -321,6 +401,51 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
         onRetryWithLatest={versionConflict.handleRetryWithLatest}
         onDiscardChanges={versionConflict.handleDiscardChanges}
       />
+
+      <Modal
+        visible={showResultsDialog}
+        onDismiss={() => {
+          setShowResultsDialog(false);
+          setGeocodingResults([]);
+        }}
+        header="Select Location"
+        footer={
+          <Box float="right">
+            <Button
+              variant="link"
+              onClick={() => {
+                setShowResultsDialog(false);
+                setGeocodingResults([]);
+              }}
+            >
+              Cancel
+            </Button>
+          </Box>
+        }
+      >
+        <SpaceBetween size="m">
+          <Box>
+            Multiple locations found for this address. Please select the correct one:
+          </Box>
+          <SpaceBetween size="s">
+            {geocodingResults.map((result, index) => (
+              <Button
+                key={index}
+                onClick={() => handleSelectResult(result)}
+                fullWidth
+                variant="normal"
+              >
+                <SpaceBetween size="xs" direction="vertical">
+                  <Box fontWeight="bold">{result.displayName}</Box>
+                  <Box variant="small" color="text-body-secondary">
+                    Coordinates: {result.latitude.toFixed(6)}, {result.longitude.toFixed(6)}
+                  </Box>
+                </SpaceBetween>
+              </Button>
+            ))}
+          </SpaceBetween>
+        </SpaceBetween>
+      </Modal>
     </>
   );
 }

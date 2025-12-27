@@ -15,6 +15,8 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Venue**: A physical location where activities occur
 - **Geographic_Area**: A hierarchical geographic region
 - **Map_View**: An interactive map visualization showing venues and activities by geography
+- **Nominatim**: OpenStreetMap's geocoding API service for converting addresses to geographic coordinates
+- **Geocoding**: The process of converting a physical address into latitude and longitude coordinates
 
 ## Requirements
 
@@ -361,3 +363,20 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL apply consistent date formatting to all date fields in tables and detail views
 6. THE Web_App SHALL apply consistent date formatting to all date fields in forms and date pickers
 7. THE Web_App SHALL apply consistent date formatting to analytics dashboard date ranges
+
+### Requirement 21: Venue Geocoding Integration
+
+**User Story:** As a community organizer, I want to automatically populate venue coordinates from addresses, so that I can quickly add venues to the map without manually looking up coordinates.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL integrate with the Nominatim geocoding API for address-to-coordinate conversion
+2. WHEN creating or editing a venue, THE Web_App SHALL provide a button to geocode the current address
+3. WHEN the geocode button is clicked, THE Web_App SHALL send the venue address to the Nominatim API
+4. WHEN the Nominatim API returns coordinates, THE Web_App SHALL populate the latitude and longitude fields
+5. WHEN the Nominatim API returns multiple results, THE Web_App SHALL display a selection dialog for the user to choose the correct location
+6. WHEN the Nominatim API returns no results, THE Web_App SHALL display an error message indicating the address could not be geocoded
+7. THE Web_App SHALL display a loading indicator while the geocoding request is in progress
+8. THE Web_App SHALL allow users to manually override geocoded coordinates
+9. THE Web_App SHALL respect Nominatim usage policy by including appropriate User-Agent header and rate limiting
+10. WHEN offline, THE Web_App SHALL disable the geocode button and display a message that geocoding requires connectivity

@@ -235,6 +235,12 @@ src/
 - Validates name, address, and geographic area are required
 - Provides dropdown for geographic area selection
 - Supports optional latitude, longitude, and venue type fields
+- Provides "Geocode Address" button to automatically populate coordinates
+- Displays loading indicator during geocoding request
+- Shows selection dialog when multiple geocoding results are returned
+- Displays error message when address cannot be geocoded
+- Disables geocode button when offline
+- Allows manual override of geocoded coordinates
 - Displays inline validation errors
 - Handles delete validation (prevents deletion if referenced)
 
@@ -398,6 +404,17 @@ src/
 - `createVenue(data)`: Creates new venue
 - `updateVenue(id, data, version?)`: Updates existing venue with optional version for optimistic locking
 - `deleteVenue(id)`: Deletes venue (validates references, returns REFERENCED_ENTITY error if referenced)
+- `getVenueActivities(id)`: Fetches activities associated with venue from `/venues/:id/activities`
+- `getVenueParticipants(id)`: Fetches participants with venue as home from `/venues/:id/participants`
+
+**GeocodingService**
+- `geocodeAddress(address)`: Queries Nominatim API to convert address to coordinates
+- `searchAddress(query)`: Searches for addresses using Nominatim search endpoint
+- Returns array of geocoding results with latitude, longitude, and display name
+- Implements rate limiting to respect Nominatim usage policy (max 1 request per second)
+- Includes User-Agent header as required by Nominatim terms of service
+- Handles API errors and network failures gracefully
+- Caches recent geocoding results to reduce API calls
 - `getVenueActivities(id)`: Fetches activities associated with venue from `/venues/:id/activities`
 - `getVenueParticipants(id)`: Fetches participants with venue as home from `/venues/:id/participants`
 
@@ -633,6 +650,20 @@ interface APIError {
   code: string;
   message: string;
   details?: any;
+}
+
+interface GeocodingResult {
+  latitude: number;
+  longitude: number;
+  displayName: string;
+  address: {
+    road?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postcode?: string;
+  };
+  boundingBox?: [number, number, number, number];
 }
 ```
 
@@ -1101,6 +1132,48 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* date value displayed in the UI (activity dates, address history dates, venue history dates, analytics date ranges, table columns, detail views, forms), the rendered output should use ISO-8601 format (YYYY-MM-DD).
 
 **Validates: Requirements 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7**
+
+### Property 69: Geocoding Request Success
+
+*For any* valid address string, when the geocode button is clicked, the Nominatim API should be called with the address and return at least one result or an error.
+
+**Validates: Requirements 21.2, 21.3**
+
+### Property 70: Geocoding Coordinate Population
+
+*For any* successful geocoding response with a single result, the latitude and longitude fields should be automatically populated with the returned coordinates.
+
+**Validates: Requirements 21.4**
+
+### Property 71: Geocoding Multiple Results Handling
+
+*For any* geocoding response with multiple results, a selection dialog should be displayed allowing the user to choose the correct location.
+
+**Validates: Requirements 21.5**
+
+### Property 72: Geocoding Error Handling
+
+*For any* geocoding request that returns no results or fails, an appropriate error message should be displayed to the user.
+
+**Validates: Requirements 21.6**
+
+### Property 73: Geocoding Loading State
+
+*For any* geocoding request in progress, a loading indicator should be displayed and the geocode button should be disabled.
+
+**Validates: Requirements 21.7**
+
+### Property 74: Geocoding Manual Override
+
+*For any* geocoded coordinates, users should be able to manually edit the latitude and longitude fields to override the geocoded values.
+
+**Validates: Requirements 21.8**
+
+### Property 75: Geocoding Offline Behavior
+
+*For any* offline state, the geocode button should be disabled and display a message that geocoding requires connectivity.
+
+**Validates: Requirements 21.10**
 
 ## Error Handling
 
