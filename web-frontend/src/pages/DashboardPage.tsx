@@ -31,6 +31,12 @@ export default function DashboardPage() {
       description: 'View and manage activity venues',
     },
     {
+      href: '/geographic-areas',
+      icon: 'globe',
+      title: 'Manage Geographic Areas',
+      description: 'View and manage geographic hierarchy',
+    },
+    {
       href: '/map',
       icon: 'map',
       title: 'Map View',
