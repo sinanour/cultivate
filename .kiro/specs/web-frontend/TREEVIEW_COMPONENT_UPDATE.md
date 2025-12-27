@@ -345,15 +345,30 @@ const renderItem = (node: TreeNode): TreeViewProps.TreeItem => {
 ```
 
 **5. Added Vertical Padding to Tree Items:**
-Wrapped content in Box component with vertical padding:
+Moved padding to the interactive div for full-height clickability:
 ```typescript
 content: (
-  <Box padding={{ vertical: 's' }}>
+  <div
+    onClick={() => hasChildren && handleToggleItem(node.id)}
+    style={{
+      cursor: hasChildren ? 'pointer' : 'default',
+      transition: 'background-color 0.15s ease',
+      padding: '8px 0', // Vertical padding on clickable element
+    }}
+    onMouseEnter={(e) => {
+      if (hasChildren) {
+        e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
+      }
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = 'transparent';
+    }}
+  >
     <SpaceBetween direction="horizontal" size="s">
       <span>{node.text}</span>
       <Badge>{area.areaType}</Badge>
     </SpaceBetween>
-  </Box>
+  </div>
 )
 ```
 
@@ -370,13 +385,14 @@ const handleToggleItem = (nodeId: string) => {
 ```
 
 **7. Added Interactive Hover Effects:**
-Applied hover highlighting and pointer cursor for rows with children:
+Applied hover highlighting and pointer cursor for rows with children, with padding on the interactive element for full-height clickability:
 ```typescript
 <div
   onClick={() => hasChildren && handleToggleItem(node.id)}
   style={{
     cursor: hasChildren ? 'pointer' : 'default',
     transition: 'background-color 0.15s ease',
+    padding: '8px 0', // Full-height clickable area
   }}
   onMouseEnter={(e) => {
     if (hasChildren) {
@@ -445,17 +461,17 @@ useEffect(() => {
 
 **Visual Enhancements:**
 - Added `connectorLines="vertical"` prop to show hierarchy lines
-- Wrapped content in `Box` with `padding={{ vertical: 's' }}` for increased row height
+- Applied `padding: '8px 0'` directly to the interactive div for full-height clickability
 - Provides clearer visual hierarchy and better readability
+- Maintains consistent spacing between items while maximizing interactive area
 
 **Interactive Enhancements:**
 - Click on any row with children to toggle expand/collapse
-- Hover highlighting with subtle background color change
+- Hover highlighting with subtle background color change covers entire row height
 - Pointer cursor for expandable rows, default cursor for leaf nodes
 - Smooth transitions for hover effects (0.15s ease)
 - Action buttons use `stopPropagation()` to prevent triggering row toggle
-- Tree fully expanded by default when page loads for immediate visibility of all areas
-- Users can still collapse/expand individual nodes as needed
+- Full vertical height of each row is clickable and responds to hover
 
 **Accessibility:**
 - Added `ariaLabel` prop for screen reader support

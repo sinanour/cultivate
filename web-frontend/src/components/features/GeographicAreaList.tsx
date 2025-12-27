@@ -150,28 +150,27 @@ export function GeographicAreaList() {
 
     return {
       content: (
-        <Box padding={{ vertical: 's' }}>
-          <div
-            onClick={() => hasChildren && handleToggleItem(node.id)}
-            style={{
-              cursor: hasChildren ? 'pointer' : 'default',
-              transition: 'background-color 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              if (hasChildren) {
-                e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <SpaceBetween direction="horizontal" size="s">
-              <span>{node.text}</span>
-              <Badge>{area.areaType}</Badge>
-            </SpaceBetween>
-          </div>
-        </Box>
+        <div
+          onClick={() => hasChildren && handleToggleItem(node.id)}
+          style={{
+            cursor: hasChildren ? 'pointer' : 'default',
+            transition: 'background-color 0.15s ease',
+            padding: '8px 0', // Vertical padding moved here for full-height clickability
+          }}
+          onMouseEnter={(e) => {
+            if (hasChildren) {
+              e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <SpaceBetween direction="horizontal" size="s">
+            <span>{node.text}</span>
+            <Badge>{area.areaType}</Badge>
+          </SpaceBetween>
+        </div>
       ),
       actions: (
         <SpaceBetween direction="horizontal" size="xs">

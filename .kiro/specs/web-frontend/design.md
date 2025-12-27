@@ -252,6 +252,7 @@ src/
 - Manages expanded state with expandedItems and onExpandedItemsChange
 - Shows vertical connector lines to visualize hierarchy relationships
 - Renders area type badges for each node with increased vertical spacing
+- Applies padding directly to interactive elements for full-height clickability and hover treatment
 - Automatically expands all nodes when page loads for immediate visibility
 - Supports click-to-toggle expansion on any row with children
 - Provides hover highlighting with smooth transitions for interactive feedback
