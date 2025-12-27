@@ -1,6 +1,7 @@
 import ContentLayout from '@cloudscape-design/components/content-layout';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
+import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import Icon from '@cloudscape-design/components/icon';
 import { useAuth } from '../hooks/useAuth';
@@ -63,7 +64,7 @@ export default function DashboardPage() {
         </Header>
       }
     >
-      <SpaceBetween size="m">
+      <ColumnLayout columns={2} variant="text-grid">
         {quickLinks.map((link) => (
           <div
             key={link.href}
@@ -103,7 +104,7 @@ export default function DashboardPage() {
             </div>
           </div>
         ))}
-      </SpaceBetween>
+      </ColumnLayout>
     </ContentLayout>
   );
 }
