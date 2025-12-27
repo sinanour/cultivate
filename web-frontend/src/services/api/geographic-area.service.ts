@@ -12,16 +12,21 @@ interface UpdateGeographicAreaData extends Partial<CreateGeographicAreaData> {
 }
 
 export class GeographicAreaService {
-  static async getGeographicAreas(page?: number, limit?: number): Promise<GeographicArea[]> {
+  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null): Promise<GeographicArea[]> {
     const params = new URLSearchParams();
     if (page) params.append('page', page.toString());
     if (limit) params.append('limit', limit.toString());
+    if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
     const query = params.toString();
     return ApiClient.get<GeographicArea[]>(`/geographic-areas${query ? `?${query}` : ''}`);
   }
 
   static async getGeographicArea(id: string): Promise<GeographicArea> {
     return ApiClient.get<GeographicArea>(`/geographic-areas/${id}`);
+  }
+
+  static async getGeographicAreaById(id: string): Promise<GeographicArea> {
+    return this.getGeographicArea(id);
   }
 
   static async createGeographicArea(data: CreateGeographicAreaData): Promise<GeographicArea> {

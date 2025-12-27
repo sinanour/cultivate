@@ -17,6 +17,8 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Map_View**: An interactive map visualization showing venues and activities by geography
 - **Nominatim**: OpenStreetMap's geocoding API service for converting addresses to geographic coordinates
 - **Geocoding**: The process of converting a physical address into latitude and longitude coordinates
+- **Global_Filter**: A persistent filter applied across all views in the application
+- **Recursive_Filter**: A filter that includes the selected entity and all its descendants in a hierarchy
 
 ## Requirements
 
@@ -407,3 +409,21 @@ The Web Frontend package provides a responsive React-based web application that 
 4. WHEN a user clicks the edit button, THE Web_App SHALL open the edit form for the current entity
 5. THE Web_App SHALL hide the edit button when the user has READ_ONLY role
 6. THE Web_App SHALL display the edit button when the user has EDITOR or ADMINISTRATOR role
+
+### Requirement 24: Global Persistent Geographic Area Filter
+
+**User Story:** As a community organizer, I want to set a global geographic area filter that applies to all views, so that I can focus on a specific region without repeatedly filtering each list.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display a geographic area filter selector in the application header component
+2. THE Web_App SHALL position the geographic area filter in the header so it is accessible from all views
+3. THE Web_App SHALL default the geographic area filter to an empty state displayed as "Global" (no filter applied)
+4. WHEN a geographic area is selected in the global filter, THE Web_App SHALL apply the filter recursively to include the selected area and all descendant areas
+5. WHEN the global geographic area filter is active, THE Web_App SHALL filter all list views (activities, participants, venues, geographic areas) to show only records associated with venues in the filtered geographic area or its descendants
+6. THE Web_App SHALL reflect the selected geographic area filter as a URL query parameter (e.g., ?geographicArea=<id>)
+7. WHEN a user navigates to a URL with a geographic area query parameter, THE Web_App SHALL apply that filter automatically
+8. THE Web_App SHALL persist the last-selected geographic area filter to localStorage
+9. WHEN a user returns to the application, THE Web_App SHALL restore the last-selected geographic area filter from localStorage
+10. THE Web_App SHALL provide a visual indicator in the header showing the currently active geographic area filter
+11. THE Web_App SHALL provide a way to clear the global filter and return to "Global" (all areas) view

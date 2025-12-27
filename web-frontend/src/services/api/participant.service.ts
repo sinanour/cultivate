@@ -14,10 +14,11 @@ interface UpdateParticipantData extends CreateParticipantData {
 }
 
 export class ParticipantService {
-    static async getParticipants(page?: number, limit?: number): Promise<Participant[]> {
+    static async getParticipants(page?: number, limit?: number, geographicAreaId?: string | null): Promise<Participant[]> {
         const params = new URLSearchParams();
         if (page) params.append('page', page.toString());
         if (limit) params.append('limit', limit.toString());
+        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
         const query = params.toString();
         return ApiClient.get<Participant[]>(`/participants${query ? `?${query}` : ''}`);
     }

@@ -14,12 +14,14 @@ import type { Venue } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { VenueForm } from './VenueForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 
 const ITEMS_PER_PAGE = 10;
 
 export function VenueList() {
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
+  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -27,8 +29,8 @@ export function VenueList() {
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
 
   const { data: venues = [], isLoading } = useQuery({
-    queryKey: ['venues'],
-    queryFn: () => VenueService.getVenues(),
+    queryKey: ['venues', selectedGeographicAreaId],
+    queryFn: () => VenueService.getVenues(undefined, undefined, selectedGeographicAreaId),
   });
 
   const deleteMutation = useMutation({

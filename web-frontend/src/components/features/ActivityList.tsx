@@ -16,6 +16,7 @@ import { ActivityService } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { ActivityForm } from './ActivityForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
 
 const ITEMS_PER_PAGE = 10;
@@ -23,6 +24,7 @@ const ITEMS_PER_PAGE = 10;
 export function ActivityList() {
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
+  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -31,8 +33,8 @@ export function ActivityList() {
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
 
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['activities'],
-    queryFn: () => ActivityService.getActivities(),
+    queryKey: ['activities', selectedGeographicAreaId],
+    queryFn: () => ActivityService.getActivities(undefined, undefined, selectedGeographicAreaId),
   });
 
   const { data: activityTypes = [] } = useQuery({

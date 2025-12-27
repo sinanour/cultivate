@@ -90,6 +90,12 @@ src/
 - Displays user menu with name, role, and logout option
 - Shows connection status indicator (online/offline)
 - Highlights current active section
+- Displays global geographic area filter selector in header utilities section
+- Shows current filter selection or "Global" when no filter is active
+- Provides dropdown with all geographic areas in hierarchical format (indented by level)
+- Shows visual indicator (badge or highlighted text) of active filter in header
+- Provides clear button (X icon) to remove filter and return to "Global" view
+- Positions filter selector prominently in header for accessibility from all views
 
 **Navigation**
 - Renders navigation items based on user role
@@ -132,6 +138,8 @@ src/
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
 - Provides actions for edit and delete (no separate View button)
 - Implements client-side search across name and email
+- Applies global geographic area filter from context when active
+- Filters to show only participants whose current home venue is in the filtered geographic area or its descendants
 
 **ParticipantForm**
 - Modal form for creating/editing participants
@@ -184,6 +192,8 @@ src/
 - Provides sort capabilities
 - Provides edit and delete actions per row (no separate View button)
 - Shows activity dates and status badges
+- Applies global geographic area filter from context when active
+- Filters to show only activities whose current venue is in the filtered geographic area or its descendants
 
 **ActivityForm**
 - Modal form for creating/editing activities
@@ -248,6 +258,8 @@ src/
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
 - Provides actions for edit and delete (no separate View button)
 - Implements client-side search across name and address
+- Applies global geographic area filter from context when active
+- Filters to show only venues in the filtered geographic area or its descendants
 
 **VenueForm**
 - Modal form for creating/editing venues
@@ -295,6 +307,8 @@ src/
 - Provides expand/collapse functionality for hierarchy navigation
 - Provides actions for edit and delete (no separate View button)
 - Handles delete validation (prevents deletion if referenced)
+- Applies global geographic area filter from context when active
+- When filtered, displays the selected area, all its descendants, and all its ancestors (to maintain hierarchy context)
 
 **GeographicAreaForm**
 - Modal form for creating/editing geographic areas
@@ -376,6 +390,21 @@ src/
 
 ### Service Layer
 
+#### React Contexts
+
+**GlobalGeographicFilterContext**
+- Manages global geographic area filter state shared across all views
+- Provides `selectedGeographicAreaId: string | null` - Currently selected geographic area ID or null for "Global" view
+- Provides `selectedGeographicArea: GeographicArea | null` - Full geographic area object for display
+- Provides `setGeographicAreaFilter(id: string | null)` - Updates filter selection
+- Provides `clearFilter()` - Resets filter to "Global" (null)
+- Provides `isLoading: boolean` - Indicates if geographic area details are being fetched
+- Synchronizes filter with URL query parameter (`?geographicArea=<id>`)
+- Persists filter to localStorage (key: `globalGeographicAreaFilter`)
+- Restores filter from localStorage on application initialization
+- URL parameter takes precedence over localStorage on initial load
+- Fetches full geographic area details when filter is set for display in header
+
 #### API Service
 
 **AuthService**
@@ -398,7 +427,7 @@ src/
 - `deleteRole(id)`: Deletes role (validates references, returns REFERENCED_ENTITY error if referenced)
 
 **ParticipantService**
-- `getParticipants(page?, limit?)`: Fetches all participants with optional pagination
+- `getParticipants(page?, limit?, geographicAreaId?)`: Fetches all participants with optional pagination and optional geographic area filter
 - `getParticipant(id)`: Fetches single participant
 - `getParticipantActivities(id)`: Fetches participant's activity assignments from `/participants/:id/activities`
 - `createParticipant(data)`: Creates new participant
@@ -412,7 +441,7 @@ src/
 - `deleteAddressHistory(participantId, historyId)`: Deletes address history record via `/participants/:id/address-history/:historyId`
 
 **ActivityService**
-- `getActivities(page?, limit?)`: Fetches all activities with optional pagination
+- `getActivities(page?, limit?, geographicAreaId?)`: Fetches all activities with optional pagination and optional geographic area filter
 - `getActivity(id)`: Fetches single activity with activityType populated
 - `createActivity(data)`: Creates new activity (status defaults to PLANNED if not provided)
 - `updateActivity(id, data, version?)`: Updates existing activity with optional version for optimistic locking
@@ -429,7 +458,7 @@ src/
 - `getActivityParticipants(activityId)`: Fetches assignments for activity
 
 **VenueService**
-- `getVenues(page?, limit?)`: Fetches all venues with optional pagination
+- `getVenues(page?, limit?, geographicAreaId?)`: Fetches all venues with optional pagination and optional geographic area filter
 - `getVenue(id)`: Fetches single venue with geographicArea populated
 - `searchVenues(query)`: Searches venues by name or address via `/venues/search?q=`
 - `createVenue(data)`: Creates new venue
@@ -450,7 +479,7 @@ src/
 - `getVenueParticipants(id)`: Fetches participants with venue as home from `/venues/:id/participants`
 
 **GeographicAreaService**
-- `getGeographicAreas(page?, limit?)`: Fetches all geographic areas with optional pagination
+- `getGeographicAreas(page?, limit?, geographicAreaId?)`: Fetches all geographic areas with optional pagination and optional geographic area filter (returns selected area, descendants, and ancestors for hierarchy context)
 - `getGeographicArea(id)`: Fetches single geographic area with parent populated
 - `createGeographicArea(data)`: Creates new geographic area (validates circular relationships)
 - `updateGeographicArea(id, data, version?)`: Updates existing geographic area with optional version for optimistic locking
@@ -459,6 +488,7 @@ src/
 - `getAncestors(id)`: Fetches hierarchy path to root from `/geographic-areas/:id/ancestors`
 - `getVenues(id)`: Fetches venues in geographic area from `/geographic-areas/:id/venues`
 - `getStatistics(id)`: Fetches statistics for geographic area and descendants from `/geographic-areas/:id/statistics`
+- `getDescendantIds(id)`: Fetches all descendant area IDs for recursive filtering (used by global filter)
 
 **ParticipantAddressHistoryService**
 - `getAddressHistory(participantId)`: Fetches participant's home address history from `/participants/:id/address-history`
@@ -1235,6 +1265,42 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* entity detail page with an edit button, clicking the edit button should open the edit form for the current entity.
 
 **Validates: Requirements 23.4**
+
+### Property 81: Global Filter URL Synchronization
+
+*For any* geographic area selected in the global filter, the URL query parameter should be updated to reflect the selected area ID, and navigating to a URL with a geographic area query parameter should apply that filter automatically.
+
+**Validates: Requirements 24.6, 24.7**
+
+### Property 82: Global Filter Persistence
+
+*For any* geographic area selected in the global filter, the selection should be persisted to localStorage so it can be restored in future sessions.
+
+**Validates: Requirements 24.8**
+
+### Property 83: Global Filter Restoration
+
+*For any* user returning to the application, the last-selected geographic area filter should be restored from localStorage and applied automatically.
+
+**Validates: Requirements 24.9**
+
+### Property 84: Recursive Geographic Filtering
+
+*For any* geographic area selected in the global filter, all filtered results should include records associated with the selected area and all its descendant areas (recursive aggregation).
+
+**Validates: Requirements 24.4, 24.5**
+
+### Property 85: Global Filter Application to All Lists
+
+*For any* list view (activities, participants, venues, geographic areas), when the global geographic area filter is active, only records associated with venues in the filtered geographic area or its descendants should be displayed.
+
+**Validates: Requirements 24.5**
+
+### Property 86: Global Filter Clear Functionality
+
+*For any* active global geographic area filter, the user should be able to clear the filter and return to the "Global" (all areas) view with a single action.
+
+**Validates: Requirements 24.11**
 
 ## Error Handling
 

@@ -3,12 +3,14 @@ import { ActivityRepository } from '../../repositories/activity.repository';
 import { ActivityTypeRepository } from '../../repositories/activity-type.repository';
 import { ActivityVenueHistoryRepository } from '../../repositories/activity-venue-history.repository';
 import { VenueRepository } from '../../repositories/venue.repository';
+import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { PrismaClient, ActivityStatus } from '@prisma/client';
 
 jest.mock('../../repositories/activity.repository');
 jest.mock('../../repositories/activity-type.repository');
 jest.mock('../../repositories/activity-venue-history.repository');
 jest.mock('../../repositories/venue.repository');
+jest.mock('../../repositories/geographic-area.repository');
 jest.mock('@prisma/client');
 
 describe('ActivityService', () => {
@@ -17,6 +19,7 @@ describe('ActivityService', () => {
     let mockActivityTypeRepo: jest.Mocked<ActivityTypeRepository>;
     let mockVenueHistoryRepo: jest.Mocked<ActivityVenueHistoryRepository>;
     let mockVenueRepo: jest.Mocked<VenueRepository>;
+    let mockGeographicAreaRepo: jest.Mocked<GeographicAreaRepository>;
     let mockPrisma: jest.Mocked<PrismaClient>;
 
     beforeEach(() => {
@@ -24,6 +27,7 @@ describe('ActivityService', () => {
         mockActivityTypeRepo = new ActivityTypeRepository(null as any) as jest.Mocked<ActivityTypeRepository>;
         mockVenueHistoryRepo = new ActivityVenueHistoryRepository(null as any) as jest.Mocked<ActivityVenueHistoryRepository>;
         mockVenueRepo = new VenueRepository(null as any) as jest.Mocked<VenueRepository>;
+        mockGeographicAreaRepo = new GeographicAreaRepository(null as any) as jest.Mocked<GeographicAreaRepository>;
 
         const mockTx = {
             activity: {
@@ -40,7 +44,7 @@ describe('ActivityService', () => {
             }),
         } as any;
 
-        service = new ActivityService(mockActivityRepo, mockActivityTypeRepo, mockVenueHistoryRepo, mockVenueRepo, mockPrisma);
+        service = new ActivityService(mockActivityRepo, mockActivityTypeRepo, mockVenueHistoryRepo, mockVenueRepo, mockPrisma, mockGeographicAreaRepo);
         jest.clearAllMocks();
     });
 
@@ -92,7 +96,16 @@ describe('ActivityService', () => {
 
             const result = await service.createActivity(input);
 
-            expect(result).toEqual(mockActivity);
+            expect(result).toMatchObject({
+                id: '1',
+                name: 'Workshop',
+                activityTypeId: 'type-1',
+                endDate: null,
+                status: 'PLANNED',
+            });
+            expect(result.startDate).toBeInstanceOf(Date);
+            expect(result.createdAt).toBeInstanceOf(Date);
+            expect(result.updatedAt).toBeInstanceOf(Date);
             expect(mockActivityTypeRepo.exists).toHaveBeenCalledWith('type-1');
         });
 

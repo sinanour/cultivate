@@ -14,10 +14,11 @@ interface UpdateActivityData extends Partial<CreateActivityData> {
 }
 
 export class ActivityService {
-    static async getActivities(page?: number, limit?: number): Promise<Activity[]> {
+    static async getActivities(page?: number, limit?: number, geographicAreaId?: string | null): Promise<Activity[]> {
         const params = new URLSearchParams();
         if (page) params.append('page', page.toString());
         if (limit) params.append('limit', limit.toString());
+        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
         const query = params.toString();
         return ApiClient.get<Activity[]>(`/activities${query ? `?${query}` : ''}`);
     }

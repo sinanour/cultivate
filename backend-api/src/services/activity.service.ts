@@ -3,6 +3,7 @@ import { ActivityRepository } from '../repositories/activity.repository';
 import { ActivityTypeRepository } from '../repositories/activity-type.repository';
 import { ActivityVenueHistoryRepository } from '../repositories/activity-venue-history.repository';
 import { VenueRepository } from '../repositories/venue.repository';
+import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 
 export interface CreateActivityInput {
@@ -30,7 +31,8 @@ export class ActivityService {
     private activityTypeRepository: ActivityTypeRepository,
     private venueHistoryRepository: ActivityVenueHistoryRepository,
     private venueRepository: VenueRepository,
-    private prisma: PrismaClient
+    private prisma: PrismaClient,
+    private geographicAreaRepository: GeographicAreaRepository
   ) {}
 
   private addComputedFields(activity: Activity) {
@@ -40,14 +42,77 @@ export class ActivityService {
     };
   }
 
-  async getAllActivities(): Promise<Activity[]> {
-    const activities = await this.activityRepository.findAll();
+  async getAllActivities(geographicAreaId?: string): Promise<Activity[]> {
+    if (!geographicAreaId) {
+      const activities = await this.activityRepository.findAll();
+      return activities.map((a) => this.addComputedFields(a));
+    }
+
+    // Get all descendant IDs including the area itself
+    const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+    const areaIds = [geographicAreaId, ...descendantIds];
+
+    // Get all activities with their most recent venue
+    const allActivities = await this.prisma.activity.findMany({
+      include: {
+        activityVenueHistory: {
+          orderBy: { effectiveFrom: 'desc' },
+          take: 1,
+          include: { venue: true }
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    // Filter to only those whose current venue is in the geographic area
+    const filteredActivities = allActivities.filter(a =>
+      a.activityVenueHistory.length > 0 &&
+      areaIds.includes(a.activityVenueHistory[0].venue.geographicAreaId)
+    );
+
+    // Remove the included relations for the response
+    const activities = filteredActivities.map(({ activityVenueHistory, ...activity }) => activity as Activity);
     return activities.map((a) => this.addComputedFields(a));
   }
 
-  async getAllActivitiesPaginated(page?: number, limit?: number): Promise<PaginatedResponse<Activity>> {
+  async getAllActivitiesPaginated(page?: number, limit?: number, geographicAreaId?: string): Promise<PaginatedResponse<Activity>> {
     const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
-    const { data, total } = await this.activityRepository.findAllPaginated(validPage, validLimit);
+
+    if (!geographicAreaId) {
+      const { data, total } = await this.activityRepository.findAllPaginated(validPage, validLimit);
+      const activitiesWithComputed = data.map((a) => this.addComputedFields(a));
+      return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);
+    }
+
+    // Get all descendant IDs including the area itself
+    const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+    const areaIds = [geographicAreaId, ...descendantIds];
+
+    // Get all activities with their most recent venue
+    const allActivities = await this.prisma.activity.findMany({
+      include: {
+        activityVenueHistory: {
+          orderBy: { effectiveFrom: 'desc' },
+          take: 1,
+          include: { venue: true }
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    // Filter to only those whose current venue is in the geographic area
+    const filteredActivities = allActivities.filter(a =>
+      a.activityVenueHistory.length > 0 &&
+      areaIds.includes(a.activityVenueHistory[0].venue.geographicAreaId)
+    );
+
+    // Apply pagination
+    const total = filteredActivities.length;
+    const skip = (validPage - 1) * validLimit;
+    const paginatedActivities = filteredActivities.slice(skip, skip + validLimit);
+
+    // Remove the included relations for the response
+    const data = paginatedActivities.map(({ activityVenueHistory, ...activity }) => activity as Activity);
     const activitiesWithComputed = data.map((a) => this.addComputedFields(a));
     return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);
   }

@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { AppLayout } from '../components/layout/AppLayout';
+import { GlobalGeographicFilterProvider } from '../contexts/GlobalGeographicFilterContext';
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import('../pages/LoginPage'));
@@ -31,7 +32,9 @@ export const router = createBrowserRouter([
     path: '/',
     element: (
       <ProtectedRoute>
-        <AppLayout />
+        <GlobalGeographicFilterProvider>
+          <AppLayout />
+        </GlobalGeographicFilterProvider>
       </ProtectedRoute>
     ),
     children: [

@@ -72,7 +72,8 @@ const participantService = new ParticipantService(
   participantRepository,
   addressHistoryRepository,
   assignmentRepository,
-  prisma
+  prisma,
+  geographicAreaRepository
 );
 const geographicAreaService = new GeographicAreaService(geographicAreaRepository, prisma);
 const venueService = new VenueService(venueRepository, geographicAreaRepository);
@@ -81,7 +82,8 @@ const activityService = new ActivityService(
   activityTypeRepository,
   activityVenueHistoryRepository,
   venueRepository,
-  prisma
+  prisma,
+  geographicAreaRepository
 );
 const assignmentService = new AssignmentService(
   assignmentRepository,

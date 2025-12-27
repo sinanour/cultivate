@@ -15,20 +15,22 @@ import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeographicAreaForm } from './GeographicAreaForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { buildGeographicAreaTree, type TreeNode } from '../../utils/tree.utils';
 
 export function GeographicAreaList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
+  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [selectedArea, setSelectedArea] = useState<GeographicArea | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const { data: geographicAreas = [], isLoading } = useQuery({
-    queryKey: ['geographicAreas'],
-    queryFn: () => GeographicAreaService.getGeographicAreas(),
+    queryKey: ['geographicAreas', selectedGeographicAreaId],
+    queryFn: () => GeographicAreaService.getGeographicAreas(undefined, undefined, selectedGeographicAreaId),
   });
 
   const deleteMutation = useMutation({

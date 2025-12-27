@@ -28,14 +28,80 @@ export class GeographicAreaService {
         private prisma: PrismaClient
     ) { }
 
-    async getAllGeographicAreas(): Promise<GeographicArea[]> {
-        return this.geographicAreaRepository.findAll();
+    async getAllGeographicAreas(geographicAreaId?: string): Promise<GeographicArea[]> {
+        if (!geographicAreaId) {
+            return this.geographicAreaRepository.findAll();
+        }
+
+        // Get the selected area
+        const selectedArea = await this.geographicAreaRepository.findById(geographicAreaId);
+        if (!selectedArea) {
+            throw new Error('Geographic area not found');
+        }
+
+        // Get all descendant IDs
+        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+
+        // Get all ancestors
+        const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+
+        // Combine: selected area, descendants, and ancestors
+        const allAreaIds = [geographicAreaId, ...descendantIds, ...ancestors.map(a => a.id)];
+
+        // Fetch all areas
+        const allAreas = await this.prisma.geographicArea.findMany({
+            where: {
+                id: { in: allAreaIds }
+            },
+            orderBy: { name: 'asc' },
+            include: {
+                parent: true,
+            },
+        });
+
+        return allAreas;
     }
 
-    async getAllGeographicAreasPaginated(page?: number, limit?: number): Promise<PaginatedResponse<GeographicArea>> {
+    async getAllGeographicAreasPaginated(page?: number, limit?: number, geographicAreaId?: string): Promise<PaginatedResponse<GeographicArea>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
-        const { data, total } = await this.geographicAreaRepository.findAllPaginated(validPage, validLimit);
-        return PaginationHelper.createResponse(data, validPage, validLimit, total);
+
+        if (!geographicAreaId) {
+            const { data, total } = await this.geographicAreaRepository.findAllPaginated(validPage, validLimit);
+            return PaginationHelper.createResponse(data, validPage, validLimit, total);
+        }
+
+        // Get the selected area
+        const selectedArea = await this.geographicAreaRepository.findById(geographicAreaId);
+        if (!selectedArea) {
+            throw new Error('Geographic area not found');
+        }
+
+        // Get all descendant IDs
+        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+
+        // Get all ancestors
+        const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+
+        // Combine: selected area, descendants, and ancestors
+        const allAreaIds = [geographicAreaId, ...descendantIds, ...ancestors.map(a => a.id)];
+
+        // Fetch all areas
+        const allAreas = await this.prisma.geographicArea.findMany({
+            where: {
+                id: { in: allAreaIds }
+            },
+            orderBy: { name: 'asc' },
+            include: {
+                parent: true,
+            },
+        });
+
+        // Apply pagination
+        const total = allAreas.length;
+        const skip = (validPage - 1) * validLimit;
+        const paginatedAreas = allAreas.slice(skip, skip + validLimit);
+
+        return PaginationHelper.createResponse(paginatedAreas, validPage, validLimit, total);
     }
 
     async getGeographicAreaById(id: string): Promise<GeographicArea> {

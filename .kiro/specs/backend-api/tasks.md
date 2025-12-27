@@ -531,6 +531,105 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Update OpenAPI specification
     - _Requirements: API Contract alignment_
 
+## Global Geographic Area Filter Implementation Notes
+
+**Query Parameter Support:**
+All list endpoints (participants, activities, venues, geographic areas) now support an optional `geographicAreaId` query parameter for filtering results to a specific geographic area and its descendants.
+
+**Implementation Pattern for Services:**
+
+```typescript
+async getEntities(page?: number, limit?: number, geographicAreaId?: string) {
+  let areaIds: string[] | undefined;
+  
+  if (geographicAreaId) {
+    // Get all descendant IDs including the area itself
+    const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+    areaIds = [geographicAreaId, ...descendantIds];
+  }
+  
+  // Apply filter to query based on entity type
+  const where = this.buildGeographicFilter(areaIds);
+  
+  return this.repository.findMany({ where, page, limit });
+}
+```
+
+**Entity-Specific Filtering Logic:**
+
+**Participants:** Filter by current home venue's geographic area
+```typescript
+const where = areaIds ? {
+  addressHistory: {
+    some: {
+      venue: {
+        geographicAreaId: { in: areaIds }
+      },
+      // Most recent address (no newer record exists)
+      NOT: {
+        participant: {
+          addressHistory: {
+            some: {
+              effectiveFrom: { gt: /* this record's effectiveFrom */ }
+            }
+          }
+        }
+      }
+    }
+  }
+} : {};
+```
+
+**Activities:** Filter by current venue's geographic area
+```typescript
+const where = areaIds ? {
+  activityVenueHistory: {
+    some: {
+      venue: {
+        geographicAreaId: { in: areaIds }
+      },
+      // Most recent venue (no newer record exists)
+      NOT: {
+        activity: {
+          activityVenueHistory: {
+            some: {
+              effectiveFrom: { gt: /* this record's effectiveFrom */ }
+            }
+          }
+        }
+      }
+    }
+  }
+} : {};
+```
+
+**Venues:** Direct geographic area filtering
+```typescript
+const where = areaIds ? {
+  geographicAreaId: { in: areaIds }
+} : {};
+```
+
+**Geographic Areas:** Special handling for hierarchy context
+```typescript
+if (geographicAreaId) {
+  const descendantIds = await this.findDescendants(geographicAreaId);
+  const ancestorIds = await this.findAncestors(geographicAreaId);
+  const areaIds = [geographicAreaId, ...descendantIds, ...ancestorIds];
+  
+  const where = { id: { in: areaIds } };
+}
+```
+
+**Key Points:**
+- Filter is optional - endpoints work without it (return all results)
+- Filtering is recursive - includes all descendant areas
+- Uses existing `findDescendants()` method from GeographicAreaRepository
+- Participants and Activities filter by "current" venue (most recent history record)
+- Geographic Areas include ancestors to maintain tree view context
+- No database schema changes required
+- Backward compatible with existing clients
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

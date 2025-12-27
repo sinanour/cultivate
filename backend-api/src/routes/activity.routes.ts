@@ -93,12 +93,13 @@ export class ActivityRoutes {
         try {
             const page = req.query.page ? parseInt(req.query.page as string) : undefined;
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+            const geographicAreaId = req.query.geographicAreaId as string | undefined;
 
             if (page !== undefined || limit !== undefined) {
-                const result = await this.activityService.getAllActivitiesPaginated(page, limit);
+                const result = await this.activityService.getAllActivitiesPaginated(page, limit, geographicAreaId);
                 res.status(200).json({ success: true, ...result });
             } else {
-                const activities = await this.activityService.getAllActivities();
+                const activities = await this.activityService.getAllActivities(geographicAreaId);
                 res.status(200).json({ success: true, data: activities });
             }
         } catch (error) {

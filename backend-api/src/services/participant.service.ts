@@ -2,6 +2,7 @@ import { Participant } from '@prisma/client';
 import { ParticipantRepository } from '../repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from '../repositories/participant-address-history.repository';
 import { AssignmentRepository } from '../repositories/assignment.repository';
+import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
 import { PrismaClient } from '@prisma/client';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 
@@ -37,16 +38,79 @@ export class ParticipantService {
         private participantRepository: ParticipantRepository,
         private addressHistoryRepository: ParticipantAddressHistoryRepository,
         private assignmentRepository: AssignmentRepository,
-        private prisma: PrismaClient
+        private prisma: PrismaClient,
+        private geographicAreaRepository: GeographicAreaRepository
     ) { }
 
-    async getAllParticipants(): Promise<Participant[]> {
-        return this.participantRepository.findAll();
+    async getAllParticipants(geographicAreaId?: string): Promise<Participant[]> {
+        if (!geographicAreaId) {
+            return this.participantRepository.findAll();
+        }
+
+        // Get all descendant IDs including the area itself
+        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+        const areaIds = [geographicAreaId, ...descendantIds];
+
+        // Get all participants with their most recent address
+        const allParticipants = await this.prisma.participant.findMany({
+            include: {
+                addressHistory: {
+                    orderBy: { effectiveFrom: 'desc' },
+                    take: 1,
+                    include: { venue: true }
+                }
+            },
+            orderBy: { name: 'asc' }
+        });
+
+        // Filter to only those whose current address is in the geographic area
+        const filteredParticipants = allParticipants.filter(p =>
+            p.addressHistory.length > 0 &&
+            areaIds.includes(p.addressHistory[0].venue.geographicAreaId)
+        );
+
+        // Remove the included relations for the response
+        return filteredParticipants.map(({ addressHistory, ...participant }) => participant as Participant);
     }
 
-    async getAllParticipantsPaginated(page?: number, limit?: number): Promise<PaginatedResponse<Participant>> {
+    async getAllParticipantsPaginated(page?: number, limit?: number, geographicAreaId?: string): Promise<PaginatedResponse<Participant>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
-        const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit);
+
+        if (!geographicAreaId) {
+            const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit);
+            return PaginationHelper.createResponse(data, validPage, validLimit, total);
+        }
+
+        // Get all descendant IDs including the area itself
+        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+        const areaIds = [geographicAreaId, ...descendantIds];
+
+        // Get all participants with their most recent address
+        const allParticipants = await this.prisma.participant.findMany({
+            include: {
+                addressHistory: {
+                    orderBy: { effectiveFrom: 'desc' },
+                    take: 1,
+                    include: { venue: true }
+                }
+            },
+            orderBy: { name: 'asc' }
+        });
+
+        // Filter to only those whose current address is in the geographic area
+        const filteredParticipants = allParticipants.filter(p =>
+            p.addressHistory.length > 0 &&
+            areaIds.includes(p.addressHistory[0].venue.geographicAreaId)
+        );
+
+        // Apply pagination
+        const total = filteredParticipants.length;
+        const skip = (validPage - 1) * validLimit;
+        const paginatedParticipants = filteredParticipants.slice(skip, skip + validLimit);
+
+        // Remove the included relations for the response
+        const data = paginatedParticipants.map(({ addressHistory, ...participant }) => participant as Participant);
+
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 

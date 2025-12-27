@@ -14,12 +14,14 @@ import type { Participant } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { ParticipantForm } from './ParticipantForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 
 const ITEMS_PER_PAGE = 10;
 
 export function ParticipantList() {
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
+  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -27,8 +29,8 @@ export function ParticipantList() {
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
 
   const { data: participants = [], isLoading } = useQuery({
-    queryKey: ['participants'],
-    queryFn: () => ParticipantService.getParticipants(),
+    queryKey: ['participants', selectedGeographicAreaId],
+    queryFn: () => ParticipantService.getParticipants(undefined, undefined, selectedGeographicAreaId),
   });
 
   const deleteMutation = useMutation({

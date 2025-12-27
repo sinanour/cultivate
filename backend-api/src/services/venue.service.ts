@@ -28,13 +28,33 @@ export class VenueService {
         private geographicAreaRepository: GeographicAreaRepository
     ) { }
 
-    async getAllVenues(): Promise<Venue[]> {
-        return this.venueRepository.findAll();
+    async getAllVenues(geographicAreaId?: string): Promise<Venue[]> {
+        if (!geographicAreaId) {
+            return this.venueRepository.findAll();
+        }
+
+        // Get all descendant IDs including the area itself
+        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+        const areaIds = [geographicAreaId, ...descendantIds];
+
+        // Filter venues by geographic area
+        return this.venueRepository.findByGeographicAreaIds(areaIds);
     }
 
-    async getAllVenuesPaginated(page?: number, limit?: number): Promise<PaginatedResponse<Venue>> {
+    async getAllVenuesPaginated(page?: number, limit?: number, geographicAreaId?: string): Promise<PaginatedResponse<Venue>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
-        const { data, total } = await this.venueRepository.findAllPaginated(validPage, validLimit);
+
+        if (!geographicAreaId) {
+            const { data, total } = await this.venueRepository.findAllPaginated(validPage, validLimit);
+            return PaginationHelper.createResponse(data, validPage, validLimit, total);
+        }
+
+        // Get all descendant IDs including the area itself
+        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+        const areaIds = [geographicAreaId, ...descendantIds];
+
+        // Filter venues by geographic area with pagination
+        const { data, total } = await this.venueRepository.findByGeographicAreaIdsPaginated(areaIds, validPage, validLimit);
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 

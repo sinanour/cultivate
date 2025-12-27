@@ -711,6 +711,81 @@ This implementation plan covers the React-based web application built with TypeS
     - Test that clicking edit button opens the edit form
     - **Validates: Requirements 23.1, 23.2, 23.3, 23.4, 23.5, 23.6**
 
+- [ ] 24. Implement global persistent geographic area filter
+  - [ ] 24.1 Create GlobalGeographicFilterContext
+    - Create React context for global geographic area filter state
+    - Provide selectedGeographicAreaId (string | null)
+    - Provide selectedGeographicArea (GeographicArea | null)
+    - Provide setGeographicAreaFilter(id: string | null) method
+    - Provide clearFilter() method
+    - Provide isLoading boolean
+    - Implement URL query parameter synchronization (?geographicArea=<id>)
+    - Implement localStorage persistence (key: 'globalGeographicAreaFilter')
+    - Restore filter from localStorage on app initialization
+    - URL parameter takes precedence over localStorage
+    - Fetch full geographic area details when filter is set
+    - _Requirements: 24.1, 24.2, 24.3, 24.6, 24.7, 24.8, 24.9_
+
+  - [ ] 24.2 Create useGlobalGeographicFilter hook
+    - Export custom hook to access GlobalGeographicFilterContext
+    - Provide convenient access to filter state and methods
+    - _Requirements: 24.1, 24.2, 24.3_
+
+  - [ ] 24.3 Update AppLayout component with filter selector
+    - Add geographic area filter selector in header utilities section
+    - Use CloudScape Select component with hierarchical options
+    - Display "Global (All Areas)" as default option
+    - Show current filter selection or "Global" when no filter active
+    - Provide clear button (X icon) to remove filter
+    - Display visual indicator (badge or highlighted text) of active filter
+    - Position prominently in header for accessibility from all views
+    - _Requirements: 24.1, 24.2, 24.3, 24.10, 24.11_
+
+  - [ ] 24.4 Update ActivityList to apply global filter
+    - Read selectedGeographicAreaId from GlobalGeographicFilterContext
+    - Pass geographicAreaId to ActivityService.getActivities()
+    - Update React Query key to include filter
+    - Display filtered results only
+    - _Requirements: 24.4, 24.5_
+
+  - [ ] 24.5 Update ParticipantList to apply global filter
+    - Read selectedGeographicAreaId from GlobalGeographicFilterContext
+    - Pass geographicAreaId to ParticipantService.getParticipants()
+    - Update React Query key to include filter
+    - Display filtered results only
+    - _Requirements: 24.4, 24.5_
+
+  - [ ] 24.6 Update VenueList to apply global filter
+    - Read selectedGeographicAreaId from GlobalGeographicFilterContext
+    - Pass geographicAreaId to VenueService.getVenues()
+    - Update React Query key to include filter
+    - Display filtered results only
+    - _Requirements: 24.4, 24.5_
+
+  - [ ] 24.7 Update GeographicAreaList to apply global filter
+    - Read selectedGeographicAreaId from GlobalGeographicFilterContext
+    - Pass geographicAreaId to GeographicAreaService.getGeographicAreas()
+    - Update React Query key to include filter
+    - Display filtered hierarchy (selected area, descendants, and ancestors)
+    - _Requirements: 24.4, 24.5_
+
+  - [ ] 24.8 Update API service methods to accept geographic area filter
+    - Update ActivityService.getActivities(page?, limit?, geographicAreaId?)
+    - Update ParticipantService.getParticipants(page?, limit?, geographicAreaId?)
+    - Update VenueService.getVenues(page?, limit?, geographicAreaId?)
+    - Update GeographicAreaService.getGeographicAreas(page?, limit?, geographicAreaId?)
+    - Add geographicAreaId as query parameter in API requests
+    - _Requirements: 24.4, 24.5_
+
+  - [ ]* 24.9 Write property tests for global filter
+    - **Property 81: Global Filter URL Synchronization**
+    - **Property 82: Global Filter Persistence**
+    - **Property 83: Global Filter Restoration**
+    - **Property 84: Recursive Geographic Filtering**
+    - **Property 85: Global Filter Application to All Lists**
+    - **Property 86: Global Filter Clear Functionality**
+    - **Validates: Requirements 24.4, 24.5, 24.6, 24.7, 24.8, 24.9, 24.11**
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

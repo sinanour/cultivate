@@ -1,12 +1,14 @@
 import { ParticipantService } from '../../services/participant.service';
 import { ParticipantRepository } from '../../repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from '../../repositories/participant-address-history.repository';
+import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { PrismaClient } from '@prisma/client';
 
 describe('ParticipantService - Address History', () => {
     let service: ParticipantService;
     let participantRepository: ParticipantRepository;
     let addressHistoryRepository: ParticipantAddressHistoryRepository;
+    let geographicAreaRepository: GeographicAreaRepository;
     let prisma: PrismaClient;
     let assignmentRepository: any;
 
@@ -14,8 +16,10 @@ describe('ParticipantService - Address History', () => {
         prisma = new PrismaClient();
         participantRepository = new ParticipantRepository(prisma);
         addressHistoryRepository = new ParticipantAddressHistoryRepository(prisma);
+        geographicAreaRepository = new GeographicAreaRepository(prisma);
+        geographicAreaRepository = new GeographicAreaRepository(prisma);
         assignmentRepository = {} as any; // Mock assignment repository for tests
-        service = new ParticipantService(participantRepository, addressHistoryRepository, assignmentRepository, prisma);
+        service = new ParticipantService(participantRepository, addressHistoryRepository, assignmentRepository, prisma, geographicAreaRepository);
     });
 
     describe('getAddressHistory', () => {

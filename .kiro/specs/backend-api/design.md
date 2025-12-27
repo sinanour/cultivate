@@ -79,7 +79,7 @@ PUT    /api/v1/roles/:id               -> Update role
 DELETE /api/v1/roles/:id               -> Delete role
 
 // Participant Routes
-GET    /api/v1/participants            -> List all participants
+GET    /api/v1/participants            -> List all participants (supports ?geographicAreaId=<id> filter)
 GET    /api/v1/participants/:id        -> Get participant by ID
 GET    /api/v1/participants/:id/activities -> Get participant's activity assignments
 GET    /api/v1/participants/search     -> Search participants
@@ -88,7 +88,7 @@ PUT    /api/v1/participants/:id        -> Update participant
 DELETE /api/v1/participants/:id        -> Delete participant
 
 // Activity Routes
-GET    /api/v1/activities              -> List all activities
+GET    /api/v1/activities              -> List all activities (supports ?geographicAreaId=<id> filter)
 GET    /api/v1/activities/:id          -> Get activity by ID
 POST   /api/v1/activities              -> Create activity
 PUT    /api/v1/activities/:id          -> Update activity
@@ -106,7 +106,7 @@ POST   /api/v1/activities/:id/venues                 -> Associate venue with act
 DELETE /api/v1/activities/:id/venues/:venueId        -> Remove venue association
 
 // Venue Routes
-GET    /api/v1/venues                  -> List all venues
+GET    /api/v1/venues                  -> List all venues (supports ?geographicAreaId=<id> filter)
 GET    /api/v1/venues/:id              -> Get venue by ID
 GET    /api/v1/venues/search           -> Search venues
 POST   /api/v1/venues                  -> Create venue
@@ -116,7 +116,7 @@ GET    /api/v1/venues/:id/activities   -> List activities at venue
 GET    /api/v1/venues/:id/participants -> List participants with venue as home
 
 // Geographic Area Routes
-GET    /api/v1/geographic-areas        -> List all geographic areas
+GET    /api/v1/geographic-areas        -> List all geographic areas (supports ?geographicAreaId=<id> filter)
 GET    /api/v1/geographic-areas/:id    -> Get geographic area by ID
 POST   /api/v1/geographic-areas        -> Create geographic area
 PUT    /api/v1/geographic-areas/:id    -> Update geographic area
@@ -154,11 +154,11 @@ Services implement business logic and coordinate operations:
 
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
-- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments
-- **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time
+- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering for list queries
+- **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
-- **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search
-- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics
+- **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search, supports geographic area filtering for list queries
+- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
 - **AnalyticsService**: Calculates engagement and growth metrics, applies date and geographic filters, aggregates data by geographic area
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
@@ -948,6 +948,24 @@ The API uses Prisma to define the following database models:
 **Property 113: Backward compatibility within version**
 *For any* endpoint within the same major version, changes should maintain backward compatibility.
 **Validates: Requirements 20.2**
+
+### Global Geographic Area Filter Properties
+
+**Property 114: Participant geographic filtering**
+*For any* participant list request with a geographic area filter, only participants whose current home venue is in the specified geographic area or its descendants should be returned.
+**Validates: Requirements 3.19**
+
+**Property 115: Activity geographic filtering**
+*For any* activity list request with a geographic area filter, only activities whose current venue is in the specified geographic area or its descendants should be returned.
+**Validates: Requirements 4.17**
+
+**Property 116: Venue geographic filtering**
+*For any* venue list request with a geographic area filter, only venues in the specified geographic area or its descendants should be returned.
+**Validates: Requirements 5A.14**
+
+**Property 117: Geographic area hierarchy filtering**
+*For any* geographic area list request with a geographic area filter, the response should include the specified area, all its descendants, and all its ancestors to maintain hierarchy context.
+**Validates: Requirements 5B.16**
 
 ## Error Handling
 

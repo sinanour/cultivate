@@ -71,6 +71,7 @@ The Backend API package provides the RESTful API service that implements all bus
 16. WHEN creating an address history record, THE API SHALL require venue ID and effective start date
 17. WHEN creating an address history record, THE API SHALL prevent duplicate records with the same effective start date for the same participant
 18. THE API SHALL provide a GET /api/participants/:id/activities endpoint that returns all activity assignments for the participant with activity and role details
+19. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only participants whose current home venue is in the specified geographic area or its descendants
 
 ### Requirement 4: Create and Manage Activities
 
@@ -94,6 +95,7 @@ The Backend API package provides the RESTful API service that implements all bus
 14. THE API SHALL provide a DELETE /api/activities/:id/venues/:venueId endpoint that removes a venue association
 15. THE API SHALL track the effective start date for each activity-venue association to support venue changes over time
 16. WHEN creating an activity-venue association, THE API SHALL prevent duplicate records with the same effective start date for the same activity
+17. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only activities whose current venue is in the specified geographic area or its descendants
 
 ### Requirement 5: Assign Participants to Activities
 
@@ -128,6 +130,7 @@ The Backend API package provides the RESTful API service that implements all bus
 11. WHEN deleting a venue, THE API SHALL return an error message explaining which entities reference it
 12. THE API SHALL provide a GET /api/venues/:id/activities endpoint that returns all activities associated with a venue
 13. THE API SHALL provide a GET /api/venues/:id/participants endpoint that returns all participants with this venue as their home address
+14. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only venues in the specified geographic area or its descendants
 
 ### Requirement 5B: Manage Geographic Areas
 
@@ -150,6 +153,7 @@ The Backend API package provides the RESTful API service that implements all bus
 13. THE API SHALL provide a GET /api/geographic-areas/:id/ancestors endpoint that returns the full hierarchy path to the root
 14. THE API SHALL provide a GET /api/geographic-areas/:id/venues endpoint that returns all venues in the geographic area and all descendant areas (recursive aggregation)
 15. THE API SHALL provide a GET /api/geographic-areas/:id/statistics endpoint that returns activity and participant statistics for the geographic area and all descendants (recursive aggregation)
+16. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return the specified geographic area, all its descendants, and all its ancestors (to maintain hierarchy context for tree view display)
 
 ### Requirement 6: Analyze Community Engagement
 

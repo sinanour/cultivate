@@ -166,4 +166,41 @@ export class VenueRepository {
     });
     return count > 0;
   }
+
+  async findByGeographicAreaIds(areaIds: string[]): Promise<Venue[]> {
+    return this.prisma.venue.findMany({
+      where: {
+        geographicAreaId: { in: areaIds },
+      },
+      orderBy: { name: 'asc' },
+      include: {
+        geographicArea: true,
+      },
+    });
+  }
+
+  async findByGeographicAreaIdsPaginated(areaIds: string[], page: number, limit: number): Promise<{ data: Venue[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.venue.findMany({
+        where: {
+          geographicAreaId: { in: areaIds },
+        },
+        skip,
+        take: limit,
+        orderBy: { name: 'asc' },
+        include: {
+          geographicArea: true,
+        },
+      }),
+      this.prisma.venue.count({
+        where: {
+          geographicAreaId: { in: areaIds },
+        },
+      }),
+    ]);
+
+    return { data, total };
+  }
 }
