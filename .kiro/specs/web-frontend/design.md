@@ -277,8 +277,9 @@ src/
 - Shows geographic area information in detail view
 - Displays full hierarchy path from root to current area
 - Lists all child geographic areas
-- Lists all venues in the geographic area
-- Shows statistics (activity and participant counts) for the area and descendants
+- Lists all venues in the geographic area and all descendant areas (recursive aggregation)
+- Shows statistics (activity and participant counts) for the area and descendants (recursive aggregation)
+- **Note:** Venue list should recursively include venues from all child and descendant geographic areas, matching the recursive behavior of statistics
 
 #### 10. Map View
 

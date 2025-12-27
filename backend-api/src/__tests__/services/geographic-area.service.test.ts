@@ -209,19 +209,45 @@ describe('GeographicAreaService', () => {
     });
 
     describe('getVenues', () => {
-        it('should return venues in area', async () => {
+        it('should return venues in area and descendants', async () => {
             const areaId = 'area-1';
-            const mockArea = { id: areaId, name: 'Downtown', areaType: 'NEIGHBOURHOOD' as AreaType, parentGeographicAreaId: null, createdAt: new Date(), updatedAt: new Date() };
+            const mockArea = { id: areaId, name: 'Downtown', areaType: 'NEIGHBOURHOOD' as AreaType, parentGeographicAreaId: null, createdAt: new Date(), updatedAt: new Date(), version: 1 };
             const mockVenues = [
-                { id: 'venue-1', name: 'Community Center', address: '123 Main St', geographicAreaId: areaId, latitude: null, longitude: null, venueType: null, createdAt: new Date(), updatedAt: new Date() },
+                { id: 'venue-1', name: 'Community Center', address: '123 Main St', geographicAreaId: areaId, latitude: null, longitude: null, venueType: null, createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: 'venue-2', name: 'Park', address: '456 Oak Ave', geographicAreaId: 'child-area-1', latitude: null, longitude: null, venueType: null, createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
 
             mockRepository.findById = jest.fn().mockResolvedValue(mockArea);
-            mockRepository.findVenues = jest.fn().mockResolvedValue(mockVenues);
+            mockRepository.findDescendants = jest.fn().mockResolvedValue(['child-area-1', 'child-area-2']);
+            (mockPrisma.venue.findMany as jest.Mock).mockResolvedValue(mockVenues);
 
             const result = await service.getVenues(areaId);
 
             expect(result).toEqual(mockVenues);
+            expect(mockRepository.findDescendants).toHaveBeenCalledWith(areaId);
+            expect(mockPrisma.venue.findMany).toHaveBeenCalledWith({
+                where: { geographicAreaId: { in: [areaId, 'child-area-1', 'child-area-2'] } },
+                orderBy: { name: 'asc' },
+            });
+        });
+
+        it('should return empty array when area has no venues', async () => {
+            const areaId = 'area-1';
+            const mockArea = { id: areaId, name: 'Empty Area', areaType: 'NEIGHBOURHOOD' as AreaType, parentGeographicAreaId: null, createdAt: new Date(), updatedAt: new Date(), version: 1 };
+
+            mockRepository.findById = jest.fn().mockResolvedValue(mockArea);
+            mockRepository.findDescendants = jest.fn().mockResolvedValue([]);
+            (mockPrisma.venue.findMany as jest.Mock).mockResolvedValue([]);
+
+            const result = await service.getVenues(areaId);
+
+            expect(result).toEqual([]);
+        });
+
+        it('should throw error for non-existent area', async () => {
+            mockRepository.findById = jest.fn().mockResolvedValue(null);
+
+            await expect(service.getVenues('non-existent')).rejects.toThrow('Geographic area not found');
         });
     });
 

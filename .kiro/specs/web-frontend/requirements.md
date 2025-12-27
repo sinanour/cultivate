@@ -152,7 +152,7 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL validate that geographic area name and type are provided
 6. THE Web_App SHALL allow selection of a parent geographic area
 7. THE Web_App SHALL prevent circular parent-child relationships
-8. THE Web_App SHALL display a detail view showing geographic area information, child areas, and associated venues
+8. THE Web_App SHALL display a detail view showing geographic area information, child areas, and associated venues from the area and all descendant areas (recursive aggregation)
 9. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
 10. WHEN deleting a geographic area, THE Web_App SHALL display an error message explaining which entities reference it
 11. THE Web_App SHALL display the full hierarchy path for each geographic area

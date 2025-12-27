@@ -828,7 +828,7 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 5B.13**
 
 **Property 87: Geographic area venues retrieval**
-*For any* geographic area, retrieving its venues should return all venues directly associated with that geographic area.
+*For any* geographic area, retrieving its venues should return all venues in that geographic area and all descendant areas (recursive aggregation).
 **Validates: Requirements 5B.14**
 
 **Property 88: Geographic area statistics calculation**

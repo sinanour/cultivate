@@ -160,7 +160,15 @@ export class GeographicAreaService {
             throw new Error('Geographic area not found');
         }
 
-        return this.geographicAreaRepository.findVenues(id);
+        // Get all descendant IDs including the area itself
+        const descendantIds = await this.geographicAreaRepository.findDescendants(id);
+        const areaIds = [id, ...descendantIds];
+
+        // Get all venues in this area and descendants (recursive)
+        return this.prisma.venue.findMany({
+            where: { geographicAreaId: { in: areaIds } },
+            orderBy: { name: 'asc' },
+        });
     }
 
     async getStatistics(id: string): Promise<GeographicAreaStatistics> {

@@ -805,7 +805,9 @@ Clients should refresh the access token before it expires using the refresh toke
 
 **Endpoint**: `GET /geographic-areas/:id/venues`
 
-**Response** (200 OK): Array of venues in this geographic area wrapped in `{ success: true, data: [...] }`
+**Response** (200 OK): Array of venues in this geographic area **and all descendant areas (recursive)** wrapped in `{ success: true, data: [...] }`
+
+**Note**: This endpoint returns venues recursively, including all venues in child geographic areas and their descendants. This matches the recursive behavior of the statistics endpoint.
 
 ### Get Geographic Area Statistics
 

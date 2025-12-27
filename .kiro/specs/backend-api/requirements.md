@@ -148,8 +148,8 @@ The Backend API package provides the RESTful API service that implements all bus
 11. WHEN deleting a geographic area, THE API SHALL prevent deletion if venues or child geographic areas reference it
 12. THE API SHALL provide a GET /api/geographic-areas/:id/children endpoint that returns all child geographic areas
 13. THE API SHALL provide a GET /api/geographic-areas/:id/ancestors endpoint that returns the full hierarchy path to the root
-14. THE API SHALL provide a GET /api/geographic-areas/:id/venues endpoint that returns all venues in the geographic area
-15. THE API SHALL provide a GET /api/geographic-areas/:id/statistics endpoint that returns activity and participant statistics for the geographic area and all descendants
+14. THE API SHALL provide a GET /api/geographic-areas/:id/venues endpoint that returns all venues in the geographic area and all descendant areas (recursive aggregation)
+15. THE API SHALL provide a GET /api/geographic-areas/:id/statistics endpoint that returns activity and participant statistics for the geographic area and all descendants (recursive aggregation)
 
 ### Requirement 6: Analyze Community Engagement
 
