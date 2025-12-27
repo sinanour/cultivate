@@ -135,6 +135,12 @@ src/
 - Validates name, email format, and required fields
 - Supports optional phone and notes fields
 - Displays inline validation errors
+- Includes embedded address history management section within the form
+- Allows adding new address history records with venue and effective start date
+- Allows editing existing address history records (edit mode only)
+- Allows deleting existing address history records (edit mode only)
+- Displays address history table in reverse chronological order within the form
+- Validates address history records for required fields and duplicate prevention
 
 **ParticipantDetail**
 - Shows participant information in detail view
@@ -172,6 +178,12 @@ src/
 - Allows null end date for ongoing activities
 - Validates name, type, and start date
 - Provides date pickers using CloudScape DatePicker
+- Includes embedded venue history management section within the form
+- Allows adding new venue associations with effective start dates
+- Allows editing existing venue associations (edit mode only)
+- Allows deleting existing venue associations (edit mode only)
+- Displays venue history table in reverse chronological order within the form
+- Validates venue associations for required fields and duplicate prevention
 
 **ActivityDetail**
 - Shows activity information in detail view

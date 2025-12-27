@@ -138,7 +138,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Support home venue selection (homeVenueId)
     - Include version field in update requests for optimistic locking
     - Display inline validation errors
-    - _Requirements: 4.4, 4.5, 4.7, 4.8, 4.9, 4.11_
+    - Embed address history management section within the form
+    - Allow adding new address history records with venue and effective start date
+    - Allow editing existing address history records (edit mode only)
+    - Allow deleting existing address history records (edit mode only)
+    - Display address history table in reverse chronological order within the form
+    - Validate address history for required fields and duplicate prevention
+    - _Requirements: 4.4, 4.5, 4.7, 4.8, 4.9, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18_
 
   - [ ]* 7.4 Write property tests for participant validation
     - **Property 7: Required Field Validation**
@@ -285,7 +291,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Support all four status values (PLANNED, ACTIVE, COMPLETED, CANCELLED)
     - Support venue selection and management
     - Include version field in update requests for optimistic locking
-    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14_
+    - Embed venue history management section within the form
+    - Allow adding new venue associations with effective start dates
+    - Allow editing existing venue associations (edit mode only)
+    - Allow deleting existing venue associations (edit mode only)
+    - Display venue history table in reverse chronological order within the form
+    - Validate venue associations for required fields and duplicate prevention
+    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17_
 
   - [ ]* 11.3 Write property tests for activity validation
     - **Property 14: Finite Activity End Date Requirement**
@@ -573,6 +585,24 @@ This implementation plan covers the React-based web application built with TypeS
 - Checkpoints ensure incremental validation
 - Property tests validate universal correctness properties
 - Unit tests validate specific examples and edge cases
+
+## Implementation Notes for Embedded History Management
+
+**ParticipantForm with Address History:**
+- The ParticipantForm component should include an embedded section for managing address history
+- In create mode: Allow adding address history records that will be created after the participant is created
+- In edit mode: Display existing address history records with add/edit/delete capabilities
+- Use a mini-table or expandable section within the form to display address history
+- Validate address history records before form submission
+- Submit participant data and address history changes in appropriate sequence
+
+**ActivityForm with Venue History:**
+- The ActivityForm component should include an embedded section for managing venue associations
+- In create mode: Allow adding venue associations that will be created after the activity is created
+- In edit mode: Display existing venue associations with add/edit/delete capabilities
+- Use a mini-table or expandable section within the form to display venue history
+- Validate venue associations before form submission
+- Submit activity data and venue association changes in appropriate sequence
 
 ## API Alignment Notes
 

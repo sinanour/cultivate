@@ -81,6 +81,8 @@ The Web Frontend package provides a responsive React-based web application that 
 14. THE Web_App SHALL provide an interface to delete address history records
 15. THE Web_App SHALL validate that address history records have a venue and effective start date
 16. THE Web_App SHALL prevent duplicate address history records with the same effective start date for the same participant
+17. WHEN creating a new participant, THE Web_App SHALL allow adding home address history records within the participant creation modal form
+18. WHEN editing an existing participant, THE Web_App SHALL allow adding, editing, and deleting home address history records within the participant edit modal form
 
 ### Requirement 5: Activity Management UI
 
@@ -103,6 +105,8 @@ The Web Frontend package provides a responsive React-based web application that 
 13. THE Web_App SHALL display a detail view showing activity information and assigned participants
 14. THE Web_App SHALL allow selection of one or more venues for each activity
 15. THE Web_App SHALL display the activity's venue history in reverse chronological order when venues have changed over time
+16. WHEN creating a new activity, THE Web_App SHALL allow adding venue associations with effective start dates within the activity creation modal form
+17. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and deleting venue associations within the activity edit modal form
 
 ### Requirement 6: Activity-Participant Assignment UI
 
