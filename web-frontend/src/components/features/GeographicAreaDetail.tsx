@@ -11,6 +11,7 @@ import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
+import { formatDate } from '../../utils/date.utils';
 
 export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
@@ -93,7 +94,7 @@ export function GeographicAreaDetail() {
           </div>
           <div>
             <Box variant="awsui-key-label">Created</Box>
-            <div>{new Date(geographicArea.createdAt).toLocaleDateString()}</div>
+            <div>{formatDate(geographicArea.createdAt)}</div>
           </div>
         </ColumnLayout>
       </Container>

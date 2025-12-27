@@ -1079,6 +1079,12 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 7.14**
 
+### Property 68: Date Formatting Consistency
+
+*For any* date value displayed in the UI (activity dates, address history dates, venue history dates, analytics date ranges, table columns, detail views, forms), the rendered output should use ISO-8601 format (YYYY-MM-DD).
+
+**Validates: Requirements 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7**
+
 ## Error Handling
 
 ### Client-Side Errors
@@ -1170,6 +1176,23 @@ All entities support optimistic locking via the `version` field. When updating a
 - Display fallback UI with error message
 - Provide "Report Error" button
 - Log component stack to console
+
+### Utility Functions
+
+**Date Formatting:**
+- `formatDate(dateString: string): string` - Converts ISO-8601 datetime strings to YYYY-MM-DD format
+- Handles both full ISO-8601 datetime strings (2024-03-15T10:30:00Z) and date-only strings (2024-03-15)
+- Returns consistently formatted date string for display throughout the UI
+- Used in all components that display dates (tables, detail views, forms, charts)
+
+**Implementation:**
+```typescript
+export function formatDate(dateString: string): string {
+  if (!dateString) return '';
+  // Extract date portion from ISO-8601 string (YYYY-MM-DD)
+  return dateString.split('T')[0];
+}
+```
 
 ## Testing Strategy
 

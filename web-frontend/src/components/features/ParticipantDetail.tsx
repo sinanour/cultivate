@@ -16,6 +16,7 @@ import { AddressHistoryTable } from './AddressHistoryTable';
 import { AddressHistoryForm } from './AddressHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { ParticipantAddressHistory } from '../../types';
+import { formatDate } from '../../utils/date.utils';
 
 export function ParticipantDetail() {
   const { id } = useParams<{ id: string }>();
@@ -169,7 +170,7 @@ export function ParticipantDetail() {
           </div>
           <div>
             <Box variant="awsui-key-label">Created</Box>
-            <div>{new Date(participant.createdAt).toLocaleDateString()}</div>
+            <div>{formatDate(participant.createdAt)}</div>
           </div>
           {participant.notes && (
             <div>

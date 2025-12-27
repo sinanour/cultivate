@@ -20,6 +20,7 @@ import { VenueService } from '../../services/api/venue.service';
 import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
+import { formatDate } from '../../utils/date.utils';
 
 interface ActivityFormProps {
   activity: Activity | null;
@@ -522,7 +523,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                       {
                         id: 'effectiveFrom',
                         header: 'Effective From',
-                        cell: (item) => new Date(item.effectiveFrom).toLocaleDateString(),
+                        cell: (item) => formatDate(item.effectiveFrom),
                       },
                       {
                         id: 'actions',

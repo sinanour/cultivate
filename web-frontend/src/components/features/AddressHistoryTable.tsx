@@ -7,6 +7,7 @@ import {
   Badge,
 } from '@cloudscape-design/components';
 import type { ParticipantAddressHistory } from '../../types';
+import { formatDate } from '../../utils/date.utils';
 
 interface AddressHistoryTableProps {
   addressHistory: ParticipantAddressHistory[];
@@ -54,10 +55,7 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
         {
           id: 'effectiveFrom',
           header: 'Effective From',
-          cell: (item: ParticipantAddressHistory) => {
-            const date = new Date(item.effectiveFrom);
-            return date.toLocaleDateString();
-          },
+          cell: (item: ParticipantAddressHistory) => formatDate(item.effectiveFrom),
           sortingField: 'effectiveFrom',
         },
         {

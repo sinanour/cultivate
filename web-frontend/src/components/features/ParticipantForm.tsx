@@ -20,6 +20,7 @@ import { ParticipantAddressHistoryService } from '../../services/api/participant
 import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
+import { formatDate } from '../../utils/date.utils';
 
 interface ParticipantFormProps {
   participant: Participant | null;
@@ -479,7 +480,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                       {
                         id: 'effectiveFrom',
                         header: 'Effective From',
-                        cell: (item) => new Date(item.effectiveFrom).toLocaleDateString(),
+                        cell: (item) => formatDate(item.effectiveFrom),
                       },
                       {
                         id: 'actions',

@@ -20,6 +20,7 @@ import { AssignmentForm } from './AssignmentForm';
 import { ActivityVenueHistoryTable } from './ActivityVenueHistoryTable';
 import { ActivityVenueHistoryForm } from './ActivityVenueHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { formatDate } from '../../utils/date.utils';
 
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -236,17 +237,17 @@ export function ActivityDetail() {
           </div>
           <div>
             <Box variant="awsui-key-label">Start Date</Box>
-            <div>{new Date(activity.startDate).toLocaleDateString()}</div>
+            <div>{formatDate(activity.startDate)}</div>
           </div>
           {activity.endDate && (
             <div>
               <Box variant="awsui-key-label">End Date</Box>
-              <div>{new Date(activity.endDate).toLocaleDateString()}</div>
+              <div>{formatDate(activity.endDate)}</div>
             </div>
           )}
           <div>
             <Box variant="awsui-key-label">Created</Box>
-            <div>{new Date(activity.createdAt).toLocaleDateString()}</div>
+            <div>{formatDate(activity.createdAt)}</div>
           </div>
         </ColumnLayout>
       </Container>

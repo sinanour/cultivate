@@ -5,6 +5,7 @@ import {
   Button,
   Badge,
 } from '@cloudscape-design/components';
+import { formatDate } from '../../utils/date.utils';
 
 interface ActivityVenueHistoryRecord {
   id: string;
@@ -62,10 +63,7 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
         {
           id: 'effectiveFrom',
           header: 'Effective From',
-          cell: (item: ActivityVenueHistoryRecord) => {
-            const date = new Date(item.effectiveFrom);
-            return date.toLocaleDateString();
-          },
+          cell: (item: ActivityVenueHistoryRecord) => formatDate(item.effectiveFrom),
           sortingField: 'effectiveFrom',
         },
         {

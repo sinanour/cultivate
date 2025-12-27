@@ -347,3 +347,17 @@ The Web Frontend package provides a responsive React-based web application that 
 3. THE Web_App SHALL automatically retry after the cooldown period
 4. THE Web_App SHALL log rate limit details for debugging
 5. THE Web_App SHALL display remaining request counts from rate limit headers when available
+
+### Requirement 20: Date Formatting Consistency
+
+**User Story:** As a user, I want all dates displayed consistently throughout the application, so that I can easily read and compare dates.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL render all dates in ISO-8601 format (YYYY-MM-DD)
+2. THE Web_App SHALL apply consistent date formatting to activity start dates and end dates
+3. THE Web_App SHALL apply consistent date formatting to address history effective dates
+4. THE Web_App SHALL apply consistent date formatting to venue history effective dates
+5. THE Web_App SHALL apply consistent date formatting to all date fields in tables and detail views
+6. THE Web_App SHALL apply consistent date formatting to all date fields in forms and date pickers
+7. THE Web_App SHALL apply consistent date formatting to analytics dashboard date ranges

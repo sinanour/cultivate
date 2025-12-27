@@ -12,6 +12,7 @@ import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
+import { formatDate } from '../../utils/date.utils';
 
 export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -108,7 +109,7 @@ export function VenueDetail() {
           )}
           <div>
             <Box variant="awsui-key-label">Created</Box>
-            <div>{new Date(venue.createdAt).toLocaleDateString()}</div>
+            <div>{formatDate(venue.createdAt)}</div>
           </div>
         </ColumnLayout>
       </Container>

@@ -16,6 +16,7 @@ import { ActivityService } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { ActivityForm } from './ActivityForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { formatDate } from '../../utils/date.utils';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -138,8 +139,8 @@ export function ActivityList() {
             id: 'dates',
             header: 'Dates',
             cell: (item) => {
-              const start = new Date(item.startDate).toLocaleDateString();
-              const end = item.endDate ? new Date(item.endDate).toLocaleDateString() : 'Ongoing';
+              const start = formatDate(item.startDate);
+              const end = item.endDate ? formatDate(item.endDate) : 'Ongoing';
               return `${start} - ${end}`;
             },
           },

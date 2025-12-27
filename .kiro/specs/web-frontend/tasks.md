@@ -499,6 +499,16 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 40: Error Console Logging**
     - **Validates: Requirements 15.2, 15.3, 15.5, 15.6**
 
+  - [x] 17.3 Create date formatting utility
+    - Implement formatDate() function to convert ISO-8601 strings to YYYY-MM-DD format
+    - Handle both full datetime strings and date-only strings
+    - Apply to all date displays in tables, detail views, forms, and charts
+    - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7_
+
+  - [ ]* 17.4 Write property test for date formatting
+    - **Property 68: Date Formatting Consistency**
+    - **Validates: Requirements 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7**
+
 - [x] 17A. Implement optimistic locking and conflict resolution
   - [x] 17A.1 Create version conflict detection utility
     - Detect 409 errors with VERSION_CONFLICT code
