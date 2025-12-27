@@ -1,6 +1,7 @@
 import { Participant } from '@prisma/client';
 import { ParticipantRepository } from '../repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from '../repositories/participant-address-history.repository';
+import { AssignmentRepository } from '../repositories/assignment.repository';
 import { PrismaClient } from '@prisma/client';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 
@@ -35,6 +36,7 @@ export class ParticipantService {
     constructor(
         private participantRepository: ParticipantRepository,
         private addressHistoryRepository: ParticipantAddressHistoryRepository,
+        private assignmentRepository: AssignmentRepository,
         private prisma: PrismaClient
     ) { }
 
@@ -309,5 +311,16 @@ export class ParticipantService {
         }
 
         await this.addressHistoryRepository.delete(historyId);
+    }
+
+    async getParticipantActivities(participantId: string) {
+        // Validate participant exists
+        const participant = await this.participantRepository.findById(participantId);
+        if (!participant) {
+            throw new Error('Participant not found');
+        }
+
+        // Get assignments with activity and role details
+        return this.assignmentRepository.findByParticipantId(participantId);
     }
 }

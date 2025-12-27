@@ -36,7 +36,9 @@ describe('ParticipantService', () => {
             },
         } as any;
 
-        service = new ParticipantService(mockParticipantRepo, mockAddressHistoryRepo, mockPrisma);
+        const mockAssignmentRepo = {} as any;
+
+        service = new ParticipantService(mockParticipantRepo, mockAddressHistoryRepo, mockAssignmentRepo, mockPrisma);
         jest.clearAllMocks();
     });
 

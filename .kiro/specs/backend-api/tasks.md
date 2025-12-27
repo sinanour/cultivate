@@ -178,11 +178,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 8: Optional Field Acceptance**
     - **Property 17: Participant Search Accuracy**
     - **Property 18: Participant Retrieval by ID**
-    - **Validates: Requirements 3.6, 3.7, 3.8, 3.9**
+    - **Property 18A: Participant Activities Retrieval**
+    - **Validates: Requirements 3.6, 3.7, 3.8, 3.9, 3.18**
 
   - [x] 7.4 Create participant routes
     - GET /api/participants
     - GET /api/participants/:id
+    - GET /api/participants/:id/activities
     - GET /api/participants/search
     - POST /api/participants
     - PUT /api/participants/:id
@@ -191,7 +193,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - POST /api/participants/:id/address-history
     - PUT /api/participants/:id/address-history/:historyId
     - DELETE /api/participants/:id/address-history/:historyId
-    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.12, 3.13, 3.14, 3.15_
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.12, 3.13, 3.14, 3.15, 3.18_
 
   - [x] 7.5 Create participant address history repository
     - Implement CRUD operations for address history

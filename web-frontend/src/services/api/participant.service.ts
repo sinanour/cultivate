@@ -1,4 +1,4 @@
-import type { Participant } from '../../types';
+import type { Participant, Assignment } from '../../types';
 import { ApiClient } from './api.client';
 
 interface CreateParticipantData {
@@ -40,5 +40,9 @@ export class ParticipantService {
 
     static async getAddressHistory(id: string): Promise<any[]> {
         return ApiClient.get<any[]>(`/participants/${id}/address-history`);
+    }
+
+    static async getParticipantActivities(id: string): Promise<Assignment[]> {
+        return ApiClient.get<Assignment[]>(`/participants/${id}/activities`);
     }
 }

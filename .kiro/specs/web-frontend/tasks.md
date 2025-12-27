@@ -194,6 +194,16 @@ This implementation plan covers the React-based web application built with TypeS
     - Use /participants/:id/address-history endpoints
     - _Requirements: 4.12, 4.13, 4.14_
 
+  - [ ] 7.7 Implement participant activities display
+    - Add getParticipantActivities(id) method to ParticipantService
+    - Update ParticipantDetail to fetch participant activities using /participants/:id/activities endpoint
+    - Display activities table with columns: activity name (linked), type, role, status, dates, notes
+    - Show loading state while fetching activities
+    - Show empty state when participant has no activities
+    - Format dates using formatDate() utility
+    - Handle ongoing activities (display "Ongoing" instead of end date)
+    - _Requirements: 4.10_
+
 - [x] 8. Implement venue management UI
   - [x] 8.1 Create VenueList component
     - Display table with name, address, and geographic area

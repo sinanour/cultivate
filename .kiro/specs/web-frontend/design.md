@@ -144,8 +144,10 @@ src/
 
 **ParticipantDetail**
 - Shows participant information in detail view
-- Lists all activities the participant is assigned to
-- Displays roles for each activity assignment
+- Lists all activities the participant is assigned to in a table
+- Displays activity name (with link to detail), type, role, status, dates, and notes for each assignment
+- Shows loading state while fetching activities
+- Shows empty state when participant has no activity assignments
 - Shows address history table in reverse chronological order
 - Provides interface to add new address history records
 - Provides interface to edit existing address history records
@@ -348,6 +350,7 @@ src/
 **ParticipantService**
 - `getParticipants(page?, limit?)`: Fetches all participants with optional pagination
 - `getParticipant(id)`: Fetches single participant
+- `getParticipantActivities(id)`: Fetches participant's activity assignments from `/participants/:id/activities`
 - `createParticipant(data)`: Creates new participant
 - `updateParticipant(id, data, version?)`: Updates existing participant with optional version for optimistic locking
 - `deleteParticipant(id)`: Deletes participant
@@ -551,6 +554,7 @@ interface Assignment {
   notes?: string;
   participant?: Participant;
   role?: ParticipantRole;
+  activity?: Activity;
   createdAt: string;
 }
 

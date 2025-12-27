@@ -8,12 +8,14 @@ describe('ParticipantService - Address History', () => {
     let participantRepository: ParticipantRepository;
     let addressHistoryRepository: ParticipantAddressHistoryRepository;
     let prisma: PrismaClient;
+    let assignmentRepository: any;
 
     beforeEach(() => {
         prisma = new PrismaClient();
         participantRepository = new ParticipantRepository(prisma);
         addressHistoryRepository = new ParticipantAddressHistoryRepository(prisma);
-        service = new ParticipantService(participantRepository, addressHistoryRepository, prisma);
+        assignmentRepository = {} as any; // Mock assignment repository for tests
+        service = new ParticipantService(participantRepository, addressHistoryRepository, assignmentRepository, prisma);
     });
 
     describe('getAddressHistory', () => {

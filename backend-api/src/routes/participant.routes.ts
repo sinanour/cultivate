@@ -51,6 +51,14 @@ export class ParticipantRoutes {
         );
 
         this.router.get(
+            '/:id/activities',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
+            ValidationMiddleware.validateParams(UuidParamSchema),
+            this.getParticipantActivities.bind(this)
+        );
+
+        this.router.get(
             '/:id/address-history',
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireAuthenticated(),
@@ -161,6 +169,27 @@ export class ParticipantRoutes {
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while fetching participant',
+                details: {},
+            });
+        }
+    }
+
+    private async getParticipantActivities(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const activities = await this.participantService.getParticipantActivities(id);
+            res.status(200).json({ success: true, data: activities });
+        } catch (error) {
+            if (error instanceof Error && error.message === 'Participant not found') {
+                return res.status(404).json({
+                    code: 'NOT_FOUND',
+                    message: error.message,
+                    details: {},
+                });
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while fetching participant activities',
                 details: {},
             });
         }

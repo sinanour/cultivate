@@ -9,6 +9,9 @@ import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
+import Table from '@cloudscape-design/components/table';
+import Link from '@cloudscape-design/components/link';
+import Badge from '@cloudscape-design/components/badge';
 import { ParticipantService } from '../../services/api/participant.service';
 import { ParticipantAddressHistoryService } from '../../services/api/participant-address-history.service';
 import { VenueService } from '../../services/api/venue.service';
@@ -37,6 +40,12 @@ export function ParticipantDetail() {
   const { data: addressHistory = [], isLoading: isLoadingHistory } = useQuery({
     queryKey: ['participantAddressHistory', id],
     queryFn: () => ParticipantAddressHistoryService.getAddressHistory(id!),
+    enabled: !!id,
+  });
+
+  const { data: activities = [], isLoading: isLoadingActivities } = useQuery({
+    queryKey: ['participantActivities', id],
+    queryFn: () => ParticipantService.getParticipantActivities(id!),
     enabled: !!id,
   });
 
@@ -112,6 +121,16 @@ export function ParticipantDetail() {
       });
     } else {
       await createAddressMutation.mutateAsync(data);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PLANNED': return 'blue';
+      case 'ACTIVE': return 'green';
+      case 'COMPLETED': return 'grey';
+      case 'CANCELLED': return 'red';
+      default: return 'grey';
     }
   };
 
@@ -206,12 +225,76 @@ export function ParticipantDetail() {
       </Container>
 
       <Container header={<Header variant="h3">Activities</Header>}>
-        <Box textAlign="center" color="inherit">
-          <b>Activities list</b>
-          <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-            Activity assignments will be displayed here once implemented.
+        {isLoadingActivities ? (
+          <Box textAlign="center" padding="xxl">
+            <Spinner size="large" />
           </Box>
-        </Box>
+        ) : activities.length === 0 ? (
+          <Box textAlign="center" color="inherit">
+            <Box variant="p" color="inherit">
+              No activity assignments found.
+            </Box>
+          </Box>
+        ) : (
+          <Table
+            columnDefinitions={[
+              {
+                id: 'activity',
+                header: 'Activity',
+                cell: (item) => (
+                  <Link href={`/activities/${item.activityId}`}>
+                    {item.activity?.name || 'Unknown'}
+                  </Link>
+                ),
+              },
+              {
+                id: 'type',
+                header: 'Type',
+                cell: (item) => item.activity?.activityType?.name || '-',
+              },
+              {
+                id: 'role',
+                header: 'Role',
+                cell: (item) => item.role?.name || '-',
+              },
+              {
+                id: 'status',
+                header: 'Status',
+                cell: (item) => item.activity ? (
+                  <Badge color={getStatusColor(item.activity.status)}>
+                    {item.activity.status}
+                  </Badge>
+                ) : '-',
+              },
+              {
+                id: 'dates',
+                header: 'Dates',
+                cell: (item) => {
+                  if (!item.activity) return '-';
+                  if (item.activity.isOngoing) {
+                    return `${formatDate(item.activity.startDate)} - Ongoing`;
+                  }
+                  return `${formatDate(item.activity.startDate)} - ${formatDate(item.activity.endDate)}`;
+                },
+              },
+              {
+                id: 'notes',
+                header: 'Notes',
+                cell: (item) => item.notes || '-',
+              },
+            ]}
+            items={activities}
+            variant="embedded"
+            empty={
+              <Box textAlign="center" color="inherit">
+                <b>No activities</b>
+                <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+                  This participant is not assigned to any activities.
+                </Box>
+              </Box>
+            }
+          />
+        )}
       </Container>
 
       <AddressHistoryForm

@@ -81,6 +81,7 @@ DELETE /api/v1/roles/:id               -> Delete role
 // Participant Routes
 GET    /api/v1/participants            -> List all participants
 GET    /api/v1/participants/:id        -> Get participant by ID
+GET    /api/v1/participants/:id/activities -> Get participant's activity assignments
 GET    /api/v1/participants/search     -> Search participants
 POST   /api/v1/participants            -> Create participant
 PUT    /api/v1/participants/:id        -> Update participant
@@ -153,7 +154,7 @@ Services implement business logic and coordinate operations:
 
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
-- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD
+- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search
@@ -507,6 +508,10 @@ The API uses Prisma to define the following database models:
 **Property 18: Participant retrieval by ID**
 *For any* existing participant, retrieving it by ID should return the correct participant data.
 **Validates: Requirements 3.2**
+
+**Property 18A: Participant activities retrieval**
+*For any* existing participant, retrieving their activities should return all assignments with complete activity and role details.
+**Validates: Requirements 3.18**
 
 **Property 19: Activity retrieval by ID**
 *For any* existing activity, retrieving it by ID should return the correct activity data including related activity type.

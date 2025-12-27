@@ -70,6 +70,7 @@ The Backend API package provides the RESTful API service that implements all bus
 15. THE API SHALL provide a DELETE /api/participants/:id/address-history/:historyId endpoint that deletes an address history record
 16. WHEN creating an address history record, THE API SHALL require venue ID and effective start date
 17. WHEN creating an address history record, THE API SHALL prevent duplicate records with the same effective start date for the same participant
+18. THE API SHALL provide a GET /api/participants/:id/activities endpoint that returns all activity assignments for the participant with activity and role details
 
 ### Requirement 4: Create and Manage Activities
 

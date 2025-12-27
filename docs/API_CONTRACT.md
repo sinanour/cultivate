@@ -510,6 +510,49 @@ Clients should refresh the access token before it expires using the refresh toke
 }
 ```
 
+### Get Participant Activities
+
+**Endpoint**: `GET /participants/:id/activities`
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (UUID)",
+      "activityId": "string (UUID)",
+      "participantId": "string (UUID)",
+      "roleId": "string (UUID)",
+      "notes": "string | null",
+      "activity": {
+        "id": "string (UUID)",
+        "name": "string",
+        "activityTypeId": "string (UUID)",
+        "activityType": {
+          "id": "string (UUID)",
+          "name": "string",
+          "isPredefined": "boolean"
+        },
+        "status": "PLANNED | ACTIVE | COMPLETED | CANCELLED",
+        "startDate": "string (ISO 8601)",
+        "endDate": "string | null (ISO 8601)",
+        "isOngoing": "boolean"
+      },
+      "role": {
+        "id": "string (UUID)",
+        "name": "string",
+        "isPredefined": "boolean"
+      },
+      "createdAt": "string (ISO 8601)"
+    }
+  ]
+}
+```
+
+**Errors**:
+- 404: Participant not found
+
 ## Venues
 
 ### List Venues

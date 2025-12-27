@@ -71,6 +71,7 @@ const roleService = new RoleService(roleRepository);
 const participantService = new ParticipantService(
   participantRepository,
   addressHistoryRepository,
+  assignmentRepository,
   prisma
 );
 const geographicAreaService = new GeographicAreaService(geographicAreaRepository, prisma);

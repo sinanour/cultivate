@@ -105,6 +105,7 @@ export interface Assignment {
     notes?: string;
     participant?: Participant;
     role?: ParticipantRole;
+    activity?: Activity;
     createdAt: string;
 }
 
