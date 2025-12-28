@@ -16,8 +16,8 @@ describe('ActivityTypeService', () => {
     describe('getAllActivityTypes', () => {
         it('should return all activity types', async () => {
             const mockTypes = [
-                { id: '1', name: 'Workshop', createdAt: new Date(), updatedAt: new Date(), version: 1 },
-                { id: '2', name: 'Meeting', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '1', name: "Children's Class", createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '2', name: 'Ruhi Book 1', createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
             mockRepository.findAll = jest.fn().mockResolvedValue(mockTypes);
 
@@ -38,7 +38,7 @@ describe('ActivityTypeService', () => {
 
     describe('createActivityType', () => {
         it('should create activity type with valid data', async () => {
-            const input = { name: 'Workshop' };
+            const input = { name: 'Ruhi Book 1' };
             const mockType = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
             mockRepository.findByName = jest.fn().mockResolvedValue(null);
@@ -47,13 +47,13 @@ describe('ActivityTypeService', () => {
             const result = await service.createActivityType(input);
 
             expect(result).toEqual({ ...mockType, isPredefined: true });
-            expect(mockRepository.findByName).toHaveBeenCalledWith('Workshop');
+            expect(mockRepository.findByName).toHaveBeenCalledWith('Ruhi Book 1');
             expect(mockRepository.create).toHaveBeenCalledWith(input);
         });
 
         it('should throw error for duplicate name', async () => {
-            const input = { name: 'Workshop' };
-            const existing = { id: '1', name: 'Workshop', createdAt: new Date(), updatedAt: new Date() };
+            const input = { name: 'Ruhi Book 1' };
+            const existing = { id: '1', name: 'Ruhi Book 1', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findByName = jest.fn().mockResolvedValue(existing);
 
@@ -70,8 +70,8 @@ describe('ActivityTypeService', () => {
     describe('updateActivityType', () => {
         it('should update activity type with valid data', async () => {
             const id = '1';
-            const input = { name: 'Updated Workshop' };
-            const existing = { id, name: 'Workshop', createdAt: new Date(), updatedAt: new Date(), version: 1 };
+            const input = { name: 'Updated Custom Type' };
+            const existing = { id, name: 'Custom Type', createdAt: new Date(), updatedAt: new Date(), version: 1 };
             const updated = { ...existing, ...input };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
@@ -92,9 +92,9 @@ describe('ActivityTypeService', () => {
 
         it('should throw error for duplicate name', async () => {
             const id = '1';
-            const input = { name: 'Workshop' };
+            const input = { name: 'Ruhi Book 1' };
             const existing = { id, name: 'Old Name', createdAt: new Date(), updatedAt: new Date() };
-            const duplicate = { id: '2', name: 'Workshop', createdAt: new Date(), updatedAt: new Date() };
+            const duplicate = { id: '2', name: 'Ruhi Book 1', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
             mockRepository.findByName = jest.fn().mockResolvedValue(duplicate);
@@ -106,7 +106,7 @@ describe('ActivityTypeService', () => {
     describe('deleteActivityType', () => {
         it('should delete activity type when not referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Workshop', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Custom Type', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
             mockRepository.countReferences = jest.fn().mockResolvedValue(0);
@@ -125,7 +125,7 @@ describe('ActivityTypeService', () => {
 
         it('should throw error when activity type is referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Workshop', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Custom Type', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
             mockRepository.countReferences = jest.fn().mockResolvedValue(5);

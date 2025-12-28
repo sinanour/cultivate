@@ -8,9 +8,6 @@ export class RoleService {
     'Animator',
     'Host',
     'Teacher',
-    'Participant',
-    'Organizer',
-    'Volunteer',
   ];
 
   constructor(private roleRepository: RoleRepository) {}

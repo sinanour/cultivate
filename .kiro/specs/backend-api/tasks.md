@@ -24,7 +24,8 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 
   - [x] 2.2 Create initial database migration
     - Generate migration from Prisma schema
-    - Include seed data for predefined activity types and roles
+    - Include seed data for predefined activity types: "Children's Class", "Junior Youth Group", "Devotional Gathering", "Ruhi Book 1", "Ruhi Book 2", "Ruhi Book 3", "Ruhi Book 3A", "Ruhi Book 3B", "Ruhi Book 3C", "Ruhi Book 3D", "Ruhi Book 4", "Ruhi Book 5", "Ruhi Book 5A", "Ruhi Book 5B", "Ruhi Book 6", "Ruhi Book 7", "Ruhi Book 8", "Ruhi Book 9", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
+    - Include seed data for predefined roles: Facilitator, Animator, Host, Teacher
     - _Requirements: 1.7, 2.7, 8.6_
 
   - [ ]* 2.3 Write property test for foreign key constraint enforcement

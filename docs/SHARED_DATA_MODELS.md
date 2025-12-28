@@ -233,13 +233,29 @@ data class ActivityType(
 ```
 
 **Predefined Types**:
-- Workshop
-- Meetup
-- Class
-- Conference
-- Social Event
-- Training
-- Volunteer Activity
+- Children's Class
+- Junior Youth Group
+- Devotional Gathering
+- Ruhi Book 1
+- Ruhi Book 2
+- Ruhi Book 3
+- Ruhi Book 3A
+- Ruhi Book 3B
+- Ruhi Book 3C
+- Ruhi Book 3D
+- Ruhi Book 4
+- Ruhi Book 5
+- Ruhi Book 5A
+- Ruhi Book 5B
+- Ruhi Book 6
+- Ruhi Book 7
+- Ruhi Book 8
+- Ruhi Book 9
+- Ruhi Book 10
+- Ruhi Book 11
+- Ruhi Book 12
+- Ruhi Book 13
+- Ruhi Book 14
 
 **Validation Rules**:
 - `name`: 1-100 characters, unique
@@ -436,9 +452,6 @@ data class ParticipantRole(
 - Animator
 - Host
 - Teacher
-- Participant
-- Volunteer
-- Organizer
 
 ### ActivityParticipant
 

@@ -37,14 +37,29 @@ async function main() {
 
     // Seed predefined activity types
     const activityTypes = [
-        { name: 'Workshop' },
-        { name: 'Meeting' },
-        { name: 'Social Event' },
-        { name: 'Training' },
-        { name: 'Conference' },
-        { name: 'Volunteer Activity' },
-        { name: 'Community Service' },
-        { name: 'Educational Program' },
+        { name: "Children's Class" },
+        { name: 'Junior Youth Group' },
+        { name: 'Devotional Gathering' },
+        { name: 'Ruhi Book 1' },
+        { name: 'Ruhi Book 2' },
+        { name: 'Ruhi Book 3' },
+        { name: 'Ruhi Book 3A' },
+        { name: 'Ruhi Book 3B' },
+        { name: 'Ruhi Book 3C' },
+        { name: 'Ruhi Book 3D' },
+        { name: 'Ruhi Book 4' },
+        { name: 'Ruhi Book 5' },
+        { name: 'Ruhi Book 5A' },
+        { name: 'Ruhi Book 5B' },
+        { name: 'Ruhi Book 6' },
+        { name: 'Ruhi Book 7' },
+        { name: 'Ruhi Book 8' },
+        { name: 'Ruhi Book 9' },
+        { name: 'Ruhi Book 10' },
+        { name: 'Ruhi Book 11' },
+        { name: 'Ruhi Book 12' },
+        { name: 'Ruhi Book 13' },
+        { name: 'Ruhi Book 14' },
     ];
 
     for (const activityType of activityTypes) {
@@ -63,9 +78,6 @@ async function main() {
         { name: 'Animator' },
         { name: 'Host' },
         { name: 'Teacher' },
-        { name: 'Participant' },
-        { name: 'Organizer' },
-        { name: 'Volunteer' },
     ];
 
     for (const role of roles) {

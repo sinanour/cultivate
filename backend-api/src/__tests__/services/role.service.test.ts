@@ -16,8 +16,8 @@ describe('RoleService', () => {
     describe('getAllRoles', () => {
         it('should return all roles', async () => {
             const mockRoles = [
-                { id: '1', name: 'Participant', createdAt: new Date(), updatedAt: new Date(), version: 1 },
-                { id: '2', name: 'Organizer', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '1', name: 'Facilitator', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '2', name: 'Animator', createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
             mockRepository.findAll = jest.fn().mockResolvedValue(mockRoles);
 
@@ -38,7 +38,7 @@ describe('RoleService', () => {
 
     describe('createRole', () => {
         it('should create role with valid data', async () => {
-            const input = { name: 'Volunteer' };
+            const input = { name: 'Custom Role' };
             const mockRole = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
             mockRepository.findByName = jest.fn().mockResolvedValue(null);
@@ -46,14 +46,14 @@ describe('RoleService', () => {
 
             const result = await service.createRole(input);
 
-            expect(result).toEqual({ ...mockRole, isPredefined: true });
-            expect(mockRepository.findByName).toHaveBeenCalledWith('Volunteer');
+            expect(result).toEqual({ ...mockRole, isPredefined: false });
+            expect(mockRepository.findByName).toHaveBeenCalledWith('Custom Role');
             expect(mockRepository.create).toHaveBeenCalledWith(input);
         });
 
         it('should throw error for duplicate name', async () => {
-            const input = { name: 'Volunteer' };
-            const existing = { id: '1', name: 'Volunteer', createdAt: new Date(), updatedAt: new Date() };
+            const input = { name: 'Custom Role' };
+            const existing = { id: '1', name: 'Custom Role', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findByName = jest.fn().mockResolvedValue(existing);
 
@@ -70,8 +70,8 @@ describe('RoleService', () => {
     describe('updateRole', () => {
         it('should update role with valid data', async () => {
             const id = '1';
-            const input = { name: 'Updated Volunteer' };
-            const existing = { id, name: 'Volunteer', createdAt: new Date(), updatedAt: new Date(), version: 1 };
+            const input = { name: 'Updated Custom Role' };
+            const existing = { id, name: 'Custom Role', createdAt: new Date(), updatedAt: new Date(), version: 1 };
             const updated = { ...existing, ...input };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
@@ -92,9 +92,9 @@ describe('RoleService', () => {
 
         it('should throw error for duplicate name', async () => {
             const id = '1';
-            const input = { name: 'Volunteer' };
+            const input = { name: 'Custom Role' };
             const existing = { id, name: 'Old Name', createdAt: new Date(), updatedAt: new Date() };
-            const duplicate = { id: '2', name: 'Volunteer', createdAt: new Date(), updatedAt: new Date() };
+            const duplicate = { id: '2', name: 'Custom Role', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
             mockRepository.findByName = jest.fn().mockResolvedValue(duplicate);
@@ -106,7 +106,7 @@ describe('RoleService', () => {
     describe('deleteRole', () => {
         it('should delete role when not referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Volunteer', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Custom Role', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
             mockRepository.countReferences = jest.fn().mockResolvedValue(0);
@@ -125,7 +125,7 @@ describe('RoleService', () => {
 
         it('should throw error when role is referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Volunteer', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Custom Role', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
             mockRepository.countReferences = jest.fn().mockResolvedValue(3);
