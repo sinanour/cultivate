@@ -180,24 +180,41 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 7: Analytics Dashboard
 
-**User Story:** As a community organizer, I want to view analytics in the web interface, so that I can understand community engagement and growth.
+**User Story:** As a community organizer, I want to view comprehensive analytics with flexible grouping and filtering in the web interface, so that I can understand participation patterns, activity trends, and engagement changes over time across different segments of my community.
 
 #### Acceptance Criteria
 
 1. THE Web_App SHALL provide an engagement metrics dashboard
-2. THE Web_App SHALL display total participants and total activities
-3. THE Web_App SHALL display active and ongoing activity counts
-4. THE Web_App SHALL display a chart showing activities by type
-5. THE Web_App SHALL display a chart showing role distribution
-6. THE Web_App SHALL provide date range filters for engagement metrics
-7. THE Web_App SHALL provide a growth analytics dashboard
-8. THE Web_App SHALL display time-series charts for new participants and activities
-9. THE Web_App SHALL provide time period selection (day, week, month, year)
-10. THE Web_App SHALL display percentage changes between periods
-11. THE Web_App SHALL display cumulative counts over time
-12. THE Web_App SHALL provide a geographic area filter for all analytics
-13. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
-14. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
+2. THE Web_App SHALL display activities at the start of the selected date range
+3. THE Web_App SHALL display activities at the end of the selected date range
+4. THE Web_App SHALL display activities started within the selected date range
+5. THE Web_App SHALL display activities completed within the selected date range
+6. THE Web_App SHALL display activities cancelled within the selected date range
+7. THE Web_App SHALL display participants at the start of the selected date range
+8. THE Web_App SHALL display participants at the end of the selected date range
+9. THE Web_App SHALL display new participants within the selected date range
+10. THE Web_App SHALL display disengaged participants at the end of the selected date range
+11. THE Web_App SHALL display all activity counts in aggregate across all activity types
+12. THE Web_App SHALL display all activity counts broken down by activity type
+13. THE Web_App SHALL display all participant counts in aggregate across all activity types
+14. THE Web_App SHALL display all participant counts broken down by activity type
+15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
+16. THE Web_App SHALL provide filter controls for activity type (point filter)
+17. THE Web_App SHALL provide filter controls for venue (point filter)
+18. THE Web_App SHALL provide filter controls for geographic area (point filter, includes descendants)
+19. THE Web_App SHALL provide filter controls for date range (range filter with start and end dates)
+20. WHEN multiple grouping dimensions are selected, THE Web_App SHALL display metrics organized hierarchically by the specified dimensions in order
+21. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
+22. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
+23. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
+24. THE Web_App SHALL provide a growth analytics dashboard
+25. THE Web_App SHALL display time-series charts for new participants and activities
+26. THE Web_App SHALL provide time period selection (day, week, month, year)
+27. THE Web_App SHALL display percentage changes between periods
+28. THE Web_App SHALL display cumulative counts over time
+29. THE Web_App SHALL provide a geographic area filter for all analytics
+30. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
+31. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
 
 ### Requirement 8: Authentication UI
 

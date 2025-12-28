@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../types/errors.types';
 import { Prisma } from '@prisma/client';
+import { ErrorCode, HttpStatus } from '../utils/constants';
 
 export interface ErrorResponse {
   code: string;
@@ -37,16 +38,16 @@ export class ErrorHandlerMiddleware {
       }
 
       if (err instanceof Prisma.PrismaClientValidationError) {
-        return res.status(400).json({
-          code: 'VALIDATION_ERROR',
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          code: ErrorCode.VALIDATION_ERROR,
           message: 'Invalid data provided',
           details: {},
         });
       }
 
       // Handle generic errors
-      return res.status(500).json({
-        code: 'INTERNAL_ERROR',
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        code: ErrorCode.INTERNAL_ERROR,
         message: 'An unexpected error occurred',
         details: {},
       });
@@ -62,8 +63,8 @@ export class ErrorHandlerMiddleware {
   ): Response {
     switch (err.code) {
       case 'P2002': // Unique constraint violation
-        return res.status(400).json({
-          code: 'DUPLICATE_ENTRY',
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          code: ErrorCode.DUPLICATE_NAME,
           message: 'A record with this value already exists',
           details: {
             target: err.meta?.target,
@@ -71,8 +72,8 @@ export class ErrorHandlerMiddleware {
         });
 
       case 'P2003': // Foreign key constraint violation
-        return res.status(400).json({
-          code: 'INVALID_REFERENCE',
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          code: ErrorCode.INVALID_REFERENCE,
           message: 'Referenced record does not exist',
           details: {
             field: err.meta?.field_name,
@@ -80,15 +81,15 @@ export class ErrorHandlerMiddleware {
         });
 
       case 'P2025': // Record not found
-        return res.status(404).json({
-          code: 'NOT_FOUND',
+        return res.status(HttpStatus.NOT_FOUND).json({
+          code: ErrorCode.NOT_FOUND,
           message: 'Record not found',
           details: {},
         });
 
       default:
-        return res.status(500).json({
-          code: 'DATABASE_ERROR',
+        return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+          code: ErrorCode.INTERNAL_ERROR,
           message: 'A database error occurred',
           details: {
             code: err.code,
@@ -102,8 +103,8 @@ export class ErrorHandlerMiddleware {
    */
   static notFound() {
     return (_req: Request, res: Response) => {
-      res.status(404).json({
-        code: 'NOT_FOUND',
+      res.status(HttpStatus.NOT_FOUND).json({
+        code: ErrorCode.NOT_FOUND,
         message: 'Route not found',
         details: {},
       });

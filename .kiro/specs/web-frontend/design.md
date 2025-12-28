@@ -365,14 +365,29 @@ src/
 #### 11. Analytics Dashboards
 
 **EngagementDashboard**
-- Displays summary metrics using CloudScape Cards
-- Shows total participants, total activities, active activities, ongoing activities
+- Displays comprehensive temporal metrics using CloudScape Cards:
+  - Activities at start/end of date range
+  - Activities started, completed, cancelled within range
+  - Participants at start/end of date range
+  - New participants and disengaged participants
+- Displays aggregate counts and breakdowns by activity type
 - Renders charts for activities by type and role distribution
-- Provides date range filter using CloudScape DateRangePicker
-- Provides geographic area filter dropdown
+- Provides multi-dimensional grouping controls:
+  - Activity type grouping
+  - Venue grouping
+  - Geographic area grouping
+  - Date grouping (weekly, monthly, quarterly, yearly)
+- Provides flexible filter controls:
+  - Activity type filter (dropdown)
+  - Venue filter (dropdown)
+  - Geographic area filter (dropdown, includes descendants)
+  - Date range filter using CloudScape DateRangePicker
+- Displays hierarchically organized results when multiple grouping dimensions selected
+- Shows role distribution within filtered and grouped results
 - Displays geographic breakdown chart showing engagement by geographic area
 - Allows drilling down into child geographic areas
 - Uses recharts library for data visualization
+- Displays all-time metrics when no date range specified
 
 **GrowthDashboard**
 - Displays time-series charts for new participants and activities
@@ -501,7 +516,12 @@ src/
 - `getAddressHistory(participantId)`: Fetches participant's home address history from `/participants/:id/address-history`
 
 **AnalyticsService**
-- `getEngagementMetrics(startDate?, endDate?, geographicAreaId?)`: Fetches engagement data from `/analytics/engagement` with optional filters
+- `getEngagementMetrics(params)`: Fetches comprehensive engagement data from `/analytics/engagement` with flexible parameters
+  - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityTypeId?`, `venueId?`, `groupBy?` (array of dimensions), `dateGranularity?` (WEEKLY, MONTHLY, QUARTERLY, YEARLY)
+  - Returns temporal analysis: activities/participants at start/end, activities started/completed/cancelled, new/disengaged participants
+  - Returns aggregate counts and breakdowns by activity type
+  - Returns hierarchically grouped results when multiple dimensions specified
+  - Returns role distribution within filtered results
 - `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR)
 - `getGeographicAnalytics(startDate?, endDate?)`: Fetches geographic breakdown from `/analytics/geographic`
 
@@ -657,21 +677,70 @@ interface Assignment {
 }
 
 interface EngagementMetrics {
+  // Temporal activity counts
+  activitiesAtStart: number;
+  activitiesAtEnd: number;
+  activitiesStarted: number;
+  activitiesCompleted: number;
+  activitiesCancelled: number;
+  
+  // Temporal participant counts
+  participantsAtStart: number;
+  participantsAtEnd: number;
+  newParticipants: number;
+  disengagedParticipants: number;
+  
+  // Aggregate counts
   totalActivities: number;
-  activeActivities: number;
   totalParticipants: number;
-  activeParticipants: number;
-  participationRate: number;
-  retentionRate: number;
-  averageActivitySize: number;
+  
+  // Breakdown by activity type
+  activitiesByType: {
+    activityTypeId: string;
+    activityTypeName: string;
+    activitiesAtStart: number;
+    activitiesAtEnd: number;
+    activitiesStarted: number;
+    activitiesCompleted: number;
+    activitiesCancelled: number;
+    participantsAtStart: number;
+    participantsAtEnd: number;
+    newParticipants: number;
+    disengagedParticipants: number;
+  }[];
+  
+  // Role distribution
+  roleDistribution: {
+    roleId: string;
+    roleName: string;
+    count: number;
+  }[];
+  
+  // Geographic breakdown
   geographicBreakdown: {
     geographicAreaId: string;
     geographicAreaName: string;
     activityCount: number;
     participantCount: number;
   }[];
+  
+  // Grouped results (when groupBy dimensions specified)
+  groupedResults?: {
+    dimensions: { [key: string]: string };
+    metrics: EngagementMetrics;
+  }[];
+  
+  // Metadata
   periodStart: string;
   periodEnd: string;
+  appliedFilters: {
+    activityTypeId?: string;
+    venueId?: string;
+    geographicAreaId?: string;
+    startDate?: string;
+    endDate?: string;
+  };
+  groupingDimensions?: string[];
 }
 
 interface GrowthMetrics {
@@ -931,109 +1000,151 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 6.6**
 
-### Property 23: Engagement Metrics Accuracy
+### Property 23: Temporal activity metrics display
 
-*For any* dataset, the engagement metrics should correctly calculate total participants, total activities, active activities, and ongoing activities counts.
+*For any* engagement dashboard with a date range, the displayed metrics should include activities at start, activities at end, activities started, activities completed, and activities cancelled.
 
-**Validates: Requirements 7.2, 7.3**
+**Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6**
 
-### Property 24: Chart Data Aggregation
+### Property 24: Temporal participant metrics display
 
-*For any* dataset, the chart data for activities by type and role distribution should correctly aggregate counts for each category.
+*For any* engagement dashboard with a date range, the displayed metrics should include participants at start, participants at end, new participants, and disengaged participants.
 
-**Validates: Requirements 7.4, 7.5**
+**Validates: Requirements 7.7, 7.8, 7.9, 7.10**
 
-### Property 25: Time-Series Data Calculation
+### Property 25: Aggregate and breakdown display
+
+*For any* engagement dashboard, all activity and participant counts should be displayed in both aggregate form and broken down by activity type.
+
+**Validates: Requirements 7.11, 7.12, 7.13, 7.14**
+
+### Property 26: Multi-dimensional grouping controls
+
+*For any* engagement dashboard, the UI should provide controls to select one or more grouping dimensions (activity type, venue, geographic area, date with granularity selection).
+
+**Validates: Requirements 7.15**
+
+### Property 27: Filter control availability
+
+*For any* engagement dashboard, the UI should provide filter controls for activity type, venue, geographic area, and date range.
+
+**Validates: Requirements 7.16, 7.17, 7.18, 7.19**
+
+### Property 28: Hierarchical grouped results display
+
+*For any* engagement dashboard with multiple grouping dimensions selected, the results should be displayed in a hierarchical structure organized by the specified dimensions in order.
+
+**Validates: Requirements 7.20**
+
+### Property 29: Multiple filter application
+
+*For any* engagement dashboard with multiple filters applied, all filters should be applied using AND logic and the UI should clearly indicate which filters are active.
+
+**Validates: Requirements 7.21**
+
+### Property 30: All-time metrics display
+
+*For any* engagement dashboard without a date range specified, the UI should display all-time metrics and clearly indicate that no date filter is active.
+
+**Validates: Requirements 7.22**
+
+### Property 31: Role distribution display
+
+*For any* engagement dashboard, the role distribution chart should display counts for all roles within the filtered and grouped results.
+
+**Validates: Requirements 7.23**
+
+### Property 32: Time-series data calculation
 
 *For any* time period and dataset, the time-series charts should correctly calculate new participants and activities for each time unit.
 
-**Validates: Requirements 7.8**
+**Validates: Requirements 7.25, 7.26**
 
-### Property 26: Percentage Change Calculation
+### Property 33: Percentage change calculation
 
 *For any* two time periods, the percentage change calculation should correctly compute the relative change between periods.
 
-**Validates: Requirements 7.10**
+**Validates: Requirements 7.27**
 
-### Property 27: Cumulative Count Calculation
+### Property 34: Cumulative count calculation
 
 *For any* time series data, the cumulative counts should correctly sum all previous values up to each point in time.
 
-**Validates: Requirements 7.11**
+**Validates: Requirements 7.28**
 
-### Property 30: Unauthenticated Access Protection
+### Property 35: Unauthenticated access protection
 
 *For any* protected route, attempting to access it without authentication should redirect to the login page.
 
 **Validates: Requirements 9.1, 9.2**
 
-### Property 31: Unauthorized Action Error Messages
+### Property 36: Unauthorized action error messages
 
 *For any* unauthorized action attempt, the application should display an appropriate error message.
 
 **Validates: Requirements 9.6**
 
-### Property 32: Offline Data Caching
+### Property 37: Offline data caching
 
 *For any* user data loaded from the API, the data should be stored in IndexedDB for offline access.
 
 **Validates: Requirements 10.2**
 
-### Property 33: Offline Operation Queueing
+### Property 38: Offline operation queueing
 
 *For any* create, update, or delete operation performed while offline, the operation should be added to the local sync queue.
 
 **Validates: Requirements 10.3**
 
-### Property 34: Offline Feature Indication
+### Property 39: Offline feature indication
 
 *For any* feature that requires connectivity, when offline, the feature should be visually indicated as unavailable and disabled.
 
 **Validates: Requirements 10.6, 10.7**
 
-### Property 35: Sync Queue Processing
+### Property 40: Sync queue processing
 
 *For any* queued operations when connectivity is restored, all operations should be sent to the backend and the queue should be cleared upon success.
 
 **Validates: Requirements 11.2, 11.3**
 
-### Property 36: Sync Retry with Exponential Backoff
+### Property 41: Sync retry with exponential backoff
 
 *For any* failed synchronization attempt, the retry delay should increase exponentially with each subsequent failure.
 
 **Validates: Requirements 11.4**
 
-### Property 37: Pending Operation Count Display
+### Property 42: Pending operation count display
 
 *For any* number of pending operations in the sync queue, the displayed count should match the actual queue length.
 
 **Validates: Requirements 11.6**
 
-### Property 38: Active Navigation Highlighting
+### Property 43: Active navigation highlighting
 
 *For any* current route, the corresponding navigation item should be visually highlighted.
 
 **Validates: Requirements 13.2**
 
-### Property 39: Navigation State Persistence
+### Property 44: Navigation state persistence
 
 *For any* navigation between sections, the navigation state (expanded/collapsed items, scroll position) should be preserved.
 
 **Validates: Requirements 13.3**
 
-### Property 40: Form Validation Error Display
+### Property 45: Form validation error display
 
 *For any* invalid form field, the field should be visually highlighted and display an inline error message.
 
 **Validates: Requirements 14.2, 14.3**
 
-### Property 41: Invalid Form Submission Prevention
+### Property 46: Invalid form submission prevention
 
 *For any* form with validation errors, the submit button should be disabled or submission should be prevented.
 
 **Validates: Requirements 14.4**
 
-### Property 42: Valid Field Value Preservation
+### Property 47: Valid field value preservation
 
 *For any* form with validation errors, all valid field values should remain unchanged after validation fails.
 

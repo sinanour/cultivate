@@ -159,7 +159,7 @@ Services implement business logic and coordinate operations:
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search, supports geographic area filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
-- **AnalyticsService**: Calculates engagement and growth metrics, applies date and geographic filters, aggregates data by geographic area
+- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled, new/disengaged participants), supports multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters and range filters), aggregates data hierarchically by specified dimensions
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
 - **AuditService**: Logs user actions, stores audit records
@@ -519,173 +519,237 @@ The API uses Prisma to define the following database models:
 
 ### Analytics Properties
 
-**Property 20: Unique participant counting**
-*For any* set of activities, the engagement metrics should count each participant only once regardless of how many activities they're assigned to.
+**Property 20: Activities at start of date range counting**
+*For any* date range, engagement metrics should correctly count activities that existed (were created and not yet completed or cancelled) at the start of the date range.
 **Validates: Requirements 6.2**
 
-**Property 21: Activity type counting**
-*For any* set of activities, the engagement metrics should correctly count activities grouped by type.
+**Property 21: Activities at end of date range counting**
+*For any* date range, engagement metrics should correctly count activities that existed (were created and not yet completed or cancelled) at the end of the date range.
 **Validates: Requirements 6.3**
 
-**Property 22: Active activity counting**
-*For any* set of activities, the engagement metrics should correctly count activities with ACTIVE or ongoing status.
+**Property 22: Activities started within range counting**
+*For any* date range, engagement metrics should correctly count activities whose start date falls within the date range.
 **Validates: Requirements 6.4**
 
-**Property 23: Date range filtering**
-*For any* date range filter, engagement metrics should include only activities whose date ranges overlap with the filter range.
-**Validates: Requirements 6.5, 6.6**
+**Property 23: Activities completed within range counting**
+*For any* date range, engagement metrics should correctly count activities whose status changed to COMPLETED within the date range.
+**Validates: Requirements 6.5**
 
-**Property 24: Participant count per type**
-*For any* set of activities, the engagement metrics should correctly count unique participants per activity type.
+**Property 24: Activities cancelled within range counting**
+*For any* date range, engagement metrics should correctly count activities whose status changed to CANCELLED within the date range.
+**Validates: Requirements 6.6**
+
+**Property 25: Participants at start of date range counting**
+*For any* date range, engagement metrics should correctly count unique participants who were assigned to at least one activity at the start of the date range.
 **Validates: Requirements 6.7**
 
-**Property 25: Role distribution calculation**
-*For any* set of activities, the engagement metrics should correctly count assignments grouped by role.
+**Property 26: Participants at end of date range counting**
+*For any* date range, engagement metrics should correctly count unique participants who were assigned to at least one activity at the end of the date range.
 **Validates: Requirements 6.8**
 
-**Property 26: Time period grouping**
+**Property 27: New participants counting**
+*For any* date range, engagement metrics should correctly count unique participants who joined their first activity within the date range.
+**Validates: Requirements 6.9**
+
+**Property 28: Disengaged participants counting**
+*For any* date range and geographic area, engagement metrics should correctly count participants who exist in the system within the geographic area but are not associated with any activities at the end of the date range.
+**Validates: Requirements 6.10**
+
+**Property 29: Aggregate activity counts**
+*For any* engagement metrics request, activity counts should be provided in aggregate across all activity types.
+**Validates: Requirements 6.11**
+
+**Property 30: Activity counts by type breakdown**
+*For any* engagement metrics request, activity counts should be broken down by activity type.
+**Validates: Requirements 6.12**
+
+**Property 31: Aggregate participant counts**
+*For any* engagement metrics request, participant counts should be provided in aggregate across all activity types.
+**Validates: Requirements 6.13**
+
+**Property 32: Participant counts by type breakdown**
+*For any* engagement metrics request, participant counts should be broken down by activity type.
+**Validates: Requirements 6.14**
+
+**Property 33: Multi-dimensional grouping support**
+*For any* engagement metrics request with multiple grouping dimensions, the response should organize metrics hierarchically by the specified dimensions in order.
+**Validates: Requirements 6.15, 6.20**
+
+**Property 34: Activity type point filter**
+*For any* engagement metrics request with an activity type filter, only activities of the specified type should be included.
+**Validates: Requirements 6.16**
+
+**Property 35: Venue point filter**
+*For any* engagement metrics request with a venue filter, only activities associated with the specified venue should be included.
+**Validates: Requirements 6.17**
+
+**Property 36: Geographic area point filter**
+*For any* engagement metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
+**Validates: Requirements 6.18, 6.23**
+
+**Property 37: Date range filter**
+*For any* engagement metrics request with a date range filter, only activities and participants within the specified date range should be included.
+**Validates: Requirements 6.19**
+
+**Property 38: Multiple filter AND logic**
+*For any* engagement metrics request with multiple filters, all filters should be applied using AND logic.
+**Validates: Requirements 6.21**
+
+**Property 39: All-time metrics without date range**
+*For any* engagement metrics request without a date range, metrics should be calculated for all time.
+**Validates: Requirements 6.22**
+
+**Property 40: Role distribution calculation**
+*For any* engagement metrics request, the response should include role distribution across all activities within the filtered and grouped results.
+**Validates: Requirements 6.24**
+
+**Property 41: Date grouping granularity**
+*For any* engagement metrics request with date grouping, the system should support weekly, monthly, quarterly, and yearly granularity.
+**Validates: Requirements 6.15**
+
+**Property 42: Time period grouping**
 *For any* time period parameter (DAY, WEEK, MONTH, YEAR), growth metrics should correctly group data into the specified periods.
 **Validates: Requirements 7.2**
 
-**Property 27: New participant counting per period**
+**Property 43: New participant counting per period**
 *For any* time period, growth metrics should count only participants created within that period.
 **Validates: Requirements 7.4**
 
-**Property 28: New activity counting per period**
+**Property 44: New activity counting per period**
 *For any* time period, growth metrics should count only activities created within that period.
 **Validates: Requirements 7.5**
 
-**Property 29: Chronological ordering**
+**Property 45: Chronological ordering**
 *For any* growth metrics response, time-series data should be ordered from earliest to latest period.
 **Validates: Requirements 7.6**
 
-**Property 30: Percentage change calculation**
+**Property 46: Percentage change calculation**
 *For any* two consecutive time periods, the percentage change should be calculated as ((current - previous) / previous) * 100.
 **Validates: Requirements 7.7**
 
-**Property 31: Cumulative count calculation**
+**Property 47: Cumulative count calculation**
 *For any* time period, the cumulative participant count should equal the sum of all new participants up to and including that period.
 **Validates: Requirements 7.8**
 
 ### Data Persistence Properties
 
-**Property 32: Immediate persistence**
+**Property 48: Immediate persistence**
 *For any* create or update operation, the data should be immediately retrievable in subsequent GET requests.
 **Validates: Requirements 8.2**
 
-**Property 33: Transaction atomicity**
+**Property 49: Transaction atomicity**
 *For any* batch operation affecting multiple tables, either all operations should succeed or all should fail (no partial updates).
 **Validates: Requirements 8.3**
 
-**Property 34: Foreign key constraint enforcement**
+**Property 50: Foreign key constraint enforcement**
 *For any* operation attempting to create invalid foreign key references, the database should reject it with an error.
 **Validates: Requirements 8.4**
 
-**Property 35: Database error handling**
+**Property 51: Database error handling**
 *For any* database operation failure, the API should return an appropriate error response with a descriptive message.
 **Validates: Requirements 8.5**
 
 ### Synchronization Properties
 
-**Property 36: Batch sync atomicity**
+**Property 52: Batch sync atomicity**
 *For any* batch of sync operations, either all operations should succeed or all should fail within a single transaction.
 **Validates: Requirements 9.2**
 
-**Property 37: Local to server ID mapping**
+**Property 53: Local to server ID mapping**
 *For any* sync operation creating a new entity with a local ID, the response should include a mapping from the local ID to the generated server ID.
 **Validates: Requirements 9.3**
 
-**Property 38: Operation status reporting**
+**Property 54: Operation status reporting**
 *For any* batch sync request, the response should include success or failure status for each individual operation.
 **Validates: Requirements 9.4**
 
-**Property 39: Last-write-wins conflict resolution**
+**Property 55: Last-write-wins conflict resolution**
 *For any* conflicting sync operations on the same entity, the operation with the latest timestamp should be applied.
 **Validates: Requirements 9.5**
 
-**Property 40: Conflict information reporting**
+**Property 56: Conflict information reporting**
 *For any* sync conflict, the response should include conflict details identifying the conflicting entity and timestamps.
 **Validates: Requirements 9.6**
 
-**Property 41: Sync operation type support**
+**Property 57: Sync operation type support**
 *For any* sync batch, the API should correctly process CREATE, UPDATE, and DELETE operation types.
 **Validates: Requirements 9.7**
 
 ### Authentication Properties
 
-**Property 42: Invalid credential rejection**
+**Property 58: Invalid credential rejection**
 *For any* login attempt with incorrect email or password, the API should reject it with a 401 error.
 **Validates: Requirements 10.5**
 
-**Property 43: Token generation on authentication**
+**Property 59: Token generation on authentication**
 *For any* successful login, the API should return both a JWT access token and a refresh token.
 **Validates: Requirements 10.6**
 
-**Property 44: Password hashing**
+**Property 60: Password hashing**
 *For any* user, the password should never be stored in plain text; only the bcrypt hash should be stored.
 **Validates: Requirements 10.7**
 
-**Property 45: Access token expiration**
+**Property 61: Access token expiration**
 *For any* access token older than 15 minutes, the API should reject it with a 401 error.
 **Validates: Requirements 10.8**
 
-**Property 46: Refresh token expiration**
+**Property 62: Refresh token expiration**
 *For any* refresh token older than 7 days, the API should reject it with a 401 error.
 **Validates: Requirements 10.9**
 
-**Property 46A: Root administrator environment variable extraction**
+**Property 62A: Root administrator environment variable extraction**
 *For any* system startup, the root administrator username should be extracted from the SRP_ROOT_ADMIN_EMAIL environment variable.
 **Validates: Requirements 10.10**
 
-**Property 46B: Root administrator password extraction**
+**Property 62B: Root administrator password extraction**
 *For any* system startup, the root administrator password should be extracted from the SRP_ROOT_ADMIN_PASSWORD environment variable.
 **Validates: Requirements 10.11**
 
-**Property 46C: Root administrator database seeding**
+**Property 62C: Root administrator database seeding**
 *For any* database seed operation, a user record should be created with the email from SRP_ROOT_ADMIN_EMAIL and hashed password from SRP_ROOT_ADMIN_PASSWORD.
 **Validates: Requirements 10.12, 10.13**
 
-**Property 46D: Root administrator password hashing**
+**Property 62D: Root administrator password hashing**
 *For any* root administrator user creation during seeding, the password should be hashed using bcrypt before storage.
 **Validates: Requirements 10.13**
 
-**Property 46E: Root administrator role assignment**
+**Property 62E: Root administrator role assignment**
 *For any* root administrator user created during seeding, the user should be assigned the ADMINISTRATOR system role.
 **Validates: Requirements 10.14**
 
 ### Authorization Properties
 
-**Property 47: Protected endpoint authentication requirement**
+**Property 63: Protected endpoint authentication requirement**
 *For any* protected endpoint request without a valid JWT token, the API should return 401 Unauthorized.
 **Validates: Requirements 11.1**
 
-**Property 48: Administrator full access**
+**Property 64: Administrator full access**
 *For any* operation, users with ADMINISTRATOR role should be able to perform it successfully.
 **Validates: Requirements 11.3**
 
-**Property 49: Editor write access**
+**Property 65: Editor write access**
 *For any* create, update, or delete operation on activities, participants, or configurations, users with EDITOR role should be able to perform it successfully.
 **Validates: Requirements 11.4**
 
-**Property 50: Read-only user restrictions**
+**Property 66: Read-only user restrictions**
 *For any* create, update, or delete operation, users with READ_ONLY role should receive a 403 Forbidden error.
 **Validates: Requirements 11.5**
 
-**Property 51: Unauthorized action rejection**
+**Property 67: Unauthorized action rejection**
 *For any* operation that a user's role doesn't permit, the API should return 403 Forbidden.
 **Validates: Requirements 11.6**
 
-**Property 52: Permission validation enforcement**
+**Property 68: Permission validation enforcement**
 *For any* protected operation, the API should validate user permissions before executing the operation.
 **Validates: Requirements 11.7**
 
 ### Audit Logging Properties
 
-**Property 53: Authentication event logging**
+**Property 69: Authentication event logging**
 *For any* login, logout, or token refresh event, an audit log entry should be created.
 **Validates: Requirements 12.1**
 
-**Property 54: Role change logging**
+**Property 70: Role change logging**
 *For any* user role modification, an audit log entry should be created.
 **Validates: Requirements 12.2**
 

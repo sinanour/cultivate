@@ -181,7 +181,9 @@ sequenceDiagram
 - Statistics aggregation across hierarchy
 
 #### Analytics Engine
-- Engagement metrics calculation (participation rates, retention)
+- Comprehensive engagement metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled, new/disengaged participants)
+- Multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity)
+- Flexible filtering (point filters and range filters)
 - Growth data aggregation (new participants, activity trends)
 - Time-series data generation
 - Geographic filtering and breakdown
@@ -505,20 +507,41 @@ All client applications provide interactive map views:
 
 ### Geographic Analytics
 
-The analytics engine supports geographic filtering and breakdown:
+The analytics engine supports comprehensive temporal analysis, multi-dimensional grouping, and flexible filtering:
+
+**Temporal Analysis**:
+- Activities at start and end of date ranges (existing activities)
+- Activities started, completed, and cancelled within date ranges (activity lifecycle events)
+- Participants at start and end of date ranges (active participants)
+- New participants (first-time joiners) and disengaged participants (no current activities)
+- All metrics provided in aggregate and broken down by activity type
+
+**Multi-Dimensional Grouping**:
+- Group by activity type: Compare different types of activities
+- Group by venue: Analyze engagement at specific locations
+- Group by geographic area: Hierarchical geographic analysis
+- Group by date: Weekly, monthly, quarterly, or yearly time periods
+- Multiple dimensions: Hierarchical organization (e.g., by geographic area, then by activity type, then by date)
+
+**Flexible Filtering**:
+- Point filters: Activity type, venue, geographic area (includes descendants)
+- Range filters: Date ranges with start and end dates
+- Multiple filters: Applied using AND logic for precise queries
+- All-time metrics: Calculate across entire dataset when no date range specified
 
 **Geographic Filtering**:
 - All analytics queries accept optional geographic area filter
 - Filtering includes the specified area and all descendants
 - Enables comparison across different geographic regions
+- Hierarchical drill-down from parent to child areas
 
 **Geographic Breakdown**:
 - Engagement metrics grouped by geographic area
-- Hierarchical drill-down from parent to child areas
 - Activity and participant counts per area
+- Role distribution within geographic segments
 - Visualization in charts and on maps
 
-**Design Rationale**: Geographic tracking enables community organizers to understand spatial patterns in community engagement, identify underserved areas, and allocate resources effectively. The hierarchical model provides flexibility for different community structures (urban vs rural, large vs small).
+**Design Rationale**: The enhanced analytics system enables sophisticated queries like "Show me monthly engagement metrics for each activity type in the downtown area, broken down by venue" or "Compare quarterly participant growth across all geographic areas." This flexibility supports diverse reporting needs while maintaining performance through efficient aggregation strategies. Geographic tracking enables community organizers to understand spatial patterns in community engagement, identify underserved areas, and allocate resources effectively. The hierarchical model provides flexibility for different community structures (urban vs rural, large vs small).
 
 
 ## Data Models

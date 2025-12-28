@@ -461,18 +461,42 @@ This implementation plan covers the React-based web application built with TypeS
 
 - [x] 14. Implement analytics dashboards
   - [x] 14.1 Create EngagementDashboard component
-    - Display summary metrics using CloudScape Cards (totalActivities, activeActivities, totalParticipants, activeParticipants, participationRate, retentionRate, averageActivitySize)
+    - Display comprehensive temporal metrics using CloudScape Cards:
+      - Activities at start/end of date range
+      - Activities started, completed, cancelled within range
+      - Participants at start/end of date range
+      - New participants and disengaged participants
+    - Display aggregate counts and breakdowns by activity type
     - Render charts for activities by type and role distribution
-    - Provide date range filter (optional startDate, endDate)
-    - Provide geographic area filter (optional geographicAreaId)
-    - Display geographic breakdown chart with geographicAreaId, geographicAreaName, activityCount, participantCount
-    - Use /analytics/engagement endpoint
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.12, 7.13, 7.14_
+    - Provide multi-dimensional grouping controls:
+      - Activity type grouping
+      - Venue grouping
+      - Geographic area grouping
+      - Date grouping (weekly, monthly, quarterly, yearly)
+    - Provide flexible filter controls:
+      - Activity type filter (dropdown)
+      - Venue filter (dropdown)
+      - Geographic area filter (dropdown, includes descendants)
+      - Date range filter using CloudScape DateRangePicker
+    - Display hierarchically organized results when multiple grouping dimensions selected
+    - Show role distribution within filtered and grouped results
+    - Display geographic breakdown chart showing engagement by geographic area
+    - Allow drilling down into child geographic areas
+    - Display all-time metrics when no date range specified
+    - Use /analytics/engagement endpoint with enhanced parameters
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.29, 7.30, 7.31_
 
   - [ ]* 14.2 Write property tests for engagement metrics
-    - **Property 20: Engagement Metrics Accuracy**
-    - **Property 21: Chart Data Aggregation**
-    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5**
+    - **Property 23: Temporal Activity Metrics Display**
+    - **Property 24: Temporal Participant Metrics Display**
+    - **Property 25: Aggregate and Breakdown Display**
+    - **Property 26: Multi-Dimensional Grouping Controls**
+    - **Property 27: Filter Control Availability**
+    - **Property 28: Hierarchical Grouped Results Display**
+    - **Property 29: Multiple Filter Application**
+    - **Property 30: All-Time Metrics Display**
+    - **Property 31: Role Distribution Display**
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23**
 
   - [x] 14.2 Create GrowthDashboard component
     - Display time-series charts for new participants and activities
@@ -481,19 +505,19 @@ This implementation plan covers the React-based web application built with TypeS
     - Display cumulative counts over time
     - Provide geographic area filter (optional geographicAreaId)
     - Use /analytics/growth endpoint with optional startDate, endDate, period, geographicAreaId
-    - _Requirements: 7.7, 7.8, 7.9, 7.10, 7.11, 7.12_
+    - _Requirements: 7.24, 7.25, 7.26, 7.27, 7.28, 7.29_
 
   - [ ]* 14.3 Write property tests for growth metrics
-    - **Property 22: Time-Series Data Calculation**
-    - **Property 23: Percentage Change Calculation**
-    - **Property 24: Cumulative Count Calculation**
-    - **Validates: Requirements 7.8, 7.10, 7.11**
+    - **Property 32: Time-Series Data Calculation**
+    - **Property 33: Percentage Change Calculation**
+    - **Property 34: Cumulative Count Calculation**
+    - **Validates: Requirements 7.25, 7.26, 7.27, 7.28**
 
   - [x] 14.3 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint
     - Show metrics by geographic area (geographicAreaId, geographicAreaName, areaType, totalActivities, activeActivities, totalParticipants, activeParticipants)
     - Provide optional date range filter (startDate, endDate)
-    - _Requirements: 7.13_
+    - _Requirements: 7.30, 7.31_
 
 - [x] 15. Implement offline support
   - [x] 15.1 Create OfflineStorage service

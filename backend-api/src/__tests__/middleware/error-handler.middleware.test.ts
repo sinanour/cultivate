@@ -52,7 +52,7 @@ describe('ErrorHandlerMiddleware', () => {
             expect(mockResponse.status).toHaveBeenCalledWith(400);
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    code: 'DUPLICATE_ENTRY',
+                    code: 'DUPLICATE_NAME',
                 })
             );
         });

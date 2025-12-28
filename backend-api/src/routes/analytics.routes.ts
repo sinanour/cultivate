@@ -5,6 +5,7 @@ import { AuthorizationMiddleware } from '../middleware/authorization.middleware'
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import { EngagementQuerySchema, GrowthQuerySchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
+import { ErrorCode, HttpStatus } from '../utils/constants';
 
 export class AnalyticsRoutes {
     private router: Router;
@@ -46,19 +47,23 @@ export class AnalyticsRoutes {
 
     private async getEngagement(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { startDate, endDate, geographicAreaId } = req.query;
+            const { startDate, endDate, geographicAreaId, activityTypeId, venueId, groupBy, dateGranularity } = req.query;
 
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
                 geographicAreaId: geographicAreaId as string | undefined,
+                activityTypeId: activityTypeId as string | undefined,
+                venueId: venueId as string | undefined,
+                groupBy: groupBy ? (Array.isArray(groupBy) ? groupBy : [groupBy]) as any[] : undefined,
+                dateGranularity: dateGranularity as any | undefined,
             };
 
             const metrics = await this.analyticsService.getEngagementMetrics(filters);
-            res.status(200).json({ success: true, data: metrics });
+            res.status(HttpStatus.OK).json({ success: true, data: metrics });
         } catch (error) {
-            res.status(500).json({
-                code: 'INTERNAL_ERROR',
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                code: ErrorCode.INTERNAL_ERROR,
                 message: 'An error occurred while calculating engagement metrics',
                 details: {},
             });
@@ -79,10 +84,10 @@ export class AnalyticsRoutes {
                 period as TimePeriod,
                 filters
             );
-            res.status(200).json({ success: true, data: metrics });
+            res.status(HttpStatus.OK).json({ success: true, data: metrics });
         } catch (error) {
-            res.status(500).json({
-                code: 'INTERNAL_ERROR',
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                code: ErrorCode.INTERNAL_ERROR,
                 message: 'An error occurred while calculating growth metrics',
                 details: {},
             });
@@ -99,10 +104,10 @@ export class AnalyticsRoutes {
             };
 
             const breakdown = await this.analyticsService.getGeographicBreakdown(filters);
-            res.status(200).json({ success: true, data: breakdown });
+            res.status(HttpStatus.OK).json({ success: true, data: breakdown });
         } catch (error) {
-            res.status(500).json({
-                code: 'INTERNAL_ERROR',
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                code: ErrorCode.INTERNAL_ERROR,
                 message: 'An error occurred while calculating geographic breakdown',
                 details: {},
             });

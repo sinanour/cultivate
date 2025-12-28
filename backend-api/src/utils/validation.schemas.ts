@@ -1,4 +1,13 @@
 import { z } from 'zod';
+import {
+  ActivityStatus,
+  VenueType,
+  GeographicAreaType,
+  SyncOperation,
+  TimePeriod,
+  DateGranularity,
+  GroupingDimension
+} from './constants';
 
 // Auth schemas
 export const LoginSchema = z.object({
@@ -55,35 +64,13 @@ export const ParticipantSearchSchema = z.object({
 // Geographic Area schemas
 export const GeographicAreaCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),
-  areaType: z.enum([
-    'NEIGHBOURHOOD',
-    'COMMUNITY',
-    'CITY',
-    'CLUSTER',
-    'COUNTY',
-    'PROVINCE',
-    'STATE',
-    'COUNTRY',
-    'CUSTOM',
-  ]),
+  areaType: z.nativeEnum(GeographicAreaType),
   parentGeographicAreaId: z.string().uuid('Invalid parent ID format').optional(),
 });
 
 export const GeographicAreaUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
-  areaType: z
-    .enum([
-      'NEIGHBOURHOOD',
-      'COMMUNITY',
-      'CITY',
-      'CLUSTER',
-      'COUNTY',
-      'PROVINCE',
-      'STATE',
-      'COUNTRY',
-      'CUSTOM',
-    ])
-    .optional(),
+  areaType: z.nativeEnum(GeographicAreaType).optional(),
   parentGeographicAreaId: z.string().uuid('Invalid parent ID format').optional().nullable(),
   version: z.number().int().positive().optional(),
 });
@@ -95,7 +82,7 @@ export const VenueCreateSchema = z.object({
   geographicAreaId: z.string().uuid('Invalid geographic area ID format'),
   latitude: z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90').optional(),
   longitude: z.number().min(-180, 'Longitude must be >= -180').max(180, 'Longitude must be <= 180').optional(),
-  venueType: z.enum(['PUBLIC_BUILDING', 'PRIVATE_RESIDENCE']).optional(),
+  venueType: z.nativeEnum(VenueType).optional(),
 });
 
 export const VenueUpdateSchema = z.object({
@@ -104,7 +91,7 @@ export const VenueUpdateSchema = z.object({
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
   latitude: z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90').optional().nullable(),
   longitude: z.number().min(-180, 'Longitude must be >= -180').max(180, 'Longitude must be <= 180').optional().nullable(),
-  venueType: z.enum(['PUBLIC_BUILDING', 'PRIVATE_RESIDENCE']).optional().nullable(),
+  venueType: z.nativeEnum(VenueType).optional().nullable(),
   version: z.number().int().positive().optional(),
 });
 
@@ -118,7 +105,7 @@ export const ActivityCreateSchema = z.object({
   activityTypeId: z.string().uuid('Invalid activity type ID format'),
   startDate: z.string().datetime('Invalid start date format'),
   endDate: z.string().datetime('Invalid end date format').optional(),
-  status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional(),
+  status: z.nativeEnum(ActivityStatus).optional(),
   venueIds: z.array(z.string().uuid('Invalid venue ID format')).optional(),
 });
 
@@ -127,7 +114,7 @@ export const ActivityUpdateSchema = z.object({
   activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional().nullable(),
-  status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional(),
+  status: z.nativeEnum(ActivityStatus).optional(),
   version: z.number().int().positive().optional(),
 });
 
@@ -152,10 +139,14 @@ export const EngagementQuerySchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
+  venueId: z.string().uuid('Invalid venue ID format').optional(),
+  groupBy: z.array(z.nativeEnum(GroupingDimension)).optional(),
+  dateGranularity: z.nativeEnum(DateGranularity).optional(),
 });
 
 export const GrowthQuerySchema = z.object({
-  period: z.enum(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+  period: z.nativeEnum(TimePeriod),
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
@@ -163,7 +154,7 @@ export const GrowthQuerySchema = z.object({
 
 // Sync schemas
 export const SyncOperationSchema = z.object({
-  operation: z.enum(['CREATE', 'UPDATE', 'DELETE']),
+  operation: z.nativeEnum(SyncOperation),
   entityType: z.string().min(1, 'Entity type is required'),
   localId: z.string().optional(),
   serverId: z.string().uuid('Invalid server ID format').optional(),

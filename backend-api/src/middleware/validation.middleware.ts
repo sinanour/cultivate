@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
+import { ErrorCode, HttpStatus } from '../utils/constants';
 
 export class ValidationMiddleware {
   /**
@@ -12,8 +13,8 @@ export class ValidationMiddleware {
         next();
       } catch (error) {
         if (error instanceof ZodError) {
-          return res.status(400).json({
-            code: 'VALIDATION_ERROR',
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            code: ErrorCode.VALIDATION_ERROR,
             message: 'Invalid request data',
             details: error.errors.map((err) => ({
               path: err.path.join('.'),
@@ -36,8 +37,8 @@ export class ValidationMiddleware {
         next();
       } catch (error) {
         if (error instanceof ZodError) {
-          return res.status(400).json({
-            code: 'VALIDATION_ERROR',
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            code: ErrorCode.VALIDATION_ERROR,
             message: 'Invalid query parameters',
             details: error.errors.map((err) => ({
               path: err.path.join('.'),
@@ -60,8 +61,8 @@ export class ValidationMiddleware {
         next();
       } catch (error) {
         if (error instanceof ZodError) {
-          return res.status(400).json({
-            code: 'VALIDATION_ERROR',
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            code: ErrorCode.VALIDATION_ERROR,
             message: 'Invalid path parameters',
             details: error.errors.map((err) => ({
               path: err.path.join('.'),
