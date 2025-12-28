@@ -54,6 +54,12 @@ export default function DashboardPage() {
       title: 'Growth Analytics',
       description: 'View growth trends over time',
     },
+    {
+      href: '/users',
+      icon: 'lock-private',
+      title: 'User Administration',
+      description: 'Manage system users and permissions',
+    },
   ];
 
   return (
