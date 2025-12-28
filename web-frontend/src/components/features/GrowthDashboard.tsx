@@ -8,21 +8,16 @@ import Box from '@cloudscape-design/components/box';
 import Select from '@cloudscape-design/components/select';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AnalyticsService } from '../../services/api/analytics.service';
-import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 
 export function GrowthDashboard() {
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
-  const [geographicAreaId, setGeographicAreaId] = useState('');
-
-  const { data: geographicAreas = [] } = useQuery({
-    queryKey: ['geographicAreas'],
-    queryFn: () => GeographicAreaService.getGeographicAreas(),
-  });
+  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['growthMetrics', period, geographicAreaId],
-    queryFn: () => AnalyticsService.getGrowthMetrics(period, geographicAreaId || undefined),
+    queryKey: ['growthMetrics', period, selectedGeographicAreaId],
+    queryFn: () => AnalyticsService.getGrowthMetrics(period, selectedGeographicAreaId || undefined),
   });
 
   const periodOptions = [
@@ -30,14 +25,6 @@ export function GrowthDashboard() {
     { label: 'Weekly', value: 'week' },
     { label: 'Monthly', value: 'month' },
     { label: 'Yearly', value: 'year' },
-  ];
-
-  const geographicAreaOptions = [
-    { label: 'All areas', value: '' },
-    ...geographicAreas.map((area) => ({
-      label: area.name,
-      value: area.id,
-    })),
   ];
 
   if (isLoading) {
@@ -67,21 +54,14 @@ export function GrowthDashboard() {
     <SpaceBetween size="l">
       <Container
         header={
-          <Header variant="h3">Filters</Header>
+          <Header variant="h3">Time Period Filter</Header>
         }
       >
-        <SpaceBetween direction="horizontal" size="m">
-          <Select
-            selectedOption={periodOptions.find((o) => o.value === period) || periodOptions[2]}
-            onChange={({ detail }) => setPeriod(detail.selectedOption.value as 'day' | 'week' | 'month' | 'year')}
-            options={periodOptions}
-          />
-          <Select
-            selectedOption={geographicAreaOptions.find((o) => o.value === geographicAreaId) || geographicAreaOptions[0]}
-            onChange={({ detail }) => setGeographicAreaId(detail.selectedOption.value || '')}
-            options={geographicAreaOptions}
-          />
-        </SpaceBetween>
+        <Select
+          selectedOption={periodOptions.find((o) => o.value === period) || periodOptions[2]}
+          onChange={({ detail }) => setPeriod(detail.selectedOption.value as 'day' | 'week' | 'month' | 'year')}
+          options={periodOptions}
+        />
       </Container>
 
       <ColumnLayout columns={2} variant="text-grid">

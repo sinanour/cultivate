@@ -12,19 +12,30 @@ import {
 import { AnalyticsService } from '../services/api/analytics.service';
 import type { GeographicAnalytics } from '../types';
 
+// Helper function to convert YYYY-MM-DD to ISO datetime string
+function toISODateTime(dateString: string, isEndOfDay = false): string {
+    const date = new Date(dateString);
+    if (isEndOfDay) {
+        date.setHours(23, 59, 59, 999);
+    } else {
+        date.setHours(0, 0, 0, 0);
+    }
+    return date.toISOString();
+}
+
 export default function GeographicAnalyticsDashboardPage() {
     const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(null);
 
     const { data: geographicData, isLoading } = useQuery({
         queryKey: ['geographic-analytics', dateRange],
         queryFn: () => {
-            // Extract dates from the date range value
+            // Extract dates from the date range value and convert to ISO datetime
             let startDate: string | undefined;
             let endDate: string | undefined;
 
             if (dateRange?.type === 'absolute') {
-                startDate = dateRange.startDate;
-                endDate = dateRange.endDate;
+                startDate = toISODateTime(dateRange.startDate, false);
+                endDate = toISODateTime(dateRange.endDate, true);
             }
 
             return AnalyticsService.getGeographicAnalytics(startDate, endDate);
@@ -43,6 +54,7 @@ export default function GeographicAnalyticsDashboardPage() {
                             <DateRangePicker
                                 onChange={({ detail }) => setDateRange(detail.value)}
                                 value={dateRange}
+                                dateOnly={true}
                                 relativeOptions={[
                                     {
                                         key: 'previous-7-days',
@@ -102,8 +114,6 @@ export default function GeographicAnalyticsDashboardPage() {
                                     relativeRangeSelectionHeading: 'Choose a range',
                                     startDateLabel: 'Start date',
                                     endDateLabel: 'End date',
-                                    startTimeLabel: 'Start time',
-                                    endTimeLabel: 'End time',
                                     clearButtonLabel: 'Clear',
                                     cancelButtonLabel: 'Cancel',
                                     applyButtonLabel: 'Apply',

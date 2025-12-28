@@ -5,39 +5,60 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
-import Select from '@cloudscape-design/components/select';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
+import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AnalyticsService } from '../../services/api/analytics.service';
-import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+
+// Helper function to convert YYYY-MM-DD to ISO datetime string
+function toISODateTime(dateString: string, isEndOfDay = false): string {
+  const date = new Date(dateString);
+  if (isEndOfDay) {
+    date.setHours(23, 59, 59, 999);
+  } else {
+    date.setHours(0, 0, 0, 0);
+  }
+  return date.toISOString();
+}
+
+// Initialize with last 30 days
+const getDefaultDateRange = (): DateRangePickerProps.Value => {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 30);
+  
+  return {
+    type: 'absolute',
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0],
+  };
+};
 
 export function EngagementDashboard() {
-  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string } | null>(null);
-  const [geographicAreaId, setGeographicAreaId] = useState('');
-
-  const { data: geographicAreas = [] } = useQuery({
-    queryKey: ['geographicAreas'],
-    queryFn: () => GeographicAreaService.getGeographicAreas(),
-  });
+  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value>(getDefaultDateRange());
+  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['engagementMetrics', dateRange, geographicAreaId],
-    queryFn: () =>
-      AnalyticsService.getEngagementMetrics(
-        dateRange?.startDate,
-        dateRange?.endDate,
-        geographicAreaId || undefined
-      ),
+    queryKey: ['engagementMetrics', dateRange, selectedGeographicAreaId],
+    queryFn: () => {
+      // Convert date range to ISO datetime format for API
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      
+      if (dateRange && dateRange.type === 'absolute') {
+        startDate = toISODateTime(dateRange.startDate, false);
+        endDate = toISODateTime(dateRange.endDate, true);
+      }
+      
+      return AnalyticsService.getEngagementMetrics(
+        startDate,
+        endDate,
+        selectedGeographicAreaId || undefined
+      );
+    },
   });
-
-  const geographicAreaOptions = [
-    { label: 'All areas', value: '' },
-    ...geographicAreas.map((area) => ({
-      label: area.name,
-      value: area.id,
-    })),
-  ];
 
   if (isLoading) {
     return <LoadingSpinner text="Loading engagement metrics..." />;
@@ -55,36 +76,49 @@ export function EngagementDashboard() {
     <SpaceBetween size="l">
       <Container
         header={
-          <Header variant="h3">Filters</Header>
+          <Header variant="h3">Date Range Filter</Header>
         }
       >
-        <SpaceBetween size="m">
-          <DateRangePicker
-            value={dateRange ? {
-              type: 'absolute',
-              startDate: dateRange.startDate,
-              endDate: dateRange.endDate,
-            } : null}
-            onChange={({ detail }) => {
-              if (detail.value && detail.value.type === 'absolute') {
-                setDateRange({
-                  startDate: detail.value.startDate,
-                  endDate: detail.value.endDate,
-                });
-              } else {
-                setDateRange(null);
-              }
-            }}
-            placeholder="Filter by date range"
-            relativeOptions={[]}
-            isValidRange={() => ({ valid: true })}
-          />
-          <Select
-            selectedOption={geographicAreaOptions.find((o) => o.value === geographicAreaId) || geographicAreaOptions[0]}
-            onChange={({ detail }) => setGeographicAreaId(detail.selectedOption.value || '')}
-            options={geographicAreaOptions}
-          />
-        </SpaceBetween>
+        <DateRangePicker
+          value={dateRange}
+          onChange={({ detail }) => {
+            if (detail.value) {
+              setDateRange(detail.value);
+            }
+          }}
+          placeholder="Filter by date range"
+          dateOnly={true}
+          relativeOptions={[
+            { key: 'previous-7-days', amount: 7, unit: 'day', type: 'relative' },
+            { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
+            { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
+          ]}
+          isValidRange={() => ({ valid: true })}
+          i18nStrings={{
+            todayAriaLabel: 'Today',
+            nextMonthAriaLabel: 'Next month',
+            previousMonthAriaLabel: 'Previous month',
+            customRelativeRangeDurationLabel: 'Duration',
+            customRelativeRangeDurationPlaceholder: 'Enter duration',
+            customRelativeRangeOptionLabel: 'Custom range',
+            customRelativeRangeOptionDescription: 'Set a custom range in the past',
+            customRelativeRangeUnitLabel: 'Unit of time',
+            formatRelativeRange: (value) => {
+              const unit = value.unit === 'day' ? 'days' : value.unit === 'week' ? 'weeks' : value.unit === 'month' ? 'months' : 'years';
+              return `Last ${value.amount} ${unit}`;
+            },
+            formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
+            dateTimeConstraintText: 'Range must be between 6 and 30 days.',
+            relativeModeTitle: 'Relative range',
+            absoluteModeTitle: 'Absolute range',
+            relativeRangeSelectionHeading: 'Choose a range',
+            startDateLabel: 'Start date',
+            endDateLabel: 'End date',
+            clearButtonLabel: 'Clear and dismiss',
+            cancelButtonLabel: 'Cancel',
+            applyButtonLabel: 'Apply',
+          }}
+        />
       </Container>
 
       <ColumnLayout columns={4} variant="text-grid">
