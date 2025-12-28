@@ -161,10 +161,32 @@ export class AnalyticsService {
             venueIds = await this.getVenueIdsForArea(geographicAreaId);
         }
 
-        // Determine date range
-        const now = new Date();
-        const start = startDate || new Date(now.getFullYear() - 1, 0, 1);
-        const end = endDate || now;
+        // Determine date range - if no dates provided, query all history
+        let start: Date;
+        let end: Date;
+
+        if (!startDate && !endDate) {
+            // Query all history - get earliest record
+            const earliestParticipant = await this.prisma.participant.findFirst({
+                orderBy: { createdAt: 'asc' },
+                select: { createdAt: true },
+            });
+            const earliestActivity = await this.prisma.activity.findFirst({
+                orderBy: { createdAt: 'asc' },
+                select: { createdAt: true },
+            });
+
+            const earliestDate = earliestParticipant && earliestActivity
+                ? new Date(Math.min(earliestParticipant.createdAt.getTime(), earliestActivity.createdAt.getTime()))
+                : earliestParticipant?.createdAt || earliestActivity?.createdAt || new Date();
+
+            start = earliestDate;
+            end = new Date();
+        } else {
+            const now = new Date();
+            start = startDate || new Date(now.getFullYear() - 1, 0, 1);
+            end = endDate || now;
+        }
 
         // Generate time periods
         const periods = this.generateTimePeriods(start, end, timePeriod);

@@ -21,7 +21,7 @@ export class AnalyticsService {
         endDate?: string,
         period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR',
         geographicAreaId?: string
-    ): Promise<GrowthMetrics[]> {
+    ): Promise<GrowthMetrics> {
         const params = new URLSearchParams();
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
@@ -29,7 +29,7 @@ export class AnalyticsService {
         if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
 
         const query = params.toString();
-        return ApiClient.get<GrowthMetrics[]>(`/analytics/growth${query ? `?${query}` : ''}`);
+        return ApiClient.get<GrowthMetrics>(`/analytics/growth${query ? `?${query}` : ''}`);
     }
 
     static async getGeographicAnalytics(

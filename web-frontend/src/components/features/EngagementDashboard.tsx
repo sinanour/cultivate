@@ -23,21 +23,13 @@ function toISODateTime(dateString: string, isEndOfDay = false): string {
   return date.toISOString();
 }
 
-// Initialize with last 30 days
-const getDefaultDateRange = (): DateRangePickerProps.Value => {
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 30);
-  
-  return {
-    type: 'absolute',
-    startDate: startDate.toISOString().split('T')[0],
-    endDate: endDate.toISOString().split('T')[0],
-  };
+// Initialize with null to query all history
+const getDefaultDateRange = (): DateRangePickerProps.Value | null => {
+  return null;
 };
 
 export function EngagementDashboard() {
-  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value>(getDefaultDateRange());
+  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(getDefaultDateRange());
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
   const { data: metrics, isLoading } = useQuery({
@@ -51,6 +43,7 @@ export function EngagementDashboard() {
         startDate = toISODateTime(dateRange.startDate, false);
         endDate = toISODateTime(dateRange.endDate, true);
       }
+      // If dateRange is null, both startDate and endDate remain undefined (query all history)
       
       return AnalyticsService.getEngagementMetrics(
         startDate,
@@ -82,11 +75,9 @@ export function EngagementDashboard() {
         <DateRangePicker
           value={dateRange}
           onChange={({ detail }) => {
-            if (detail.value) {
-              setDateRange(detail.value);
-            }
+            setDateRange(detail.value || null);
           }}
-          placeholder="Filter by date range"
+          placeholder="All history"
           dateOnly={true}
           relativeOptions={[
             { key: 'previous-7-days', amount: 7, unit: 'day', type: 'relative' },

@@ -128,6 +128,10 @@ export interface EngagementMetrics {
 }
 
 export interface GrowthMetrics {
+    timeSeries: GrowthPeriodData[];
+}
+
+export interface GrowthPeriodData {
     date: string;
     newParticipants: number;
     newActivities: number;
