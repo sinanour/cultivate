@@ -448,10 +448,11 @@ data class ParticipantRole(
 ```
 
 **Predefined Roles**:
-- Facilitator
+- Tutor
+- Teacher
 - Animator
 - Host
-- Teacher
+- Participant
 
 ### ActivityParticipant
 

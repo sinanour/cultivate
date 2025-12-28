@@ -45,7 +45,7 @@ The Backend API package provides the RESTful API service that implements all bus
 4. THE API SHALL provide a DELETE /api/roles/:id endpoint that deletes a role
 5. WHEN creating a role, THE API SHALL validate that the name is provided and unique
 6. WHEN deleting a role, THE API SHALL prevent deletion if assignments reference it
-7. THE API SHALL seed predefined roles (Facilitator, Animator, Host, Teacher) on initial database setup
+7. THE API SHALL seed the following predefined roles on initial database setup: "Tutor", "Teacher", "Animator", "Host", "Participant"
 
 ### Requirement 3: Track Participants
 

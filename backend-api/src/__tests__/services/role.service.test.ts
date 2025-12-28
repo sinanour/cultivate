@@ -16,7 +16,7 @@ describe('RoleService', () => {
     describe('getAllRoles', () => {
         it('should return all roles', async () => {
             const mockRoles = [
-                { id: '1', name: 'Facilitator', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '1', name: 'Tutor', createdAt: new Date(), updatedAt: new Date(), version: 1 },
                 { id: '2', name: 'Animator', createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
             mockRepository.findAll = jest.fn().mockResolvedValue(mockRoles);

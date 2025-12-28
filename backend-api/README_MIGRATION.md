@@ -34,8 +34,8 @@ npm run prisma:migrate
 When prompted, provide a migration name like "init" or "initial_schema".
 
 5. The seed data will run automatically after the migration, creating:
-   - 8 predefined activity types (Workshop, Meeting, Social Event, etc.)
-   - 7 predefined roles (Facilitator, Animator, Host, Teacher, etc.)
+   - 23 predefined activity types (Children's Class, Junior Youth Group, Devotional Gathering, Ruhi Books 1-14, etc.)
+   - 5 predefined roles (Tutor, Teacher, Animator, Host, Participant)
 
 ### Subsequent Migrations
 

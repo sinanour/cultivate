@@ -595,7 +595,7 @@ interface Participant {
 
 interface ParticipantRole {
   id: string;
-  name: string;            // Facilitator, Animator, Host, Teacher, etc.
+  name: string;            // Tutor, Teacher, Animator, Host, Participant, etc.
   isPredefined: boolean;
   createdAt: Date;
 }

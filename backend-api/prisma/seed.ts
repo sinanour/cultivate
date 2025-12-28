@@ -74,10 +74,11 @@ async function main() {
 
     // Seed predefined roles
     const roles = [
-        { name: 'Facilitator' },
+        { name: 'Tutor' },
+        { name: 'Teacher' },
         { name: 'Animator' },
         { name: 'Host' },
-        { name: 'Teacher' },
+        { name: 'Participant' },
     ];
 
     for (const role of roles) {

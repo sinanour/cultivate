@@ -4,10 +4,11 @@ import { RoleRepository } from '../repositories/role.repository';
 export class RoleService {
   // Predefined roles that are seeded
   private readonly PREDEFINED_ROLES = [
-    'Facilitator',
+    'Tutor',
+    'Teacher',
     'Animator',
     'Host',
-    'Teacher',
+    'Participant',
   ];
 
   constructor(private roleRepository: RoleRepository) {}
