@@ -240,8 +240,8 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 49: Venue Detail View Completeness**
     - **Validates: Requirements 6A.9**
 
-  - [ ] 8.5 Implement Nominatim geocoding integration
-    - [ ] 8.5.1 Create GeocodingService
+  - [x] 8.5 Implement Nominatim geocoding integration
+    - [x] 8.5.1 Create GeocodingService
       - Implement geocodeAddress(address) method to query Nominatim API
       - Use Nominatim search endpoint: https://nominatim.openstreetmap.org/search
       - Include User-Agent header as required by Nominatim usage policy
@@ -251,7 +251,20 @@ This implementation plan covers the React-based web application built with TypeS
       - Handle API errors and network failures gracefully
       - _Requirements: 21.1, 21.3, 21.9_
 
-    - [ ] 8.5.2 Update VenueForm component with geocoding
+    - [x] 8.5.2 Create VenueFormMapView component
+      - Create reusable map component for venue form using Leaflet
+      - Display map positioned to the right of form fields
+      - Render draggable marker when coordinates are provided
+      - Set map zoom to level 15 when coordinates are first populated
+      - Track whether user has manually adjusted zoom level
+      - Handle marker drag events to extract new coordinates
+      - Provide callback to update parent form state with new coordinates
+      - Center map on marker when coordinates change (without resetting zoom if user-adjusted)
+      - Preserve user-adjusted zoom level during coordinate updates
+      - Handle empty coordinate state (no marker displayed)
+      - _Requirements: 21.11, 21.12, 21.13, 21.14, 21.18_
+
+    - [x] 8.5.3 Update VenueForm component with geocoding and map
       - Add "Geocode Address" button next to latitude/longitude fields
       - Disable geocode button when address field is empty
       - Disable geocode button when offline
@@ -260,9 +273,16 @@ This implementation plan covers the React-based web application built with TypeS
       - On multiple results: display selection dialog with result list
       - On no results: display error message
       - Allow manual editing of geocoded coordinates
-      - _Requirements: 21.2, 21.4, 21.5, 21.6, 21.7, 21.8, 21.10_
+      - Integrate VenueFormMapView component in form layout
+      - Position map view to the right of form fields using grid or flex layout
+      - Pass latitude/longitude state to map component
+      - Update latitude/longitude state when map pin is dragged
+      - Update map pin when latitude/longitude inputs are manually edited
+      - Maintain two-way synchronization between inputs and map
+      - Preserve user-adjusted zoom level during coordinate updates
+      - _Requirements: 21.2, 21.4, 21.5, 21.6, 21.7, 21.8, 21.10, 21.11, 21.12, 21.13, 21.14, 21.15, 21.16, 21.17, 21.18_
 
-    - [ ]* 8.5.3 Write property tests for geocoding
+    - [ ]* 8.5.4 Write property tests for geocoding and map interaction
       - **Property 69: Geocoding Request Success**
       - **Property 70: Geocoding Coordinate Population**
       - **Property 71: Geocoding Multiple Results Handling**
@@ -270,7 +290,14 @@ This implementation plan covers the React-based web application built with TypeS
       - **Property 73: Geocoding Loading State**
       - **Property 74: Geocoding Manual Override**
       - **Property 75: Geocoding Offline Behavior**
-      - **Validates: Requirements 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.10**
+      - **Property 87: Map View Display in Venue Form**
+      - **Property 88: Map Pin Rendering**
+      - **Property 89: Map Zoom Level**
+      - **Property 90: Pin Drag Updates Coordinates**
+      - **Property 91: Coordinate Input Updates Pin**
+      - **Property 92: Two-Way Coordinate Synchronization**
+      - **Property 93: Zoom Level Preservation**
+      - **Validates: Requirements 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.10, 21.11, 21.12, 21.13, 21.14, 21.15, 21.16, 21.17, 21.18**
 
 - [x] 9. Implement geographic area management UI
   - [x] 9.1 Create GeographicAreaList component

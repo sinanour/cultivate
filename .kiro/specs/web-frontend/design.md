@@ -274,6 +274,13 @@ src/
 - Allows manual override of geocoded coordinates
 - Displays inline validation errors
 - Handles delete validation (prevents deletion if referenced)
+- Displays interactive map view component positioned to the right of the form
+- Renders draggable pin on map when coordinates are populated
+- Sets map zoom to reasonable level (e.g., zoom level 15) when coordinates are first populated
+- Updates latitude/longitude input fields when pin is dragged to new position
+- Updates map pin position when latitude/longitude fields are manually edited
+- Maintains two-way synchronization between coordinate inputs and map pin at all times
+- Preserves user-adjusted zoom level during coordinate updates (only adjusts center point, not zoom)
 
 **VenueDetail**
 - Shows venue information in detail view
@@ -1235,6 +1242,48 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* offline state, the geocode button should be disabled and display a message that geocoding requires connectivity.
 
 **Validates: Requirements 21.10**
+
+### Property 87: Map View Display in Venue Form
+
+*For any* venue form (create or edit mode), an interactive map view component should be displayed positioned to the right of the form fields.
+
+**Validates: Requirements 21.11**
+
+### Property 88: Map Pin Rendering
+
+*For any* venue form with populated latitude and longitude coordinates, a pin should be rendered on the map at those exact coordinates.
+
+**Validates: Requirements 21.12**
+
+### Property 89: Map Zoom Level
+
+*For any* venue form with populated coordinates, the map should be set to a reasonable zoom level for viewing the venue location.
+
+**Validates: Requirements 21.13**
+
+### Property 90: Pin Drag Updates Coordinates
+
+*For any* venue form with a map pin, when the pin is dragged to a new position on the map, the latitude and longitude input fields should be updated with the new coordinates.
+
+**Validates: Requirements 21.14, 21.15**
+
+### Property 91: Coordinate Input Updates Pin
+
+*For any* venue form with a map pin, when the latitude or longitude input fields are manually edited with valid coordinates, the pin position on the map should be updated to reflect the new coordinates.
+
+**Validates: Requirements 21.16**
+
+### Property 92: Two-Way Coordinate Synchronization
+
+*For any* venue form, changes to either the coordinate input fields or the map pin position should immediately synchronize with the other, maintaining consistency at all times.
+
+**Validates: Requirements 21.17**
+
+### Property 93: Zoom Level Preservation
+
+*For any* venue form where the user has manually adjusted the map zoom level, subsequent coordinate updates (via input fields or pin drag) should preserve the user's zoom level and only adjust the map center point.
+
+**Validates: Requirements 21.18**
 
 ### Property 76: Hyperlinked Primary Column Navigation
 

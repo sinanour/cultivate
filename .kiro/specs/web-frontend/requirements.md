@@ -382,6 +382,14 @@ The Web Frontend package provides a responsive React-based web application that 
 8. THE Web_App SHALL allow users to manually override geocoded coordinates
 9. THE Web_App SHALL respect Nominatim usage policy by including appropriate User-Agent header and rate limiting
 10. WHEN offline, THE Web_App SHALL disable the geocode button and display a message that geocoding requires connectivity
+11. WHEN creating or editing a venue, THE Web_App SHALL display an interactive map view component positioned to the right of the form
+12. WHEN latitude and longitude coordinates are populated, THE Web_App SHALL render a pin on the map at those coordinates
+13. WHEN coordinates are populated, THE Web_App SHALL set the map zoom level to a reasonable level for viewing the venue location
+14. THE Web_App SHALL provide a graphical interface on the map to drag and reposition the pin
+15. WHEN the pin is repositioned on the map, THE Web_App SHALL update the latitude and longitude input fields with the new coordinates
+16. WHEN the latitude or longitude input fields are manually edited, THE Web_App SHALL update the pin position on the map
+17. THE Web_App SHALL maintain two-way synchronization between the coordinate input fields and the map pin position at all times
+18. WHEN the user manually adjusts the map zoom level, THE Web_App SHALL preserve that zoom level during subsequent coordinate updates and only adjust the map center point
 
 ### Requirement 22: Hyperlinked Primary Columns in Tables
 

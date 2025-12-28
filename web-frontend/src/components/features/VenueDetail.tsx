@@ -208,6 +208,7 @@ export function VenueDetail() {
       <Modal
         visible={isEditFormOpen}
         onDismiss={() => setIsEditFormOpen(false)}
+        size="large"
         header="Edit Venue"
       >
         {isEditFormOpen && (
