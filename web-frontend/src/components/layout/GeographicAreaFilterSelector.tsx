@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Select, { type SelectProps } from '@cloudscape-design/components/select';
-import SpaceBetween from '@cloudscape-design/components/space-between';
 import BreadcrumbGroup, { type BreadcrumbGroupProps } from '@cloudscape-design/components/breadcrumb-group';
 import Button from '@cloudscape-design/components/button';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
@@ -112,7 +111,7 @@ export function GeographicAreaFilterSelector() {
     }
 
     // Convert to breadcrumb items
-    ancestry.forEach((area, index) => {
+    ancestry.forEach((area) => {
       items.push({
         text: area.name,
         href: `#${area.id}`,
