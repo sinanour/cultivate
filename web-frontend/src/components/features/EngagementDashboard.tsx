@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -32,22 +32,149 @@ function toISODateTime(dateString: string, isEndOfDay = false): string {
   return date.toISOString();
 }
 
-// Initialize with null to query all history
-const getDefaultDateRange = (): DateRangePickerProps.Value | null => {
-  return null;
-};
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export function EngagementDashboard() {
   const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(getDefaultDateRange());
-  const [activityTypeFilter] = useState<SelectProps.Option | null>(null);
-  const [venueFilter] = useState<SelectProps.Option | null>(null);
-  const [groupByDimensions, setGroupByDimensions] = useState<MultiselectProps.Options>([]);
-  const [dateGranularity, setDateGranularity] = useState<SelectProps.Option | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Initialize state from URL parameters
+  const initializeDateRange = (): DateRangePickerProps.Value | null => {
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const relativePeriod = searchParams.get('relativePeriod');
+    
+    // Handle relative date range (e.g., "-90d", "-6m")
+    if (relativePeriod) {
+      const match = relativePeriod.match(/^-(\d+)([dwmy])$/);
+      if (match) {
+        const amount = parseInt(match[1], 10);
+        const unitChar = match[2];
+        
+        let unit: 'day' | 'week' | 'month' | 'year';
+        switch (unitChar) {
+          case 'd':
+            unit = 'day';
+            break;
+          case 'w':
+            unit = 'week';
+            break;
+          case 'm':
+            unit = 'month';
+            break;
+          case 'y':
+            unit = 'year';
+            break;
+          default:
+            return null;
+        }
+        
+        return {
+          type: 'relative',
+          amount,
+          unit,
+        };
+      }
+    }
+    
+    // Handle absolute date range
+    if (startDate && endDate) {
+      return {
+        type: 'absolute',
+        startDate,
+        endDate,
+      };
+    }
+    
+    return null;
+  };
+
+  const initializeGroupByDimensions = (): MultiselectProps.Options => {
+    const groupByParam = searchParams.get('groupBy');
+    if (!groupByParam) return [];
+    
+    const dimensions = groupByParam.split(',');
+    return dimensions.map(dim => {
+      const label = dim.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return { label, value: dim };
+    });
+  };
+
+  const initializeDateGranularity = (): SelectProps.Option | null => {
+    const granularity = searchParams.get('dateGranularity');
+    if (!granularity) return null;
+    
+    const label = granularity.charAt(0) + granularity.slice(1).toLowerCase();
+    return { label, value: granularity };
+  };
+
+  const initializeActivityTypeFilter = (): SelectProps.Option | null => {
+    const activityType = searchParams.get('activityType');
+    if (!activityType) return null;
+    
+    // Note: We'll need to fetch the activity type name from the API or cache
+    // For now, just use the ID as the label
+    return { label: activityType, value: activityType };
+  };
+
+  const initializeVenueFilter = (): SelectProps.Option | null => {
+    const venue = searchParams.get('venue');
+    if (!venue) return null;
+    
+    // Note: We'll need to fetch the venue name from the API or cache
+    // For now, just use the ID as the label
+    return { label: venue, value: venue };
+  };
+
+  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(initializeDateRange);
+  const [activityTypeFilter, setActivityTypeFilter] = useState<SelectProps.Option | null>(initializeActivityTypeFilter);
+  const [venueFilter, setVenueFilter] = useState<SelectProps.Option | null>(initializeVenueFilter);
+  const [groupByDimensions, setGroupByDimensions] = useState<MultiselectProps.Options>(initializeGroupByDimensions);
+  const [dateGranularity, setDateGranularity] = useState<SelectProps.Option | null>(initializeDateGranularity);
   
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+
+  // Sync state to URL whenever filters or grouping changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    
+    // Add date range parameters
+    if (dateRange) {
+      if (dateRange.type === 'absolute') {
+        params.set('startDate', dateRange.startDate);
+        params.set('endDate', dateRange.endDate);
+      } else if (dateRange.type === 'relative') {
+        // Convert relative date range to compact format (e.g., "-90d", "-6m")
+        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
+        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
+      }
+    }
+    
+    if (activityTypeFilter?.value) {
+      params.set('activityType', activityTypeFilter.value);
+    }
+    
+    if (venueFilter?.value) {
+      params.set('venue', venueFilter.value);
+    }
+    
+    if (selectedGeographicAreaId) {
+      params.set('geographicArea', selectedGeographicAreaId);
+    }
+    
+    // Add grouping parameters
+    if (groupByDimensions.length > 0) {
+      const groupByValues = groupByDimensions.map(d => d.value).join(',');
+      params.set('groupBy', groupByValues);
+    }
+    
+    if (dateGranularity?.value) {
+      params.set('dateGranularity', dateGranularity.value);
+    }
+    
+    // Update URL without causing navigation/reload
+    setSearchParams(params, { replace: true });
+  }, [dateRange, activityTypeFilter, venueFilter, selectedGeographicAreaId, groupByDimensions, dateGranularity, setSearchParams]);
 
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['engagementMetrics', dateRange, selectedGeographicAreaId, activityTypeFilter, venueFilter, groupByDimensions, dateGranularity],
@@ -135,6 +262,7 @@ export function EngagementDashboard() {
         header={<Header variant="h3">Filters and Grouping</Header>}
       >
         <SpaceBetween size="m">
+          {/* Date Range and Date Granularity */}
           <ColumnLayout columns={2}>
             <DateRangePicker
               value={dateRange}
@@ -187,6 +315,28 @@ export function EngagementDashboard() {
             />
           </ColumnLayout>
 
+          {/* Point Filters: Activity Type and Venue */}
+          <ColumnLayout columns={2}>
+            <Select
+              selectedOption={activityTypeFilter}
+              onChange={({ detail }) => setActivityTypeFilter(detail.selectedOption)}
+              options={[]}
+              placeholder="Filter by activity type"
+              selectedAriaLabel="Selected"
+              empty="No activity types available"
+            />
+            
+            <Select
+              selectedOption={venueFilter}
+              onChange={({ detail }) => setVenueFilter(detail.selectedOption)}
+              options={[]}
+              placeholder="Filter by venue"
+              selectedAriaLabel="Selected"
+              empty="No venues available"
+            />
+          </ColumnLayout>
+
+          {/* Grouping Dimensions */}
           <ColumnLayout columns={2}>
             <Multiselect
               selectedOptions={groupByDimensions}

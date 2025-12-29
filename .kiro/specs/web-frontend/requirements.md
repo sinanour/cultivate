@@ -211,14 +211,20 @@ The Web Frontend package provides a responsive React-based web application that 
 25. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
 26. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
 27. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
-28. THE Web_App SHALL provide a growth analytics dashboard
-29. THE Web_App SHALL display time-series charts for new participants and activities
-30. THE Web_App SHALL provide time period selection (day, week, month, year)
-31. THE Web_App SHALL display percentage changes between periods
-32. THE Web_App SHALL display cumulative counts over time
-33. THE Web_App SHALL provide a geographic area filter for all analytics
-34. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
-35. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
+28. THE Web_App SHALL synchronize all filter parameters (activity type, venue, geographic area, start date, end date) with URL query parameters
+29. THE Web_App SHALL synchronize all grouping parameters (group by dimensions and date granularity) with URL query parameters
+30. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
+31. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
+32. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
+33. THE Web_App SHALL allow users to share the current analytics view URL with other users to display the same filtered and grouped results
+34. THE Web_App SHALL provide a growth analytics dashboard
+35. THE Web_App SHALL display time-series charts for new participants and activities
+36. THE Web_App SHALL provide time period selection (day, week, month, year)
+37. THE Web_App SHALL display percentage changes between periods
+38. THE Web_App SHALL display cumulative counts over time
+39. THE Web_App SHALL provide a geographic area filter for all analytics
+40. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
+41. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
 
 ### Requirement 8: Authentication UI
 

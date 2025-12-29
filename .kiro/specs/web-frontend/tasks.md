@@ -489,8 +489,14 @@ This implementation plan covers the React-based web application built with TypeS
     - Display geographic breakdown chart showing engagement by geographic area
     - Allow drilling down into child geographic areas
     - Display all-time metrics when no date range specified
+    - Synchronize all filter and grouping parameters with URL query parameters:
+      - Read URL parameters on component mount to initialize dashboard state
+      - Update URL when user changes filters or grouping (using React Router's useSearchParams or similar)
+      - Support parameters: activityType, venue, geographicArea, startDate, endDate, groupBy (array), dateGranularity
+      - Enable browser back/forward navigation between different configurations
+      - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.33, 7.34, 7.35_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41_
 
   - [ ]* 14.2 Write property tests for engagement metrics
     - **Property 23: Temporal Activity Metrics Display**
@@ -504,7 +510,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 29: Multiple Filter Application**
     - **Property 30: All-Time Metrics Display**
     - **Property 31: Role Distribution Display**
-    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27**
+    - **Property 31a: Analytics URL Parameter Synchronization**
+    - **Property 31b: Analytics URL Parameter Application**
+    - **Property 31c: Analytics URL Update on State Change**
+    - **Property 31d: Analytics Browser Navigation Support**
+    - **Property 31e: Analytics URL Shareability**
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33**
 
   - [x] 14.2 Create GrowthDashboard component
     - Display time-series charts for new participants and activities
@@ -513,19 +524,19 @@ This implementation plan covers the React-based web application built with TypeS
     - Display cumulative counts over time
     - Provide geographic area filter (optional geographicAreaId)
     - Use /analytics/growth endpoint with optional startDate, endDate, period, geographicAreaId
-    - _Requirements: 7.28, 7.29, 7.30, 7.31, 7.32, 7.33_
+    - _Requirements: 7.34, 7.35, 7.36, 7.37, 7.38, 7.39_
 
   - [ ]* 14.3 Write property tests for growth metrics
     - **Property 32: Time-Series Data Calculation**
     - **Property 33: Percentage Change Calculation**
     - **Property 34: Cumulative Count Calculation**
-    - **Validates: Requirements 7.29, 7.30, 7.31, 7.32**
+    - **Validates: Requirements 7.35, 7.36, 7.37, 7.38**
 
   - [x] 14.3 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint
     - Show metrics by geographic area (geographicAreaId, geographicAreaName, areaType, totalActivities, activeActivities, totalParticipants, activeParticipants)
     - Provide optional date range filter (startDate, endDate)
-    - _Requirements: 7.34, 7.35_
+    - _Requirements: 7.40, 7.41_
 
 - [x] 15. Implement offline support
   - [x] 15.1 Create OfflineStorage service

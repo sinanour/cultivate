@@ -394,6 +394,13 @@ src/
 - Allows drilling down into child geographic areas
 - Uses recharts library for data visualization
 - Displays all-time metrics when no date range specified
+- Synchronizes all filter and grouping parameters with URL query parameters:
+  - Filter parameters: activityType, venue, geographicArea, startDate, endDate
+  - Grouping parameters: groupBy (array), dateGranularity
+  - Reads URL parameters on component mount to initialize dashboard state
+  - Updates URL when user changes filters or grouping
+  - Enables browser back/forward navigation between different configurations
+  - Allows URL sharing for collaborative analysis
 
 **GrowthDashboard**
 - Displays time-series charts for new participants and activities
@@ -1071,6 +1078,36 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* engagement dashboard, the role distribution chart should display counts for all roles within the filtered and grouped results.
 
 **Validates: Requirements 7.27**
+
+### Property 31a: Analytics URL Parameter Synchronization
+
+*For any* engagement dashboard state (filters and grouping), the browser URL query parameters should accurately reflect all current filter values (activityType, venue, geographicArea, startDate, endDate) and grouping configuration (groupBy dimensions, dateGranularity).
+
+**Validates: Requirements 7.28, 7.29**
+
+### Property 31b: Analytics URL Parameter Application
+
+*For any* URL with analytics query parameters, when a user navigates to that URL, the engagement dashboard should automatically apply all filter and grouping parameters from the URL to initialize the dashboard state.
+
+**Validates: Requirements 7.30**
+
+### Property 31c: Analytics URL Update on State Change
+
+*For any* change to filters or grouping parameters in the engagement dashboard, the browser URL should be updated to reflect the new state without causing a page reload.
+
+**Validates: Requirements 7.31**
+
+### Property 31d: Analytics Browser Navigation Support
+
+*For any* sequence of filter or grouping changes in the engagement dashboard, using browser back/forward buttons should navigate through the history of configurations and restore the corresponding dashboard state.
+
+**Validates: Requirements 7.32**
+
+### Property 31e: Analytics URL Shareability
+
+*For any* engagement dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered and grouped results as the original user.
+
+**Validates: Requirements 7.33**
 
 ### Property 32: Time-series data calculation
 
