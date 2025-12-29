@@ -9,6 +9,7 @@ import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
+import Icon from '@cloudscape-design/components/icon';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
@@ -65,8 +66,11 @@ export function VenueDetail() {
     );
   }
 
-  const hierarchyPath = [...ancestors, venue.geographicArea].filter(Boolean).map((a) => a!.name).join(' > ');
-
+  // Reverse ancestors to get correct order: most ancestral -> leaf node
+  const hierarchyItems = [...ancestors].reverse();
+  if (venue.geographicArea) {
+    hierarchyItems.push(venue.geographicArea);
+  }
   return (
     <SpaceBetween size="l">
       <Container
@@ -97,7 +101,27 @@ export function VenueDetail() {
           </div>
           <div>
             <Box variant="awsui-key-label">Geographic Area</Box>
-            <div>{hierarchyPath || venue.geographicArea?.name || '-'}</div>
+            <div style={{ display: 'flex', alignItems: 'center', paddingTop: '4px' }}>
+              {hierarchyItems.length > 0 ? (
+                hierarchyItems.map((area, index) => (
+                  <span key={area.id} style={{ display: 'flex', alignItems: 'center' }}>
+                    <Link href={`/geographic-areas/${area.id}`} fontSize="body-m" variant="primary">
+                      {area.name}
+                    </Link>
+                    {index < hierarchyItems.length - 1 && (
+                      <span style={{ marginLeft: '8px', marginRight: '8px', display: 'flex', alignItems: 'center', color: 'var(--color-text-breadcrumb-icon, #8c8c94)' }}>
+                        <Icon 
+                          name="angle-right" 
+                          size="normal"
+                        />
+                      </span>
+                    )}
+                  </span>
+                ))
+              ) : (
+                '-'
+              )}
+            </div>
           </div>
           {venue.latitude && venue.longitude && (
             <>
