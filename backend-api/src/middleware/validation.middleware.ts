@@ -9,7 +9,8 @@ export class ValidationMiddleware {
   static validateBody(schema: ZodSchema) {
     return (req: Request, res: Response, next: NextFunction) => {
       try {
-        schema.parse(req.body);
+        const parsed = schema.parse(req.body);
+        req.body = parsed; // Update req.body with transformed values
         next();
       } catch (error) {
         if (error instanceof ZodError) {
@@ -33,7 +34,8 @@ export class ValidationMiddleware {
   static validateQuery(schema: ZodSchema) {
     return (req: Request, res: Response, next: NextFunction) => {
       try {
-        schema.parse(req.query);
+        const parsed = schema.parse(req.query);
+        req.query = parsed as any; // Update req.query with transformed values
         next();
       } catch (error) {
         if (error instanceof ZodError) {
@@ -57,7 +59,8 @@ export class ValidationMiddleware {
   static validateParams(schema: ZodSchema) {
     return (req: Request, res: Response, next: NextFunction) => {
       try {
-        schema.parse(req.params);
+        const parsed = schema.parse(req.params);
+        req.params = parsed as any; // Update req.params with transformed values
         next();
       } catch (error) {
         if (error instanceof ZodError) {

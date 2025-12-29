@@ -109,22 +109,79 @@ export interface Assignment {
     createdAt: string;
 }
 
+export interface ActivityTypeBreakdown {
+    activityTypeId: string;
+    activityTypeName: string;
+    activitiesAtStart: number;
+    activitiesAtEnd: number;
+    activitiesStarted: number;
+    activitiesCompleted: number;
+    activitiesCancelled: number;
+    participantsAtStart: number;
+    participantsAtEnd: number;
+    newParticipants: number;
+    disengagedParticipants: number;
+}
+
+export interface RoleDistribution {
+    roleId: string;
+    roleName: string;
+    count: number;
+}
+
+export interface GeographicBreakdown {
+    geographicAreaId: string;
+    geographicAreaName: string;
+    activityCount: number;
+    participantCount: number;
+}
+
+export interface GroupedMetrics {
+    dimensions: Record<string, string>;
+    metrics: EngagementMetrics;
+}
+
 export interface EngagementMetrics {
+    // Temporal activity counts
+    activitiesAtStart: number;
+    activitiesAtEnd: number;
+    activitiesStarted: number;
+    activitiesCompleted: number;
+    activitiesCancelled: number;
+
+    // Temporal participant counts
+    participantsAtStart: number;
+    participantsAtEnd: number;
+    newParticipants: number;
+    disengagedParticipants: number;
+
+    // Aggregate counts
     totalActivities: number;
-    activeActivities: number;
     totalParticipants: number;
-    activeParticipants: number;
-    participationRate: number;
-    retentionRate: number;
-    averageActivitySize: number;
-    geographicBreakdown: {
-        geographicAreaId: string;
-        geographicAreaName: string;
-        activityCount: number;
-        participantCount: number;
-    }[];
+
+    // Breakdown by activity type
+    activitiesByType: ActivityTypeBreakdown[];
+
+    // Role distribution
+    roleDistribution: RoleDistribution[];
+
+    // Geographic breakdown
+    geographicBreakdown: GeographicBreakdown[];
+
+    // Grouped results (when groupBy dimensions specified)
+    groupedResults?: GroupedMetrics[];
+
+// Metadata
     periodStart: string;
     periodEnd: string;
+    appliedFilters: {
+        activityTypeId?: string;
+        venueId?: string;
+        geographicAreaId?: string;
+        startDate?: string;
+        endDate?: string;
+    };
+    groupingDimensions?: string[];
 }
 
 export interface GrowthMetrics {

@@ -382,7 +382,13 @@ src/
   - Venue filter (dropdown)
   - Geographic area filter (dropdown, includes descendants)
   - Date range filter using CloudScape DateRangePicker
-- Displays hierarchically organized results when multiple grouping dimensions selected
+- Renders grouped results in a CloudScape Table when multiple grouping dimensions selected:
+  - Breakdown dimension columns appear first (activity type, venue, geographic area, date period)
+  - Metric aggregation columns follow (activities at start, at end, started, completed, cancelled, participants at start, at end, new, disengaged)
+  - Activity type names rendered as hyperlinks to edit forms or detail views
+  - Venue names rendered as hyperlinks to /venues/:id
+  - Geographic area names rendered as hyperlinks to /geographic-areas/:id
+  - Each metric displayed in its own column for easy comparison
 - Shows role distribution within filtered and grouped results
 - Displays geographic breakdown chart showing engagement by geographic area
 - Allows drilling down into child geographic areas
@@ -1030,47 +1036,59 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 7.16, 7.17, 7.18, 7.19**
 
-### Property 28: Hierarchical grouped results display
+### Property 28: Grouped results table display
 
-*For any* engagement dashboard with multiple grouping dimensions selected, the results should be displayed in a hierarchical structure organized by the specified dimensions in order.
+*For any* engagement dashboard with multiple grouping dimensions selected, the results should be displayed in a table where breakdown dimension columns appear first, followed by metric aggregation columns.
 
 **Validates: Requirements 7.20**
+
+### Property 28a: Dimension hyperlinks in grouped results
+
+*For any* grouped results table, dimension values (activity type names, venue names, geographic area names) should be rendered as hyperlinks that navigate to their respective detail views.
+
+**Validates: Requirements 7.21, 7.22, 7.23**
+
+### Property 28b: Metric columns in grouped results
+
+*For any* grouped results table, each metric aggregation (activities at start, at end, started, completed, cancelled, participants at start, at end, new, disengaged) should be displayed in its own separate column.
+
+**Validates: Requirements 7.24**
 
 ### Property 29: Multiple filter application
 
 *For any* engagement dashboard with multiple filters applied, all filters should be applied using AND logic and the UI should clearly indicate which filters are active.
 
-**Validates: Requirements 7.21**
+**Validates: Requirements 7.25**
 
 ### Property 30: All-time metrics display
 
 *For any* engagement dashboard without a date range specified, the UI should display all-time metrics and clearly indicate that no date filter is active.
 
-**Validates: Requirements 7.22**
+**Validates: Requirements 7.26**
 
 ### Property 31: Role distribution display
 
 *For any* engagement dashboard, the role distribution chart should display counts for all roles within the filtered and grouped results.
 
-**Validates: Requirements 7.23**
+**Validates: Requirements 7.27**
 
 ### Property 32: Time-series data calculation
 
 *For any* time period and dataset, the time-series charts should correctly calculate new participants and activities for each time unit.
 
-**Validates: Requirements 7.25, 7.26**
+**Validates: Requirements 7.29, 7.30**
 
 ### Property 33: Percentage change calculation
 
 *For any* two time periods, the percentage change calculation should correctly compute the relative change between periods.
 
-**Validates: Requirements 7.27**
+**Validates: Requirements 7.31**
 
 ### Property 34: Cumulative count calculation
 
 *For any* time series data, the cumulative counts should correctly sum all previous values up to each point in time.
 
-**Validates: Requirements 7.28**
+**Validates: Requirements 7.32**
 
 ### Property 35: Unauthenticated access protection
 
@@ -1292,19 +1310,19 @@ All entities support optimistic locking via the `version` field. When updating a
 
 *For any* analytics dashboard with a geographic area filter applied, only activities and participants associated with venues in that geographic area or its descendants should be included in the metrics.
 
-**Validates: Requirements 7.12**
+**Validates: Requirements 7.18**
 
 ### Property 66: Geographic Breakdown Chart Display
 
 *For any* engagement metrics, the geographic breakdown chart should correctly display engagement data grouped by geographic area.
 
-**Validates: Requirements 7.13**
+**Validates: Requirements 7.34**
 
 ### Property 67: Geographic Area Drill-Down
 
 *For any* geographic area in the breakdown chart, clicking it should allow drilling down into child geographic areas to view more detailed statistics.
 
-**Validates: Requirements 7.14**
+**Validates: Requirements 7.35**
 
 ### Property 68: Date Formatting Consistency
 

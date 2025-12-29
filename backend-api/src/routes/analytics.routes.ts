@@ -55,17 +55,18 @@ export class AnalyticsRoutes {
                 geographicAreaId: geographicAreaId as string | undefined,
                 activityTypeId: activityTypeId as string | undefined,
                 venueId: venueId as string | undefined,
-                groupBy: groupBy ? (Array.isArray(groupBy) ? groupBy : [groupBy]) as any[] : undefined,
+                groupBy: groupBy as any[] | undefined, // Already normalized by Zod transform
                 dateGranularity: dateGranularity as any | undefined,
             };
 
             const metrics = await this.analyticsService.getEngagementMetrics(filters);
             res.status(HttpStatus.OK).json({ success: true, data: metrics });
         } catch (error) {
+            console.error('Error in getEngagement:', error);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 code: ErrorCode.INTERNAL_ERROR,
                 message: 'An error occurred while calculating engagement metrics',
-                details: {},
+                details: error instanceof Error ? { message: error.message, stack: error.stack } : {},
             });
         }
     }

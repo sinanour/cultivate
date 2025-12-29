@@ -141,7 +141,14 @@ export const EngagementQuerySchema = z.object({
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
   activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
   venueId: z.string().uuid('Invalid venue ID format').optional(),
-  groupBy: z.array(z.nativeEnum(GroupingDimension)).optional(),
+  groupBy: z.union([
+    z.nativeEnum(GroupingDimension),
+    z.array(z.nativeEnum(GroupingDimension))
+  ]).optional().transform(val => {
+    // Normalize to array
+    if (!val) return undefined;
+    return Array.isArray(val) ? val : [val];
+  }),
   dateGranularity: z.nativeEnum(DateGranularity).optional(),
 });
 

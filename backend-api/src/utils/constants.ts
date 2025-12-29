@@ -67,6 +67,25 @@ export enum GroupingDimension {
     DATE = 'date',
 }
 
+// Dimension key constants for grouped results
+export const DimensionKeys = {
+    ACTIVITY_TYPE: {
+        name: 'activityType',
+        id: 'activityTypeId',
+    },
+    VENUE: {
+        name: 'venue',
+        id: 'venueId',
+    },
+    GEOGRAPHIC_AREA: {
+        name: 'geographicArea',
+        id: 'geographicAreaId',
+    },
+    DATE: {
+        name: 'date',
+    },
+} as const;
+
 // Error Codes
 export enum ErrorCode {
     VALIDATION_ERROR = 'VALIDATION_ERROR',

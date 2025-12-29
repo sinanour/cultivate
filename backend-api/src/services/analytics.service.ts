@@ -4,7 +4,8 @@ import {
     ActivityStatus,
     TimePeriod,
     DateGranularity,
-    GroupingDimension
+    GroupingDimension,
+    DimensionKeys,
 } from '../utils/constants';
 
 export { TimePeriod, DateGranularity, GroupingDimension };
@@ -113,11 +114,14 @@ export class AnalyticsService {
     ) { }
 
     async getEngagementMetrics(filters: AnalyticsFilters = {}): Promise<EngagementMetrics> {
-        const { startDate, endDate, geographicAreaId, activityTypeId, venueId, groupBy } = filters;
+        const { startDate, geographicAreaId, activityTypeId, venueId, groupBy } = filters;
+
+        // Default endDate to now if startDate is provided but endDate is not
+        const endDate = filters.endDate || (startDate ? new Date() : undefined);
 
         // If groupBy dimensions are specified, return grouped results
         if (groupBy && groupBy.length > 0) {
-            return this.getGroupedEngagementMetrics(filters);
+            return this.getGroupedEngagementMetrics({ ...filters, endDate });
         }
 
         // Get venue IDs if geographic or venue filter is provided
@@ -159,39 +163,69 @@ export class AnalyticsService {
         });
 
         // Calculate temporal metrics
+        // An activity "exists" at a point in time if:
+        // - It was created before or at that time AND
+        // - It was not completed or cancelled before that time (or has no end date for ongoing)
+
         const activitiesAtStart = startDate
-            ? allActivities.filter(a =>
-                a.createdAt <= startDate &&
-                (a.status !== ActivityStatus.COMPLETED && a.status !== ActivityStatus.CANCELLED ||
-                    (a.endDate && a.endDate >= startDate))
-            ).length
+            ? allActivities.filter(a => {
+                // Must be created before or at start date
+                if (a.createdAt > startDate) return false;
+
+                // If completed or cancelled, check if it happened after start date
+                if (a.status === ActivityStatus.COMPLETED || a.status === ActivityStatus.CANCELLED) {
+                    // For completed/cancelled activities, check if endDate is after startDate
+                    return a.endDate && a.endDate >= startDate;
+                }
+
+                // For planned/active activities, they exist if created before startDate
+                return true;
+            }).length
             : 0;
 
         const activitiesAtEnd = endDate
-            ? allActivities.filter(a =>
-                a.createdAt <= endDate &&
-                (a.status !== ActivityStatus.COMPLETED && a.status !== ActivityStatus.CANCELLED ||
-                    (a.endDate && a.endDate >= endDate))
-            ).length
-            : allActivities.length;
+            ? allActivities.filter(a => {
+                // Must be created before or at end date
+                if (a.createdAt > endDate) return false;
+
+                // If completed or cancelled, check if it happened after end date
+                if (a.status === ActivityStatus.COMPLETED || a.status === ActivityStatus.CANCELLED) {
+                    // For completed/cancelled activities, check if endDate is after the reference date
+                    return a.endDate && a.endDate >= endDate;
+                }
+
+                // For planned/active activities, they exist if created before endDate
+                return true;
+            }).length
+            : allActivities.filter(a =>
+                a.status !== ActivityStatus.COMPLETED && a.status !== ActivityStatus.CANCELLED
+            ).length;
 
         const activitiesStarted = startDate && endDate
             ? allActivities.filter(a => a.startDate >= startDate && a.startDate <= endDate).length
-            : allActivities.length;
+            : startDate && !endDate
+                ? allActivities.filter(a => a.startDate >= startDate).length
+                : !startDate && endDate
+                    ? allActivities.filter(a => a.startDate <= endDate).length
+                    : allActivities.length; // No date filter = all activities were "started"
 
+        // For completed/cancelled, we need to check when the status changed
+        // Since we don't have a status change timestamp, we'll use endDate as a proxy
         const activitiesCompleted = startDate && endDate
             ? allActivities.filter(a =>
                 a.status === ActivityStatus.COMPLETED &&
-                a.updatedAt >= startDate &&
-                a.updatedAt <= endDate
+                a.endDate &&
+                a.endDate >= startDate &&
+                a.endDate <= endDate
             ).length
             : allActivities.filter(a => a.status === ActivityStatus.COMPLETED).length;
 
         const activitiesCancelled = startDate && endDate
             ? allActivities.filter(a =>
                 a.status === ActivityStatus.CANCELLED &&
-                a.updatedAt >= startDate &&
-                a.updatedAt <= endDate
+                a.endDate &&
+                a.endDate >= startDate &&
+                a.endDate <= endDate
             ).length
             : allActivities.filter(a => a.status === ActivityStatus.CANCELLED).length;
 
@@ -285,30 +319,50 @@ export class AnalyticsService {
 
             const breakdown = activitiesByTypeMap.get(typeId)!;
 
-            // Count activities by temporal category
-            if (startDate && activity.createdAt <= startDate &&
-                (activity.status !== ActivityStatus.COMPLETED && activity.status !== ActivityStatus.CANCELLED ||
-                    (activity.endDate && activity.endDate >= startDate))) {
-                breakdown.activitiesAtStart++;
+            // Count activities by temporal category using same logic as aggregate
+            if (startDate) {
+                // Activity exists at start if created before start and not completed/cancelled before start
+                if (activity.createdAt <= startDate) {
+                    if (activity.status === ActivityStatus.COMPLETED || activity.status === ActivityStatus.CANCELLED) {
+                        if (activity.endDate && activity.endDate >= startDate) {
+                            breakdown.activitiesAtStart++;
+                        }
+                    } else {
+                        breakdown.activitiesAtStart++;
+                    }
+                }
             }
 
-            if (endDate && activity.createdAt <= endDate &&
-                (activity.status !== ActivityStatus.COMPLETED && activity.status !== ActivityStatus.CANCELLED ||
-                    (activity.endDate && activity.endDate >= endDate))) {
-                breakdown.activitiesAtEnd++;
+            if (endDate) {
+                // Activity exists at end if created before end and not completed/cancelled before end
+                if (activity.createdAt <= endDate) {
+                    if (activity.status === ActivityStatus.COMPLETED || activity.status === ActivityStatus.CANCELLED) {
+                        if (activity.endDate && activity.endDate >= endDate) {
+                            breakdown.activitiesAtEnd++;
+                        }
+                    } else {
+                        breakdown.activitiesAtEnd++;
+                    }
+                }
             }
 
             if (startDate && endDate && activity.startDate >= startDate && activity.startDate <= endDate) {
                 breakdown.activitiesStarted++;
+            } else if (startDate && !endDate && activity.startDate >= startDate) {
+                breakdown.activitiesStarted++;
+            } else if (!startDate && endDate && activity.startDate <= endDate) {
+                breakdown.activitiesStarted++;
+            } else if (!startDate && !endDate) {
+                breakdown.activitiesStarted++;
             }
 
             if (startDate && endDate && activity.status === ActivityStatus.COMPLETED &&
-                activity.updatedAt >= startDate && activity.updatedAt <= endDate) {
+                activity.endDate && activity.endDate >= startDate && activity.endDate <= endDate) {
                 breakdown.activitiesCompleted++;
             }
 
             if (startDate && endDate && activity.status === ActivityStatus.CANCELLED &&
-                activity.updatedAt >= startDate && activity.updatedAt <= endDate) {
+                activity.endDate && activity.endDate >= startDate && activity.endDate <= endDate) {
                 breakdown.activitiesCancelled++;
             }
 
@@ -448,7 +502,7 @@ export class AnalyticsService {
         return {
             ...baseMetrics,
             groupedResults,
-            groupingDimensions: groupBy.map(d => d.toString()),
+            groupingDimensions: Array.isArray(groupBy) ? groupBy.map(d => d.toString()) : [],
         };
     }
 
@@ -460,16 +514,24 @@ export class AnalyticsService {
         const results: GroupedMetrics[] = [];
 
         for (const type of activityTypes) {
-            const typeFilters = {
+            const typeFilters: AnalyticsFilters = {
                 ...filters,
                 activityTypeId: type.id,
                 groupBy: remainingDimensions.length > 0 ? remainingDimensions : undefined,
             };
 
+            // Remove the current groupBy to prevent infinite recursion
+            if (remainingDimensions.length === 0) {
+                delete typeFilters.groupBy;
+            }
+
             const metrics = await this.getEngagementMetrics(typeFilters);
 
             results.push({
-                dimensions: { activityType: type.name },
+                dimensions: {
+                    [DimensionKeys.ACTIVITY_TYPE.name]: type.name,
+                    [DimensionKeys.ACTIVITY_TYPE.id]: type.id,
+                },
                 metrics,
             });
         }
@@ -492,16 +554,24 @@ export class AnalyticsService {
         const results: GroupedMetrics[] = [];
 
         for (const venue of venues) {
-            const venueFilters = {
+            const venueFilters: AnalyticsFilters = {
                 ...filters,
                 venueId: venue.id,
                 groupBy: remainingDimensions.length > 0 ? remainingDimensions : undefined,
             };
 
+            // Remove the current groupBy to prevent infinite recursion
+            if (remainingDimensions.length === 0) {
+                delete venueFilters.groupBy;
+            }
+
             const metrics = await this.getEngagementMetrics(venueFilters);
 
             results.push({
-                dimensions: { venue: venue.name },
+                dimensions: {
+                    [DimensionKeys.VENUE.name]: venue.name,
+                    [DimensionKeys.VENUE.id]: venue.id,
+                },
                 metrics,
             });
         }
@@ -517,16 +587,24 @@ export class AnalyticsService {
         const results: GroupedMetrics[] = [];
 
         for (const area of areas) {
-            const areaFilters = {
+            const areaFilters: AnalyticsFilters = {
                 ...filters,
                 geographicAreaId: area.id,
                 groupBy: remainingDimensions.length > 0 ? remainingDimensions : undefined,
             };
 
+            // Remove the current groupBy to prevent infinite recursion
+            if (remainingDimensions.length === 0) {
+                delete areaFilters.groupBy;
+            }
+
             const metrics = await this.getEngagementMetrics(areaFilters);
 
             results.push({
-                dimensions: { geographicArea: area.name },
+                dimensions: {
+                    [DimensionKeys.GEOGRAPHIC_AREA.name]: area.name,
+                    [DimensionKeys.GEOGRAPHIC_AREA.id]: area.id,
+                },
                 metrics,
             });
         }
@@ -568,17 +646,24 @@ export class AnalyticsService {
         const results: GroupedMetrics[] = [];
 
         for (const period of periods) {
-            const periodFilters = {
+            const periodFilters: AnalyticsFilters = {
                 ...filters,
                 startDate: period.start,
                 endDate: period.end,
                 groupBy: remainingDimensions.length > 0 ? remainingDimensions : undefined,
             };
 
+            // Remove the current groupBy to prevent infinite recursion
+            if (remainingDimensions.length === 0) {
+                delete periodFilters.groupBy;
+            }
+
             const metrics = await this.getEngagementMetrics(periodFilters);
 
             results.push({
-                dimensions: { date: period.label },
+                dimensions: {
+                    [DimensionKeys.DATE.name]: period.label,
+                },
                 metrics,
             });
         }
@@ -593,7 +678,9 @@ export class AnalyticsService {
                     const combinedMetrics = this.combineMetrics(quarterMonths.map(m => m.metrics));
 
                     quarterlyResults.push({
-                        dimensions: { date: quarterLabel },
+                        dimensions: {
+                            [DimensionKeys.DATE.name]: quarterLabel,
+                        },
                         metrics: combinedMetrics,
                     });
                 }

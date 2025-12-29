@@ -9,9 +9,10 @@ import Select from '@cloudscape-design/components/select';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { AnalyticsService } from '../../services/api/analytics.service';
+import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import type { TimePeriod } from '../../utils/constants';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -30,7 +31,7 @@ const getDefaultDateRange = (): DateRangePickerProps.Value | null => {
 };
 
 export function GrowthDashboard() {
-  const [period, setPeriod] = useState<'DAY' | 'WEEK' | 'MONTH' | 'YEAR'>('MONTH');
+  const [period, setPeriod] = useState<TimePeriod>('MONTH');
   const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(getDefaultDateRange());
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
@@ -41,26 +42,52 @@ export function GrowthDashboard() {
       let startDate: string | undefined;
       let endDate: string | undefined;
       
-      if (dateRange && dateRange.type === 'absolute') {
-        startDate = toISODateTime(dateRange.startDate, false);
-        endDate = toISODateTime(dateRange.endDate, true);
+      if (dateRange) {
+        if (dateRange.type === 'absolute') {
+          startDate = toISODateTime(dateRange.startDate, false);
+          endDate = toISODateTime(dateRange.endDate, true);
+        } else if (dateRange.type === 'relative') {
+          // Calculate relative date range
+          const now = new Date();
+          const start = new Date(now);
+          
+          // Calculate start date based on relative amount and unit
+          switch (dateRange.unit) {
+            case 'day':
+              start.setDate(start.getDate() - dateRange.amount);
+              break;
+            case 'week':
+              start.setDate(start.getDate() - (dateRange.amount * 7));
+              break;
+            case 'month':
+              start.setMonth(start.getMonth() - dateRange.amount);
+              break;
+            case 'year':
+              start.setFullYear(start.getFullYear() - dateRange.amount);
+              break;
+          }
+          
+          startDate = start.toISOString();
+          endDate = now.toISOString();
+        }
       }
-      // If dateRange is null, both startDate and endDate remain undefined (query all history)
       
-      return AnalyticsService.getGrowthMetrics(
+      const params: GrowthMetricsParams = {
         startDate,
         endDate,
         period,
-        selectedGeographicAreaId || undefined
-      );
+        geographicAreaId: selectedGeographicAreaId || undefined,
+      };
+      
+      return AnalyticsService.getGrowthMetrics(params);
     },
   });
 
   const periodOptions = [
-    { label: 'Daily', value: 'DAY' },
-    { label: 'Weekly', value: 'WEEK' },
-    { label: 'Monthly', value: 'MONTH' },
-    { label: 'Yearly', value: 'YEAR' },
+    { label: 'Daily', value: 'DAY' as TimePeriod },
+    { label: 'Weekly', value: 'WEEK' as TimePeriod },
+    { label: 'Monthly', value: 'MONTH' as TimePeriod },
+    { label: 'Yearly', value: 'YEAR' as TimePeriod },
   ];
 
   if (isLoading) {
@@ -143,7 +170,7 @@ export function GrowthDashboard() {
       >
         <Select
           selectedOption={periodOptions.find((o) => o.value === period) || periodOptions[2]}
-          onChange={({ detail }) => setPeriod(detail.selectedOption.value as 'DAY' | 'WEEK' | 'MONTH' | 'YEAR')}
+          onChange={({ detail }) => setPeriod(detail.selectedOption.value as TimePeriod)}
           options={periodOptions}
         />
       </Container>

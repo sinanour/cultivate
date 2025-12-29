@@ -1,34 +1,55 @@
 import type { EngagementMetrics, GrowthMetrics, GeographicAnalytics } from '../../types';
 import { ApiClient } from './api.client';
+import type { TimePeriod, DateGranularity, GroupingDimension } from '../../utils/constants';
+
+export interface EngagementMetricsParams {
+    startDate?: string;
+    endDate?: string;
+    geographicAreaId?: string;
+    activityTypeId?: string;
+    venueId?: string;
+    groupBy?: GroupingDimension[];
+    dateGranularity?: DateGranularity;
+}
+
+export interface GrowthMetricsParams {
+    startDate?: string;
+    endDate?: string;
+    period?: TimePeriod;
+    geographicAreaId?: string;
+}
 
 export class AnalyticsService {
-    static async getEngagementMetrics(
-        startDate?: string,
-        endDate?: string,
-        geographicAreaId?: string
-    ): Promise<EngagementMetrics> {
-        const params = new URLSearchParams();
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
-        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
+    static async getEngagementMetrics(params: EngagementMetricsParams = {}): Promise<EngagementMetrics> {
+        const queryParams = new URLSearchParams();
 
-        const query = params.toString();
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.geographicAreaId) queryParams.append('geographicAreaId', params.geographicAreaId);
+        if (params.activityTypeId) queryParams.append('activityTypeId', params.activityTypeId);
+        if (params.venueId) queryParams.append('venueId', params.venueId);
+        if (params.dateGranularity) queryParams.append('dateGranularity', params.dateGranularity);
+
+        // Handle groupBy array parameter
+        if (params.groupBy && params.groupBy.length > 0) {
+            params.groupBy.forEach(dimension => {
+                queryParams.append('groupBy', dimension);
+            });
+        }
+
+        const query = queryParams.toString();
         return ApiClient.get<EngagementMetrics>(`/analytics/engagement${query ? `?${query}` : ''}`);
     }
 
-    static async getGrowthMetrics(
-        startDate?: string,
-        endDate?: string,
-        period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR',
-        geographicAreaId?: string
-    ): Promise<GrowthMetrics> {
-        const params = new URLSearchParams();
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
-        if (period) params.append('period', period);
-        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
+    static async getGrowthMetrics(params: GrowthMetricsParams = {}): Promise<GrowthMetrics> {
+        const queryParams = new URLSearchParams();
 
-        const query = params.toString();
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.period) queryParams.append('period', params.period);
+        if (params.geographicAreaId) queryParams.append('geographicAreaId', params.geographicAreaId);
+
+        const query = queryParams.toString();
         return ApiClient.get<GrowthMetrics>(`/analytics/growth${query ? `?${query}` : ''}`);
     }
 
@@ -44,4 +65,3 @@ export class AnalyticsService {
         return ApiClient.get<GeographicAnalytics[]>(`/analytics/geographic${query ? `?${query}` : ''}`);
     }
 }
-
