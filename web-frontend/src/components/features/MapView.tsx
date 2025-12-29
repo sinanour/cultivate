@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import { Icon } from 'leaflet';
+import { Icon, divIcon, point } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Box from '@cloudscape-design/components/box';
 import Badge from '@cloudscape-design/components/badge';
@@ -19,6 +19,27 @@ const DefaultIcon = new Icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
+
+// Custom cluster icon creator for better visual representation
+const createClusterCustomIcon = (cluster: any) => {
+  const count = cluster.getChildCount();
+  let size = 'small';
+  let sizeClass = 'marker-cluster-small';
+  
+  if (count >= 10) {
+    size = 'large';
+    sizeClass = 'marker-cluster-large';
+  } else if (count >= 5) {
+    size = 'medium';
+    sizeClass = 'marker-cluster-medium';
+  }
+
+  return divIcon({
+    html: `<div class="cluster-inner"><span>${count}</span></div>`,
+    className: `marker-cluster ${sizeClass}`,
+    iconSize: point(40, 40, true),
+  });
+};
 
 export function MapView() {
   const { data: venues = [] } = useQuery({
@@ -47,6 +68,48 @@ export function MapView() {
 
   return (
     <div style={{ height: '100%', width: '100%' }}>
+      <style>{`
+        .marker-cluster {
+          background-clip: padding-box;
+          border-radius: 50%;
+        }
+        .marker-cluster-small {
+          background-color: rgba(110, 204, 57, 0.6);
+          border: 3px solid rgba(110, 204, 57, 0.9);
+        }
+        .marker-cluster-small .cluster-inner {
+          background-color: rgba(110, 204, 57, 0.8);
+        }
+        .marker-cluster-medium {
+          background-color: rgba(241, 211, 87, 0.6);
+          border: 3px solid rgba(241, 211, 87, 0.9);
+        }
+        .marker-cluster-medium .cluster-inner {
+          background-color: rgba(241, 211, 87, 0.8);
+        }
+        .marker-cluster-large {
+          background-color: rgba(253, 156, 115, 0.6);
+          border: 3px solid rgba(253, 156, 115, 0.9);
+        }
+        .marker-cluster-large .cluster-inner {
+          background-color: rgba(253, 156, 115, 0.8);
+        }
+        .cluster-inner {
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 3px;
+        }
+        .cluster-inner span {
+          color: white;
+          font-weight: bold;
+          font-size: 14px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+      `}</style>
       <MapContainer
         center={defaultCenter}
         zoom={13}
@@ -56,7 +119,14 @@ export function MapView() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MarkerClusterGroup>
+        <MarkerClusterGroup
+          maxClusterRadius={40}
+          disableClusteringAtZoom={16}
+          spiderfyOnMaxZoom={true}
+          showCoverageOnHover={false}
+          zoomToBoundsOnClick={true}
+          iconCreateFunction={createClusterCustomIcon}
+        >
           {venuesWithCoordinates.map((venue) => {
             // Note: Activity-venue associations would need to be fetched separately
             // For now, just show the venue marker
