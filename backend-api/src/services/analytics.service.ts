@@ -474,29 +474,27 @@ export class AnalyticsService {
         delete baseFilters.groupBy;
         const baseMetrics = await this.getEngagementMetrics(baseFilters);
 
-        // Generate grouped results
+        // Query database to find actual dimension combinations that exist in the data (SQL GROUP BY style)
+        const actualCombinations = await this.queryActualDimensionCombinations(filters, groupBy);
+
+        // Calculate metrics for each actual combination
         const groupedResults: GroupedMetrics[] = [];
+        for (const combination of actualCombinations) {
+            const combinationFilters: AnalyticsFilters = {
+                ...filters,
+                ...combination.filters,
+            };
+            delete combinationFilters.groupBy;
 
-        // Process grouping dimensions in order
-        const primaryDimension = groupBy[0];
-        const remainingDimensions = groupBy.slice(1);
+            const metrics = await this.getEngagementMetrics(combinationFilters);
 
-        switch (primaryDimension) {
-            case GroupingDimension.ACTIVITY_TYPE:
-                groupedResults.push(...await this.groupByActivityType(filters, remainingDimensions));
-                break;
-
-            case GroupingDimension.VENUE:
-                groupedResults.push(...await this.groupByVenue(filters, remainingDimensions));
-                break;
-
-            case GroupingDimension.GEOGRAPHIC_AREA:
-                groupedResults.push(...await this.groupByGeographicArea(filters, remainingDimensions));
-                break;
-
-            case GroupingDimension.DATE:
-                groupedResults.push(...await this.groupByDate(filters, remainingDimensions));
-                break;
+            // Only include results that have actual data
+            if (metrics.totalActivities > 0 || metrics.totalParticipants > 0) {
+                groupedResults.push({
+                    dimensions: combination.dimensions,
+                    metrics,
+                });
+            }
         }
 
         return {
@@ -506,280 +504,175 @@ export class AnalyticsService {
         };
     }
 
-    private async groupByActivityType(
+    private async queryActualDimensionCombinations(
         filters: AnalyticsFilters,
-        remainingDimensions: GroupingDimension[]
-    ): Promise<GroupedMetrics[]> {
-        const activityTypes = await this.prisma.activityType.findMany();
-        const results: GroupedMetrics[] = [];
+        dimensions: GroupingDimension[]
+    ): Promise<Array<{ dimensions: Record<string, string>; filters: Partial<AnalyticsFilters> }>> {
+        // Build base activity filter from existing filters
+        const { startDate, endDate, geographicAreaId, activityTypeId, venueId } = filters;
 
-        for (const type of activityTypes) {
-            const typeFilters: AnalyticsFilters = {
-                ...filters,
-                activityTypeId: type.id,
-                groupBy: remainingDimensions.length > 0 ? remainingDimensions : undefined,
-            };
+        let venueIds: string[] | undefined;
+        if (geographicAreaId) {
+            venueIds = await this.getVenueIdsForArea(geographicAreaId);
+        } else if (venueId) {
+            venueIds = [venueId];
+        }
 
-            // Remove the current groupBy to prevent infinite recursion
-            if (remainingDimensions.length === 0) {
-                delete typeFilters.groupBy;
-            }
-
-            const metrics = await this.getEngagementMetrics(typeFilters);
-
-            results.push({
-                dimensions: {
-                    [DimensionKeys.ACTIVITY_TYPE.name]: type.name,
-                    [DimensionKeys.ACTIVITY_TYPE.id]: type.id,
+        const activityWhere: any = {};
+        if (activityTypeId) {
+            activityWhere.activityTypeId = activityTypeId;
+        }
+        if (venueIds) {
+            activityWhere.activityVenueHistory = {
+                some: {
+                    venueId: { in: venueIds },
                 },
-                metrics,
-            });
-        }
-
-        return results;
-    }
-
-    private async groupByVenue(
-        filters: AnalyticsFilters,
-        remainingDimensions: GroupingDimension[]
-    ): Promise<GroupedMetrics[]> {
-        // Get venues filtered by geographic area if specified
-        const venueWhere: any = {};
-        if (filters.geographicAreaId) {
-            const venueIds = await this.getVenueIdsForArea(filters.geographicAreaId);
-            venueWhere.id = { in: venueIds };
-        }
-
-        const venues = await this.prisma.venue.findMany({ where: venueWhere });
-        const results: GroupedMetrics[] = [];
-
-        for (const venue of venues) {
-            const venueFilters: AnalyticsFilters = {
-                ...filters,
-                venueId: venue.id,
-                groupBy: remainingDimensions.length > 0 ? remainingDimensions : undefined,
             };
-
-            // Remove the current groupBy to prevent infinite recursion
-            if (remainingDimensions.length === 0) {
-                delete venueFilters.groupBy;
-            }
-
-            const metrics = await this.getEngagementMetrics(venueFilters);
-
-            results.push({
-                dimensions: {
-                    [DimensionKeys.VENUE.name]: venue.name,
-                    [DimensionKeys.VENUE.id]: venue.id,
-                },
-                metrics,
-            });
         }
 
-        return results;
-    }
-
-    private async groupByGeographicArea(
-        filters: AnalyticsFilters,
-        remainingDimensions: GroupingDimension[]
-    ): Promise<GroupedMetrics[]> {
-        const areas = await this.geographicAreaRepository.findAll();
-        const results: GroupedMetrics[] = [];
-
-        for (const area of areas) {
-            const areaFilters: AnalyticsFilters = {
-                ...filters,
-                geographicAreaId: area.id,
-                groupBy: remainingDimensions.length > 0 ? remainingDimensions : undefined,
-            };
-
-            // Remove the current groupBy to prevent infinite recursion
-            if (remainingDimensions.length === 0) {
-                delete areaFilters.groupBy;
-            }
-
-            const metrics = await this.getEngagementMetrics(areaFilters);
-
-            results.push({
-                dimensions: {
-                    [DimensionKeys.GEOGRAPHIC_AREA.name]: area.name,
-                    [DimensionKeys.GEOGRAPHIC_AREA.id]: area.id,
-                },
-                metrics,
-            });
-        }
-
-        return results;
-    }
-
-    private async groupByDate(
-        filters: AnalyticsFilters,
-        remainingDimensions: GroupingDimension[]
-    ): Promise<GroupedMetrics[]> {
-        const { startDate, endDate, dateGranularity } = filters;
-
-        if (!startDate || !endDate) {
-            // Cannot group by date without date range
-            return [];
-        }
-
-        // Convert DateGranularity to TimePeriod
-        let timePeriod: TimePeriod;
-        switch (dateGranularity) {
-            case DateGranularity.WEEKLY:
-                timePeriod = TimePeriod.WEEK;
-                break;
-            case DateGranularity.MONTHLY:
-                timePeriod = TimePeriod.MONTH;
-                break;
-            case DateGranularity.QUARTERLY:
-                timePeriod = TimePeriod.MONTH; // Will group by 3 months
-                break;
-            case DateGranularity.YEARLY:
-                timePeriod = TimePeriod.YEAR;
-                break;
-            default:
-                timePeriod = TimePeriod.MONTH;
-        }
-
-        const periods = this.generateTimePeriods(startDate, endDate, timePeriod);
-        const results: GroupedMetrics[] = [];
-
-        for (const period of periods) {
-            const periodFilters: AnalyticsFilters = {
-                ...filters,
-                startDate: period.start,
-                endDate: period.end,
-                groupBy: remainingDimensions.length > 0 ? remainingDimensions : undefined,
-            };
-
-            // Remove the current groupBy to prevent infinite recursion
-            if (remainingDimensions.length === 0) {
-                delete periodFilters.groupBy;
-            }
-
-            const metrics = await this.getEngagementMetrics(periodFilters);
-
-            results.push({
-                dimensions: {
-                    [DimensionKeys.DATE.name]: period.label,
-                },
-                metrics,
-            });
-        }
-
-        // Handle quarterly grouping by combining 3 months
-        if (dateGranularity === DateGranularity.QUARTERLY) {
-            const quarterlyResults: GroupedMetrics[] = [];
-            for (let i = 0; i < results.length; i += 3) {
-                const quarterMonths = results.slice(i, i + 3);
-                if (quarterMonths.length > 0) {
-                    const quarterLabel = `Q${Math.floor(i / 3) + 1} ${quarterMonths[0].dimensions.date.split('-')[0]}`;
-                    const combinedMetrics = this.combineMetrics(quarterMonths.map(m => m.metrics));
-
-                    quarterlyResults.push({
-                        dimensions: {
-                            [DimensionKeys.DATE.name]: quarterLabel,
+        // Query activities with all necessary relations to determine actual combinations
+        const activities = await this.prisma.activity.findMany({
+            where: activityWhere,
+            include: {
+                activityType: true,
+                activityVenueHistory: {
+                    include: {
+                        venue: {
+                            include: {
+                                geographicArea: true,
+                            },
                         },
-                        metrics: combinedMetrics,
-                    });
+                    },
+                    orderBy: {
+                        effectiveFrom: 'desc',
+                    },
+                },
+            },
+        });
+
+        // Extract unique combinations from actual data
+        const combinationMap = new Map<string, { dimensions: Record<string, string>; filters: Partial<AnalyticsFilters> }>();
+
+        for (const activity of activities) {
+            // Get current venue (most recent in history)
+            const currentVenue = activity.activityVenueHistory[0];
+            if (!currentVenue) continue;
+
+            // Build dimension values for this activity
+            const dimensionValues: Record<string, any> = {
+                [GroupingDimension.ACTIVITY_TYPE]: {
+                    id: activity.activityTypeId,
+                    name: activity.activityType.name,
+                },
+                [GroupingDimension.VENUE]: {
+                    id: currentVenue.venueId,
+                    name: currentVenue.venue.name,
+                },
+                [GroupingDimension.GEOGRAPHIC_AREA]: {
+                    id: currentVenue.venue.geographicAreaId,
+                    name: currentVenue.venue.geographicArea.name,
+                },
+            };
+
+            // Handle date dimension if specified
+            if (dimensions.includes(GroupingDimension.DATE) && startDate && endDate) {
+                const { dateGranularity } = filters;
+                let timePeriod: TimePeriod;
+                switch (dateGranularity) {
+                    case DateGranularity.WEEKLY:
+                        timePeriod = TimePeriod.WEEK;
+                        break;
+                    case DateGranularity.MONTHLY:
+                        timePeriod = TimePeriod.MONTH;
+                        break;
+                    case DateGranularity.QUARTERLY:
+                        timePeriod = TimePeriod.MONTH;
+                        break;
+                    case DateGranularity.YEARLY:
+                        timePeriod = TimePeriod.YEAR;
+                        break;
+                    default:
+                        timePeriod = TimePeriod.MONTH;
+                }
+
+                const periods = this.generateTimePeriods(startDate, endDate, timePeriod);
+                const activityPeriod = periods.find(p =>
+                    activity.createdAt >= p.start && activity.createdAt < p.end
+                );
+
+                if (activityPeriod) {
+                    if (dateGranularity === DateGranularity.QUARTERLY) {
+                        // Map to quarter
+                        const monthIndex = periods.findIndex(p => p.label === activityPeriod.label);
+                        const quarterIndex = Math.floor(monthIndex / 3);
+                        const quarterMonths = periods.slice(quarterIndex * 3, quarterIndex * 3 + 3);
+                        if (quarterMonths.length > 0) {
+                            const quarterLabel = `Q${quarterIndex + 1} ${quarterMonths[0].start.getFullYear()}`;
+
+                            dimensionValues[GroupingDimension.DATE] = {
+                                label: quarterLabel,
+                                start: quarterMonths[0].start,
+                                end: quarterMonths[quarterMonths.length - 1].end,
+                            };
+                        }
+                    } else {
+                        dimensionValues[GroupingDimension.DATE] = {
+                            label: activityPeriod.label,
+                            start: activityPeriod.start,
+                            end: activityPeriod.end,
+                        };
+                    }
                 }
             }
-            return quarterlyResults;
-        }
 
-        return results;
-    }
+            // Build combination key and record for requested dimensions
+            const combination: { dimensions: Record<string, string>; filters: Partial<AnalyticsFilters> } = {
+                dimensions: {},
+                filters: {},
+            };
 
-    private combineMetrics(metricsList: EngagementMetrics[]): EngagementMetrics {
-        // Combine multiple metrics into one by summing counts
-        const combined: EngagementMetrics = {
-            activitiesAtStart: 0,
-            activitiesAtEnd: 0,
-            activitiesStarted: 0,
-            activitiesCompleted: 0,
-            activitiesCancelled: 0,
-            participantsAtStart: 0,
-            participantsAtEnd: 0,
-            newParticipants: 0,
-            disengagedParticipants: 0,
-            totalActivities: 0,
-            totalParticipants: 0,
-            activitiesByType: [],
-            roleDistribution: [],
-            geographicBreakdown: [],
-            periodStart: metricsList[0]?.periodStart || '',
-            periodEnd: metricsList[metricsList.length - 1]?.periodEnd || '',
-            appliedFilters: metricsList[0]?.appliedFilters || {},
-            groupingDimensions: metricsList[0]?.groupingDimensions,
-        };
+            let combinationKey = '';
+            for (const dim of dimensions) {
+                const value = dimensionValues[dim];
+                if (!value) continue;
 
-        // Sum all numeric fields
-        for (const metrics of metricsList) {
-            combined.activitiesAtStart += metrics.activitiesAtStart;
-            combined.activitiesAtEnd += metrics.activitiesAtEnd;
-            combined.activitiesStarted += metrics.activitiesStarted;
-            combined.activitiesCompleted += metrics.activitiesCompleted;
-            combined.activitiesCancelled += metrics.activitiesCancelled;
-            combined.participantsAtStart += metrics.participantsAtStart;
-            combined.participantsAtEnd += metrics.participantsAtEnd;
-            combined.newParticipants += metrics.newParticipants;
-            combined.disengagedParticipants += metrics.disengagedParticipants;
-            combined.totalActivities += metrics.totalActivities;
-            combined.totalParticipants += metrics.totalParticipants;
-        }
+                switch (dim) {
+                    case GroupingDimension.ACTIVITY_TYPE:
+                        combination.dimensions[DimensionKeys.ACTIVITY_TYPE.name] = value.name;
+                        combination.dimensions[DimensionKeys.ACTIVITY_TYPE.id] = value.id;
+                        combination.filters.activityTypeId = value.id;
+                        combinationKey += `type:${value.id}|`;
+                        break;
 
-        // Combine activity type breakdowns
-        const typeMap = new Map<string, ActivityTypeBreakdown>();
-        for (const metrics of metricsList) {
-            for (const typeBreakdown of metrics.activitiesByType) {
-                if (!typeMap.has(typeBreakdown.activityTypeId)) {
-                    typeMap.set(typeBreakdown.activityTypeId, { ...typeBreakdown });
-                } else {
-                    const existing = typeMap.get(typeBreakdown.activityTypeId)!;
-                    existing.activitiesAtStart += typeBreakdown.activitiesAtStart;
-                    existing.activitiesAtEnd += typeBreakdown.activitiesAtEnd;
-                    existing.activitiesStarted += typeBreakdown.activitiesStarted;
-                    existing.activitiesCompleted += typeBreakdown.activitiesCompleted;
-                    existing.activitiesCancelled += typeBreakdown.activitiesCancelled;
-                    existing.participantsAtStart += typeBreakdown.participantsAtStart;
-                    existing.participantsAtEnd += typeBreakdown.participantsAtEnd;
-                    existing.newParticipants += typeBreakdown.newParticipants;
-                    existing.disengagedParticipants += typeBreakdown.disengagedParticipants;
+                    case GroupingDimension.VENUE:
+                        combination.dimensions[DimensionKeys.VENUE.name] = value.name;
+                        combination.dimensions[DimensionKeys.VENUE.id] = value.id;
+                        combination.filters.venueId = value.id;
+                        combinationKey += `venue:${value.id}|`;
+                        break;
+
+                    case GroupingDimension.GEOGRAPHIC_AREA:
+                        combination.dimensions[DimensionKeys.GEOGRAPHIC_AREA.name] = value.name;
+                        combination.dimensions[DimensionKeys.GEOGRAPHIC_AREA.id] = value.id;
+                        combination.filters.geographicAreaId = value.id;
+                        combinationKey += `area:${value.id}|`;
+                        break;
+
+                    case GroupingDimension.DATE:
+                        combination.dimensions[DimensionKeys.DATE.name] = value.label;
+                        combination.filters.startDate = value.start;
+                        combination.filters.endDate = value.end;
+                        combinationKey += `date:${value.label}|`;
+                        break;
                 }
             }
-        }
-        combined.activitiesByType = Array.from(typeMap.values());
 
-        // Combine role distributions
-        const roleMap = new Map<string, RoleDistribution>();
-        for (const metrics of metricsList) {
-            for (const role of metrics.roleDistribution) {
-                if (!roleMap.has(role.roleId)) {
-                    roleMap.set(role.roleId, { ...role });
-                } else {
-                    roleMap.get(role.roleId)!.count += role.count;
-                }
+            if (!combinationMap.has(combinationKey)) {
+                combinationMap.set(combinationKey, combination);
             }
         }
-        combined.roleDistribution = Array.from(roleMap.values());
 
-        // Combine geographic breakdowns
-        const geoMap = new Map<string, GeographicBreakdown>();
-        for (const metrics of metricsList) {
-            for (const geo of metrics.geographicBreakdown) {
-                if (!geoMap.has(geo.geographicAreaId)) {
-                    geoMap.set(geo.geographicAreaId, { ...geo });
-                } else {
-                    const existing = geoMap.get(geo.geographicAreaId)!;
-                    existing.activityCount += geo.activityCount;
-                    existing.participantCount += geo.participantCount;
-                }
-            }
-        }
-        combined.geographicBreakdown = Array.from(geoMap.values());
-
-        return combined;
+        return Array.from(combinationMap.values());
     }
 
     async getGrowthMetrics(
