@@ -1,7 +1,8 @@
+import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import { Icon, divIcon, point } from 'leaflet';
+import { Icon, divIcon, point, type LatLngBoundsExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Box from '@cloudscape-design/components/box';
 import Badge from '@cloudscape-design/components/badge';
@@ -69,6 +70,29 @@ type MapMode = 'activities' | 'participantHomes' | 'venues';
 interface MapViewProps {
   mode: MapMode;
   activityTypes: ActivityType[];
+}
+
+// Component to handle map bounds adjustment
+function MapBoundsAdjuster({ markers }: { markers: Array<{ position: [number, number] }> }) {
+  const map = useMap();
+  const prevMarkersRef = useRef<string>('');
+
+  useEffect(() => {
+    if (markers.length === 0) return;
+
+    // Create a unique key for current markers to detect changes
+    const markersKey = markers.map(m => `${m.position[0]},${m.position[1]}`).sort().join('|');
+    
+    // Only adjust bounds if markers have changed
+    if (markersKey !== prevMarkersRef.current) {
+      prevMarkersRef.current = markersKey;
+      
+      const bounds: LatLngBoundsExpression = markers.map(m => m.position);
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    }
+  }, [markers, map]);
+
+  return null;
 }
 
 export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
@@ -339,6 +363,7 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
         zoom={13}
         style={{ height: '100%', width: '100%' }}
       >
+        <MapBoundsAdjuster markers={markers} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
