@@ -201,28 +201,31 @@ The Web Frontend package provides a responsive React-based web application that 
 15. THE Web_App SHALL provide filter controls for venue (point filter)
 16. THE Web_App SHALL provide filter controls for geographic area (point filter, includes descendants)
 17. THE Web_App SHALL provide filter controls for date range (range filter with start and end dates)
-18. WHEN multiple grouping dimensions are selected, THE Web_App SHALL render grouped results in a table where breakdown dimensions are the first columns followed by metric aggregation columns
-19. WHEN rendering grouped results in a table, THE Web_App SHALL render activity type names as hyperlinks to their respective edit forms or detail views
-20. WHEN rendering grouped results in a table, THE Web_App SHALL render venue names as hyperlinks to their respective detail views at /venues/:id
-21. WHEN rendering grouped results in a table, THE Web_App SHALL render geographic area names as hyperlinks to their respective detail views at /geographic-areas/:id
-22. WHEN rendering grouped results in a table, THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end) in its own column
-23. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
-24. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
-25. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
-26. THE Web_App SHALL synchronize all filter parameters (activity type, venue, geographic area, start date, end date) with URL query parameters
-27. THE Web_App SHALL synchronize all grouping parameters (group by dimensions and date granularity) with URL query parameters
-28. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
-29. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
-30. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
-31. THE Web_App SHALL allow users to share the current analytics view URL with other users to display the same filtered and grouped results
-32. THE Web_App SHALL provide a growth analytics dashboard
-33. THE Web_App SHALL display time-series charts for new activities
-34. THE Web_App SHALL provide time period selection (day, week, month, year)
-35. THE Web_App SHALL display percentage changes between periods for activities
-36. THE Web_App SHALL display cumulative participant counts over time
-37. THE Web_App SHALL provide a geographic area filter for all analytics
-38. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
-39. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
+18. THE Web_App SHALL render an "Engagement Summary" table that displays aggregate metrics and dimensional breakdowns
+19. THE Web_App SHALL render the first row of the Engagement Summary table with the label "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end) in subsequent columns
+20. WHEN multiple grouping dimensions are selected, THE Web_App SHALL leave subsequent dimension cells blank in the first row (Total row)
+21. WHEN grouping dimensions are selected, THE Web_App SHALL render additional rows below the Total row showing dimensional breakdowns where breakdown dimension columns appear first followed by metric aggregation columns
+22. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity type names as hyperlinks to their respective edit forms or detail views
+23. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render venue names as hyperlinks to their respective detail views at /venues/:id
+24. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render geographic area names as hyperlinks to their respective detail views at /geographic-areas/:id
+25. THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end) in its own column in the Engagement Summary table
+26. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
+27. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
+28. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
+29. THE Web_App SHALL synchronize all filter parameters (activity type, venue, geographic area, start date, end date) with URL query parameters
+30. THE Web_App SHALL synchronize all grouping parameters (group by dimensions and date granularity) with URL query parameters
+31. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
+32. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
+33. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
+34. THE Web_App SHALL allow users to share the current analytics view URL with other users to display the same filtered and grouped results
+35. THE Web_App SHALL provide a growth analytics dashboard
+36. THE Web_App SHALL display time-series charts for new activities
+37. THE Web_App SHALL provide time period selection (day, week, month, year)
+38. THE Web_App SHALL display percentage changes between periods for activities
+39. THE Web_App SHALL display cumulative participant counts over time
+40. THE Web_App SHALL provide a geographic area filter for all analytics
+41. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
+42. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
 
 ### Requirement 8: Authentication UI
 

@@ -19,7 +19,6 @@ import { AnalyticsService, type EngagementMetricsParams } from '../../services/a
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { GroupingDimension, DateGranularity } from '../../utils/constants';
-import type { GroupedMetrics } from '../../types';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -354,76 +353,219 @@ export function EngagementDashboard() {
         </SpaceBetween>
       </Container>
 
-      {/* Temporal Activity Metrics */}
-      <Container header={<Header variant="h3">Activity Metrics</Header>}>
-        <ColumnLayout columns={5} variant="text-grid">
-          <Container>
-            <Box variant="awsui-key-label">At Start</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.activitiesAtStart}
+      {/* Engagement Summary Table - Always visible */}
+      <Container header={<Header variant="h3">Engagement Summary</Header>}>
+        <Table
+          columnDefinitions={[
+            // First column for dimension label or "Total"
+            {
+              id: 'label',
+              header: metrics.groupingDimensions && metrics.groupingDimensions.length > 0 
+                ? metrics.groupingDimensions[0].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                : 'Summary',
+              cell: (item: any) => {
+                // For the Total row
+                if (item.isTotal) {
+                  return <Box fontWeight="bold">Total</Box>;
+                }
+                
+                // For dimensional breakdown rows
+                const dimension = metrics.groupingDimensions?.[0];
+                if (!dimension) return '-';
+                
+                const nameValue = item.dimensions[dimension];
+                const idValue = item.dimensions[`${dimension}Id`];
+                
+                // Render hyperlinks for specific dimensions
+                if (dimension === GroupingDimension.ACTIVITY_TYPE) {
+                  if (idValue) {
+                    return (
+                      <Link 
+                        href={`/activity-types`}
+                        onFollow={(e) => {
+                          e.preventDefault();
+                          navigate('/activity-types');
+                        }}
+                      >
+                        {nameValue}
+                      </Link>
+                    );
+                  }
+                  return nameValue || '-';
+                } else if (dimension === GroupingDimension.VENUE) {
+                  if (idValue) {
+                    return (
+                      <Link 
+                        href={`/venues/${idValue}`}
+                        onFollow={(e) => {
+                          e.preventDefault();
+                          navigate(`/venues/${idValue}`);
+                        }}
+                      >
+                        {nameValue}
+                      </Link>
+                    );
+                  }
+                  return nameValue || '-';
+                } else if (dimension === GroupingDimension.GEOGRAPHIC_AREA) {
+                  if (idValue) {
+                    return (
+                      <Link 
+                        href={`/geographic-areas/${idValue}`}
+                        onFollow={(e) => {
+                          e.preventDefault();
+                          navigate(`/geographic-areas/${idValue}`);
+                        }}
+                      >
+                        {nameValue}
+                      </Link>
+                    );
+                  }
+                  return nameValue || '-';
+                }
+                
+                return nameValue || '-';
+              },
+              sortingField: 'label',
+            },
+            // Additional dimension columns (if multiple dimensions selected)
+            ...(metrics.groupingDimensions && metrics.groupingDimensions.length > 1 
+              ? metrics.groupingDimensions.slice(1).map(dimension => ({
+                  id: dimension,
+                  header: dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                  cell: (item: any) => {
+                    // For Total row, leave blank
+                    if (item.isTotal) {
+                      return '';
+                    }
+                    
+                    const nameValue = item.dimensions[dimension];
+                    const idValue = item.dimensions[`${dimension}Id`];
+                    
+                    // Render hyperlinks for specific dimensions
+                    if (dimension === GroupingDimension.ACTIVITY_TYPE) {
+                      if (idValue) {
+                        return (
+                          <Link 
+                            href={`/activity-types`}
+                            onFollow={(e) => {
+                              e.preventDefault();
+                              navigate('/activity-types');
+                            }}
+                          >
+                            {nameValue}
+                          </Link>
+                        );
+                      }
+                      return nameValue || '-';
+                    } else if (dimension === GroupingDimension.VENUE) {
+                      if (idValue) {
+                        return (
+                          <Link 
+                            href={`/venues/${idValue}`}
+                            onFollow={(e) => {
+                              e.preventDefault();
+                              navigate(`/venues/${idValue}`);
+                            }}
+                          >
+                            {nameValue}
+                          </Link>
+                        );
+                      }
+                      return nameValue || '-';
+                    } else if (dimension === GroupingDimension.GEOGRAPHIC_AREA) {
+                      if (idValue) {
+                        return (
+                          <Link 
+                            href={`/geographic-areas/${idValue}`}
+                            onFollow={(e) => {
+                              e.preventDefault();
+                              navigate(`/geographic-areas/${idValue}`);
+                            }}
+                          >
+                            {nameValue}
+                          </Link>
+                        );
+                      }
+                      return nameValue || '-';
+                    }
+                    
+                    return nameValue || '-';
+                  },
+                  sortingField: dimension,
+                }))
+              : []
+            ),
+            // Metric columns
+            {
+              id: 'activitiesAtStart',
+              header: 'Activities at Start',
+              cell: (item: any) => item.metrics.activitiesAtStart,
+              sortingField: 'activitiesAtStart',
+            },
+            {
+              id: 'activitiesAtEnd',
+              header: 'Activities at End',
+              cell: (item: any) => item.metrics.activitiesAtEnd,
+              sortingField: 'activitiesAtEnd',
+            },
+            {
+              id: 'activitiesStarted',
+              header: 'Activities Started',
+              cell: (item: any) => item.metrics.activitiesStarted,
+              sortingField: 'activitiesStarted',
+            },
+            {
+              id: 'activitiesCompleted',
+              header: 'Activities Completed',
+              cell: (item: any) => item.metrics.activitiesCompleted,
+              sortingField: 'activitiesCompleted',
+            },
+            {
+              id: 'activitiesCancelled',
+              header: 'Activities Cancelled',
+              cell: (item: any) => item.metrics.activitiesCancelled,
+              sortingField: 'activitiesCancelled',
+            },
+            {
+              id: 'participantsAtStart',
+              header: 'Participants at Start',
+              cell: (item: any) => item.metrics.participantsAtStart,
+              sortingField: 'participantsAtStart',
+            },
+            {
+              id: 'participantsAtEnd',
+              header: 'Participants at End',
+              cell: (item: any) => item.metrics.participantsAtEnd,
+              sortingField: 'participantsAtEnd',
+            },
+          ]}
+          items={[
+            // First row: Total (aggregate metrics)
+            {
+              isTotal: true,
+              dimensions: {},
+              metrics: {
+                activitiesAtStart: metrics.activitiesAtStart,
+                activitiesAtEnd: metrics.activitiesAtEnd,
+                activitiesStarted: metrics.activitiesStarted,
+                activitiesCompleted: metrics.activitiesCompleted,
+                activitiesCancelled: metrics.activitiesCancelled,
+                participantsAtStart: metrics.participantsAtStart,
+                participantsAtEnd: metrics.participantsAtEnd,
+              },
+            },
+            // Subsequent rows: Dimensional breakdowns (if any)
+            ...(metrics.groupedResults || []),
+          ]}
+          sortingDisabled={false}
+          variant="embedded"
+          empty={
+            <Box textAlign="center" color="inherit">
+              <b>No data available</b>
             </Box>
-          </Container>
-          <Container>
-            <Box variant="awsui-key-label">At End</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.activitiesAtEnd}
-            </Box>
-          </Container>
-          <Container>
-            <Box variant="awsui-key-label">Started</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.activitiesStarted}
-            </Box>
-          </Container>
-          <Container>
-            <Box variant="awsui-key-label">Completed</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.activitiesCompleted}
-            </Box>
-          </Container>
-          <Container>
-            <Box variant="awsui-key-label">Cancelled</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.activitiesCancelled}
-            </Box>
-          </Container>
-        </ColumnLayout>
-      </Container>
-
-      {/* Temporal Participant Metrics */}
-      <Container header={<Header variant="h3">Participant Metrics</Header>}>
-        <ColumnLayout columns={4} variant="text-grid">
-          <Container>
-            <Box variant="awsui-key-label">At Start</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.participantsAtStart}
-            </Box>
-          </Container>
-          <Container>
-            <Box variant="awsui-key-label">At End</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.participantsAtEnd}
-            </Box>
-          </Container>
-        </ColumnLayout>
-      </Container>
-
-      {/* Aggregate Totals */}
-      <Container header={<Header variant="h3">Aggregate Totals</Header>}>
-        <ColumnLayout columns={2} variant="text-grid">
-          <Container>
-            <Box variant="awsui-key-label">Total Activities</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.totalActivities}
-            </Box>
-          </Container>
-          <Container>
-            <Box variant="awsui-key-label">Total Participants</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.totalParticipants}
-            </Box>
-          </Container>
-        </ColumnLayout>
+          }
+        />
       </Container>
 
       {/* Activities by Type Breakdown */}
@@ -485,130 +627,6 @@ export function EngagementDashboard() {
               <Bar dataKey="participantCount" fill="#00C49F" name="Participants" />
             </BarChart>
           </ResponsiveContainer>
-        </Container>
-      )}
-
-            {metrics.groupedResults && metrics.groupedResults.length > 0 && (
-        <Container header={<Header variant="h3">Grouped Results</Header>}>
-          <Table
-            columnDefinitions={[
-              // Dimension columns first
-              ...(metrics.groupingDimensions || []).map(dimension => {
-                return {
-                  id: dimension,
-                  header: dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                  cell: (item: GroupedMetrics) => {
-                    // Get the name and ID using the dimension value
-                    const nameValue = item.dimensions[dimension];
-                    const idValue = item.dimensions[`${dimension}Id`];
-                    
-                    // Render hyperlinks for specific dimensions using constants
-                    if (dimension === GroupingDimension.ACTIVITY_TYPE) {
-                      if (idValue) {
-                        return (
-                          <Link 
-                            href={`/activity-types`}
-                            onFollow={(e) => {
-                              e.preventDefault();
-                              navigate('/activity-types');
-                            }}
-                          >
-                            {nameValue}
-                          </Link>
-                        );
-                      }
-                      return nameValue || '-';
-                    } else if (dimension === GroupingDimension.VENUE) {
-                      if (idValue) {
-                        return (
-                          <Link 
-                            href={`/venues/${idValue}`}
-                            onFollow={(e) => {
-                              e.preventDefault();
-                              navigate(`/venues/${idValue}`);
-                            }}
-                          >
-                            {nameValue}
-                          </Link>
-                        );
-                      }
-                      return nameValue || '-';
-                    } else if (dimension === GroupingDimension.GEOGRAPHIC_AREA) {
-                      if (idValue) {
-                        return (
-                          <Link 
-                            href={`/geographic-areas/${idValue}`}
-                            onFollow={(e) => {
-                              e.preventDefault();
-                              navigate(`/geographic-areas/${idValue}`);
-                            }}
-                          >
-                            {nameValue}
-                          </Link>
-                        );
-                      }
-                      return nameValue || '-';
-                    }
-                    
-                    // For date or other dimensions without IDs, just display the value
-                    return nameValue || '-';
-                  },
-                  sortingField: dimension,
-                };
-              }),
-              // Metric columns follow
-              {
-                id: 'activitiesAtStart',
-                header: 'Activities at Start',
-                cell: (item: GroupedMetrics) => item.metrics.activitiesAtStart,
-                sortingField: 'activitiesAtStart',
-              },
-              {
-                id: 'activitiesAtEnd',
-                header: 'Activities at End',
-                cell: (item: GroupedMetrics) => item.metrics.activitiesAtEnd,
-                sortingField: 'activitiesAtEnd',
-              },
-              {
-                id: 'activitiesStarted',
-                header: 'Activities Started',
-                cell: (item: GroupedMetrics) => item.metrics.activitiesStarted,
-                sortingField: 'activitiesStarted',
-              },
-              {
-                id: 'activitiesCompleted',
-                header: 'Activities Completed',
-                cell: (item: GroupedMetrics) => item.metrics.activitiesCompleted,
-                sortingField: 'activitiesCompleted',
-              },
-              {
-                id: 'activitiesCancelled',
-                header: 'Activities Cancelled',
-                cell: (item: GroupedMetrics) => item.metrics.activitiesCancelled,
-                sortingField: 'activitiesCancelled',
-              },
-              {
-                id: 'participantsAtStart',
-                header: 'Participants at Start',
-                cell: (item: GroupedMetrics) => item.metrics.participantsAtStart,
-                sortingField: 'participantsAtStart',
-              },
-              {
-                id: 'participantsAtEnd',
-                header: 'Participants at End',
-                cell: (item: GroupedMetrics) => item.metrics.participantsAtEnd,
-                sortingField: 'participantsAtEnd',
-              },
-            ]}
-            items={metrics.groupedResults}
-            sortingDisabled={false}
-            variant="embedded"
-            empty={
-              <Box textAlign="center" color="inherit">
-                <b>No grouped results</b>
-              </Box>
-            }
-          />
         </Container>
       )}
     </SpaceBetween>

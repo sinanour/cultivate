@@ -477,13 +477,18 @@ This implementation plan covers the React-based web application built with TypeS
       - Venue filter (dropdown)
       - Geographic area filter (dropdown, includes descendants)
       - Date range filter using CloudScape DateRangePicker
-    - Render grouped results in CloudScape Table when multiple grouping dimensions selected:
-      - Display breakdown dimension columns first (activity type, venue, geographic area, date period)
-      - Display metric aggregation columns after dimensions (activities at start, at end, started, completed, cancelled, participants at start, at end)
-      - Render activity type names as hyperlinks to edit forms or detail views
-      - Render venue names as hyperlinks to /venues/:id using CloudScape Link component
-      - Render geographic area names as hyperlinks to /geographic-areas/:id using CloudScape Link component
-      - Display each metric in its own column for easy comparison
+    - Render "Engagement Summary" table using CloudScape Table:
+      - Always display table regardless of whether grouping dimensions are selected
+      - First row displays aggregate metrics with "Total" label in first column
+      - When multiple grouping dimensions selected, leave subsequent dimension cells blank in Total row
+      - Display metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
+      - When grouping dimensions selected, render additional rows below Total row showing dimensional breakdowns:
+        - Display breakdown dimension columns first (activity type, venue, geographic area, date period)
+        - Display metric aggregation columns after dimensions
+        - Render activity type names as hyperlinks to edit forms or detail views
+        - Render venue names as hyperlinks to /venues/:id using CloudScape Link component
+        - Render geographic area names as hyperlinks to /geographic-areas/:id using CloudScape Link component
+        - Display each metric in its own column for easy comparison
     - Show role distribution within filtered and grouped results
     - Display geographic breakdown chart showing engagement by geographic area
     - Allow drilling down into child geographic areas
@@ -495,7 +500,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42_
 
   - [ ]* 14.2 Write property tests for engagement metrics
     - **Property 23: Temporal Activity Metrics Display**
@@ -503,9 +508,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 25: Aggregate and Breakdown Display**
     - **Property 26: Multi-Dimensional Grouping Controls**
     - **Property 27: Filter Control Availability**
-    - **Property 28: Grouped Results Table Display**
-    - **Property 28a: Dimension Hyperlinks in Grouped Results**
-    - **Property 28b: Metric Columns in Grouped Results**
+    - **Property 28: Engagement Summary Table Display**
+    - **Property 28a: Total Row Aggregate Metrics**
+    - **Property 28b: Total Row Blank Dimension Cells**
+    - **Property 28c: Dimensional Breakdown Rows**
+    - **Property 28d: Dimension Hyperlinks in Breakdown Rows**
+    - **Property 28e: Metric Columns in Engagement Summary**
     - **Property 29: Multiple Filter Application**
     - **Property 30: All-Time Metrics Display**
     - **Property 31: Role Distribution Display**
@@ -514,7 +522,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31c: Analytics URL Update on State Change**
     - **Property 31d: Analytics Browser Navigation Support**
     - **Property 31e: Analytics URL Shareability**
-    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31**
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34**
 
   - [x] 14.2 Create GrowthDashboard component
     - Display time-series charts for new activities

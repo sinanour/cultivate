@@ -381,12 +381,16 @@ src/
   - Venue filter (dropdown)
   - Geographic area filter (dropdown, includes descendants)
   - Date range filter using CloudScape DateRangePicker
-- Renders grouped results in a CloudScape Table when multiple grouping dimensions selected:
-  - Breakdown dimension columns appear first (activity type, venue, geographic area, date period)
-  - Metric aggregation columns follow (activities at start, at end, started, completed, cancelled, participants at start, at end)
-  - Activity type names rendered as hyperlinks to edit forms or detail views
-  - Venue names rendered as hyperlinks to /venues/:id
-  - Geographic area names rendered as hyperlinks to /geographic-areas/:id
+- Renders "Engagement Summary" table using CloudScape Table:
+  - Always visible regardless of whether grouping dimensions are selected
+  - First row displays aggregate metrics with "Total" label in first column
+  - When multiple grouping dimensions selected, subsequent dimension cells in Total row are left blank
+  - Metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
+  - When grouping dimensions selected, additional rows show dimensional breakdowns:
+    - Breakdown dimension columns appear first (activity type, venue, geographic area, date period)
+    - Activity type names rendered as hyperlinks to edit forms or detail views
+    - Venue names rendered as hyperlinks to /venues/:id
+    - Geographic area names rendered as hyperlinks to /geographic-areas/:id
   - Each metric displayed in its own column for easy comparison
 - Shows role distribution within filtered and grouped results
 - Displays geographic breakdown chart showing engagement by geographic area
@@ -1038,23 +1042,41 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 7.14, 7.15, 7.16, 7.17**
 
-### Property 28: Grouped results table display
+### Property 28: Engagement Summary Table Display
 
-*For any* engagement dashboard with multiple grouping dimensions selected, the results should be displayed in a table where breakdown dimension columns appear first, followed by metric aggregation columns.
+*For any* engagement dashboard state (with or without grouping dimensions), an "Engagement Summary" table should always be displayed with the first row labeled "Total" containing aggregate metrics.
 
-**Validates: Requirements 7.18**
+**Validates: Requirements 7.18, 7.19**
 
-### Property 28a: Dimension hyperlinks in grouped results
+### Property 28a: Total Row Aggregate Metrics
 
-*For any* grouped results table, dimension values (activity type names, venue names, geographic area names) should be rendered as hyperlinks that navigate to their respective detail views.
+*For any* engagement dashboard, the first row of the Engagement Summary table should display "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end) in subsequent columns.
 
-**Validates: Requirements 7.19, 7.20, 7.21**
+**Validates: Requirements 7.19**
 
-### Property 28b: Metric columns in grouped results
+### Property 28b: Total Row Blank Dimension Cells
 
-*For any* grouped results table, each metric aggregation (activities at start, at end, started, completed, cancelled, participants at start, at end) should be displayed in its own separate column.
+*For any* engagement dashboard with multiple grouping dimensions selected, the dimension cells in the Total row (after the first column) should be left blank.
 
-**Validates: Requirements 7.22**
+**Validates: Requirements 7.20**
+
+### Property 28c: Dimensional Breakdown Rows
+
+*For any* engagement dashboard with grouping dimensions selected, rows below the Total row should display dimensional breakdowns where breakdown dimension columns appear first, followed by metric aggregation columns.
+
+**Validates: Requirements 7.21**
+
+### Property 28d: Dimension Hyperlinks in Breakdown Rows
+
+*For any* dimensional breakdown row in the Engagement Summary table, dimension values (activity type names, venue names, geographic area names) should be rendered as hyperlinks that navigate to their respective detail views.
+
+**Validates: Requirements 7.22, 7.23, 7.24**
+
+### Property 28e: Metric Columns in Engagement Summary
+
+*For any* row in the Engagement Summary table, each metric aggregation (activities at start, at end, started, completed, cancelled, participants at start, at end) should be displayed in its own separate column.
+
+**Validates: Requirements 7.25**
 
 ### Property 29: Multiple filter application
 
