@@ -20,8 +20,6 @@ export interface ActivityTypeBreakdown {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
-    newParticipants: number;
-    disengagedParticipants: number;
 }
 
 export interface RoleDistribution {
@@ -53,8 +51,6 @@ export interface EngagementMetrics {
     // Temporal participant counts
     participantsAtStart: number;
     participantsAtEnd: number;
-    newParticipants: number;
-    disengagedParticipants: number;
 
     // Aggregate counts
     totalActivities: number;
@@ -87,9 +83,9 @@ export interface EngagementMetrics {
 
 export interface GrowthPeriodData {
     period: string;
-    newParticipants: number;
     newActivities: number;
     cumulativeParticipants: number;
+    cumulativeActivities: number;
     percentageChange: number | null;
 }
 
@@ -230,17 +226,18 @@ export class AnalyticsService {
             : allActivities.filter(a => a.status === ActivityStatus.CANCELLED).length;
 
         // Get all participants for temporal analysis
-        const participantWhere: any = {};
-        if (venueIds) {
-            participantWhere.addressHistory = {
-                some: {
-                    venueId: { in: venueIds },
-                },
-            };
-        }
+        // Participants should be filtered based on the venues of activities they're assigned to,
+        // not their home address history
+        const activityIds = allActivities.map(a => a.id);
 
         const allParticipants = await this.prisma.participant.findMany({
-            where: participantWhere,
+            where: {
+                assignments: {
+                    some: {
+                        activityId: { in: activityIds },
+                    },
+                },
+            },
             include: {
                 assignments: {
                     include: {
@@ -269,25 +266,6 @@ export class AnalyticsService {
             ).length
             : allParticipants.filter(p => p.assignments.length > 0).length;
 
-        const newParticipants = startDate && endDate
-            ? allParticipants.filter(p =>
-                p.assignments.some(a =>
-                    a.createdAt >= startDate &&
-                    a.createdAt <= endDate &&
-                    !p.assignments.some(a2 => a2.createdAt < startDate)
-                )
-            ).length
-            : allParticipants.length;
-
-        const disengagedParticipants = endDate
-            ? allParticipants.filter(p =>
-                p.createdAt <= endDate &&
-                !p.assignments.some(a =>
-                    allActivities.some(act => act.id === a.activityId)
-                )
-            ).length
-            : allParticipants.filter(p => p.assignments.length === 0).length;
-
         // Calculate aggregate counts
         const totalActivities = allActivities.length;
         const totalParticipants = new Set(
@@ -312,8 +290,6 @@ export class AnalyticsService {
                     activitiesCancelled: 0,
                     participantsAtStart: 0,
                     participantsAtEnd: 0,
-                    newParticipants: 0,
-                    disengagedParticipants: 0,
                 });
             }
 
@@ -376,14 +352,6 @@ export class AnalyticsService {
                 const participantsAtEndForType = activity.assignments.filter(a => a.createdAt <= endDate);
                 breakdown.participantsAtEnd += new Set(participantsAtEndForType.map(a => a.participantId)).size;
             }
-
-            if (startDate && endDate) {
-                const newParticipantsForType = activity.assignments.filter(a =>
-                    a.createdAt >= startDate && a.createdAt <= endDate &&
-                    !activity.assignments.some(a2 => a2.participantId === a.participantId && a2.createdAt < startDate)
-                );
-                breakdown.newParticipants += new Set(newParticipantsForType.map(a => a.participantId)).size;
-            }
         }
 
         const activitiesByType = Array.from(activitiesByTypeMap.values());
@@ -439,8 +407,6 @@ export class AnalyticsService {
             activitiesCancelled,
             participantsAtStart,
             participantsAtEnd,
-            newParticipants,
-            disengagedParticipants,
             totalActivities,
             totalParticipants,
             activitiesByType,
@@ -761,33 +727,35 @@ export class AnalyticsService {
         // Calculate metrics for each period
         const timeSeries: GrowthPeriodData[] = [];
         let cumulativeParticipants = 0;
-        let previousNewParticipants = 0;
+        let cumulativeActivities = 0;
+        let previousNewActivities = 0;
 
         for (const period of periods) {
-            const newParticipants = participants.filter(
-                (p) => p.createdAt >= period.start && p.createdAt < period.end
-            ).length;
-
             const newActivities = activities.filter(
                 (a) => a.createdAt >= period.start && a.createdAt < period.end
             ).length;
 
-            cumulativeParticipants += newParticipants;
+            const participantsInPeriod = participants.filter(
+                (p) => p.createdAt >= period.start && p.createdAt < period.end
+            ).length;
+
+            cumulativeParticipants += participantsInPeriod;
+            cumulativeActivities += newActivities;
 
             const percentageChange =
-                previousNewParticipants > 0
-                    ? ((newParticipants - previousNewParticipants) / previousNewParticipants) * 100
+                previousNewActivities > 0
+                    ? ((newActivities - previousNewActivities) / previousNewActivities) * 100
                     : null;
 
             timeSeries.push({
                 period: period.label,
-                newParticipants,
                 newActivities,
                 cumulativeParticipants,
+                cumulativeActivities,
                 percentageChange,
             });
 
-            previousNewParticipants = newParticipants;
+            previousNewActivities = newActivities;
         }
 
         return { timeSeries };

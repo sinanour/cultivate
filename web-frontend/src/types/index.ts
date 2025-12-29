@@ -119,8 +119,6 @@ export interface ActivityTypeBreakdown {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
-    newParticipants: number;
-    disengagedParticipants: number;
 }
 
 export interface RoleDistribution {
@@ -152,8 +150,6 @@ export interface EngagementMetrics {
     // Temporal participant counts
     participantsAtStart: number;
     participantsAtEnd: number;
-    newParticipants: number;
-    disengagedParticipants: number;
 
     // Aggregate counts
     totalActivities: number;
@@ -190,7 +186,6 @@ export interface GrowthMetrics {
 
 export interface GrowthPeriodData {
     date: string;
-    newParticipants: number;
     newActivities: number;
     cumulativeParticipants: number;
     cumulativeActivities: number;

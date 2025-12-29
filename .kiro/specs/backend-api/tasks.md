@@ -351,7 +351,6 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Calculate activities at start and end of date range
     - Calculate activities started, completed, and cancelled within date range
     - Calculate participants at start and end of date range
-    - Calculate new participants and disengaged participants
     - Provide aggregate counts and breakdowns by activity type
     - Support multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity)
     - Support flexible filtering (point filters for activity type, venue, geographic area; range filter for dates)
@@ -361,7 +360,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Implement geographic breakdown calculation
     - Support date range filtering
     - Support geographic area filtering
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10_
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
 
   - [ ]* 13.2 Write property tests for analytics calculations
     - **Property 20: Activities at Start of Date Range Counting**
@@ -371,28 +370,24 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 24: Activities Cancelled Within Range Counting**
     - **Property 25: Participants at Start of Date Range Counting**
     - **Property 26: Participants at End of Date Range Counting**
-    - **Property 27: New Participants Counting**
-    - **Property 28: Disengaged Participants Counting**
-    - **Property 29: Aggregate Activity Counts**
-    - **Property 30: Activity Counts by Type Breakdown**
-    - **Property 31: Aggregate Participant Counts**
-    - **Property 32: Participant Counts by Type Breakdown**
-    - **Property 33: Multi-Dimensional Grouping Support**
-    - **Property 34: Activity Type Point Filter**
-    - **Property 35: Venue Point Filter**
-    - **Property 36: Geographic Area Point Filter**
-    - **Property 37: Date Range Filter**
-    - **Property 38: Multiple Filter AND Logic**
-    - **Property 39: All-Time Metrics Without Date Range**
-    - **Property 40: Role Distribution Calculation**
-    - **Property 41: Date Grouping Granularity**
-    - **Property 42: Time Period Grouping**
-    - **Property 43: New Participant Counting Per Period**
-    - **Property 44: New Activity Counting Per Period**
-    - **Property 45: Chronological Ordering**
-    - **Property 46: Percentage Change Calculation**
-    - **Property 47: Cumulative Count Calculation**
-    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 7.2, 7.4, 7.5, 7.6, 7.7, 7.8**
+    - **Property 27: Aggregate Activity Counts**
+    - **Property 28: Activity Counts by Type Breakdown**
+    - **Property 29: Aggregate Participant Counts**
+    - **Property 30: Participant Counts by Type Breakdown**
+    - **Property 31: Multi-Dimensional Grouping Support**
+    - **Property 32: Activity Type Point Filter**
+    - **Property 33: Venue Point Filter**
+    - **Property 34: Geographic Area Point Filter**
+    - **Property 35: Date Range Filter**
+    - **Property 36: Multiple Filter AND Logic**
+    - **Property 37: All-Time Metrics Without Date Range**
+    - **Property 38: Role Distribution Calculation**
+    - **Property 39: Date Grouping Granularity**
+    - **Property 40: Time Period Grouping**
+    - **Property 41: New Activity Counting Per Period**
+    - **Property 42: Chronological Ordering**
+    - **Property 43: Percentage Change Calculation for Activities**
+    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 7.2, 7.4, 7.5, 7.6**
 
   - [x] 13.3 Create analytics routes
     - GET /api/analytics/engagement

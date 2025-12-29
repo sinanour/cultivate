@@ -148,20 +148,20 @@ describe('AnalyticsService', () => {
             expect(result.timeSeries).toBeDefined();
             expect(result.timeSeries.length).toBeGreaterThan(0);
             expect(result.timeSeries[0]).toHaveProperty('period');
-            expect(result.timeSeries[0]).toHaveProperty('newParticipants');
             expect(result.timeSeries[0]).toHaveProperty('newActivities');
             expect(result.timeSeries[0]).toHaveProperty('cumulativeParticipants');
+            expect(result.timeSeries[0]).toHaveProperty('cumulativeActivities');
         });
 
         it('should calculate percentage change correctly', async () => {
-            const mockParticipants = [
-                { id: 'p1', createdAt: new Date('2024-01-15') },
-                { id: 'p2', createdAt: new Date('2024-02-15') },
-                { id: 'p3', createdAt: new Date('2024-02-20') },
+            const mockActivities = [
+                { id: 'a1', createdAt: new Date('2024-01-15') },
+                { id: 'a2', createdAt: new Date('2024-02-15') },
+                { id: 'a3', createdAt: new Date('2024-02-20') },
             ];
 
-            mockPrisma.participant.findMany = jest.fn().mockResolvedValue(mockParticipants);
-            mockPrisma.activity.findMany = jest.fn().mockResolvedValue([]);
+            mockPrisma.participant.findMany = jest.fn().mockResolvedValue([]);
+            mockPrisma.activity.findMany = jest.fn().mockResolvedValue(mockActivities);
 
             const result = await service.getGrowthMetrics(TimePeriod.MONTH, {
                 startDate: new Date('2024-01-01'),

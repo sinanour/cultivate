@@ -405,18 +405,6 @@ export function EngagementDashboard() {
               {metrics.participantsAtEnd}
             </Box>
           </Container>
-          <Container>
-            <Box variant="awsui-key-label">New</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.newParticipants}
-            </Box>
-          </Container>
-          <Container>
-            <Box variant="awsui-key-label">Disengaged</Box>
-            <Box fontSize="display-l" fontWeight="bold">
-              {metrics.disengagedParticipants}
-            </Box>
-          </Container>
         </ColumnLayout>
       </Container>
 
@@ -610,18 +598,6 @@ export function EngagementDashboard() {
                 header: 'Participants at End',
                 cell: (item: GroupedMetrics) => item.metrics.participantsAtEnd,
                 sortingField: 'participantsAtEnd',
-              },
-              {
-                id: 'newParticipants',
-                header: 'New Participants',
-                cell: (item: GroupedMetrics) => item.metrics.newParticipants,
-                sortingField: 'newParticipants',
-              },
-              {
-                id: 'disengagedParticipants',
-                header: 'Disengaged Participants',
-                cell: (item: GroupedMetrics) => item.metrics.disengagedParticipants,
-                sortingField: 'disengagedParticipants',
               },
             ]}
             items={metrics.groupedResults}

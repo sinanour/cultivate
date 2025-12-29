@@ -104,15 +104,15 @@ export function GrowthDashboard() {
 
   const timeSeriesData = metrics.timeSeries;
 
-  // Calculate percentage changes
-  const participantChange = timeSeriesData.length >= 2
-    ? ((timeSeriesData[timeSeriesData.length - 1].newParticipants - timeSeriesData[timeSeriesData.length - 2].newParticipants) / 
-       (timeSeriesData[timeSeriesData.length - 2].newParticipants || 1)) * 100
-    : 0;
-
+  // Calculate percentage changes for activities
   const activityChange = timeSeriesData.length >= 2
     ? ((timeSeriesData[timeSeriesData.length - 1].newActivities - timeSeriesData[timeSeriesData.length - 2].newActivities) / 
        (timeSeriesData[timeSeriesData.length - 2].newActivities || 1)) * 100
+    : 0;
+
+  // Calculate participant growth from cumulative counts
+  const participantGrowth = timeSeriesData.length >= 2
+    ? timeSeriesData[timeSeriesData.length - 1].cumulativeParticipants - timeSeriesData[0].cumulativeParticipants
     : 0;
 
   return (
@@ -177,9 +177,9 @@ export function GrowthDashboard() {
 
       <ColumnLayout columns={2} variant="text-grid">
         <Container>
-          <Box variant="awsui-key-label">Participant Change</Box>
-          <Box fontSize="display-l" fontWeight="bold" color={participantChange >= 0 ? 'text-status-success' : 'text-status-error'}>
-            {participantChange >= 0 ? '+' : ''}{participantChange.toFixed(1)}%
+          <Box variant="awsui-key-label">Participant Growth</Box>
+          <Box fontSize="display-l" fontWeight="bold" color={participantGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
+            {participantGrowth >= 0 ? '+' : ''}{participantGrowth}
           </Box>
         </Container>
         <Container>
@@ -190,7 +190,7 @@ export function GrowthDashboard() {
         </Container>
       </ColumnLayout>
 
-      <Container header={<Header variant="h3">New Participants and Activities</Header>}>
+      <Container header={<Header variant="h3">New Activities</Header>}>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={timeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -198,12 +198,6 @@ export function GrowthDashboard() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line
-              type="monotone"
-              dataKey="newParticipants"
-              stroke="#0088FE"
-              name="New Participants"
-            />
             <Line
               type="monotone"
               dataKey="newActivities"

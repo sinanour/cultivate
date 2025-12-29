@@ -181,10 +181,10 @@ sequenceDiagram
 - Statistics aggregation across hierarchy
 
 #### Analytics Engine
-- Comprehensive engagement metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled, new/disengaged participants)
+- Comprehensive engagement metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled)
 - Multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity)
 - Flexible filtering (point filters and range filters)
-- Growth data aggregation (new participants, activity trends)
+- Growth data aggregation (new activities, activity trends)
 - Time-series data generation
 - Geographic filtering and breakdown
 - Hierarchical statistics calculation
@@ -513,7 +513,6 @@ The analytics engine supports comprehensive temporal analysis, multi-dimensional
 - Activities at start and end of date ranges (existing activities)
 - Activities started, completed, and cancelled within date ranges (activity lifecycle events)
 - Participants at start and end of date ranges (active participants)
-- New participants (first-time joiners) and disengaged participants (no current activities)
 - All metrics provided in aggregate and broken down by activity type
 
 **Multi-Dimensional Grouping**:
@@ -750,7 +749,6 @@ interface GeographicEngagement {
 
 interface GrowthData {
   date: Date;
-  newParticipants: number;
   newActivities: number;
   cumulativeParticipants: number;
   cumulativeActivities: number;
@@ -922,7 +920,7 @@ CREATE INDEX idx_activity_participants_participant ON activity_participants(part
 
 ### Property 9: Analytics Calculation Accuracy
 
-*For any* time period, the sum of newParticipants across all GrowthData entries should equal the difference between cumulativeParticipants at period end and period start.
+*For any* time period, the cumulative participant count at period end should equal the total number of unique participants who have been assigned to activities up to that point.
 
 **Validates: Requirements (implicit from analytics functionality)**
 

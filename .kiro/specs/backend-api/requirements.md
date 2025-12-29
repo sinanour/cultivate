@@ -169,22 +169,20 @@ The Backend API package provides the RESTful API service that implements all bus
 6. WHEN calculating engagement metrics with a date range, THE API SHALL count activities that were cancelled within the date range
 7. WHEN calculating engagement metrics with a date range, THE API SHALL count unique participants at the start of the date range
 8. WHEN calculating engagement metrics with a date range, THE API SHALL count unique participants at the end of the date range
-9. WHEN calculating engagement metrics with a date range, THE API SHALL count new participants (participants who joined activities within the date range)
-10. WHEN calculating engagement metrics with a date range, THE API SHALL count disengaged participants (participants who exist in the system within the geographic area but are not associated with any activities at the end of the date range)
-11. THE API SHALL provide activity counts in aggregate across all activity types
-12. THE API SHALL provide activity counts broken down by activity type
-13. THE API SHALL provide participant counts in aggregate across all activity types
-14. THE API SHALL provide participant counts broken down by activity type
-15. THE API SHALL support grouping engagement metrics by one or more dimensions: activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
-16. THE API SHALL support filtering engagement metrics by activity type (point filter)
-17. THE API SHALL support filtering engagement metrics by venue (point filter)
-18. THE API SHALL support filtering engagement metrics by geographic area (point filter, includes descendants)
-19. THE API SHALL support filtering engagement metrics by date range (range filter with start and end dates)
-20. WHEN multiple grouping dimensions are specified, THE API SHALL return metrics organized hierarchically by the specified dimensions in order
-21. WHEN multiple filters are specified, THE API SHALL apply all filters using AND logic
-22. WHEN no date range is provided, THE API SHALL calculate metrics for all time
-23. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
-24. THE API SHALL return role distribution across all activities within the filtered and grouped results
+9. THE API SHALL provide activity counts in aggregate across all activity types
+10. THE API SHALL provide activity counts broken down by activity type
+11. THE API SHALL provide participant counts in aggregate across all activity types
+12. THE API SHALL provide participant counts broken down by activity type
+13. THE API SHALL support grouping engagement metrics by one or more dimensions: activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
+14. THE API SHALL support filtering engagement metrics by activity type (point filter)
+15. THE API SHALL support filtering engagement metrics by venue (point filter)
+16. THE API SHALL support filtering engagement metrics by geographic area (point filter, includes descendants)
+17. THE API SHALL support filtering engagement metrics by date range (range filter with start and end dates)
+18. WHEN multiple grouping dimensions are specified, THE API SHALL return metrics organized hierarchically by the specified dimensions in order
+19. WHEN multiple filters are specified, THE API SHALL apply all filters using AND logic
+20. WHEN no date range is provided, THE API SHALL calculate metrics for all time
+21. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
+22. THE API SHALL return role distribution across all activities within the filtered and grouped results
 
 ### Requirement 7: Track Growth Over Time
 
@@ -195,13 +193,11 @@ The Backend API package provides the RESTful API service that implements all bus
 1. THE API SHALL provide a GET /api/analytics/growth endpoint that returns growth metrics
 2. WHEN calculating growth metrics, THE API SHALL accept a time period parameter (DAY, WEEK, MONTH, YEAR)
 3. WHEN calculating growth metrics, THE API SHALL accept optional start and end date filters
-4. WHEN calculating growth metrics, THE API SHALL count new participants per time period
-5. WHEN calculating growth metrics, THE API SHALL count new activities per time period
-6. THE API SHALL return time-series data ordered chronologically
-7. THE API SHALL calculate percentage change between consecutive periods
-8. THE API SHALL calculate cumulative participant count over time
-9. WHEN calculating growth metrics, THE API SHALL accept an optional geographic area ID filter
-10. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
+4. WHEN calculating growth metrics, THE API SHALL count new activities per time period
+5. THE API SHALL return time-series data ordered chronologically
+6. THE API SHALL calculate percentage change between consecutive periods for activities
+7. WHEN calculating growth metrics, THE API SHALL accept an optional geographic area ID filter
+8. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
 
 ### Requirement 8: Persist Data
 

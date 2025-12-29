@@ -159,7 +159,7 @@ Services implement business logic and coordinate operations:
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search, supports geographic area filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
-- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled, new/disengaged participants), supports multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters and range filters), aggregates data hierarchically by specified dimensions
+- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters and range filters), aggregates data hierarchically by specified dimensions
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
 - **AuditService**: Logs user actions, stores audit records
@@ -547,89 +547,73 @@ The API uses Prisma to define the following database models:
 *For any* date range, engagement metrics should correctly count unique participants who were assigned to at least one activity at the end of the date range.
 **Validates: Requirements 6.8**
 
-**Property 27: New participants counting**
-*For any* date range, engagement metrics should correctly count unique participants who joined their first activity within the date range.
+**Property 27: Aggregate activity counts**
+*For any* engagement metrics request, activity counts should be provided in aggregate across all activity types.
 **Validates: Requirements 6.9**
 
-**Property 28: Disengaged participants counting**
-*For any* date range and geographic area, engagement metrics should correctly count participants who exist in the system within the geographic area but are not associated with any activities at the end of the date range.
+**Property 28: Activity counts by type breakdown**
+*For any* engagement metrics request, activity counts should be broken down by activity type.
 **Validates: Requirements 6.10**
 
-**Property 29: Aggregate activity counts**
-*For any* engagement metrics request, activity counts should be provided in aggregate across all activity types.
+**Property 29: Aggregate participant counts**
+*For any* engagement metrics request, participant counts should be provided in aggregate across all activity types.
 **Validates: Requirements 6.11**
 
-**Property 30: Activity counts by type breakdown**
-*For any* engagement metrics request, activity counts should be broken down by activity type.
+**Property 30: Participant counts by type breakdown**
+*For any* engagement metrics request, participant counts should be broken down by activity type.
 **Validates: Requirements 6.12**
 
-**Property 31: Aggregate participant counts**
-*For any* engagement metrics request, participant counts should be provided in aggregate across all activity types.
-**Validates: Requirements 6.13**
+**Property 31: Multi-dimensional grouping support**
+*For any* engagement metrics request with multiple grouping dimensions, the response should organize metrics hierarchically by the specified dimensions in order.
+**Validates: Requirements 6.13, 6.18**
 
-**Property 32: Participant counts by type breakdown**
-*For any* engagement metrics request, participant counts should be broken down by activity type.
+**Property 32: Activity type point filter**
+*For any* engagement metrics request with an activity type filter, only activities of the specified type should be included.
 **Validates: Requirements 6.14**
 
-**Property 33: Multi-dimensional grouping support**
-*For any* engagement metrics request with multiple grouping dimensions, the response should organize metrics hierarchically by the specified dimensions in order.
-**Validates: Requirements 6.15, 6.20**
-
-**Property 34: Activity type point filter**
-*For any* engagement metrics request with an activity type filter, only activities of the specified type should be included.
-**Validates: Requirements 6.16**
-
-**Property 35: Venue point filter**
+**Property 33: Venue point filter**
 *For any* engagement metrics request with a venue filter, only activities associated with the specified venue should be included.
-**Validates: Requirements 6.17**
-
-**Property 36: Geographic area point filter**
-*For any* engagement metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
-**Validates: Requirements 6.18, 6.23**
-
-**Property 37: Date range filter**
-*For any* engagement metrics request with a date range filter, only activities and participants within the specified date range should be included.
-**Validates: Requirements 6.19**
-
-**Property 38: Multiple filter AND logic**
-*For any* engagement metrics request with multiple filters, all filters should be applied using AND logic.
-**Validates: Requirements 6.21**
-
-**Property 39: All-time metrics without date range**
-*For any* engagement metrics request without a date range, metrics should be calculated for all time.
-**Validates: Requirements 6.22**
-
-**Property 40: Role distribution calculation**
-*For any* engagement metrics request, the response should include role distribution across all activities within the filtered and grouped results.
-**Validates: Requirements 6.24**
-
-**Property 41: Date grouping granularity**
-*For any* engagement metrics request with date grouping, the system should support weekly, monthly, quarterly, and yearly granularity.
 **Validates: Requirements 6.15**
 
-**Property 42: Time period grouping**
+**Property 34: Geographic area point filter**
+*For any* engagement metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
+**Validates: Requirements 6.16, 6.21**
+
+**Property 35: Date range filter**
+*For any* engagement metrics request with a date range filter, only activities and participants within the specified date range should be included.
+**Validates: Requirements 6.17**
+
+**Property 36: Multiple filter AND logic**
+*For any* engagement metrics request with multiple filters, all filters should be applied using AND logic.
+**Validates: Requirements 6.19**
+
+**Property 37: All-time metrics without date range**
+*For any* engagement metrics request without a date range, metrics should be calculated for all time.
+**Validates: Requirements 6.20**
+
+**Property 38: Role distribution calculation**
+*For any* engagement metrics request, the response should include role distribution across all activities within the filtered and grouped results.
+**Validates: Requirements 6.22**
+
+**Property 39: Date grouping granularity**
+*For any* engagement metrics request with date grouping, the system should support weekly, monthly, quarterly, and yearly granularity.
+**Validates: Requirements 6.13**
+
+**Property 40: Time period grouping**
 *For any* time period parameter (DAY, WEEK, MONTH, YEAR), growth metrics should correctly group data into the specified periods.
 **Validates: Requirements 7.2**
 
-**Property 43: New participant counting per period**
-*For any* time period, growth metrics should count only participants created within that period.
+**Property 41: New activity counting per period**
+*For any* time period, growth metrics should count only activities created within that period.
 **Validates: Requirements 7.4**
 
-**Property 44: New activity counting per period**
-*For any* time period, growth metrics should count only activities created within that period.
+**Property 42: Chronological ordering**
+*For any* growth metrics response, time-series data should be ordered from earliest to latest period.
 **Validates: Requirements 7.5**
 
-**Property 45: Chronological ordering**
-*For any* growth metrics response, time-series data should be ordered from earliest to latest period.
+**Property 43: Percentage change calculation for activities**
+*For any* two consecutive time periods, the percentage change for activities should be calculated as ((current - previous) / previous) * 100.
 **Validates: Requirements 7.6**
-
-**Property 46: Percentage change calculation**
-*For any* two consecutive time periods, the percentage change should be calculated as ((current - previous) / previous) * 100.
-**Validates: Requirements 7.7**
-
-**Property 47: Cumulative count calculation**
-*For any* time period, the cumulative participant count should equal the sum of all new participants up to and including that period.
-**Validates: Requirements 7.8**
 
 ### Data Persistence Properties
 
@@ -753,117 +737,283 @@ The API uses Prisma to define the following database models:
 *For any* user role modification, an audit log entry should be created.
 **Validates: Requirements 12.2**
 
-**Property 55: Entity modification logging**
+**Property 71: Entity modification logging**
 *For any* create, update, or delete operation on entities, an audit log entry should be created.
 **Validates: Requirements 12.3**
 
-**Property 56: Audit log completeness**
+**Property 72: Audit log completeness**
 *For any* audit log entry, it should contain user ID, action type, entity type, entity ID, and timestamp.
 **Validates: Requirements 12.4**
 
-**Property 57: Audit log detail format**
+**Property 73: Audit log detail format**
 *For any* audit log entry, additional details should be stored as valid JSON.
 **Validates: Requirements 12.5**
 
-**Property 58: Audit log access restriction**
+**Property 74: Audit log access restriction**
 *For any* request to access audit logs, only users with ADMINISTRATOR role should be able to retrieve them.
 **Validates: Requirements 12.6**
 
 ### Error Handling Properties
 
-**Property 59: Consistent error format**
+**Property 75: Consistent error format**
 *For any* error response, it should include code, message, and details fields in a consistent structure.
 **Validates: Requirements 13.1**
 
-**Property 60: Validation error status code**
+**Property 76: Validation error status code**
 *For any* request with invalid input data, the API should return 400 Bad Request.
 **Validates: Requirements 13.2**
 
-**Property 61: Authentication error status code**
+**Property 77: Authentication error status code**
 *For any* request with missing or invalid authentication, the API should return 401 Unauthorized.
 **Validates: Requirements 13.3**
 
-**Property 62: Authorization error status code**
+**Property 78: Authorization error status code**
 *For any* request with insufficient permissions, the API should return 403 Forbidden.
 **Validates: Requirements 13.4**
 
-**Property 63: Not found error status code**
+**Property 79: Not found error status code**
 *For any* request for a non-existent resource, the API should return 404 Not Found.
 **Validates: Requirements 13.5**
 
-**Property 64: Internal error status code**
+**Property 80: Internal error status code**
 *For any* unexpected server error, the API should return 500 Internal Server Error.
 **Validates: Requirements 13.6**
 
-**Property 65: Error logging with stack traces**
+**Property 81: Error logging with stack traces**
 *For any* error, the API should log it with a stack trace for debugging purposes.
 **Validates: Requirements 13.7**
 
 ### Documentation Properties
 
-**Property 66: OpenAPI specification completeness**
+**Property 82: OpenAPI specification completeness**
 *For any* API endpoint, it should be documented in the OpenAPI specification with request and response schemas.
 **Validates: Requirements 14.3**
 
-**Property 67: Example documentation**
+**Property 83: Example documentation**
 *For any* API endpoint, the OpenAPI specification should include example requests and responses.
 **Validates: Requirements 14.4**
 
-**Property 68: Error response documentation**
+**Property 84: Error response documentation**
 *For any* API endpoint, all possible error responses should be documented in the OpenAPI specification.
 **Validates: Requirements 14.5**
 
 ### Input Validation Properties
 
-**Property 69: Request body validation**
+**Property 85: Request body validation**
 *For any* request with a body, the API should validate it against the defined Zod schema and reject invalid data with 400.
 **Validates: Requirements 15.1**
 
-**Property 70: Parameter validation**
+**Property 86: Parameter validation**
 *For any* request with query or path parameters, the API should validate them and reject invalid values with 400.
 **Validates: Requirements 15.2**
 
-**Property 71: Detailed validation errors**
+**Property 87: Detailed validation errors**
 *For any* validation failure, the error response should include specific details about which fields failed validation and why.
 **Validates: Requirements 15.3**
 
-**Property 72: Input sanitization**
+**Property 88: Input sanitization**
 *For any* user input, the API should sanitize it to prevent SQL injection, XSS, and other injection attacks.
 **Validates: Requirements 15.5**
 
 ### Venue Management Properties
 
-**Property 73: Venue creation with geographic area**
+**Property 89: Venue creation with geographic area**
 *For any* valid venue with name, address, and existing geographic area ID, creating it via POST should result in the venue being retrievable with the correct geographic area association.
 **Validates: Requirements 5A.3, 5A.7, 5A.8**
 
-**Property 74: Venue geographic area validation**
+**Property 90: Venue geographic area validation**
 *For any* venue creation or update with a non-existent geographic area ID, the API should reject it with a 400 error.
 **Validates: Requirements 5A.8**
 
-**Property 75: Venue optional fields**
+**Property 91: Venue optional fields**
 *For any* venue creation with or without optional latitude, longitude, and venue type fields, the API should accept it and persist the provided values.
 **Validates: Requirements 5A.9**
 
-**Property 76: Venue deletion prevention**
+**Property 92: Venue deletion prevention**
 *For any* venue referenced by activities or participants, attempting to delete it should be rejected with a 400 error explaining which entities reference it.
 **Validates: Requirements 5A.10, 5A.11**
 
-**Property 77: Venue search accuracy**
+**Property 93: Venue search accuracy**
 *For any* search query, all returned venues should have names or addresses that match the query string (case-insensitive).
 **Validates: Requirements 5A.6**
 
-**Property 78: Venue activities retrieval**
+**Property 94: Venue activities retrieval**
 *For any* venue, retrieving its activities should return all activities currently or historically associated with that venue.
 **Validates: Requirements 5A.12**
 
-**Property 79: Venue participants retrieval**
+**Property 95: Venue participants retrieval**
 *For any* venue, retrieving its participants should return all participants who currently or historically had this venue as their home address.
 **Validates: Requirements 5A.13**
 
 ### Geographic Area Management Properties
 
-**Property 80: Geographic area creation**
+**Property 96: Geographic area creation**
+*For any* valid geographic area with name and area type, creating it via POST should result in the geographic area being retrievable.
+**Validates: Requirements 5B.3, 5B.6**
+
+**Property 97: Geographic area parent validation**
+*For any* geographic area creation with a non-existent parent geographic area ID, the API should reject it with a 400 error.
+**Validates: Requirements 5B.8**
+
+**Property 98: Circular relationship prevention**
+*For any* geographic area, attempting to set its parent to itself or to one of its descendants should be rejected with a 400 error.
+**Validates: Requirements 5B.9**
+
+**Property 99: Geographic area type validation**
+*For any* geographic area, the area type should be one of: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, or CUSTOM.
+**Validates: Requirements 5B.10**
+
+**Property 100: Geographic area deletion prevention**
+*For any* geographic area referenced by venues or child geographic areas, attempting to delete it should be rejected with a 400 error.
+**Validates: Requirements 5B.11**
+
+**Property 101: Geographic area children retrieval**
+*For any* geographic area, retrieving its children should return all geographic areas that have it as their parent.
+**Validates: Requirements 5B.12**
+
+**Property 102: Geographic area ancestors retrieval**
+*For any* geographic area, retrieving its ancestors should return the complete hierarchy path from the area to the root, ordered from child to root.
+**Validates: Requirements 5B.13**
+
+**Property 103: Geographic area venues retrieval**
+*For any* geographic area, retrieving its venues should return all venues in that geographic area and all descendant areas (recursive aggregation).
+**Validates: Requirements 5B.14**
+
+**Property 104: Geographic area statistics calculation**
+*For any* geographic area, the statistics should include activity and participant counts for the area and all its descendants.
+**Validates: Requirements 5B.15**
+
+### Participant Address History Properties
+
+**Property 105: Address history creation on venue update**
+*For any* participant whose home venue is updated, a new ParticipantAddressHistory record should be created with the new venue and current timestamp as effectiveFrom.
+**Validates: Requirements 3.11**
+
+**Property 106: Address history retrieval**
+*For any* participant, retrieving their address history should return all ParticipantAddressHistory records ordered by effectiveFrom descending (most recent first).
+**Validates: Requirements 3.12**
+
+**Property 107: Current address identification**
+*For any* participant with address history, the current address should be the record with the most recent effectiveFrom date.
+**Validates: Requirements 3.11**
+
+**Property 108: Address history duplicate prevention**
+*For any* participant, attempting to create an address history record with the same effectiveFrom date as an existing record should be rejected with a 400 error.
+**Validates: Requirements 3.17**
+
+### Activity Venue Association Properties
+
+**Property 109: Activity venue association creation**
+*For any* activity and valid venue ID, associating the venue via POST should result in an ActivityVenueHistory record being created with the current timestamp as effectiveFrom.
+**Validates: Requirements 4.11, 4.13**
+
+**Property 110: Activity venue history retrieval**
+*For any* activity, retrieving its venues should return all ActivityVenueHistory records ordered by effectiveFrom descending (most recent first).
+**Validates: Requirements 4.12, 4.15**
+
+**Property 111: Current venue identification**
+*For any* activity with venue history, the current venue should be the record with the most recent effectiveFrom date.
+**Validates: Requirements 4.11**
+
+**Property 112: Activity venue duplicate prevention**
+*For any* activity, attempting to create a venue association with the same effectiveFrom date as an existing record should be rejected with a 400 error.
+**Validates: Requirements 4.15**
+
+### Geographic Analytics Properties
+
+**Property 113: Geographic area filtering for engagement**
+*For any* engagement metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
+**Validates: Requirements 6.21**
+
+**Property 114: Geographic breakdown calculation**
+*For any* geographic analytics request, engagement metrics should be correctly grouped and aggregated by geographic area.
+**Validates: Requirements 6.9**
+
+**Property 115: Geographic area filtering for growth**
+*For any* growth metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
+**Validates: Requirements 7.7, 7.8**
+
+**Property 116: Hierarchical statistics aggregation**
+*For any* geographic area, statistics should include data from all descendant geographic areas in the hierarchy.
+**Validates: Requirements 5B.15**
+
+### Pagination Properties
+
+**Property 117: Page parameter validation**
+*For any* paginated list request with an invalid page number (less than 1), the API should reject it with a 400 error.
+**Validates: Requirements 17.5**
+
+**Property 118: Limit parameter validation**
+*For any* paginated list request with a limit greater than 100, the API should reject it with a 400 error.
+**Validates: Requirements 17.7**
+
+**Property 119: Pagination metadata accuracy**
+*For any* paginated list response, the pagination metadata should correctly reflect the total count, current page, limit, and total pages.
+**Validates: Requirements 17.8**
+
+**Property 120: Pagination data consistency**
+*For any* paginated list request, the returned data should contain exactly the items for the requested page based on the limit.
+**Validates: Requirements 17.9**
+
+### Optimistic Locking Properties
+
+**Property 121: Version field inclusion**
+*For any* entity response (Activity, Participant, Venue, GeographicArea, ActivityType, Role), it should include a version field.
+**Validates: Requirements 18.1**
+
+**Property 122: Version mismatch rejection**
+*For any* update request with a version that doesn't match the current entity version, the API should return 409 Conflict.
+**Validates: Requirements 18.2, 18.3**
+
+**Property 123: Version increment on update**
+*For any* successful update operation, the entity's version number should be incremented by 1.
+**Validates: Requirements 18.4**
+
+### Rate Limiting Properties
+
+**Property 124: Authentication rate limit enforcement**
+*For any* IP address making more than 5 authentication requests per minute, the API should return 429 Too Many Requests.
+**Validates: Requirements 19.1**
+
+**Property 125: Mutation rate limit enforcement**
+*For any* authenticated user making more than 100 mutation requests per minute, the API should return 429 Too Many Requests.
+**Validates: Requirements 19.2**
+
+**Property 126: Query rate limit enforcement**
+*For any* authenticated user making more than 1000 query requests per minute, the API should return 429 Too Many Requests.
+**Validates: Requirements 19.3**
+
+**Property 127: Rate limit header inclusion**
+*For any* API response, it should include X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset headers.
+**Validates: Requirements 19.5**
+
+### API Versioning Properties
+
+**Property 128: Version path inclusion**
+*For any* API endpoint, it should be accessible via the /api/v1/... path.
+**Validates: Requirements 20.1**
+
+**Property 129: Backward compatibility within version**
+*For any* endpoint within the same major version, changes should maintain backward compatibility.
+**Validates: Requirements 20.2**
+
+### Global Geographic Area Filter Properties
+
+**Property 130: Participant geographic filtering**
+*For any* participant list request with a geographic area filter, only participants whose current home venue is in the specified geographic area or its descendants should be returned.
+**Validates: Requirements 3.19**
+
+**Property 131: Activity geographic filtering**
+*For any* activity list request with a geographic area filter, only activities whose current venue is in the specified geographic area or its descendants should be returned.
+**Validates: Requirements 4.17**
+
+**Property 132: Venue geographic filtering**
+*For any* venue list request with a geographic area filter, only venues in the specified geographic area or its descendants should be returned.
+**Validates: Requirements 5A.14**
+
+**Property 133: Geographic area hierarchy filtering**
+*For any* geographic area list request with a geographic area filter, the response should include the specified area, all its descendants, and all its ancestors to maintain hierarchy context.
+**Validates: Requirements 5B.16**
 *For any* valid geographic area with name and area type, creating it via POST should result in the geographic area being retrievable.
 **Validates: Requirements 5B.3, 5B.6**
 

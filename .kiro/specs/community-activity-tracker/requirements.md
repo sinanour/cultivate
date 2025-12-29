@@ -209,14 +209,13 @@ The Community Activity Tracker system is organized into five independent package
 
 1. THE System SHALL provide engagement metrics with temporal analysis showing activities and participants at the start and end of date ranges
 2. THE System SHALL track activities started, completed, and cancelled within specified date ranges
-3. THE System SHALL identify new participants and disengaged participants within date ranges
-4. THE System SHALL provide all metrics in both aggregate form and broken down by activity type
-5. THE System SHALL support multi-dimensional grouping by activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
-6. THE System SHALL support flexible filtering including point filters (activity type, venue, geographic area) and range filters (date ranges)
-7. THE System SHALL apply multiple filters using AND logic
-8. THE System SHALL calculate role distribution across all activities within filtered and grouped results
-9. THE System SHALL support all-time metrics when no date range is specified
-10. THE System SHALL include descendant geographic areas when geographic area filters are applied
+3. THE System SHALL provide all metrics in both aggregate form and broken down by activity type
+4. THE System SHALL support multi-dimensional grouping by activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
+5. THE System SHALL support flexible filtering including point filters (activity type, venue, geographic area) and range filters (date ranges)
+6. THE System SHALL apply multiple filters using AND logic
+7. THE System SHALL calculate role distribution across all activities within filtered and grouped results
+8. THE System SHALL support all-time metrics when no date range is specified
+9. THE System SHALL include descendant geographic areas when geographic area filters are applied
 
 **Implementation:** See Backend API specification (Requirement 6: Analyze Community Engagement).
 

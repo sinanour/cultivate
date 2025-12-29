@@ -369,7 +369,6 @@ src/
   - Activities at start/end of date range
   - Activities started, completed, cancelled within range
   - Participants at start/end of date range
-  - New participants and disengaged participants
 - Displays aggregate counts and breakdowns by activity type
 - Renders charts for activities by type and role distribution
 - Provides multi-dimensional grouping controls:
@@ -384,7 +383,7 @@ src/
   - Date range filter using CloudScape DateRangePicker
 - Renders grouped results in a CloudScape Table when multiple grouping dimensions selected:
   - Breakdown dimension columns appear first (activity type, venue, geographic area, date period)
-  - Metric aggregation columns follow (activities at start, at end, started, completed, cancelled, participants at start, at end, new, disengaged)
+  - Metric aggregation columns follow (activities at start, at end, started, completed, cancelled, participants at start, at end)
   - Activity type names rendered as hyperlinks to edit forms or detail views
   - Venue names rendered as hyperlinks to /venues/:id
   - Geographic area names rendered as hyperlinks to /geographic-areas/:id
@@ -403,10 +402,10 @@ src/
   - Allows URL sharing for collaborative analysis
 
 **GrowthDashboard**
-- Displays time-series charts for new participants and activities
+- Displays time-series charts for new activities
 - Provides time period selector (day, week, month, year)
-- Shows percentage changes between periods
-- Displays cumulative counts over time
+- Shows percentage changes between periods for activities
+- Displays cumulative participant counts over time
 - Provides geographic area filter dropdown
 - Uses recharts for line and area charts
 
@@ -531,7 +530,7 @@ src/
 **AnalyticsService**
 - `getEngagementMetrics(params)`: Fetches comprehensive engagement data from `/analytics/engagement` with flexible parameters
   - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityTypeId?`, `venueId?`, `groupBy?` (array of dimensions), `dateGranularity?` (WEEKLY, MONTHLY, QUARTERLY, YEARLY)
-  - Returns temporal analysis: activities/participants at start/end, activities started/completed/cancelled, new/disengaged participants
+  - Returns temporal analysis: activities/participants at start/end, activities started/completed/cancelled
   - Returns aggregate counts and breakdowns by activity type
   - Returns hierarchically grouped results when multiple dimensions specified
   - Returns role distribution within filtered results
@@ -700,8 +699,6 @@ interface EngagementMetrics {
   // Temporal participant counts
   participantsAtStart: number;
   participantsAtEnd: number;
-  newParticipants: number;
-  disengagedParticipants: number;
   
   // Aggregate counts
   totalActivities: number;
@@ -718,8 +715,6 @@ interface EngagementMetrics {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
-    newParticipants: number;
-    disengagedParticipants: number;
   }[];
   
   // Role distribution
@@ -758,7 +753,7 @@ interface EngagementMetrics {
 
 interface GrowthMetrics {
   date: string;
-  newParticipants: number;
+  newActivities: number;
   newActivities: number;
   cumulativeParticipants: number;
   cumulativeActivities: number;
@@ -1021,111 +1016,111 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 24: Temporal participant metrics display
 
-*For any* engagement dashboard with a date range, the displayed metrics should include participants at start, participants at end, new participants, and disengaged participants.
+*For any* engagement dashboard with a date range, the displayed metrics should include participants at start and participants at end.
 
-**Validates: Requirements 7.7, 7.8, 7.9, 7.10**
+**Validates: Requirements 7.7, 7.8**
 
 ### Property 25: Aggregate and breakdown display
 
 *For any* engagement dashboard, all activity and participant counts should be displayed in both aggregate form and broken down by activity type.
 
-**Validates: Requirements 7.11, 7.12, 7.13, 7.14**
+**Validates: Requirements 7.9, 7.10, 7.11, 7.12**
 
 ### Property 26: Multi-dimensional grouping controls
 
 *For any* engagement dashboard, the UI should provide controls to select one or more grouping dimensions (activity type, venue, geographic area, date with granularity selection).
 
-**Validates: Requirements 7.15**
+**Validates: Requirements 7.13**
 
 ### Property 27: Filter control availability
 
 *For any* engagement dashboard, the UI should provide filter controls for activity type, venue, geographic area, and date range.
 
-**Validates: Requirements 7.16, 7.17, 7.18, 7.19**
+**Validates: Requirements 7.14, 7.15, 7.16, 7.17**
 
 ### Property 28: Grouped results table display
 
 *For any* engagement dashboard with multiple grouping dimensions selected, the results should be displayed in a table where breakdown dimension columns appear first, followed by metric aggregation columns.
 
-**Validates: Requirements 7.20**
+**Validates: Requirements 7.18**
 
 ### Property 28a: Dimension hyperlinks in grouped results
 
 *For any* grouped results table, dimension values (activity type names, venue names, geographic area names) should be rendered as hyperlinks that navigate to their respective detail views.
 
-**Validates: Requirements 7.21, 7.22, 7.23**
+**Validates: Requirements 7.19, 7.20, 7.21**
 
 ### Property 28b: Metric columns in grouped results
 
-*For any* grouped results table, each metric aggregation (activities at start, at end, started, completed, cancelled, participants at start, at end, new, disengaged) should be displayed in its own separate column.
+*For any* grouped results table, each metric aggregation (activities at start, at end, started, completed, cancelled, participants at start, at end) should be displayed in its own separate column.
 
-**Validates: Requirements 7.24**
+**Validates: Requirements 7.22**
 
 ### Property 29: Multiple filter application
 
 *For any* engagement dashboard with multiple filters applied, all filters should be applied using AND logic and the UI should clearly indicate which filters are active.
 
-**Validates: Requirements 7.25**
+**Validates: Requirements 7.23**
 
 ### Property 30: All-time metrics display
 
 *For any* engagement dashboard without a date range specified, the UI should display all-time metrics and clearly indicate that no date filter is active.
 
-**Validates: Requirements 7.26**
+**Validates: Requirements 7.24**
 
 ### Property 31: Role distribution display
 
 *For any* engagement dashboard, the role distribution chart should display counts for all roles within the filtered and grouped results.
 
-**Validates: Requirements 7.27**
+**Validates: Requirements 7.25**
 
 ### Property 31a: Analytics URL Parameter Synchronization
 
 *For any* engagement dashboard state (filters and grouping), the browser URL query parameters should accurately reflect all current filter values (activityType, venue, geographicArea, startDate, endDate) and grouping configuration (groupBy dimensions, dateGranularity).
 
-**Validates: Requirements 7.28, 7.29**
+**Validates: Requirements 7.26, 7.27**
 
 ### Property 31b: Analytics URL Parameter Application
 
 *For any* URL with analytics query parameters, when a user navigates to that URL, the engagement dashboard should automatically apply all filter and grouping parameters from the URL to initialize the dashboard state.
 
-**Validates: Requirements 7.30**
+**Validates: Requirements 7.28**
 
 ### Property 31c: Analytics URL Update on State Change
 
 *For any* change to filters or grouping parameters in the engagement dashboard, the browser URL should be updated to reflect the new state without causing a page reload.
 
-**Validates: Requirements 7.31**
+**Validates: Requirements 7.29**
 
 ### Property 31d: Analytics Browser Navigation Support
 
 *For any* sequence of filter or grouping changes in the engagement dashboard, using browser back/forward buttons should navigate through the history of configurations and restore the corresponding dashboard state.
 
-**Validates: Requirements 7.32**
+**Validates: Requirements 7.30**
 
 ### Property 31e: Analytics URL Shareability
 
 *For any* engagement dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered and grouped results as the original user.
 
-**Validates: Requirements 7.33**
+**Validates: Requirements 7.31**
 
 ### Property 32: Time-series data calculation
 
-*For any* time period and dataset, the time-series charts should correctly calculate new participants and activities for each time unit.
+*For any* time period and dataset, the time-series charts should correctly calculate new activities for each time unit.
 
-**Validates: Requirements 7.29, 7.30**
+**Validates: Requirements 7.33**
 
 ### Property 33: Percentage change calculation
 
-*For any* two time periods, the percentage change calculation should correctly compute the relative change between periods.
+*For any* two time periods, the percentage change calculation for activities should correctly compute the relative change between periods.
 
-**Validates: Requirements 7.31**
+**Validates: Requirements 7.34**
 
 ### Property 34: Cumulative count calculation
 
-*For any* time series data, the cumulative counts should correctly sum all previous values up to each point in time.
+*For any* time series data, the cumulative participant counts should correctly sum all participant counts up to each point in time.
 
-**Validates: Requirements 7.32**
+**Validates: Requirements 7.35**
 
 ### Property 35: Unauthenticated access protection
 
@@ -1347,19 +1342,19 @@ All entities support optimistic locking via the `version` field. When updating a
 
 *For any* analytics dashboard with a geographic area filter applied, only activities and participants associated with venues in that geographic area or its descendants should be included in the metrics.
 
-**Validates: Requirements 7.18**
+**Validates: Requirements 7.16**
 
 ### Property 66: Geographic Breakdown Chart Display
 
 *For any* engagement metrics, the geographic breakdown chart should correctly display engagement data grouped by geographic area.
 
-**Validates: Requirements 7.34**
+**Validates: Requirements 7.38**
 
 ### Property 67: Geographic Area Drill-Down
 
 *For any* geographic area in the breakdown chart, clicking it should allow drilling down into child geographic areas to view more detailed statistics.
 
-**Validates: Requirements 7.35**
+**Validates: Requirements 7.39**
 
 ### Property 68: Date Formatting Consistency
 
