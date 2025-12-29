@@ -39,7 +39,15 @@ export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
   ariaLabel,
 }) => {
   const [filterText, setFilterText] = useState('');
-  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+  
+  // Try to get global geographic filter, but don't fail if context not available
+  let selectedGeographicAreaId: string | null = null;
+  try {
+    const filterContext = useGlobalGeographicFilter();
+    selectedGeographicAreaId = filterContext.selectedGeographicAreaId;
+  } catch (e) {
+    // Context not available yet, that's okay
+  }
 
   // Debounce the search text to avoid excessive API calls
   const debouncedSearch = useDebounce(filterText, 300);
