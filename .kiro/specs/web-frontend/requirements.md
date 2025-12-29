@@ -163,20 +163,32 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 6C: Map View UI
 
-**User Story:** As a community organizer, I want to view activities on a map, so that I can visualize community engagement by geography.
+**User Story:** As a community organizer, I want to view activities, participant locations, and venues on a map, so that I can visualize community engagement and infrastructure by geography.
 
 #### Acceptance Criteria
 
 1. THE Web_App SHALL provide an interactive map view using a mapping library (e.g., Leaflet, Mapbox)
-2. THE Web_App SHALL display venue markers on the map for all venues with latitude and longitude
-3. THE Web_App SHALL display activity information when a venue marker is clicked
-4. THE Web_App SHALL color-code venue markers by activity type or status
-5. THE Web_App SHALL provide filtering controls to show/hide activities by type, status, or date range
-6. THE Web_App SHALL provide geographic area boundary overlays when available
-7. THE Web_App SHALL allow zooming and panning of the map
-8. THE Web_App SHALL display a legend explaining marker colors and symbols
-9. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
-10. THE Web_App SHALL display participant home addresses as markers when appropriate privacy settings allow
+2. THE Web_App SHALL provide a mode selector control to switch between three map modes: "Activities", "Participant Homes", and "Venues"
+3. WHEN in "Activities" mode, THE Web_App SHALL display markers for all activities at their current venue locations
+4. WHEN in "Activities" mode, THE Web_App SHALL color-code activity markers by activity type
+5. WHEN in "Activities" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity types
+6. WHEN an activity marker is clicked, THE Web_App SHALL display a popup showing the activity name, start date, and number of participants
+7. WHEN an activity marker popup is displayed, THE Web_App SHALL render the activity name as a hyperlink to the activity detail page (/activities/:id)
+8. WHEN in "Participant Homes" mode, THE Web_App SHALL display markers for all participant home addresses (current venue from address history)
+9. WHEN a participant home marker is clicked, THE Web_App SHALL display a popup showing the venue name and the number of participants living at that address
+10. WHEN a participant home marker popup is displayed, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
+11. WHEN in "Venues" mode, THE Web_App SHALL display markers for all venues with latitude and longitude coordinates, regardless of whether they have activities or participants
+12. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL display a popup showing the venue name, address, and geographic area
+13. WHEN a venue marker popup is displayed in "Venues" mode, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
+14. THE Web_App SHALL provide filtering controls to show/hide activities by type, status, or date range
+15. THE Web_App SHALL provide geographic area boundary overlays when available
+16. THE Web_App SHALL allow zooming and panning of the map
+17. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
+18. THE Web_App SHALL implement marker clustering for dense areas to improve map readability
+19. WHEN the global geographic area filter is active, THE Web_App SHALL apply the filter to all map modes to show only markers for entities associated with venues in the filtered geographic area or its descendants
+20. WHEN the global geographic area filter is active in "Activities" mode, THE Web_App SHALL display only activities whose current venue is in the filtered geographic area or its descendants
+21. WHEN the global geographic area filter is active in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses where the venue is in the filtered geographic area or its descendants
+22. WHEN the global geographic area filter is active in "Venues" mode, THE Web_App SHALL display only venues that are in the filtered geographic area or its descendants
 
 ### Requirement 7: Analytics Dashboard
 

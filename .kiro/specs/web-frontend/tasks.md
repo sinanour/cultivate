@@ -440,24 +440,47 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 13. Implement map view UI
   - [x] 13.1 Create MapView component
     - Render interactive map using Leaflet or Mapbox
-    - Display venue markers with coordinates
-    - Use different colors for activity types/statuses
-    - Implement marker clustering
-    - Provide popup with activity information
-    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.7_
+    - Provide mode selector control to switch between "Activities", "Participant Homes", and "Venues" modes
+    - In Activities mode: display activity markers at current venue locations, color-coded by activity type
+    - In Participant Homes mode: display markers for participant home addresses (current venue from address history)
+    - In Venues mode: display markers for all venues with coordinates, regardless of activities or participants
+    - Implement marker clustering for dense areas
+    - Provide mode-specific popup with information on marker click
+    - Include map controls for zoom, pan, and center
+    - Display right-aligned legend in Activities mode showing activity type color mapping
+    - Respect global geographic area filter across all modes
+    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22_
 
   - [ ]* 13.2 Write property tests for map display
-    - **Property 55: Map Venue Marker Display**
-    - **Property 56: Map Marker Activity Information**
-    - **Validates: Requirements 6C.2, 6C.3**
+    - **Property 60: Map Mode Selector**
+    - **Property 61: Activity Marker Display**
+    - **Property 62: Activity Marker Color Coding**
+    - **Property 63: Activity Legend Display**
+    - **Property 64: Activity Popup Information**
+    - **Property 65: Participant Home Marker Display**
+    - **Property 66: Participant Home Popup Information**
+    - **Property 67: Venue Marker Display**
+    - **Property 68: Venue Popup Information**
+    - **Property 70: Map Global Filter Application**
+    - **Validates: Requirements 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.19, 6C.20, 6C.21, 6C.22**
 
-  - [x] 13.2 Create MapFilters component
+  - [x] 13.3 Create MapFilters component
     - Provide filter controls for type, status, date range
     - Update markers based on filters
     - Support geographic area boundary toggle
     - Provide center button
-    - Display legend
-    - _Requirements: 6C.5, 6C.6, 6C.8, 6C.9, 6C.10_
+    - _Requirements: 6C.14, 6C.15, 6C.17_
+
+  - [x] 13.4 Create MapPopup component
+    - In Activities mode: display activity name (hyperlinked to /activities/:id), start date, and participant count
+    - In Participant Homes mode: display venue name (hyperlinked to /venues/:id) and count of participants at that address
+    - In Venues mode: display venue name (hyperlinked to /venues/:id), address, and geographic area
+    - Provide navigation to detail pages via hyperlinked names
+    - _Requirements: 6C.6, 6C.7, 6C.9, 6C.10, 6C.12, 6C.13_
+
+  - [ ]* 13.5 Write property test for map filter application
+    - **Property 69: Map Filter Application**
+    - **Validates: Requirements 6C.14**
 
 - [x] 14. Implement analytics dashboards
   - [x] 14.1 Create EngagementDashboard component

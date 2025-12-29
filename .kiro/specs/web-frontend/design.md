@@ -342,25 +342,27 @@ src/
 
 **MapView**
 - Renders interactive map using Leaflet or Mapbox GL JS
-- Displays venue markers for all venues with coordinates
-- Uses different marker colors/icons for activity types and statuses
+- Provides mode selector control to switch between "Activities", "Participant Homes", and "Venues" modes
+- In Activities mode: displays activity markers at current venue locations, color-coded by activity type
+- In Participant Homes mode: displays markers for participant home addresses (current venue from address history)
+- In Venues mode: displays markers for all venues with coordinates, regardless of activities or participants
 - Implements marker clustering for dense areas
-- Provides popup with activity information on marker click
+- Provides popup with mode-specific information on marker click
 - Includes map controls for zoom, pan, and center
-- Displays legend explaining marker colors and symbols
+- Displays right-aligned legend in Activities mode showing activity type color mapping
+- Respects global geographic area filter across all modes
 
 **MapFilters**
 - Provides filter controls for activity type, status, and date range
 - Updates map markers based on selected filters
-- Allows showing/hiding participant home addresses
 - Provides geographic area boundary toggle
 - Includes button to center map on specific venue or geographic area
 
 **MapPopup**
-- Displays activity information when venue marker is clicked
-- Shows venue name and address
-- Lists activities at the venue with dates and status
-- Provides link to activity detail view
+- In Activities mode: displays activity name (hyperlinked to /activities/:id), start date, and participant count
+- In Participant Homes mode: displays venue name (hyperlinked to /venues/:id) and count of participants living at that address
+- In Venues mode: displays venue name (hyperlinked to /venues/:id), address, and geographic area
+- Provides navigation to detail pages via hyperlinked names
 
 #### 11. Analytics Dashboards
 
@@ -1346,241 +1348,271 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 6B.11**
 
-### Property 60: Map Venue Marker Display
+### Property 60: Map Mode Selector
 
-*For any* venue with latitude and longitude coordinates, a marker should be displayed on the map at the correct location.
+*For any* map view, a mode selector control should be available to switch between "Activities", "Participant Homes", and "Venues" modes.
 
 **Validates: Requirements 6C.2**
 
-### Property 61: Map Marker Activity Information
+### Property 61: Activity Marker Display
 
-*For any* venue marker clicked on the map, a popup should display showing activity information for that venue.
+*For any* activity with a current venue that has latitude and longitude coordinates, when in "Activities" mode, a marker should be displayed on the map at the venue's location.
 
 **Validates: Requirements 6C.3**
 
-### Property 62: Map Marker Color Coding
+### Property 62: Activity Marker Color Coding
 
-*For any* set of venues on the map, markers should be color-coded based on activity type or status to visually distinguish them.
+*For any* set of activities displayed on the map in "Activities" mode, markers should be color-coded based on activity type to visually distinguish them.
 
 **Validates: Requirements 6C.4**
 
-### Property 63: Map Filter Application
+### Property 63: Activity Legend Display
 
-*For any* filter criteria (activity type, status, or date range) applied to the map, only venues with activities matching the criteria should display markers.
+*For any* map view in "Activities" mode, a right-aligned legend should be displayed showing the mapping between marker colors and activity types.
 
 **Validates: Requirements 6C.5**
 
-### Property 64: Map Legend Display
+### Property 64: Activity Popup Information
 
-*For any* map view, a legend should be displayed explaining the meaning of marker colors and symbols.
+*For any* activity marker clicked in "Activities" mode, a popup should display showing the activity name (as a hyperlink to /activities/:id), start date, and participant count.
+
+**Validates: Requirements 6C.6, 6C.7**
+
+### Property 65: Participant Home Marker Display
+
+*For any* participant with a current home venue (from address history) that has latitude and longitude coordinates, when in "Participant Homes" mode, a marker should be displayed on the map at the venue's location.
 
 **Validates: Requirements 6C.8**
 
-### Property 61: Activity Venue Display
+### Property 66: Participant Home Popup Information
 
-*For any* activity with associated venues, the detail view should display all current and historical venue associations with their effective date ranges.
+*For any* participant home marker clicked in "Participant Homes" mode, a popup should display showing the venue name (as a hyperlink to /venues/:id) and the count of participants living at that address.
 
-**Validates: Requirements 5.13, 5.14**
+**Validates: Requirements 6C.9, 6C.10**
 
-### Property 65: Geographic Area Filter Application
+### Property 67: Venue Marker Display
+
+*For any* venue with latitude and longitude coordinates, when in "Venues" mode, a marker should be displayed on the map at the venue's location.
+
+**Validates: Requirements 6C.11**
+
+### Property 68: Venue Popup Information
+
+*For any* venue marker clicked in "Venues" mode, a popup should display showing the venue name (as a hyperlink to /venues/:id), address, and geographic area.
+
+**Validates: Requirements 6C.12, 6C.13**
+
+### Property 69: Map Filter Application
+
+*For any* filter criteria (activity type, status, or date range) applied to the map, only activities matching the criteria should display markers.
+
+**Validates: Requirements 6C.14**
+
+### Property 70: Map Global Filter Application
+
+*For any* map mode with the global geographic area filter active, only markers for entities associated with venues in the filtered geographic area or its descendants should be displayed.
+
+**Validates: Requirements 6C.19, 6C.20, 6C.21, 6C.22**
+
+### Property 71: Geographic Area Filter Application
 
 *For any* analytics dashboard with a geographic area filter applied, only activities and participants associated with venues in that geographic area or its descendants should be included in the metrics.
 
 **Validates: Requirements 7.16**
 
-### Property 66: Geographic Breakdown Chart Display
+### Property 72: Geographic Breakdown Chart Display
 
 *For any* engagement metrics, the geographic breakdown chart should correctly display engagement data grouped by geographic area.
 
 **Validates: Requirements 7.38**
 
-### Property 67: Geographic Area Drill-Down
+### Property 73: Geographic Area Drill-Down
 
 *For any* geographic area in the breakdown chart, clicking it should allow drilling down into child geographic areas to view more detailed statistics.
 
 **Validates: Requirements 7.39**
 
-### Property 68: Date Formatting Consistency
+### Property 74: Date Formatting Consistency
 
 *For any* date value displayed in the UI (activity dates, address history dates, venue history dates, analytics date ranges, table columns, detail views, forms), the rendered output should use ISO-8601 format (YYYY-MM-DD).
 
 **Validates: Requirements 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7**
 
-### Property 69: Geocoding Request Success
+### Property 75: Geocoding Request Success
 
 *For any* valid address string, when the geocode button is clicked, the Nominatim API should be called with the address and return at least one result or an error.
 
 **Validates: Requirements 21.2, 21.3**
 
-### Property 70: Geocoding Coordinate Population
+### Property 76: Geocoding Coordinate Population
 
 *For any* successful geocoding response with a single result, the latitude and longitude fields should be automatically populated with the returned coordinates.
 
 **Validates: Requirements 21.4**
 
-### Property 71: Geocoding Multiple Results Handling
+### Property 77: Geocoding Multiple Results Handling
 
 *For any* geocoding response with multiple results, a selection dialog should be displayed allowing the user to choose the correct location.
 
 **Validates: Requirements 21.5**
 
-### Property 72: Geocoding Error Handling
+### Property 78: Geocoding Error Handling
 
 *For any* geocoding request that returns no results or fails, an appropriate error message should be displayed to the user.
 
 **Validates: Requirements 21.6**
 
-### Property 73: Geocoding Loading State
+### Property 79: Geocoding Loading State
 
 *For any* geocoding request in progress, a loading indicator should be displayed and the geocode button should be disabled.
 
 **Validates: Requirements 21.7**
 
-### Property 74: Geocoding Manual Override
+### Property 80: Geocoding Manual Override
 
 *For any* geocoded coordinates, users should be able to manually edit the latitude and longitude fields to override the geocoded values.
 
 **Validates: Requirements 21.8**
 
-### Property 75: Geocoding Offline Behavior
+### Property 81: Geocoding Offline Behavior
 
 *For any* offline state, the geocode button should be disabled and display a message that geocoding requires connectivity.
 
 **Validates: Requirements 21.10**
 
-### Property 87: Map View Display in Venue Form
+### Property 82: Map View Display in Venue Form
 
 *For any* venue form (create or edit mode), an interactive map view component should be displayed positioned to the right of the form fields.
 
 **Validates: Requirements 21.11**
 
-### Property 88: Map Pin Rendering
+### Property 83: Map Pin Rendering
 
 *For any* venue form with populated latitude and longitude coordinates, a pin should be rendered on the map at those exact coordinates.
 
 **Validates: Requirements 21.12**
 
-### Property 89: Map Zoom Level
+### Property 84: Map Zoom Level
 
 *For any* venue form with populated coordinates, the map should be set to a reasonable zoom level for viewing the venue location.
 
 **Validates: Requirements 21.13**
 
-### Property 90: Pin Drag Updates Coordinates
+### Property 85: Pin Drag Updates Coordinates
 
 *For any* venue form with a map pin, when the pin is dragged to a new position on the map, the latitude and longitude input fields should be updated with the new coordinates.
 
 **Validates: Requirements 21.14, 21.15**
 
-### Property 91: Coordinate Input Updates Pin
+### Property 86: Coordinate Input Updates Pin
 
 *For any* venue form with a map pin, when the latitude or longitude input fields are manually edited with valid coordinates, the pin position on the map should be updated to reflect the new coordinates.
 
 **Validates: Requirements 21.16**
 
-### Property 92: Two-Way Coordinate Synchronization
+### Property 87: Two-Way Coordinate Synchronization
 
 *For any* venue form, changes to either the coordinate input fields or the map pin position should immediately synchronize with the other, maintaining consistency at all times.
 
 **Validates: Requirements 21.17**
 
-### Property 93: Zoom Level Preservation
+### Property 88: Zoom Level Preservation
 
 *For any* venue form where the user has manually adjusted the map zoom level, subsequent coordinate updates (via input fields or pin drag) should preserve the user's zoom level and only adjust the map center point.
 
 **Validates: Requirements 21.18**
 
-### Property 76: Hyperlinked Primary Column Navigation
+### Property 89: Hyperlinked Primary Column Navigation
 
 *For any* entity list table, clicking the hyperlinked primary column value should navigate to the detail view for that entity.
 
 **Validates: Requirements 22.1, 22.2**
 
-### Property 77: View Button Exclusion with Hyperlinked Primary Column
+### Property 90: View Button Exclusion with Hyperlinked Primary Column
 
 *For any* table with a hyperlinked primary column, the Actions column should NOT include a separate "View" action button.
 
 **Validates: Requirements 22.3**
 
-### Property 78: Hyperlinked Primary Column Consistency
+### Property 91: Hyperlinked Primary Column Consistency
 
 *For any* table in the application (list views or detail page tables), the primary column should use the CloudScape Link component with consistent styling.
 
 **Validates: Requirements 22.5, 22.6**
 
-### Property 79: Edit Button on Detail Pages
+### Property 92: Edit Button on Detail Pages
 
 *For any* entity detail page (participants, activities, venues, geographic areas), when the user has EDITOR or ADMINISTRATOR role, an edit button should be displayed in the header section as the right-most action using CloudScape Button with variant="primary".
 
 **Validates: Requirements 23.1, 23.2, 23.3, 23.5, 23.6**
 
-### Property 80: Edit Button Opens Edit Form
+### Property 93: Edit Button Opens Edit Form
 
 *For any* entity detail page with an edit button, clicking the edit button should open the edit form for the current entity.
 
 **Validates: Requirements 23.4**
 
-### Property 81: Global Filter URL Synchronization
+### Property 94: Global Filter URL Synchronization
 
 *For any* geographic area selected in the global filter, the URL query parameter should be updated to reflect the selected area ID, and navigating to a URL with a geographic area query parameter should apply that filter automatically.
 
 **Validates: Requirements 24.6, 24.7**
 
-### Property 82: Global Filter Persistence
+### Property 95: Global Filter Persistence
 
 *For any* geographic area selected in the global filter, the selection should be persisted to localStorage so it can be restored in future sessions.
 
 **Validates: Requirements 24.8**
 
-### Property 83: Global Filter Restoration
+### Property 96: Global Filter Restoration
 
 *For any* user returning to the application, the last-selected geographic area filter should be restored from localStorage and applied automatically.
 
 **Validates: Requirements 24.9**
 
-### Property 84: Recursive Geographic Filtering
+### Property 97: Recursive Geographic Filtering
 
 *For any* geographic area selected in the global filter, all filtered results should include records associated with the selected area and all its descendant areas (recursive aggregation).
 
 **Validates: Requirements 24.4, 24.5**
 
-### Property 85: Global Filter Application to All Lists
+### Property 98: Global Filter Application to All Lists
 
 *For any* list view (activities, participants, venues, geographic areas), when the global geographic area filter is active, only records associated with venues in the filtered geographic area or its descendants should be displayed.
 
 **Validates: Requirements 24.5**
 
-### Property 86: Global Filter Clear Functionality
+### Property 99: Global Filter Clear Functionality
 
 *For any* active global geographic area filter, the user should be able to clear the filter and return to the "Global" (all areas) view with a single action.
 
 **Validates: Requirements 24.11**
 
-### Property 94: Async Dropdown Initial Load
+### Property 100: Async Dropdown Initial Load
 
 *For any* high-cardinality entity dropdown (venue, participant, geographic area), when the dropdown is opened, the first page of results should be automatically loaded from the backend.
 
 **Validates: Requirements 25.4**
 
-### Property 95: Async Dropdown Text Filtering
+### Property 101: Async Dropdown Text Filtering
 
 *For any* high-cardinality entity dropdown with user text input, the dropdown should asynchronously fetch and display filtered results from the backend based on the input text.
 
 **Validates: Requirements 25.5**
 
-### Property 96: Dropdown Input Debouncing
+### Property 102: Dropdown Input Debouncing
 
 *For any* text input in a high-cardinality dropdown, API requests should be debounced with a minimum 300ms delay to prevent excessive requests.
 
 **Validates: Requirements 25.6**
 
-### Property 97: Dropdown Loading Indicator
+### Property 103: Dropdown Loading Indicator
 
 *For any* high-cardinality dropdown while fetching results, a loading indicator should be displayed to provide visual feedback.
 
 **Validates: Requirements 25.7**
 
-### Property 98: Dropdown Combined Filtering
+### Property 104: Dropdown Combined Filtering
 
 *For any* high-cardinality dropdown with both text search and geographic area filter active, both filters should be applied using AND logic.
 
