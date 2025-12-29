@@ -6,8 +6,13 @@ import { MapView } from '../components/features/MapView';
 export default function MapViewPage() {
   return (
     <ContentLayout>
-      <Container header={<Header variant="h2">Map View</Header>}>
-        <MapView />
+      <Container 
+        header={<Header variant="h2">Map View</Header>}
+        disableContentPaddings
+      >
+        <div style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
+          <MapView />
+        </div>
       </Container>
     </ContentLayout>
   );

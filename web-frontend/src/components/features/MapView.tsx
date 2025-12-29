@@ -46,7 +46,7 @@ export function MapView() {
   }
 
   return (
-    <div style={{ height: '600px', width: '100%' }}>
+    <div style={{ height: '100%', width: '100%' }}>
       <MapContainer
         center={defaultCenter}
         zoom={13}
@@ -70,7 +70,11 @@ export function MapView() {
               >
                 <Popup>
                   <div style={{ minWidth: '200px' }}>
-                    <Box variant="h4">{venue.name}</Box>
+                    <Box variant="h4">
+                      <Link href={`/venues/${venue.id}`} fontSize="heading-m">
+                        {venue.name}
+                      </Link>
+                    </Box>
                     <Box variant="small" color="text-body-secondary">
                       {venue.address}
                     </Box>
