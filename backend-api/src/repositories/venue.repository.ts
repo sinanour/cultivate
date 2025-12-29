@@ -31,11 +31,12 @@ export class VenueRepository {
     });
   }
 
-  async findAllPaginated(page: number, limit: number): Promise<{ data: Venue[]; total: number }> {
+  async findAllPaginated(page: number, limit: number, where?: any): Promise<{ data: Venue[]; total: number }> {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
       this.prisma.venue.findMany({
+        where,
         skip,
         take: limit,
         orderBy: { name: 'asc' },
@@ -43,7 +44,7 @@ export class VenueRepository {
           geographicArea: true,
         },
       }),
-      this.prisma.venue.count(),
+      this.prisma.venue.count({ where }),
     ]);
 
     return { data, total };
@@ -167,11 +168,14 @@ export class VenueRepository {
     return count > 0;
   }
 
-  async findByGeographicAreaIds(areaIds: string[]): Promise<Venue[]> {
+  async findByGeographicAreaIds(areaIds: string[], searchWhere?: any): Promise<Venue[]> {
+    const where = {
+      geographicAreaId: { in: areaIds },
+      ...searchWhere
+    };
+
     return this.prisma.venue.findMany({
-      where: {
-        geographicAreaId: { in: areaIds },
-      },
+      where,
       orderBy: { name: 'asc' },
       include: {
         geographicArea: true,
@@ -179,14 +183,16 @@ export class VenueRepository {
     });
   }
 
-  async findByGeographicAreaIdsPaginated(areaIds: string[], page: number, limit: number): Promise<{ data: Venue[]; total: number }> {
+  async findByGeographicAreaIdsPaginated(areaIds: string[], page: number, limit: number, searchWhere?: any): Promise<{ data: Venue[]; total: number }> {
     const skip = (page - 1) * limit;
+    const where = {
+      geographicAreaId: { in: areaIds },
+      ...searchWhere
+    };
 
     const [data, total] = await Promise.all([
       this.prisma.venue.findMany({
-        where: {
-          geographicAreaId: { in: areaIds },
-        },
+        where,
         skip,
         take: limit,
         orderBy: { name: 'asc' },
@@ -194,11 +200,7 @@ export class VenueRepository {
           geographicArea: true,
         },
       }),
-      this.prisma.venue.count({
-        where: {
-          geographicAreaId: { in: areaIds },
-        },
-      }),
+      this.prisma.venue.count({ where }),
     ]);
 
     return { data, total };

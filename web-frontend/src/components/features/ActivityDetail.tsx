@@ -14,7 +14,6 @@ import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import { ActivityService } from '../../services/api/activity.service';
-import { VenueService } from '../../services/api/venue.service';
 import type { Activity } from '../../types';
 import { AssignmentService } from '../../services/api/assignment.service';
 import { AssignmentForm } from './AssignmentForm';
@@ -51,11 +50,6 @@ export function ActivityDetail() {
     queryKey: ['activity-venues', id],
     queryFn: () => ActivityService.getActivityVenues(id!),
     enabled: !!id,
-  });
-
-  const { data: venues = [] } = useQuery({
-    queryKey: ['venues'],
-    queryFn: () => VenueService.getVenues(),
   });
 
   const updateStatusMutation = useMutation({
@@ -375,7 +369,6 @@ export function ActivityDetail() {
         visible={isVenueFormOpen}
         onDismiss={() => setIsVenueFormOpen(false)}
         onSubmit={handleSubmitVenue}
-        venues={venues}
         existingDates={existingDates}
         loading={addVenueMutation.isPending}
       />

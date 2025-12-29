@@ -94,12 +94,13 @@ export class VenueRoutes {
             const page = req.query.page ? parseInt(req.query.page as string) : undefined;
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
+            const search = req.query.search as string | undefined;
 
             if (page !== undefined || limit !== undefined) {
-                const result = await this.venueService.getAllVenuesPaginated(page, limit, geographicAreaId);
+                const result = await this.venueService.getAllVenuesPaginated(page, limit, geographicAreaId, search);
                 res.status(200).json({ success: true, ...result });
             } else {
-                const venues = await this.venueService.getAllVenues(geographicAreaId);
+                const venues = await this.venueService.getAllVenues(geographicAreaId, search);
                 res.status(200).json({ success: true, data: venues });
             }
         } catch (error) {

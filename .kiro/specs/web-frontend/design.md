@@ -426,6 +426,28 @@ src/
 - Allows role assignment and modification
 - Only accessible to administrators
 
+#### 12. Common Components
+
+**AsyncEntitySelect**
+- Reusable dropdown component for high-cardinality entity selection (venues, participants, geographic areas)
+- Uses CloudScape Autosuggest or Select component with async loading capabilities
+- Loads first page of results from backend on component mount (default 50 items)
+- Supports text-based filtering with debounced input (300ms delay)
+- Sends search query to backend via `?search=text` parameter
+- Displays loading indicator while fetching filtered results
+- Supports pagination for large result sets (loads more on scroll or explicit action)
+- Respects global geographic area filter when applicable (combines `?search=text&geographicAreaId=id`)
+- Handles empty states and error states gracefully
+- Provides clear visual feedback during async operations
+- Optimizes for both small scoped datasets (shows all immediately) and large global datasets (requires filtering)
+
+**Implementation Details:**
+- Generic component accepting entity type, fetch function, and display formatter
+- Maintains local state for search text, loading status, and current results
+- Uses React Query for caching and request deduplication
+- Implements virtual scrolling for large result sets
+- Provides accessible keyboard navigation and screen reader support
+
 ### Service Layer
 
 #### React Contexts
@@ -465,7 +487,7 @@ src/
 - `deleteRole(id)`: Deletes role (validates references, returns REFERENCED_ENTITY error if referenced)
 
 **ParticipantService**
-- `getParticipants(page?, limit?, geographicAreaId?)`: Fetches all participants with optional pagination and optional geographic area filter
+- `getParticipants(page?, limit?, geographicAreaId?, search?)`: Fetches all participants with optional pagination, optional geographic area filter, and optional text search filter
 - `getParticipant(id)`: Fetches single participant
 - `getParticipantActivities(id)`: Fetches participant's activity assignments from `/participants/:id/activities`
 - `createParticipant(data)`: Creates new participant
@@ -496,7 +518,7 @@ src/
 - `getActivityParticipants(activityId)`: Fetches assignments for activity
 
 **VenueService**
-- `getVenues(page?, limit?, geographicAreaId?)`: Fetches all venues with optional pagination and optional geographic area filter
+- `getVenues(page?, limit?, geographicAreaId?, search?)`: Fetches all venues with optional pagination, optional geographic area filter, and optional text search filter
 - `getVenue(id)`: Fetches single venue with geographicArea populated
 - `searchVenues(query)`: Searches venues by name or address via `/venues/search?q=`
 - `createVenue(data)`: Creates new venue
@@ -517,7 +539,7 @@ src/
 - `getVenueParticipants(id)`: Fetches participants with venue as home from `/venues/:id/participants`
 
 **GeographicAreaService**
-- `getGeographicAreas(page?, limit?, geographicAreaId?)`: Fetches all geographic areas with optional pagination and optional geographic area filter (returns selected area, descendants, and ancestors for hierarchy context)
+- `getGeographicAreas(page?, limit?, geographicAreaId?, search?)`: Fetches all geographic areas with optional pagination, optional geographic area filter (returns selected area, descendants, and ancestors for hierarchy context), and optional text search filter
 - `getGeographicArea(id)`: Fetches single geographic area with parent populated
 - `createGeographicArea(data)`: Creates new geographic area (validates circular relationships)
 - `updateGeographicArea(id, data, version?)`: Updates existing geographic area with optional version for optimistic locking
@@ -1533,6 +1555,36 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* active global geographic area filter, the user should be able to clear the filter and return to the "Global" (all areas) view with a single action.
 
 **Validates: Requirements 24.11**
+
+### Property 94: Async Dropdown Initial Load
+
+*For any* high-cardinality entity dropdown (venue, participant, geographic area), when the dropdown is opened, the first page of results should be automatically loaded from the backend.
+
+**Validates: Requirements 25.4**
+
+### Property 95: Async Dropdown Text Filtering
+
+*For any* high-cardinality entity dropdown with user text input, the dropdown should asynchronously fetch and display filtered results from the backend based on the input text.
+
+**Validates: Requirements 25.5**
+
+### Property 96: Dropdown Input Debouncing
+
+*For any* text input in a high-cardinality dropdown, API requests should be debounced with a minimum 300ms delay to prevent excessive requests.
+
+**Validates: Requirements 25.6**
+
+### Property 97: Dropdown Loading Indicator
+
+*For any* high-cardinality dropdown while fetching results, a loading indicator should be displayed to provide visual feedback.
+
+**Validates: Requirements 25.7**
+
+### Property 98: Dropdown Combined Filtering
+
+*For any* high-cardinality dropdown with both text search and geographic area filter active, both filters should be applied using AND logic.
+
+**Validates: Requirements 25.7 (implied from backend requirement 21.7)**
 
 ## Error Handling
 

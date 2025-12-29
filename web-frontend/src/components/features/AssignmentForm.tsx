@@ -11,6 +11,7 @@ import type { Assignment } from '../../types';
 import { AssignmentService } from '../../services/api/assignment.service';
 import { ParticipantService } from '../../services/api/participant.service';
 import { ParticipantRoleService } from '../../services/api/participant-role.service';
+import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
 
 interface AssignmentFormProps {
   activityId: string;
@@ -29,20 +30,10 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
   const [roleError, setRoleError] = useState('');
   const [error, setError] = useState('');
 
-  const { data: participants = [] } = useQuery({
-    queryKey: ['participants'],
-    queryFn: () => ParticipantService.getParticipants(),
-  });
-
   const { data: roles = [] } = useQuery({
     queryKey: ['participantRoles'],
     queryFn: () => ParticipantRoleService.getRoles(),
   });
-
-  const participantOptions = participants.map((p) => ({
-    label: `${p.name} (${p.email})`,
-    value: p.id,
-  }));
 
   const roleOptions = roles.map((r) => ({
     label: r.name,
@@ -140,16 +131,31 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
             </Alert>
           )}
           <FormField label="Participant" errorText={participantError} constraintText="Required">
-            <Select
-              selectedOption={participantOptions.find((o) => o.value === participantId) || null}
-              onChange={({ detail }) => {
-                setParticipantId(detail.selectedOption.value || '');
-                if (participantError) validateParticipant(detail.selectedOption.value || '');
+            <AsyncEntitySelect
+              value={participantId}
+              onChange={(value) => {
+                setParticipantId(value);
+                if (participantError) validateParticipant(value);
               }}
-              options={participantOptions}
-              placeholder="Select a participant"
+              entityType="participant"
+              fetchFunction={async (params) => {
+                const data = await ParticipantService.getParticipants(
+                  params.page,
+                  params.limit,
+                  params.geographicAreaId,
+                  params.search
+                );
+                return { data };
+              }}
+              formatOption={(p) => ({
+                value: p.id,
+                label: p.name,
+                description: p.email,
+              })}
+              placeholder="Search for a participant"
               disabled={isSubmitting}
-              empty="No participants available"
+              invalid={!!participantError}
+              ariaLabel="Select participant"
             />
           </FormField>
           <FormField label="Role" errorText={roleError} constraintText="Required">

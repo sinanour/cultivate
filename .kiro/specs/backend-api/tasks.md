@@ -552,6 +552,60 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Update OpenAPI specification
     - _Requirements: API Contract alignment_
 
+- [x] 22. Implement high-cardinality text-based filtering
+  - [x] 22.1 Add search parameter support to participant endpoints
+    - Update ParticipantService.getParticipants to accept search parameter
+    - Implement case-insensitive partial matching on name and email fields
+    - Combine search filter with geographic area filter using AND logic
+    - Ensure pagination works with filtered results
+    - _Requirements: 21.2, 21.5, 21.7, 21.8, 21.9_
+
+  - [x] 22.2 Add search parameter support to venue endpoints
+    - Update VenueService.getVenues to accept search parameter
+    - Implement case-insensitive partial matching on name and address fields
+    - Combine search filter with geographic area filter using AND logic
+    - Ensure pagination works with filtered results
+    - _Requirements: 21.1, 21.4, 21.7, 21.8, 21.9_
+
+  - [x] 22.3 Add search parameter support to geographic area endpoints
+    - Update GeographicAreaService.getGeographicAreas to accept search parameter
+    - Implement case-insensitive partial matching on name field
+    - Combine search filter with geographic area filter using AND logic
+    - Ensure pagination works with filtered results
+    - _Requirements: 21.3, 21.6, 21.7, 21.8, 21.9_
+
+  - [x] 22.4 Create database indexes for text search optimization
+    - Add GIN trigram indexes on participants.name and participants.email
+    - Add GIN trigram indexes on venues.name and venues.address
+    - Add GIN trigram index on geographic_areas.name
+    - Create Prisma migration for index creation
+    - Enable pg_trgm extension in PostgreSQL
+    - _Requirements: 21.10_
+
+  - [x] 22.5 Update route handlers to accept search query parameter
+    - Update GET /api/v1/participants route to accept ?search parameter
+    - Update GET /api/v1/venues route to accept ?search parameter
+    - Update GET /api/v1/geographic-areas route to accept ?search parameter
+    - Validate search parameter (optional string, max 200 chars)
+    - Pass search parameter to service layer
+    - _Requirements: 21.1, 21.2, 21.3_
+
+  - [x] 22.6 Update OpenAPI documentation
+    - Document search query parameter for participants endpoint
+    - Document search query parameter for venues endpoint
+    - Document search query parameter for geographic areas endpoint
+    - Include examples showing combined search and geographic filtering
+    - _Requirements: 21.1, 21.2, 21.3, 21.7_
+
+  - [ ]* 22.7 Write property tests for text-based filtering
+    - **Property 118: Venue Text Search Filtering**
+    - **Property 119: Participant Text Search Filtering**
+    - **Property 120: Geographic Area Text Search Filtering**
+    - **Property 121: Combined Search and Geographic Filtering**
+    - **Property 122: Filtered Result Pagination**
+    - **Property 123: Search Query Optimization**
+    - **Validates: Requirements 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10**
+
 ## Global Geographic Area Filter Implementation Notes
 
 **Query Parameter Support:**

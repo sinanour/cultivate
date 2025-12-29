@@ -382,3 +382,22 @@ The Backend API package provides the RESTful API service that implements all bus
 3. WHEN breaking changes are introduced, THE API SHALL increment the major version to /api/v2/...
 4. THE API SHALL document version changes in the OpenAPI specification
 5. THE API SHALL support multiple API versions simultaneously during transition periods
+
+### Requirement 21: High-Cardinality Entity Filtering
+
+**User Story:** As a client developer working with large datasets, I want API endpoints to support efficient text-based filtering and pagination for venues, participants, and geographic areas, so that dropdown lists can scale to millions of records without performance degradation.
+
+#### Acceptance Criteria
+
+1. THE API SHALL support text-based filtering on GET /api/venues endpoint via a query parameter (e.g., ?search=text)
+2. THE API SHALL support text-based filtering on GET /api/participants endpoint via a query parameter (e.g., ?search=text)
+3. THE API SHALL support text-based filtering on GET /api/geographic-areas endpoint via a query parameter (e.g., ?search=text)
+4. WHEN a search query parameter is provided for venues, THE API SHALL return only venues whose name or address contains the search text (case-insensitive partial match)
+5. WHEN a search query parameter is provided for participants, THE API SHALL return only participants whose name or email contains the search text (case-insensitive partial match)
+6. WHEN a search query parameter is provided for geographic areas, THE API SHALL return only geographic areas whose name contains the search text (case-insensitive partial match)
+7. WHEN both search and geographicAreaId query parameters are provided, THE API SHALL apply both filters using AND logic
+8. THE API SHALL support pagination on all filtered results using page and limit query parameters
+9. WHEN returning filtered and paginated results, THE API SHALL include pagination metadata (page, limit, total, totalPages)
+10. THE API SHALL optimize database queries for text-based filtering using appropriate indexes on name, address, and email fields
+11. THE API SHALL return the first page of results by default when no page parameter is specified
+12. THE API SHALL limit the maximum page size to 100 items to prevent performance issues

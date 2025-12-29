@@ -15,11 +15,12 @@ interface UpdateVenueData extends Partial<CreateVenueData> {
 }
 
 export class VenueService {
-    static async getVenues(page?: number, limit?: number, geographicAreaId?: string | null): Promise<Venue[]> {
+    static async getVenues(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<Venue[]> {
         const params = new URLSearchParams();
         if (page) params.append('page', page.toString());
         if (limit) params.append('limit', limit.toString());
         if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
+        if (search) params.append('search', search);
         const query = params.toString();
         return ApiClient.get<Venue[]>(`/venues${query ? `?${query}` : ''}`);
   }

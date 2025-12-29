@@ -5,22 +5,16 @@ import {
   SpaceBetween,
   Button,
   FormField,
-  Select,
   DatePicker,
   Alert,
 } from '@cloudscape-design/components';
-
-interface Venue {
-  id: string;
-  name: string;
-  address: string;
-}
+import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
+import { VenueService } from '../../services/api/venue.service';
 
 interface ActivityVenueHistoryFormProps {
   visible: boolean;
   onDismiss: () => void;
   onSubmit: (data: { venueId: string; effectiveFrom: string }) => Promise<void>;
-  venues: Venue[];
   existingDates?: string[]; // Array of existing effective dates to check for duplicates
   loading?: boolean;
 }
@@ -29,7 +23,6 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
   visible,
   onDismiss,
   onSubmit,
-  venues,
   existingDates = [],
   loading = false,
 }) => {
@@ -89,13 +82,6 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
     }
   };
 
-  const venueOptions = venues.map(venue => ({
-    label: `${venue.name} - ${venue.address}`,
-    value: venue.id,
-  }));
-
-  const selectedVenue = venueOptions.find(option => option.value === venueId);
-
   return (
     <Modal
       visible={visible}
@@ -131,16 +117,31 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
           errorText={errors.venue}
           description="Select the venue for this activity"
         >
-          <Select
-            selectedOption={selectedVenue || null}
-            onChange={({ detail }) => {
-              setVenueId(detail.selectedOption.value || '');
+          <AsyncEntitySelect
+            value={venueId}
+            onChange={(value) => {
+              setVenueId(value);
               setErrors({ ...errors, venue: undefined, duplicate: undefined });
             }}
-            options={venueOptions}
-            placeholder="Choose a venue"
+            entityType="venue"
+            fetchFunction={async (params) => {
+              const data = await VenueService.getVenues(
+                params.page,
+                params.limit,
+                params.geographicAreaId,
+                params.search
+              );
+              return { data };
+            }}
+            formatOption={(v) => ({
+              value: v.id,
+              label: v.name,
+              description: v.address,
+            })}
+            placeholder="Search for a venue"
             disabled={loading}
-            filteringType="auto"
+            invalid={!!errors.venue}
+            ariaLabel="Select venue"
           />
         </FormField>
 

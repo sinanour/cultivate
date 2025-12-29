@@ -28,8 +28,20 @@ export class VenueService {
         private geographicAreaRepository: GeographicAreaRepository
     ) { }
 
-    async getAllVenues(geographicAreaId?: string): Promise<Venue[]> {
+    async getAllVenues(geographicAreaId?: string, search?: string): Promise<Venue[]> {
+        // Build search filter
+        const searchWhere = search ? {
+            OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { address: { contains: search, mode: 'insensitive' as const } }
+            ]
+        } : {};
+
         if (!geographicAreaId) {
+            // No geographic filter, just apply search if provided
+            if (search) {
+                return this.venueRepository.search(search);
+            }
             return this.venueRepository.findAll();
         }
 
@@ -37,15 +49,24 @@ export class VenueService {
         const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
         const areaIds = [geographicAreaId, ...descendantIds];
 
-        // Filter venues by geographic area
-        return this.venueRepository.findByGeographicAreaIds(areaIds);
+        // Filter venues by geographic area and search
+        return this.venueRepository.findByGeographicAreaIds(areaIds, searchWhere);
     }
 
-    async getAllVenuesPaginated(page?: number, limit?: number, geographicAreaId?: string): Promise<PaginatedResponse<Venue>> {
+    async getAllVenuesPaginated(page?: number, limit?: number, geographicAreaId?: string, search?: string): Promise<PaginatedResponse<Venue>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
+        // Build search filter
+        const searchWhere = search ? {
+            OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { address: { contains: search, mode: 'insensitive' as const } }
+            ]
+        } : {};
+
         if (!geographicAreaId) {
-            const { data, total } = await this.venueRepository.findAllPaginated(validPage, validLimit);
+            // No geographic filter, just apply search if provided
+            const { data, total } = await this.venueRepository.findAllPaginated(validPage, validLimit, searchWhere);
             return PaginationHelper.createResponse(data, validPage, validLimit, total);
         }
 
@@ -53,8 +74,8 @@ export class VenueService {
         const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
         const areaIds = [geographicAreaId, ...descendantIds];
 
-        // Filter venues by geographic area with pagination
-        const { data, total } = await this.venueRepository.findByGeographicAreaIdsPaginated(areaIds, validPage, validLimit);
+        // Filter venues by geographic area with pagination and search
+        const { data, total } = await this.venueRepository.findByGeographicAreaIdsPaginated(areaIds, validPage, validLimit, searchWhere);
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 

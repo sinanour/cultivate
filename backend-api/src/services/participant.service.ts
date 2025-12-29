@@ -42,8 +42,20 @@ export class ParticipantService {
         private geographicAreaRepository: GeographicAreaRepository
     ) { }
 
-    async getAllParticipants(geographicAreaId?: string): Promise<Participant[]> {
+    async getAllParticipants(geographicAreaId?: string, search?: string): Promise<Participant[]> {
+        // Build search filter
+        const searchWhere = search ? {
+            OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { email: { contains: search, mode: 'insensitive' as const } }
+            ]
+        } : {};
+
         if (!geographicAreaId) {
+            // No geographic filter, just apply search if provided
+            if (search) {
+                return this.participantRepository.search(search);
+            }
             return this.participantRepository.findAll();
         }
 
@@ -53,6 +65,7 @@ export class ParticipantService {
 
         // Get all participants with their most recent address
         const allParticipants = await this.prisma.participant.findMany({
+            where: searchWhere,
             include: {
                 addressHistory: {
                     orderBy: { effectiveFrom: 'desc' },
@@ -73,11 +86,20 @@ export class ParticipantService {
         return filteredParticipants.map(({ addressHistory, ...participant }) => participant as Participant);
     }
 
-    async getAllParticipantsPaginated(page?: number, limit?: number, geographicAreaId?: string): Promise<PaginatedResponse<Participant>> {
+    async getAllParticipantsPaginated(page?: number, limit?: number, geographicAreaId?: string, search?: string): Promise<PaginatedResponse<Participant>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
+        // Build search filter
+        const searchWhere = search ? {
+            OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { email: { contains: search, mode: 'insensitive' as const } }
+            ]
+        } : {};
+
         if (!geographicAreaId) {
-            const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit);
+            // No geographic filter, just apply search if provided
+            const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit, searchWhere);
             return PaginationHelper.createResponse(data, validPage, validLimit, total);
         }
 
@@ -87,6 +109,7 @@ export class ParticipantService {
 
         // Get all participants with their most recent address
         const allParticipants = await this.prisma.participant.findMany({
+            where: searchWhere,
             include: {
                 addressHistory: {
                     orderBy: { effectiveFrom: 'desc' },

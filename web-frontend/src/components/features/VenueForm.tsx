@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
@@ -20,6 +20,7 @@ import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
 import { VenueFormMapView } from './VenueFormMapView';
+import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
 
 interface VenueFormProps {
   venue: Venue | null;
@@ -94,16 +95,6 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
     queryKey: ['venues'],
     onDiscard: onCancel,
   });
-
-  const { data: geographicAreas = [] } = useQuery({
-    queryKey: ['geographicAreas'],
-    queryFn: () => GeographicAreaService.getGeographicAreas(),
-  });
-
-  const geographicAreaOptions = geographicAreas.map((area) => ({
-    label: area.name,
-    value: area.id,
-  }));
 
   const venueTypeOptions = [
     { label: 'Not specified', value: '' },
@@ -347,16 +338,31 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
                   />
                 </FormField>
                 <FormField label="Geographic Area" errorText={geographicAreaError} constraintText="Required">
-                  <Select
-                    selectedOption={geographicAreaOptions.find((o) => o.value === geographicAreaId) || null}
-                    onChange={({ detail }) => {
-                      setGeographicAreaId(detail.selectedOption.value || '');
-                      if (geographicAreaError) validateGeographicArea(detail.selectedOption.value || '');
+                  <AsyncEntitySelect
+                    value={geographicAreaId}
+                    onChange={(value) => {
+                      setGeographicAreaId(value);
+                      if (geographicAreaError) validateGeographicArea(value);
                     }}
-                    options={geographicAreaOptions}
-                    placeholder="Select a geographic area"
+                    entityType="geographic-area"
+                    fetchFunction={async (params) => {
+                      const data = await GeographicAreaService.getGeographicAreas(
+                        params.page,
+                        params.limit,
+                        params.geographicAreaId,
+                        params.search
+                      );
+                      return { data };
+                    }}
+                    formatOption={(area) => ({
+                      value: area.id,
+                      label: area.name,
+                      description: area.areaType,
+                    })}
+                    placeholder="Search for a geographic area"
                     disabled={isSubmitting}
-                    empty="No geographic areas available"
+                    invalid={!!geographicAreaError}
+                    ariaLabel="Select geographic area"
                   />
                 </FormField>
                 <FormField 

@@ -14,7 +14,6 @@ import Link from '@cloudscape-design/components/link';
 import Badge from '@cloudscape-design/components/badge';
 import { ParticipantService } from '../../services/api/participant.service';
 import { ParticipantAddressHistoryService } from '../../services/api/participant-address-history.service';
-import { VenueService } from '../../services/api/venue.service';
 import { AddressHistoryTable } from './AddressHistoryTable';
 import { AddressHistoryForm } from './AddressHistoryForm';
 import { ParticipantForm } from './ParticipantForm';
@@ -50,11 +49,6 @@ export function ParticipantDetail() {
     queryKey: ['participantActivities', id],
     queryFn: () => ParticipantService.getParticipantActivities(id!),
     enabled: !!id,
-  });
-
-  const { data: venues = [] } = useQuery({
-    queryKey: ['venues'],
-    queryFn: () => VenueService.getVenues(),
   });
 
   const createAddressMutation = useMutation({
@@ -314,7 +308,6 @@ export function ParticipantDetail() {
           setEditingAddress(undefined);
         }}
         onSubmit={handleSubmitAddress}
-        venues={venues}
         existingRecord={editingAddress}
         existingDates={existingDates}
         loading={createAddressMutation.isPending || updateAddressMutation.isPending}

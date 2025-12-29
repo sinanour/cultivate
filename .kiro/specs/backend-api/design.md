@@ -79,7 +79,7 @@ PUT    /api/v1/roles/:id               -> Update role
 DELETE /api/v1/roles/:id               -> Delete role
 
 // Participant Routes
-GET    /api/v1/participants            -> List all participants (supports ?geographicAreaId=<id> filter)
+GET    /api/v1/participants            -> List all participants (supports ?geographicAreaId=<id> and ?search=<text> filters)
 GET    /api/v1/participants/:id        -> Get participant by ID
 GET    /api/v1/participants/:id/activities -> Get participant's activity assignments
 GET    /api/v1/participants/search     -> Search participants
@@ -106,7 +106,7 @@ POST   /api/v1/activities/:id/venues                 -> Associate venue with act
 DELETE /api/v1/activities/:id/venues/:venueId        -> Remove venue association
 
 // Venue Routes
-GET    /api/v1/venues                  -> List all venues (supports ?geographicAreaId=<id> filter)
+GET    /api/v1/venues                  -> List all venues (supports ?geographicAreaId=<id> and ?search=<text> filters)
 GET    /api/v1/venues/:id              -> Get venue by ID
 GET    /api/v1/venues/search           -> Search venues
 POST   /api/v1/venues                  -> Create venue
@@ -116,7 +116,7 @@ GET    /api/v1/venues/:id/activities   -> List activities at venue
 GET    /api/v1/venues/:id/participants -> List participants with venue as home
 
 // Geographic Area Routes
-GET    /api/v1/geographic-areas        -> List all geographic areas (supports ?geographicAreaId=<id> filter)
+GET    /api/v1/geographic-areas        -> List all geographic areas (supports ?geographicAreaId=<id> and ?search=<text> filters)
 GET    /api/v1/geographic-areas/:id    -> Get geographic area by ID
 POST   /api/v1/geographic-areas        -> Create geographic area
 PUT    /api/v1/geographic-areas/:id    -> Update geographic area
@@ -154,11 +154,11 @@ Services implement business logic and coordinate operations:
 
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
-- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering for list queries
+- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
-- **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search, supports geographic area filtering for list queries
-- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
+- **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search, supports geographic area filtering and text-based search filtering for list queries
+- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters and range filters), aggregates data hierarchically by specified dimensions
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
@@ -170,11 +170,11 @@ Repositories encapsulate Prisma database access:
 
 - **ActivityTypeRepository**: CRUD operations for activity types
 - **RoleRepository**: CRUD operations for roles
-- **ParticipantRepository**: CRUD operations and search for participants
+- **ParticipantRepository**: CRUD operations and text-based search for participants (supports filtering by name/email and geographic area with pagination)
 - **ActivityRepository**: CRUD operations and queries for activities
 - **AssignmentRepository**: CRUD operations for participant assignments
-- **VenueRepository**: CRUD operations and search for venues, queries for associated activities and participants
-- **GeographicAreaRepository**: CRUD operations for geographic areas, hierarchical queries for ancestors and descendants, statistics aggregation
+- **VenueRepository**: CRUD operations and text-based search for venues (supports filtering by name/address and geographic area with pagination), queries for associated activities and participants
+- **GeographicAreaRepository**: CRUD operations for geographic areas with text-based search (supports filtering by name and geographic area with pagination), hierarchical queries for ancestors and descendants, statistics aggregation
 - **ParticipantAddressHistoryRepository**: Temporal tracking operations for participant home address changes
 - **ActivityVenueHistoryRepository**: Temporal tracking operations for activity-venue associations
 - **UserRepository**: User authentication and management
@@ -1181,6 +1181,32 @@ The API uses Prisma to define the following database models:
 *For any* geographic area list request with a geographic area filter, the response should include the specified area, all its descendants, and all its ancestors to maintain hierarchy context.
 **Validates: Requirements 5B.16**
 
+### High-Cardinality Filtering Properties
+
+**Property 118: Venue text search filtering**
+*For any* venue list request with a search query parameter, only venues whose name or address contains the search text (case-insensitive) should be returned.
+**Validates: Requirements 21.1, 21.4**
+
+**Property 119: Participant text search filtering**
+*For any* participant list request with a search query parameter, only participants whose name or email contains the search text (case-insensitive) should be returned.
+**Validates: Requirements 21.2, 21.5**
+
+**Property 120: Geographic area text search filtering**
+*For any* geographic area list request with a search query parameter, only geographic areas whose name contains the search text (case-insensitive) should be returned.
+**Validates: Requirements 21.3, 21.6**
+
+**Property 121: Combined search and geographic filtering**
+*For any* list request with both search and geographicAreaId query parameters, both filters should be applied using AND logic.
+**Validates: Requirements 21.7**
+
+**Property 122: Filtered result pagination**
+*For any* filtered list request with page and limit parameters, the response should include correctly paginated results and accurate pagination metadata.
+**Validates: Requirements 21.8, 21.9**
+
+**Property 123: Search query optimization**
+*For any* text-based search query on indexed fields (name, address, email), the database query should use appropriate indexes for efficient execution.
+**Validates: Requirements 21.10**
+
 ## Error Handling
 
 ### Error Response Format
@@ -1217,6 +1243,104 @@ All errors follow a consistent format:
 - All errors are logged with stack traces using a structured logging library
 - Logs include request ID, user ID (if authenticated), timestamp, and error details
 - Sensitive information (passwords, tokens) is never logged
+
+## High-Cardinality Filtering Implementation
+
+### Text-Based Search Support
+
+To support efficient dropdown filtering for high-cardinality entities (venues, participants, geographic areas), all list endpoints accept an optional `search` query parameter that performs case-insensitive partial text matching.
+
+**Query Parameter Pattern:**
+```
+GET /api/v1/participants?search=john&geographicAreaId=abc123&page=1&limit=50
+GET /api/v1/venues?search=community&geographicAreaId=abc123&page=1&limit=50
+GET /api/v1/geographic-areas?search=downtown&page=1&limit=50
+```
+
+**Implementation Pattern for Services:**
+
+```typescript
+async getEntities(
+  page?: number, 
+  limit?: number, 
+  geographicAreaId?: string,
+  search?: string
+) {
+  // Build geographic area filter
+  let areaIds: string[] | undefined;
+  if (geographicAreaId) {
+    const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+    areaIds = [geographicAreaId, ...descendantIds];
+  }
+  
+  // Build search filter
+  const searchFilter = search ? this.buildSearchFilter(search) : {};
+  
+  // Combine filters
+  const where = {
+    ...this.buildGeographicFilter(areaIds),
+    ...searchFilter
+  };
+  
+  return this.repository.findMany({ where, page, limit });
+}
+```
+
+**Entity-Specific Search Filters:**
+
+**Participants:** Search by name or email
+```typescript
+const searchFilter = search ? {
+  OR: [
+    { name: { contains: search, mode: 'insensitive' } },
+    { email: { contains: search, mode: 'insensitive' } }
+  ]
+} : {};
+```
+
+**Venues:** Search by name or address
+```typescript
+const searchFilter = search ? {
+  OR: [
+    { name: { contains: search, mode: 'insensitive' } },
+    { address: { contains: search, mode: 'insensitive' } }
+  ]
+} : {};
+```
+
+**Geographic Areas:** Search by name
+```typescript
+const searchFilter = search ? {
+  name: { contains: search, mode: 'insensitive' }
+} : {};
+```
+
+**Database Optimization:**
+
+To ensure efficient text-based searches at scale, the following database indexes should be created:
+
+```sql
+-- Participant indexes
+CREATE INDEX idx_participants_name ON participants USING gin(name gin_trgm_ops);
+CREATE INDEX idx_participants_email ON participants USING gin(email gin_trgm_ops);
+
+-- Venue indexes
+CREATE INDEX idx_venues_name ON venues USING gin(name gin_trgm_ops);
+CREATE INDEX idx_venues_address ON venues USING gin(address gin_trgm_ops);
+
+-- Geographic Area indexes
+CREATE INDEX idx_geographic_areas_name ON geographic_areas USING gin(name gin_trgm_ops);
+```
+
+These GIN (Generalized Inverted Index) indexes with trigram operators enable fast case-insensitive partial text matching even with millions of records.
+
+**Key Design Points:**
+- Search parameter is optional - endpoints work without it
+- Search combines with geographic area filter using AND logic
+- Pagination works seamlessly with filtered results
+- Uses Prisma's `contains` with `mode: 'insensitive'` for case-insensitive matching
+- Database indexes ensure sub-second query performance at scale
+- No breaking changes to existing API contract
 
 ## Testing Strategy
 

@@ -4,7 +4,6 @@ import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
 import Textarea from '@cloudscape-design/components/textarea';
-import Select from '@cloudscape-design/components/select';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
@@ -21,6 +20,7 @@ import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
 import { formatDate } from '../../utils/date.utils';
+import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
 
 interface ParticipantFormProps {
   participant: Participant | null;
@@ -91,13 +91,6 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     queryKey: ['participants'],
     onDiscard: onCancel,
   });
-
-  const { data: venues = [] } = useQuery({
-    queryKey: ['venues'],
-    queryFn: () => VenueService.getVenues(),
-  });
-
-  const venueOptions = venues.map((v) => ({ label: `${v.name} - ${v.address}`, value: v.id }));
 
   const createMutation = useMutation({
     mutationFn: (data: {
@@ -270,7 +263,8 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
         participantId: '',
         venueId: newAddressVenueId,
         effectiveFrom: isoDate,
-        venue: venues.find(v => v.id === newAddressVenueId),
+        // Venue details will be populated when displayed
+        venue: undefined,
       };
       setAddressHistory(prev => [...prev, tempAddress]);
       setShowAddressForm(false);
@@ -434,15 +428,30 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                         errorText={addressFormErrors.venue}
                         description="Select the venue for this address"
                       >
-                        <Select
-                          selectedOption={venueOptions.find(o => o.value === newAddressVenueId) || null}
-                          onChange={({ detail }) => {
-                            setNewAddressVenueId(detail.selectedOption.value || '');
+                        <AsyncEntitySelect
+                          value={newAddressVenueId}
+                          onChange={(value) => {
+                            setNewAddressVenueId(value);
                             setAddressFormErrors({ ...addressFormErrors, venue: undefined, duplicate: undefined });
                           }}
-                          options={venueOptions}
-                          placeholder="Choose a venue"
-                          filteringType="auto"
+                          entityType="venue"
+                          fetchFunction={async (params) => {
+                            const data = await VenueService.getVenues(
+                              params.page,
+                              params.limit,
+                              params.geographicAreaId,
+                              params.search
+                            );
+                            return { data };
+                          }}
+                          formatOption={(v) => ({
+                            value: v.id,
+                            label: v.name,
+                            description: v.address,
+                          })}
+                          placeholder="Search for a venue"
+                          invalid={!!addressFormErrors.venue}
+                          ariaLabel="Select venue"
                         />
                       </FormField>
                       <FormField

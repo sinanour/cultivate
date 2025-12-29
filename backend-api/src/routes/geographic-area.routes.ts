@@ -101,12 +101,13 @@ export class GeographicAreaRoutes {
             const page = req.query.page ? parseInt(req.query.page as string) : undefined;
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
+            const search = req.query.search as string | undefined;
 
             if (page !== undefined || limit !== undefined) {
-                const result = await this.geographicAreaService.getAllGeographicAreasPaginated(page, limit, geographicAreaId);
+                const result = await this.geographicAreaService.getAllGeographicAreasPaginated(page, limit, geographicAreaId, search);
                 res.status(200).json({ success: true, ...result });
             } else {
-                const areas = await this.geographicAreaService.getAllGeographicAreas(geographicAreaId);
+                const areas = await this.geographicAreaService.getAllGeographicAreas(geographicAreaId, search);
                 res.status(200).json({ success: true, data: areas });
             }
         } catch (error) {

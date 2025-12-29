@@ -863,6 +863,72 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 86: Global Filter Clear Functionality**
     - **Validates: Requirements 24.4, 24.5, 24.6, 24.7, 24.8, 24.9, 24.11**
 
+- [x] 25. Implement high-cardinality dropdown filtering
+  - [x] 25.1 Create AsyncEntitySelect component
+    - Create reusable dropdown component for venues, participants, and geographic areas
+    - Use CloudScape Autosuggest component with async loading capabilities
+    - Load first page of results (50 items) from backend on component mount
+    - Implement text input with debounced search (300ms delay)
+    - Send search query to backend via ?search=text parameter
+    - Combine with geographic area filter when applicable (?search=text&geographicAreaId=id)
+    - Display loading indicator during async fetch operations
+    - Support pagination for large result sets
+    - Handle empty states when no results match
+    - Handle error states gracefully
+    - Provide accessible keyboard navigation
+    - _Requirements: 25.1, 25.2, 25.3, 25.4, 25.5, 25.6, 25.7, 25.9_
+
+  - [x] 25.2 Update ParticipantForm to use AsyncEntitySelect
+    - Replace venue dropdown with AsyncEntitySelect for venue selection
+    - Configure for participant entity type
+    - Pass appropriate fetch function and display formatter
+    - _Requirements: 25.2_
+
+  - [x] 25.3 Update ActivityForm to use AsyncEntitySelect
+    - Replace venue dropdown with AsyncEntitySelect for venue selection
+    - Configure for venue entity type
+    - _Requirements: 25.1_
+
+  - [x] 25.4 Update AssignmentForm to use AsyncEntitySelect
+    - Replace participant dropdown with AsyncEntitySelect
+    - Configure for participant entity type
+    - _Requirements: 25.2_
+
+  - [x] 25.5 Update VenueForm to use AsyncEntitySelect
+    - Replace geographic area dropdown with AsyncEntitySelect
+    - Configure for geographic area entity type
+    - _Requirements: 25.3_
+
+  - [x] 25.6 Update GeographicAreaForm to use AsyncEntitySelect
+    - Replace parent geographic area dropdown with AsyncEntitySelect
+    - Configure for geographic area entity type
+    - _Requirements: 25.3_
+
+  - [x] 25.7 Update AddressHistoryForm to use AsyncEntitySelect
+    - Replace venue dropdown with AsyncEntitySelect
+    - Configure for venue entity type
+    - _Requirements: 25.1_
+
+  - [x] 25.8 Update ActivityVenueHistoryForm to use AsyncEntitySelect
+    - Replace venue dropdown with AsyncEntitySelect
+    - Configure for venue entity type
+    - _Requirements: 25.1_
+
+  - [x] 25.9 Update API service methods to support search parameter
+    - Update ParticipantService.getParticipants to accept search parameter
+    - Update VenueService.getVenues to accept search parameter
+    - Update GeographicAreaService.getGeographicAreas to accept search parameter
+    - Add search as query parameter in API requests
+    - _Requirements: 25.5_
+
+  - [ ]* 25.10 Write property tests for async dropdown filtering
+    - **Property 94: Async Dropdown Initial Load**
+    - **Property 95: Async Dropdown Text Filtering**
+    - **Property 96: Dropdown Input Debouncing**
+    - **Property 97: Dropdown Loading Indicator**
+    - **Property 98: Dropdown Combined Filtering**
+    - **Validates: Requirements 25.4, 25.5, 25.6, 25.7**
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

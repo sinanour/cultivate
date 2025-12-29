@@ -463,3 +463,21 @@ The Web Frontend package provides a responsive React-based web application that 
 9. WHEN a user returns to the application, THE Web_App SHALL restore the last-selected geographic area filter from localStorage
 10. THE Web_App SHALL provide a visual indicator in the header showing the currently active geographic area filter
 11. THE Web_App SHALL provide a way to clear the global filter and return to "Global" (all areas) view
+
+### Requirement 25: High-Cardinality Dropdown Filtering
+
+**User Story:** As a community organizer working with large datasets, I want dropdown lists for venues, participants, and geographic areas to support text-based filtering, so that I can efficiently find and select items even when there are millions of records.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL support text-based input filtering for all venue selection dropdowns
+2. THE Web_App SHALL support text-based input filtering for all participant selection dropdowns
+3. THE Web_App SHALL support text-based input filtering for all geographic area selection dropdowns
+4. WHEN a dropdown is opened, THE Web_App SHALL automatically load the first page of results from the backend
+5. WHEN a user types text into a dropdown filter field, THE Web_App SHALL asynchronously load filtered results from the backend based on the input text
+6. THE Web_App SHALL debounce text input to avoid excessive API requests (minimum 300ms delay)
+7. THE Web_App SHALL display a loading indicator while fetching filtered results
+8. THE Web_App SHALL support pagination for dropdown results when the filtered set exceeds the page size
+9. THE Web_App SHALL use CloudScape Select or Autosuggest components with async loading capabilities
+10. WHEN the global geographic area filter is active and sufficiently scoped, THE Web_App SHALL display all matching items in dropdowns for convenience
+11. WHEN viewing data at a large geographic scale (country or global), THE Web_App SHALL rely on text-based filtering to manage the large result sets efficiently

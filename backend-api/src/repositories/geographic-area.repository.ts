@@ -25,11 +25,12 @@ export class GeographicAreaRepository {
     });
   }
 
-  async findAllPaginated(page: number, limit: number): Promise<{ data: GeographicArea[]; total: number }> {
+  async findAllPaginated(page: number, limit: number, where?: any): Promise<{ data: GeographicArea[]; total: number }> {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
       this.prisma.geographicArea.findMany({
+        where,
         skip,
         take: limit,
         orderBy: { name: 'asc' },
@@ -37,7 +38,7 @@ export class GeographicAreaRepository {
           parent: true,
         },
       }),
-      this.prisma.geographicArea.count(),
+      this.prisma.geographicArea.count({ where }),
     ]);
 
     return { data, total };

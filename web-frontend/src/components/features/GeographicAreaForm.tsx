@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
@@ -9,10 +9,10 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
 import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
-import { isCircularRelationship } from '../../utils/tree.utils';
 import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
+import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
 
 interface GeographicAreaFormProps {
   geographicArea: GeographicArea | null;
@@ -55,11 +55,6 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
     onDiscard: onCancel,
   });
 
-  const { data: geographicAreas = [] } = useQuery({
-    queryKey: ['geographicAreas'],
-    queryFn: () => GeographicAreaService.getGeographicAreas(),
-  });
-
   const areaTypeOptions = [
     { label: 'Neighbourhood', value: 'NEIGHBOURHOOD' },
     { label: 'Community', value: 'COMMUNITY' },
@@ -70,16 +65,6 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
     { label: 'State', value: 'STATE' },
     { label: 'Country', value: 'COUNTRY' },
     { label: 'Custom', value: 'CUSTOM' },
-  ];
-
-  const parentOptions = [
-    { label: 'No parent (root level)', value: '' },
-    ...geographicAreas
-      .filter((a) => a.id !== geographicArea?.id)
-      .map((area) => ({
-        label: area.name,
-        value: area.id,
-      })),
   ];
 
   const createMutation = useMutation({
@@ -135,17 +120,8 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
     return true;
   };
 
-  const validateParent = (value: string): boolean => {
-    if (!value) {
-      setParentError('');
-      return true;
-    }
-    
-    if (geographicArea && isCircularRelationship(geographicArea.id, value, geographicAreas)) {
-      setParentError('Cannot create circular relationship: selected parent is a descendant of this area');
-      return false;
-    }
-    
+  const validateParent = (): boolean => {
+    // Note: Circular relationship validation is handled by the backend
     setParentError('');
     return true;
   };
@@ -156,7 +132,7 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
 
     const isNameValid = validateName(name);
     const isAreaTypeValid = validateAreaType(areaType);
-    const isParentValid = validateParent(parentGeographicAreaId);
+    const isParentValid = validateParent();
 
     if (!isNameValid || !isAreaTypeValid || !isParentValid) {
       return;
@@ -227,14 +203,35 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
               />
             </FormField>
             <FormField key="parent-field" label="Parent Geographic Area" errorText={parentError} constraintText="Optional">
-              <Select
-                selectedOption={parentOptions.find((o) => o.value === parentGeographicAreaId) || parentOptions[0]}
-                onChange={({ detail }) => {
-                  setParentGeographicAreaId(detail.selectedOption.value || '');
-                  if (parentError) validateParent(detail.selectedOption.value || '');
+              <AsyncEntitySelect
+                value={parentGeographicAreaId}
+                onChange={(value) => {
+                  setParentGeographicAreaId(value);
+                  if (parentError) validateParent();
                 }}
-                options={parentOptions}
+                entityType="geographic-area"
+                fetchFunction={async (params) => {
+                  const data = await GeographicAreaService.getGeographicAreas(
+                    params.page,
+                    params.limit,
+                    params.geographicAreaId,
+                    params.search
+                  );
+                  // Filter out current area to prevent self-reference
+                  const filtered = geographicArea 
+                    ? data.filter((a) => a.id !== geographicArea.id)
+                    : data;
+                  return { data: filtered };
+                }}
+                formatOption={(area) => ({
+                  value: area.id,
+                  label: area.name,
+                  description: area.areaType,
+                })}
+                placeholder="Search for parent area (optional)"
                 disabled={isSubmitting}
+                invalid={!!parentError}
+                ariaLabel="Select parent geographic area"
               />
             </FormField>
           </SpaceBetween>

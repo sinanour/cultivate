@@ -21,6 +21,7 @@ import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
 import { formatDate } from '../../utils/date.utils';
+import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
 
 interface ActivityFormProps {
   activity: Activity | null;
@@ -112,19 +113,9 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     queryFn: () => ActivityTypeService.getActivityTypes(),
   });
 
-  const { data: venues = [] } = useQuery({
-    queryKey: ['venues'],
-    queryFn: () => VenueService.getVenues(),
-  });
-
   const activityTypeOptions = activityTypes.map((t) => ({
     label: t.name,
     value: t.id,
-  }));
-
-  const venueOptions = venues.map((v) => ({
-    label: `${v.name} - ${v.address}`,
-    value: v.id,
   }));
 
   const createMutation = useMutation({
@@ -282,7 +273,8 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         activityId: '',
         venueId: newVenueId,
         effectiveFrom: isoDate,
-        venue: venues.find(v => v.id === newVenueId),
+        // Venue details will be populated when displayed
+        venue: undefined,
       };
       setVenueHistory(prev => [...prev, tempVenue]);
       setShowVenueForm(false);
@@ -477,15 +469,30 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                         errorText={venueFormErrors.venue}
                         description="Select the venue for this activity"
                       >
-                        <Select
-                          selectedOption={venueOptions.find(o => o.value === newVenueId) || null}
-                          onChange={({ detail }) => {
-                            setNewVenueId(detail.selectedOption.value || '');
+                        <AsyncEntitySelect
+                          value={newVenueId}
+                          onChange={(value) => {
+                            setNewVenueId(value);
                             setVenueFormErrors({ ...venueFormErrors, venue: undefined, duplicate: undefined });
                           }}
-                          options={venueOptions}
-                          placeholder="Choose a venue"
-                          filteringType="auto"
+                          entityType="venue"
+                          fetchFunction={async (params) => {
+                            const data = await VenueService.getVenues(
+                              params.page,
+                              params.limit,
+                              params.geographicAreaId,
+                              params.search
+                            );
+                            return { data };
+                          }}
+                          formatOption={(v) => ({
+                            value: v.id,
+                            label: v.name,
+                            description: v.address,
+                          })}
+                          placeholder="Search for a venue"
+                          invalid={!!venueFormErrors.venue}
+                          ariaLabel="Select venue"
                         />
                       </FormField>
                       <FormField

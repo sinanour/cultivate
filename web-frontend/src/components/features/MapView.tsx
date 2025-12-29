@@ -23,14 +23,11 @@ const DefaultIcon = new Icon({
 // Custom cluster icon creator for better visual representation
 const createClusterCustomIcon = (cluster: any) => {
   const count = cluster.getChildCount();
-  let size = 'small';
   let sizeClass = 'marker-cluster-small';
   
   if (count >= 10) {
-    size = 'large';
     sizeClass = 'marker-cluster-large';
   } else if (count >= 5) {
-    size = 'medium';
     sizeClass = 'marker-cluster-medium';
   }
 
