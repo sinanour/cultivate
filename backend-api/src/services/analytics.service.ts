@@ -354,6 +354,11 @@ export class AnalyticsService {
                         breakdown.activitiesAtEnd++;
                     }
                 }
+            } else if (!startDate) {
+                // When no date range is specified, count all current activities (not completed/cancelled)
+                if (activity.status !== ActivityStatus.COMPLETED && activity.status !== ActivityStatus.CANCELLED) {
+                    breakdown.activitiesAtEnd++;
+                }
             }
 
             if (startDate && endDate && activity.startDate >= startDate && activity.startDate <= endDate) {
@@ -441,6 +446,11 @@ export class AnalyticsService {
                         // Ongoing activity (no endDate)
                         breakdown.activitiesAtEnd++;
                     }
+                }
+            } else if (!startDate) {
+                // When no date range is specified, count all current activities (not completed/cancelled)
+                if (activity.status !== ActivityStatus.COMPLETED && activity.status !== ActivityStatus.CANCELLED) {
+                    breakdown.activitiesAtEnd++;
                 }
             }
 

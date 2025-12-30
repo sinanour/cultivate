@@ -21,7 +21,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Metric appears to be calculated incorrectly in these scenarios
   - Requires investigation and correction
 
-- [ ] 5. Simplify activities chart on Engagement Dashboard
+- [x] 5. Simplify activities chart on Engagement Dashboard
   - Show only activity counts at start and end of period
   - Remove cancelled, started, and completed counts from this chart
   - Keep visualization focused on net change

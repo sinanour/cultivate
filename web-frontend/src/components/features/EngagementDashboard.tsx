@@ -266,24 +266,52 @@ export function EngagementDashboard() {
   }
 
   // Prepare chart data for activities by type
-  const activitiesByTypeChartData = (metrics.activitiesByType || []).map(type => ({
-    name: type.activityTypeName,
-    'At Start': type.activitiesAtStart,
-    'At End': type.activitiesAtEnd,
-    'Started': type.activitiesStarted,
-    'Completed': type.activitiesCompleted,
-    'Cancelled': type.activitiesCancelled,
-  })).sort((a, b) => b['At End'] - a['At End']); // Sort by count descending
+  // Use different field names based on whether a date range is selected
+  const hasDateRange = !!dateRange;
+  const endLabel = hasDateRange ? 'At End' : 'Count';
+  
+  const activitiesByTypeChartData = (metrics.activitiesByType || [])
+    .map(type => {
+      // Construct object with keys in correct order for legend
+      const dataPoint: any = { name: type.activityTypeName };
+      if (hasDateRange) {
+        dataPoint['At Start'] = type.activitiesAtStart;
+        dataPoint['At End'] = type.activitiesAtEnd;
+      } else {
+        dataPoint['Count'] = type.activitiesAtEnd;
+      }
+      return dataPoint;
+    })
+    .filter(item => {
+      // Filter out items with 0 counts
+      if (hasDateRange) {
+        return item['At Start'] > 0 || item['At End'] > 0;
+      }
+      return item['Count'] > 0;
+    })
+    .sort((a, b) => (b as any)[endLabel] - (a as any)[endLabel]); // Sort by count descending
 
   // Prepare chart data for activities by category
-  const activitiesByCategoryChartData = (metrics.activitiesByCategory || []).map(category => ({
-    name: category.activityCategoryName,
-    'At Start': category.activitiesAtStart,
-    'At End': category.activitiesAtEnd,
-    'Started': category.activitiesStarted,
-    'Completed': category.activitiesCompleted,
-    'Cancelled': category.activitiesCancelled,
-  })).sort((a, b) => b['At End'] - a['At End']); // Sort by count descending
+  const activitiesByCategoryChartData = (metrics.activitiesByCategory || [])
+    .map(category => {
+      // Construct object with keys in correct order for legend
+      const dataPoint: any = { name: category.activityCategoryName };
+      if (hasDateRange) {
+        dataPoint['At Start'] = category.activitiesAtStart;
+        dataPoint['At End'] = category.activitiesAtEnd;
+      } else {
+        dataPoint['Count'] = category.activitiesAtEnd;
+      }
+      return dataPoint;
+    })
+    .filter(item => {
+      // Filter out items with 0 counts
+      if (hasDateRange) {
+        return item['At Start'] > 0 || item['At End'] > 0;
+      }
+      return item['Count'] > 0;
+    })
+    .sort((a, b) => (b as any)[endLabel] - (a as any)[endLabel]); // Sort by count descending
 
   // Select chart data based on view mode
   const activitiesChartData = activitiesViewMode === 'type' 
@@ -680,12 +708,26 @@ export function EngagementDashboard() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
-                <Bar dataKey="At Start" fill="#0088FE" />
-                <Bar dataKey="At End" fill="#00C49F" />
-                <Bar dataKey="Started" fill="#FFBB28" />
-                <Bar dataKey="Completed" fill="#FF8042" />
-                <Bar dataKey="Cancelled" fill="#8884D8" />
+                <Legend 
+                  itemSorter={(item: any) => {
+                    // Custom sort order: "At Start" first, then "At End", then "Count"
+                    const order: { [key: string]: number } = {
+                      'At Start': 0,
+                      'At End': 1,
+                      'Count': 2
+                    };
+                    return order[item.value] ?? 999;
+                  }}
+                />
+                {/* Render bars in chronological order when date range is selected */}
+                {dateRange ? (
+                  <>
+                    <Bar dataKey="At Start" fill="#0088FE" />
+                    <Bar dataKey="At End" fill="#00C49F" />
+                  </>
+                ) : (
+                  <Bar dataKey="Count" fill="#00C49F" />
+                )}
               </BarChart>
             </ResponsiveContainer>
           </>
