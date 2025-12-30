@@ -126,7 +126,7 @@ export class AnalyticsRoutes {
 
     private async getActivityLifecycle(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { startDate, endDate, groupBy, geographicAreaIds, activityTypeIds, venueIds } = req.query;
+            const { startDate, endDate, groupBy, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds } = req.query;
 
             const data = await this.analyticsService.getActivityLifecycleEvents(
                 startDate ? new Date(startDate as string) : undefined,
@@ -134,6 +134,7 @@ export class AnalyticsRoutes {
                 groupBy as 'category' | 'type',
                 {
                     geographicAreaIds: geographicAreaIds as string[] | undefined,
+                    activityCategoryIds: activityCategoryIds as string[] | undefined,
                     activityTypeIds: activityTypeIds as string[] | undefined,
                     venueIds: venueIds as string[] | undefined,
                 }

@@ -183,6 +183,13 @@ export const ActivityLifecycleQuerySchema = z.object({
     if (!val) return undefined;
     return Array.isArray(val) ? val : [val];
   }),
+  activityCategoryIds: z.union([
+    z.string().uuid('Invalid activity category ID format'),
+    z.array(z.string().uuid('Invalid activity category ID format'))
+  ]).optional().transform(val => {
+    if (!val) return undefined;
+    return Array.isArray(val) ? val : [val];
+  }),
   activityTypeIds: z.union([
     z.string().uuid('Invalid activity type ID format'),
     z.array(z.string().uuid('Invalid activity type ID format'))

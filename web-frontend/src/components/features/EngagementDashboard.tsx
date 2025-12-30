@@ -9,14 +9,19 @@ import Box from '@cloudscape-design/components/box';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import Select from '@cloudscape-design/components/select';
 import Multiselect from '@cloudscape-design/components/multiselect';
+import PropertyFilter from '@cloudscape-design/components/property-filter';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import type { SelectProps } from '@cloudscape-design/components/select';
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
+import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { AnalyticsService, type EngagementMetricsParams } from '../../services/api/analytics.service';
+import { activityCategoryService } from '../../services/api/activity-category.service';
+import { ActivityTypeService } from '../../services/api/activity-type.service';
+import { VenueService } from '../../services/api/venue.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActivityLifecycleChart } from './ActivityLifecycleChart';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
@@ -34,6 +39,11 @@ function toISODateTime(dateString: string, isEndOfDay = false): string {
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+// Bar chart styling constants
+const BAR_CHART_MAX_BAR_SIZE = 60;
+const BAR_CHART_GAP = 0;
+const BAR_CHART_CATEGORY_GAP = '20%';
 
 // LocalStorage key for Activities chart view mode
 const ACTIVITIES_CHART_VIEW_MODE_KEY = 'activitiesChartViewMode';
@@ -115,27 +125,7 @@ export function EngagementDashboard() {
     return { label, value: granularity };
   };
 
-  const initializeActivityTypeFilter = (): SelectProps.Option | null => {
-    const activityType = searchParams.get('activityType');
-    if (!activityType) return null;
-    
-    // Note: We'll need to fetch the activity type name from the API or cache
-    // For now, just use the ID as the label
-    return { label: activityType, value: activityType };
-  };
-
-  const initializeVenueFilter = (): SelectProps.Option | null => {
-    const venue = searchParams.get('venue');
-    if (!venue) return null;
-    
-    // Note: We'll need to fetch the venue name from the API or cache
-    // For now, just use the ID as the label
-    return { label: venue, value: venue };
-  };
-
   const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(initializeDateRange);
-  const [activityTypeFilter, setActivityTypeFilter] = useState<SelectProps.Option | null>(initializeActivityTypeFilter);
-  const [venueFilter, setVenueFilter] = useState<SelectProps.Option | null>(initializeVenueFilter);
   const [groupByDimensions, setGroupByDimensions] = useState<MultiselectProps.Options>(initializeGroupByDimensions);
   const [dateGranularity, setDateGranularity] = useState<SelectProps.Option | null>(initializeDateGranularity);
   
@@ -152,6 +142,113 @@ export function EngagementDashboard() {
   
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
+  // PropertyFilter configuration with bidirectional label-UUID cache
+  const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
+    tokens: [],
+    operation: 'and',
+  });
+  const [propertyFilterOptions, setPropertyFilterOptions] = useState<PropertyFilterProps.FilteringOption[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  
+  // Bidirectional cache: label ↔ UUID
+  const [labelToUuid, setLabelToUuid] = useState<Map<string, string>>(new Map());
+  const [uuidToLabel, setUuidToLabel] = useState<Map<string, string>>(new Map());
+
+  // Helper to add to cache
+  const addToCache = (uuid: string, label: string) => {
+    setLabelToUuid(prev => new Map(prev).set(label, uuid));
+    setUuidToLabel(prev => new Map(prev).set(uuid, label));
+  };
+
+  // Helper to get UUID from label
+  const getUuidFromLabel = (label: string): string | undefined => {
+    return labelToUuid.get(label);
+  };
+
+  // Helper to get label from UUID
+  const getLabelFromUuid = (uuid: string): string | undefined => {
+    return uuidToLabel.get(uuid);
+  };
+
+  const filteringProperties: PropertyFilterProps.FilteringProperty[] = [
+    {
+      key: 'activityCategory',
+      propertyLabel: 'Activity Category',
+      groupValuesLabel: 'Activity Category values',
+      operators: ['=', '!='],
+    },
+    {
+      key: 'activityType',
+      propertyLabel: 'Activity Type',
+      groupValuesLabel: 'Activity Type values',
+      operators: ['=', '!='],
+    },
+    {
+      key: 'venue',
+      propertyLabel: 'Venue',
+      groupValuesLabel: 'Venue values',
+      operators: ['=', '!='],
+    },
+  ];
+
+  // Async loading of property values with cache population
+  const handleLoadItems = async ({ detail }: { detail: PropertyFilterProps.LoadItemsDetail }) => {
+    const { filteringProperty, filteringText } = detail;
+    
+    if (!filteringProperty) return;
+
+    setIsLoadingOptions(true);
+
+    try {
+      let options: PropertyFilterProps.FilteringOption[] = [];
+
+      if (filteringProperty.key === 'activityCategory') {
+        const categories = await activityCategoryService.getActivityCategories();
+        const filtered = categories.filter(cat => 
+          !filteringText || cat.name.toLowerCase().includes(filteringText.toLowerCase())
+        );
+        
+        // Add to cache and create options with labels as values
+        filtered.forEach(cat => addToCache(cat.id, cat.name));
+        options = filtered.map(cat => ({
+          propertyKey: 'activityCategory',
+          value: cat.name, // Use label as value for display
+          label: cat.name,
+        }));
+      } else if (filteringProperty.key === 'activityType') {
+        const types = await ActivityTypeService.getActivityTypes();
+        const filtered = types.filter(type => 
+          !filteringText || type.name.toLowerCase().includes(filteringText.toLowerCase())
+        );
+        
+        // Add to cache and create options with labels as values
+        filtered.forEach(type => addToCache(type.id, type.name));
+        options = filtered.map(type => ({
+          propertyKey: 'activityType',
+          value: type.name, // Use label as value for display
+          label: type.name,
+        }));
+      } else if (filteringProperty.key === 'venue') {
+        const venues = await VenueService.getVenues(undefined, undefined, selectedGeographicAreaId, filteringText || undefined);
+        
+        // Add to cache and create options with labels as values
+        venues.forEach(venue => addToCache(venue.id, venue.name));
+        options = venues.map(venue => ({
+          propertyKey: 'venue',
+          value: venue.name, // Use label as value for display
+          label: venue.name,
+        }));
+      }
+
+      setPropertyFilterOptions(options);
+    } catch (error) {
+      console.error('Error loading property filter options:', error);
+      setPropertyFilterOptions([]);
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  };
+
   // Persist activities view mode to localStorage whenever it changes
   useEffect(() => {
     try {
@@ -160,6 +257,88 @@ export function EngagementDashboard() {
       // Silently fail if localStorage is unavailable
     }
   }, [activitiesViewMode]);
+
+  // Initialize PropertyFilter from URL parameters (convert UUIDs to labels)
+  useEffect(() => {
+    const initializeFiltersFromUrl = async () => {
+      const tokens: PropertyFilterProps.Token[] = [];
+      
+      // Check for activity category in URL
+      const activityCategoryId = searchParams.get('activityCategory');
+      if (activityCategoryId) {
+        let label = getLabelFromUuid(activityCategoryId);
+        if (!label) {
+          // Cache miss - fetch the category to get its label
+          try {
+            const categories = await activityCategoryService.getActivityCategories();
+            const category = categories.find(c => c.id === activityCategoryId);
+            if (category) {
+              label = category.name;
+              addToCache(category.id, category.name);
+            }
+          } catch (error) {
+            console.error('Error fetching activity category:', error);
+          }
+        }
+        if (label) {
+          tokens.push({ propertyKey: 'activityCategory', operator: '=', value: label });
+        }
+      }
+      
+      // Check for activity type in URL
+      const activityTypeId = searchParams.get('activityType');
+      if (activityTypeId) {
+        let label = getLabelFromUuid(activityTypeId);
+        if (!label) {
+          // Cache miss - fetch the type to get its label
+          try {
+            const types = await ActivityTypeService.getActivityTypes();
+            const type = types.find(t => t.id === activityTypeId);
+            if (type) {
+              label = type.name;
+              addToCache(type.id, type.name);
+            }
+          } catch (error) {
+            console.error('Error fetching activity type:', error);
+          }
+        }
+        if (label) {
+          tokens.push({ propertyKey: 'activityType', operator: '=', value: label });
+        }
+      }
+      
+      // Check for venue in URL
+      const venueId = searchParams.get('venue');
+      if (venueId) {
+        let label = getLabelFromUuid(venueId);
+        if (!label) {
+          // Cache miss - fetch the venue to get its label
+          try {
+            const venues = await VenueService.getVenues();
+            const venue = venues.find(v => v.id === venueId);
+            if (venue) {
+              label = venue.name;
+              addToCache(venue.id, venue.name);
+            }
+          } catch (error) {
+            console.error('Error fetching venue:', error);
+          }
+        }
+        if (label) {
+          tokens.push({ propertyKey: 'venue', operator: '=', value: label });
+        }
+      }
+      
+      if (tokens.length > 0) {
+        setPropertyFilterQuery({ tokens, operation: 'and' });
+      }
+    };
+    
+    // Only initialize once on mount
+    if (propertyFilterQuery.tokens.length === 0) {
+      initializeFiltersFromUrl();
+    }
+  }, []); // Empty dependency array - run once on mount
 
   // Sync state to URL whenever filters or grouping changes
   useEffect(() => {
@@ -177,13 +356,15 @@ export function EngagementDashboard() {
       }
     }
     
-    if (activityTypeFilter?.value) {
-      params.set('activityType', activityTypeFilter.value);
-    }
-    
-    if (venueFilter?.value) {
-      params.set('venue', venueFilter.value);
-    }
+    // Add PropertyFilter tokens to URL (convert labels to UUIDs)
+    propertyFilterQuery.tokens.forEach((token) => {
+      if (token.propertyKey && token.value) {
+        const uuid = getUuidFromLabel(token.value);
+        if (uuid) {
+          params.append(token.propertyKey, uuid);
+        }
+      }
+    });
     
     if (selectedGeographicAreaId) {
       params.set('geographicArea', selectedGeographicAreaId);
@@ -201,10 +382,10 @@ export function EngagementDashboard() {
     
     // Update URL without causing navigation/reload
     setSearchParams(params, { replace: true });
-  }, [dateRange, activityTypeFilter, venueFilter, selectedGeographicAreaId, groupByDimensions, dateGranularity, setSearchParams]);
+  }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, groupByDimensions, dateGranularity, setSearchParams]);
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['engagementMetrics', dateRange, selectedGeographicAreaId, activityTypeFilter, venueFilter, groupByDimensions, dateGranularity],
+    queryKey: ['engagementMetrics', dateRange, selectedGeographicAreaId, propertyFilterQuery, groupByDimensions, dateGranularity],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
@@ -240,12 +421,23 @@ export function EngagementDashboard() {
         }
       }
       
+      // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
+      const activityCategoryLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityCategory' && t.operator === '=')?.value;
+      const activityCategoryId = activityCategoryLabel ? getUuidFromLabel(activityCategoryLabel) : undefined;
+      
+      const activityTypeLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityType' && t.operator === '=')?.value;
+      const activityTypeId = activityTypeLabel ? getUuidFromLabel(activityTypeLabel) : undefined;
+      
+      const venueLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'venue' && t.operator === '=')?.value;
+      const venueId = venueLabel ? getUuidFromLabel(venueLabel) : undefined;
+      
       const params: EngagementMetricsParams = {
         startDate,
         endDate,
         geographicAreaId: selectedGeographicAreaId || undefined,
-        activityTypeId: activityTypeFilter?.value,
-        venueId: venueFilter?.value,
+        activityCategoryId,
+        activityTypeId,
+        venueId,
         groupBy: groupByDimensions.map(d => d.value as GroupingDimension),
         dateGranularity: dateGranularity?.value as DateGranularity | undefined,
       };
@@ -385,26 +577,48 @@ export function EngagementDashboard() {
             />
           </ColumnLayout>
 
-          {/* Point Filters: Activity Type and Venue */}
-          <ColumnLayout columns={2}>
-            <Select
-              selectedOption={activityTypeFilter}
-              onChange={({ detail }) => setActivityTypeFilter(detail.selectedOption)}
-              options={[]}
-              placeholder="Filter by activity type"
-              selectedAriaLabel="Selected"
-              empty="No activity types available"
-            />
-            
-            <Select
-              selectedOption={venueFilter}
-              onChange={({ detail }) => setVenueFilter(detail.selectedOption)}
-              options={[]}
-              placeholder="Filter by venue"
-              selectedAriaLabel="Selected"
-              empty="No venues available"
-            />
-          </ColumnLayout>
+          {/* PropertyFilter for Activity Category, Activity Type, and Venue */}
+          <PropertyFilter
+            query={propertyFilterQuery}
+            onChange={({ detail }) => setPropertyFilterQuery(detail)}
+            filteringProperties={filteringProperties}
+            filteringOptions={propertyFilterOptions}
+            filteringLoadingText="Loading options..."
+            filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
+            onLoadItems={handleLoadItems}
+            i18nStrings={{
+              filteringAriaLabel: 'Filter engagement data',
+              dismissAriaLabel: 'Dismiss',
+              filteringPlaceholder: 'Filter by activity category, type, or venue',
+              groupValuesText: 'Values',
+              groupPropertiesText: 'Properties',
+              operatorsText: 'Operators',
+              operationAndText: 'and',
+              operationOrText: 'or',
+              operatorLessText: 'Less than',
+              operatorLessOrEqualText: 'Less than or equal',
+              operatorGreaterText: 'Greater than',
+              operatorGreaterOrEqualText: 'Greater than or equal',
+              operatorContainsText: 'Contains',
+              operatorDoesNotContainText: 'Does not contain',
+              operatorEqualsText: 'Equals',
+              operatorDoesNotEqualText: 'Does not equal',
+              editTokenHeader: 'Edit filter',
+              propertyText: 'Property',
+              operatorText: 'Operator',
+              valueText: 'Value',
+              cancelActionText: 'Cancel',
+              applyActionText: 'Apply',
+              allPropertiesLabel: 'All properties',
+              tokenLimitShowMore: 'Show more',
+              tokenLimitShowFewer: 'Show fewer',
+              clearFiltersText: 'Clear filters',
+              removeTokenButtonAriaLabel: (token) => `Remove token ${token.propertyKey} ${token.operator} ${token.value}`,
+              enteredTextLabel: (text) => `Use: "${text}"`,
+            }}
+            filteringEmpty="No matching options"
+            filteringFinishedText="End of results"
+          />
 
           {/* Grouping Dimensions */}
           <ColumnLayout columns={2}>
@@ -704,7 +918,7 @@ export function EngagementDashboard() {
               {activitiesViewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
             </div>
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={activitiesChartData}>
+              <BarChart data={activitiesChartData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -774,8 +988,21 @@ export function EngagementDashboard() {
             : undefined
         }
         geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
-        activityTypeIds={activityTypeFilter?.value ? [activityTypeFilter.value] : undefined}
-        venueIds={venueFilter?.value ? [venueFilter.value] : undefined}
+        activityCategoryIds={(() => {
+          const label = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityCategory' && t.operator === '=')?.value;
+          const uuid = label ? getUuidFromLabel(label) : undefined;
+          return uuid ? [uuid] : undefined;
+        })()}
+        activityTypeIds={(() => {
+          const label = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityType' && t.operator === '=')?.value;
+          const uuid = label ? getUuidFromLabel(label) : undefined;
+          return uuid ? [uuid] : undefined;
+        })()}
+        venueIds={(() => {
+          const label = propertyFilterQuery.tokens.find(t => t.propertyKey === 'venue' && t.operator === '=')?.value;
+          const uuid = label ? getUuidFromLabel(label) : undefined;
+          return uuid ? [uuid] : undefined;
+        })()}
       />
 
       {/* Role Distribution */}
@@ -809,7 +1036,7 @@ export function EngagementDashboard() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={metrics.geographicBreakdown.filter(area => 
               !area.hasChildren && (area.activityCount > 0 || area.participantCount > 0)
-            )}>
+            )} barGap={BAR_CHART_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="geographicAreaName" />
               <YAxis />

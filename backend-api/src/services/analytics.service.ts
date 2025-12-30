@@ -964,11 +964,12 @@ export class AnalyticsService {
         groupBy: 'category' | 'type',
         filters: {
             geographicAreaIds?: string[];
+            activityCategoryIds?: string[];
             activityTypeIds?: string[];
             venueIds?: string[];
         } = {}
     ): Promise<ActivityLifecycleData[]> {
-        const { geographicAreaIds, activityTypeIds, venueIds } = filters;
+        const { geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds } = filters;
 
         // Get venue IDs if geographic filter is provided
         let effectiveVenueIds: string[] | undefined = venueIds;
@@ -985,6 +986,12 @@ export class AnalyticsService {
                 not: ActivityStatus.CANCELLED, // Exclude cancelled activities
             },
         };
+
+        if (activityCategoryIds && activityCategoryIds.length > 0) {
+            activityWhere.activityType = {
+                activityCategoryId: { in: activityCategoryIds },
+            };
+        }
 
         if (activityTypeIds && activityTypeIds.length > 0) {
             activityWhere.activityTypeId = { in: activityTypeIds };

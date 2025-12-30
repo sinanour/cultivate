@@ -7,6 +7,11 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { AnalyticsService, type ActivityLifecycleData } from '../../services/api/analytics.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 
+// Bar chart styling constants
+const BAR_CHART_MAX_BAR_SIZE = 60;
+const BAR_CHART_GAP = 0;
+const BAR_CHART_CATEGORY_GAP = '20%';
+
 // LocalStorage key for lifecycle chart view mode
 const LIFECYCLE_CHART_VIEW_MODE_KEY = 'lifecycleChartViewMode';
 
@@ -17,6 +22,7 @@ interface ActivityLifecycleChartProps {
   startDate?: Date;
   endDate?: Date;
   geographicAreaIds?: string[];
+  activityCategoryIds?: string[];
   activityTypeIds?: string[];
   venueIds?: string[];
 }
@@ -25,6 +31,7 @@ export function ActivityLifecycleChart({
   startDate,
   endDate,
   geographicAreaIds,
+  activityCategoryIds,
   activityTypeIds,
   venueIds,
 }: ActivityLifecycleChartProps) {
@@ -63,6 +70,7 @@ export function ActivityLifecycleChart({
           endDate: endDate?.toISOString(),
           groupBy: viewMode,
           geographicAreaIds,
+          activityCategoryIds,
           activityTypeIds,
           venueIds,
         });
@@ -77,7 +85,7 @@ export function ActivityLifecycleChart({
     };
 
     fetchData();
-  }, [startDate, endDate, viewMode, geographicAreaIds, activityTypeIds, venueIds]);
+  }, [startDate, endDate, viewMode, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds]);
 
   // Transform data for chart
   const chartData = data
@@ -130,7 +138,7 @@ export function ActivityLifecycleChart({
             {viewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
           </div>
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={chartData}>
+            <BarChart data={chartData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />

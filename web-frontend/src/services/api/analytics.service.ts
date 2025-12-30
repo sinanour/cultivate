@@ -31,6 +31,7 @@ export interface ActivityLifecycleParams {
     endDate?: string;
     groupBy: 'category' | 'type';
     geographicAreaIds?: string[];
+    activityCategoryIds?: string[];
     activityTypeIds?: string[];
     venueIds?: string[];
 }
@@ -93,6 +94,12 @@ export class AnalyticsService {
         if (params.geographicAreaIds && params.geographicAreaIds.length > 0) {
             params.geographicAreaIds.forEach(id => {
                 queryParams.append('geographicAreaIds', id);
+            });
+        }
+
+        if (params.activityCategoryIds && params.activityCategoryIds.length > 0) {
+            params.activityCategoryIds.forEach(id => {
+                queryParams.append('activityCategoryIds', id);
             });
         }
 

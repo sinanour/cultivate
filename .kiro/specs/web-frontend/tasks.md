@@ -670,6 +670,32 @@ This implementation plan covers the React-based web application built with TypeS
     - Always render (not conditional on date range type)
     - _Requirements: 7A.1, 7A.5, 7A.21, 7A.22, 7A.23, 7A.24, 7A.25, 7A.30, 7A.31, 7A.32_
 
+  - [x] 14.6 Replace filter dropdowns with PropertyFilter component
+    - Remove separate Select components for activity type and venue filters
+    - Add CloudScape PropertyFilter component to EngagementDashboard
+    - Configure filtering properties: Activity Category, Activity Type, Venue
+    - Implement handleLoadItems function for async property value loading:
+      - Fetch activity categories from ActivityCategoryService
+      - Fetch activity types from ActivityTypeService
+      - Fetch venues from VenueService with geographic area filtering
+      - Filter results based on user input text (case-insensitive)
+    - Configure PropertyFilter with operators: = (equals) and != (not equals)
+    - Manage PropertyFilter query state with tokens and operation
+    - Extract filter values from PropertyFilter tokens (propertyKey and value)
+    - Apply extracted filters to analytics API queries (activityCategoryId, activityTypeId, venueId)
+    - Update URL synchronization to persist PropertyFilter tokens
+    - Update ActivityLifecycleChart to use PropertyFilter tokens for filtering
+    - Display loading indicator while fetching property values
+    - Provide comprehensive i18nStrings for PropertyFilter accessibility
+    - _Requirements: 7B.1, 7B.2, 7B.3, 7B.4, 7B.5, 7B.6, 7B.7, 7B.8, 7B.9, 7B.10, 7B.11, 7B.12, 7B.13, 7B.14, 7B.15, 7B.16, 7B.17_
+
+  - [ ]* 14.7 Write property tests for PropertyFilter
+    - **Property 31o: PropertyFilter Lazy Loading**
+    - **Property 31p: PropertyFilter Multiple Token Application**
+    - **Property 31q: PropertyFilter URL Persistence**
+    - **Property 31r: PropertyFilter Integration**
+    - **Validates: Requirements 7B.5, 7B.6, 7B.9, 7B.10, 7B.11, 7B.12, 7B.16, 7B.17**
+
 - [x] 15. Implement offline support
   - [x] 15.1 Create OfflineStorage service
     - Use Dexie.js for IndexedDB management

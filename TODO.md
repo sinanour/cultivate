@@ -40,7 +40,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Filtering & Search
 
-- [ ] 8. Replace Engagement Dashboard filters with PropertyFilter component
+- [x] 8. Replace Engagement Dashboard filters with PropertyFilter component
   - Current activity type and venue filters are not working/populating
   - Replace with single CloudScape PropertyFilter component
   - Include Activity Category as a filterable property

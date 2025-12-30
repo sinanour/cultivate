@@ -313,6 +313,30 @@ The Web Frontend package provides a responsive React-based web application that 
 31. WHEN no date range is selected, THE Activity_Lifecycle_Chart SHALL display lifecycle events for all time
 32. WHEN a relative date range is selected, THE Activity_Lifecycle_Chart SHALL calculate the absolute date range and display lifecycle events for that period
 
+### Requirement 7B: PropertyFilter for Engagement Dashboard
+
+**User Story:** As a community organizer, I want to use a unified PropertyFilter component to filter engagement data by multiple properties, so that I can efficiently analyze specific subsets of data with a consistent interface.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL replace the separate activity type and venue filter dropdowns with a single CloudScape PropertyFilter component
+2. THE PropertyFilter SHALL support filtering by Activity Category property
+3. THE PropertyFilter SHALL support filtering by Activity Type property
+4. THE PropertyFilter SHALL support filtering by Venue property
+5. THE PropertyFilter SHALL implement lazy loading of property values when the user types in the filter input
+6. WHEN a user types in the PropertyFilter, THE Web_App SHALL asynchronously fetch matching values from the backend
+7. THE PropertyFilter SHALL debounce user input to avoid excessive API requests (minimum 300ms delay)
+8. THE PropertyFilter SHALL display a loading indicator while fetching property values
+9. WHEN multiple filter tokens are added, THE Web_App SHALL apply all filters using AND logic
+10. WHEN a filter token is removed, THE Web_App SHALL update the dashboard to reflect the removed filter
+11. THE PropertyFilter SHALL persist filter state to URL query parameters
+12. WHEN a user navigates to a URL with PropertyFilter query parameters, THE Web_App SHALL restore the filter tokens
+13. THE PropertyFilter SHALL provide clear labels for each property (Activity Category, Activity Type, Venue)
+14. THE PropertyFilter SHALL display the selected property values in filter tokens
+15. THE PropertyFilter SHALL allow users to clear all filters at once
+16. THE PropertyFilter SHALL integrate with the existing date range and geographic area filters
+17. WHEN the PropertyFilter is empty, THE Web_App SHALL display all activities without property-based filtering
+
 ### Requirement 8: Authentication UI
 
 **User Story:** As a user, I want to log in to the web interface, so that I can access my community data.

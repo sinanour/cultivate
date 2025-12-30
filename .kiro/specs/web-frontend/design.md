@@ -422,12 +422,27 @@ src/
   - Venue grouping
   - Geographic area grouping
   - Date grouping (weekly, monthly, quarterly, yearly)
-- Provides flexible filter controls:
-  - Activity category filter (dropdown)
-  - Activity type filter (dropdown)
-  - Venue filter (dropdown)
-  - Geographic area filter (dropdown, includes descendants)
-  - Date range filter using CloudScape DateRangePicker
+- **PropertyFilter Component** for unified filtering:
+  - Replaces separate activity type and venue filter dropdowns
+  - Uses CloudScape PropertyFilter component
+  - Supports filtering by Activity Category, Activity Type, and Venue properties
+  - Implements lazy loading of property values when user types in filter input
+  - Asynchronously fetches matching values from backend APIs:
+    - Activity Categories: from ActivityCategoryService.getActivityCategories()
+    - Activity Types: from ActivityTypeService.getActivityTypes()
+    - Venues: from VenueService.getVenues() with geographic area filtering
+  - Debounces user input internally (CloudScape handles debouncing)
+  - Displays loading indicator while fetching property values
+  - Supports multiple filter tokens with AND logic
+  - Provides clear labels for each property (Activity Category, Activity Type, Venue)
+  - Displays selected property values in filter tokens
+  - Allows clearing all filters at once
+  - Integrates with existing date range and geographic area filters
+  - Persists filter tokens to URL query parameters
+  - Restores filter tokens from URL on page load
+  - Extracts filter values from tokens (propertyKey and value) and applies to analytics queries
+  - Supports operators: = (equals) and != (not equals)
+- Provides date range filter using CloudScape DateRangePicker
 - Renders "Engagement Summary" table using CloudScape Table:
   - Always visible regardless of whether grouping dimensions are selected
   - First row displays aggregate metrics with "Total" label in first column
@@ -1373,6 +1388,30 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* Activities chart segmented control, appropriate ARIA labels should be present and view mode changes should be announced to screen readers.
 
 **Validates: Requirements 7.64, 7.65**
+
+### Property 31o: PropertyFilter Lazy Loading
+
+*For any* PropertyFilter property (Activity Category, Activity Type, Venue), when a user types in the filter input, matching values should be asynchronously fetched from the backend and displayed.
+
+**Validates: Requirements 7B.5, 7B.6**
+
+### Property 31p: PropertyFilter Multiple Token Application
+
+*For any* PropertyFilter with multiple filter tokens, all filters should be applied using AND logic to the analytics queries.
+
+**Validates: Requirements 7B.9**
+
+### Property 31q: PropertyFilter URL Persistence
+
+*For any* PropertyFilter state with active filter tokens, the tokens should be persisted to URL query parameters and restored when navigating to a URL with those parameters.
+
+**Validates: Requirements 7B.11, 7B.12**
+
+### Property 31r: PropertyFilter Integration
+
+*For any* PropertyFilter state change (adding or removing tokens), the dashboard should update to reflect the new filters while preserving date range and geographic area filters.
+
+**Validates: Requirements 7B.10, 7B.16, 7B.17**
 
 ### Property 32: Time-series data calculation
 
