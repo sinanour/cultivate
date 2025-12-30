@@ -180,10 +180,14 @@ src/
 **ParticipantDetail**
 - Shows participant information in detail view
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
-- Positions edit button as right-most action in header
+- Displays delete button in header section next to edit button
+- Positions edit button as right-most action in header (before Back button)
 - Opens ParticipantForm when edit button is clicked
-- Hides edit button when user has READ_ONLY role
-- Shows edit button when user has EDITOR or ADMINISTRATOR role
+- Shows confirmation dialog when delete button is clicked
+- Navigates to participant list page after successful deletion
+- Displays error message when deletion fails
+- Hides edit and delete buttons when user has READ_ONLY role
+- Shows edit and delete buttons when user has EDITOR or ADMINISTRATOR role
 - Lists all activities the participant is assigned to in a table
 - Displays activity name (with link to detail), type, role, status, dates, and notes for each assignment
 - Shows loading state while fetching activities
@@ -238,10 +242,14 @@ src/
 **ActivityDetail**
 - Shows activity information in detail view
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
-- Positions edit button as right-most action in header
+- Displays delete button in header section next to edit button
+- Positions edit button as right-most action in header (before Back button)
 - Opens ActivityForm when edit button is clicked
-- Hides edit button when user has READ_ONLY role
-- Shows edit button when user has EDITOR or ADMINISTRATOR role
+- Shows confirmation dialog when delete button is clicked
+- Navigates to activity list page after successful deletion
+- Displays error message when deletion fails
+- Hides edit and delete buttons when user has READ_ONLY role
+- Shows edit and delete buttons when user has EDITOR or ADMINISTRATOR role
 - Lists all assigned participants with their roles
 - Provides interface to add/remove participant assignments
 - Shows venue history table in reverse chronological order
@@ -312,10 +320,14 @@ src/
 **VenueDetail**
 - Shows venue information in detail view
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
-- Positions edit button as right-most action in header
+- Displays delete button in header section next to edit button
+- Positions edit button as right-most action in header (before Back button)
 - Opens VenueForm when edit button is clicked
-- Hides edit button when user has READ_ONLY role
-- Shows edit button when user has EDITOR or ADMINISTRATOR role
+- Shows confirmation dialog when delete button is clicked
+- Navigates to venue list page after successful deletion
+- Displays error message when deletion fails
+- Hides edit and delete buttons when user has READ_ONLY role
+- Shows edit and delete buttons when user has EDITOR or ADMINISTRATOR role
 - Lists all activities associated with the venue (current and historical) with activity names hyperlinked to /activities/:id
 - Lists all participants with this venue as their home address with participant names hyperlinked to /participants/:id
 - Displays geographic area hierarchy path
@@ -355,10 +367,14 @@ src/
 **GeographicAreaDetail**
 - Shows geographic area information in detail view
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
-- Positions edit button as right-most action in header
+- Displays delete button in header section next to edit button
+- Positions edit button as right-most action in header (before Back button)
 - Opens GeographicAreaForm when edit button is clicked
-- Hides edit button when user has READ_ONLY role
-- Shows edit button when user has EDITOR or ADMINISTRATOR role
+- Shows confirmation dialog when delete button is clicked
+- Navigates to geographic area list page after successful deletion
+- Displays error message when deletion fails
+- Hides edit and delete buttons when user has READ_ONLY role
+- Shows edit and delete buttons when user has EDITOR or ADMINISTRATOR role
 - Displays full hierarchy path from root to current area
 - Lists all child geographic areas
 - Lists all venues in the geographic area and all descendant areas (recursive aggregation)
@@ -1835,6 +1851,30 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* entity detail page with an edit button, clicking the edit button should open the edit form for the current entity.
 
 **Validates: Requirements 23.4**
+
+### Property 93a: Delete Button on Detail Pages
+
+*For any* entity detail page (participants, activities, venues, geographic areas), when the user has EDITOR or ADMINISTRATOR role, a delete button should be displayed in the header section next to the edit button.
+
+**Validates: Requirements 23A.1, 23A.2, 23A.3, 23A.8, 23A.9**
+
+### Property 93b: Delete Confirmation Dialog
+
+*For any* delete button click on an entity detail page, a confirmation dialog should be displayed before proceeding with the deletion.
+
+**Validates: Requirements 23A.4**
+
+### Property 93c: Delete Success Navigation
+
+*For any* successful entity deletion from a detail page, the application should navigate back to the corresponding entity list page.
+
+**Validates: Requirements 23A.5, 23A.6**
+
+### Property 93d: Delete Error Handling
+
+*For any* failed entity deletion from a detail page, an error message should be displayed explaining why the deletion failed.
+
+**Validates: Requirements 23A.7, 23A.10**
 
 ### Property 94: Global Filter URL Synchronization
 

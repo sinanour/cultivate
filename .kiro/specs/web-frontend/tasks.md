@@ -953,6 +953,59 @@ This implementation plan covers the React-based web application built with TypeS
     - Test that clicking edit button opens the edit form
     - **Validates: Requirements 23.1, 23.2, 23.3, 23.4, 23.5, 23.6**
 
+- [x] 23A. Implement delete action buttons on detail pages
+  - [x] 23A.1 Update ParticipantDetail component
+    - Add delete button to header section next to edit button
+    - Display confirmation dialog on delete button click
+    - Call ParticipantService.deleteParticipant() on confirmation
+    - Navigate to /participants on successful deletion
+    - Display error message on deletion failure
+    - Hide delete button when user has READ_ONLY role
+    - Show delete button when user has EDITOR or ADMINISTRATOR role
+    - _Requirements: 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10_
+
+  - [x] 23A.2 Update ActivityDetail component
+    - Add delete button to header section next to edit button
+    - Display confirmation dialog on delete button click
+    - Call ActivityService.deleteActivity() on confirmation
+    - Navigate to /activities on successful deletion
+    - Display error message on deletion failure
+    - Hide delete button when user has READ_ONLY role
+    - Show delete button when user has EDITOR or ADMINISTRATOR role
+    - _Requirements: 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10_
+
+  - [x] 23A.3 Update VenueDetail component
+    - Add delete button to header section next to edit button
+    - Display confirmation dialog on delete button click
+    - Call VenueService.deleteVenue() on confirmation
+    - Navigate to /venues on successful deletion
+    - Display error message on deletion failure
+    - Hide delete button when user has READ_ONLY role
+    - Show delete button when user has EDITOR or ADMINISTRATOR role
+    - _Requirements: 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10_
+
+  - [x] 23A.4 Update GeographicAreaDetail component
+    - Add delete button to header section next to edit button
+    - Display confirmation dialog on delete button click
+    - Call GeographicAreaService.deleteGeographicArea() on confirmation
+    - Navigate to /geographic-areas on successful deletion
+    - Display error message on deletion failure
+    - Hide delete button when user has READ_ONLY role
+    - Show delete button when user has EDITOR or ADMINISTRATOR role
+    - _Requirements: 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10_
+
+  - [ ]* 23A.5 Write property tests for delete buttons on detail pages
+    - **Property 93a: Delete Button on Detail Pages**
+    - **Property 93b: Delete Confirmation Dialog**
+    - **Property 93c: Delete Success Navigation**
+    - **Property 93d: Delete Error Handling**
+    - Test that delete button is displayed for EDITOR and ADMINISTRATOR roles
+    - Test that delete button is hidden for READ_ONLY role
+    - Test that confirmation dialog appears on delete click
+    - Test that successful deletion navigates to list page
+    - Test that failed deletion displays error message
+    - **Validates: Requirements 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10**
+
 - [ ] 24. Implement global persistent geographic area filter
   - [ ] 24.1 Create GlobalGeographicFilterContext
     - Create React context for global geographic area filter state

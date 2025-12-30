@@ -25,6 +25,7 @@ export function VenueDetail() {
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const { data: venue, isLoading, error } = useQuery({
     queryKey: ['venue', id],
@@ -73,6 +74,15 @@ export function VenueDetail() {
   }
   return (
     <SpaceBetween size="l">
+      {deleteError && (
+        <Alert
+          type="error"
+          dismissible
+          onDismiss={() => setDeleteError('')}
+        >
+          {deleteError}
+        </Alert>
+      )}
       <Container
         header={
           <Header
@@ -80,9 +90,26 @@ export function VenueDetail() {
             actions={
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
-                  <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
-                    Edit
-                  </Button>
+                  <>
+                    <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                      Edit
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this venue? This action cannot be undone.')) {
+                          VenueService.deleteVenue(id!)
+                            .then(() => {
+                              navigate('/venues');
+                            })
+                            .catch((err) => {
+                              setDeleteError(err.message || 'Failed to delete venue');
+                            });
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </>
                 )}
                 <Button onClick={() => navigate('/venues')}>
                   Back to Venues

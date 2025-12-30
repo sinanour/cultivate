@@ -24,6 +24,7 @@ export function GeographicAreaDetail() {
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const { data: geographicArea, isLoading, error } = useQuery({
     queryKey: ['geographicArea', id],
@@ -84,6 +85,15 @@ export function GeographicAreaDetail() {
 
   return (
     <SpaceBetween size="l">
+      {deleteError && (
+        <Alert
+          type="error"
+          dismissible
+          onDismiss={() => setDeleteError('')}
+        >
+          {deleteError}
+        </Alert>
+      )}
       <Container
         header={
           <Header
@@ -91,9 +101,26 @@ export function GeographicAreaDetail() {
             actions={
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
-                  <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
-                    Edit
-                  </Button>
+                  <>
+                    <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                      Edit
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this geographic area? This action cannot be undone.')) {
+                          GeographicAreaService.deleteGeographicArea(id!)
+                            .then(() => {
+                              navigate('/geographic-areas');
+                            })
+                            .catch((err) => {
+                              setDeleteError(err.message || 'Failed to delete geographic area');
+                            });
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </>
                 )}
                 <Button onClick={() => navigate('/geographic-areas')}>
                   Back to Geographic Areas

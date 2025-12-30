@@ -46,16 +46,24 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Provides consistent navigation experience
   - Users can view and edit categories/types on the Configuration page
 
+- [ ] 9. Filter map view legend to show only visible items
+  - Issue: Map legend shows all activity categories/types, even those not currently displayed on the map
+  - Problem: Legend becomes verbose and colors may not match actual map pins when filters are applied
+  - Solution: Dynamically generate legend based on activities/categories actually rendered on the map
+  - Filter legend items to match current map data after applying all filters
+  - Ensures legend colors accurately correspond to visible map pins
+  - Improves map readability and user experience
+
 ## Navigation & UI Organization
 
-- [x] 9. Reorder management views in navigation
+- [x] 10. Reorder management views in navigation
   - Update order in main dashboard quick links
   - Update order in side-panel navigation
   - New order: Geographic Areas, Venues, Activities, Participants
 
 ## Filtering & Search
 
-- [x] 10. Replace Engagement Dashboard filters with PropertyFilter component
+- [x] 11. Replace Engagement Dashboard filters with PropertyFilter component
   - Current activity type and venue filters are not working/populating
   - Replace with single CloudScape PropertyFilter component
   - Include Activity Category as a filterable property
@@ -63,14 +71,14 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Data Entry & Forms
 
-- [x] 11. Fix venue name rendering in create modals
+- [x] 12. Fix venue name rendering in create modals
   - Issue: When assigning venue to address history (create participant) or venue history (create activity), newly-associated venue name doesn't render
   - Root cause: Parent entity not fully created when venue association occurs
   - Solution: Fetch venue details when venue is selected and store in temporary record for display
 
 ## User Administration
 
-- [x] 12. Fix User Administration page integration
+- [x] 13. Fix User Administration page integration
   - Page doesn't list any users
   - Create workflow fails
   - Backend integration appears broken
@@ -80,14 +88,24 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Entity Management
 
-- [ ] 13. Add Delete button to all entity detail pages
-  - Applies to: Participants, Venues, Activities, Geographic Areas, etc.
+- [x] 14. Add Delete button to all entity detail pages
+  - Applies to: Participants, Venues, Activities, Geographic Areas
   - Position: Next to Edit button
-  - Style: Red color to indicate destructive action
+  - Solution: Added delete buttons to all detail page headers
+  - Buttons show confirmation dialog before deletion
+  - Navigate to list page on success, display error on failure
+  - Hidden from READ_ONLY users, visible to EDITOR and ADMINISTRATOR
+
+- [ ] 15. Filter venue participants to show only current residents
+  - Issue: Venue detail page shows all participants who have ever lived at the venue (historical)
+  - Expected: Should only show participants whose current home address is at this venue
+  - Solution: Update backend endpoint /api/v1/venues/:id/participants to filter by most recent address history record
+  - Ensures participant list reflects current residents only, not historical residents
+  - Improves data accuracy and relevance on venue detail pages
 
 ## Import/Export
 
-- [ ] 14. Implement CSV import/export functionality
+- [ ] 16. Implement CSV import/export functionality
   - Applies to: Participants, Venues, Activities, Geographic Areas
   - Import CTA should be available on each entity list page
   - Export CTA should be available on each entity list page
@@ -96,7 +114,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Data Model Enhancements
 
-- [ ] 15. Enhance Participant entity with additional optional fields
+- [ ] 17. Enhance Participant entity with additional optional fields
   - Make email address optional/nullable (currently required)
   - Add dateOfBirth attribute (nullable/optional)
   - Add dateOfRegistration attribute (nullable/optional)
@@ -109,7 +127,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## UI/UX Improvements
 
-- [ ] 16. Make Activity Categories clickable in Activity Type list
+- [ ] 18. Make Activity Categories clickable in Activity Type list
   - On the Activity Configuration page, the Activity Category column in the Activity Type list should be clickable
   - Clicking an activity category name should open the edit form for that category
   - Provides quick access to edit categories without scrolling to the categories section

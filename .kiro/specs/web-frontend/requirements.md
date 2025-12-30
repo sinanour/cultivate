@@ -563,6 +563,23 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL hide the edit button when the user has READ_ONLY role
 6. THE Web_App SHALL display the edit button when the user has EDITOR or ADMINISTRATOR role
 
+### Requirement 23A: Delete Action Buttons on Detail Pages
+
+**User Story:** As a user, I want to delete records from their detail pages, so that I can remove entities without navigating back to the list view.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display a delete action button in the header section of all entity detail pages (participants, activities, venues, geographic areas)
+2. THE Web_App SHALL position the delete button next to the edit button in the header
+3. THE Web_App SHALL use CloudScape Button component for all detail page delete buttons
+4. WHEN a user clicks the delete button, THE Web_App SHALL display a confirmation dialog before proceeding with deletion
+5. WHEN deletion is confirmed, THE Web_App SHALL call the appropriate delete API endpoint
+6. WHEN deletion succeeds, THE Web_App SHALL navigate back to the entity list page
+7. WHEN deletion fails, THE Web_App SHALL display an error message explaining why deletion failed
+8. THE Web_App SHALL hide the delete button when the user has READ_ONLY role
+9. THE Web_App SHALL display the delete button when the user has EDITOR or ADMINISTRATOR role
+10. THE Web_App SHALL handle referential integrity errors gracefully and display user-friendly messages
+
 ### Requirement 24: Global Persistent Geographic Area Filter
 
 **User Story:** As a community organizer, I want to set a global geographic area filter that applies to all views, so that I can focus on a specific region without repeatedly filtering each list.

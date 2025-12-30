@@ -197,6 +197,21 @@ export function ActivityDetail() {
                     <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
                       Edit
                     </Button>
+                    <Button 
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this activity? This action cannot be undone.')) {
+                          ActivityService.deleteActivity(id!)
+                            .then(() => {
+                              navigate('/activities');
+                            })
+                            .catch((err) => {
+                              setError(err.message || 'Failed to delete activity');
+                            });
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </SpaceBetween>
                 )}
                 <Button onClick={() => navigate('/activities')}>

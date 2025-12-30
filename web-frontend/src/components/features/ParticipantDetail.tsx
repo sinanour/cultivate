@@ -168,9 +168,26 @@ export function ParticipantDetail() {
             actions={
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
-                  <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
-                    Edit
-                  </Button>
+                  <>
+                    <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                      Edit
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this participant? This action cannot be undone.')) {
+                          ParticipantService.deleteParticipant(id!)
+                            .then(() => {
+                              navigate('/participants');
+                            })
+                            .catch((err) => {
+                              setError(err.message || 'Failed to delete participant');
+                            });
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </>
                 )}
                 <Button onClick={() => navigate('/participants')}>
                   Back to Participants
