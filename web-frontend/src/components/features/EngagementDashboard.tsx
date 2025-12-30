@@ -725,7 +725,9 @@ export function EngagementDashboard() {
       {metrics.geographicBreakdown && metrics.geographicBreakdown.length > 0 && (
         <Container header={<Header variant="h3">Geographic Breakdown</Header>}>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={metrics.geographicBreakdown}>
+            <BarChart data={metrics.geographicBreakdown.filter(area => 
+              !area.hasChildren && (area.activityCount > 0 || area.participantCount > 0)
+            )}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="geographicAreaName" />
               <YAxis />

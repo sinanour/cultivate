@@ -45,6 +45,7 @@ export interface GeographicBreakdown {
     geographicAreaName: string;
     activityCount: number;
     participantCount: number;
+    hasChildren: boolean;
 }
 
 export interface GroupedMetrics {
@@ -488,26 +489,48 @@ export class AnalyticsService {
 
         const roleDistribution = Array.from(roleDistributionMap.values());
 
-        // Calculate geographic breakdown (if not already filtered by geographic area)
+        // Calculate geographic breakdown
         const geographicBreakdown: GeographicBreakdown[] = [];
-        if (!geographicAreaId) {
-            const areas = await this.geographicAreaRepository.findAll();
-            for (const area of areas) {
-                const areaVenueIds = await this.getVenueIdsForArea(area.id);
-                const areaActivities = allActivities.filter(a =>
-                    a.activityVenueHistory?.some(vh => areaVenueIds.includes(vh.venueId))
-                );
-                const areaParticipantIds = new Set(
-                    areaActivities.flatMap(a => a.assignments.map(as => as.participantId))
-                );
 
-                geographicBreakdown.push({
-                    geographicAreaId: area.id,
-                    geographicAreaName: area.name,
-                    activityCount: areaActivities.length,
-                    participantCount: areaParticipantIds.size,
-                });
-            }
+        // Determine which areas to include in breakdown
+        let areasToBreakdown: any[];
+        if (geographicAreaId) {
+            // When filtered by geographic area, show breakdown of that area and its descendants
+            const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+            const parentArea = await this.geographicAreaRepository.findById(geographicAreaId);
+
+            // Fetch all descendant areas
+            const descendantAreas = descendantIds.length > 0
+                ? await this.prisma.geographicArea.findMany({
+                    where: { id: { in: descendantIds } },
+                })
+                : [];
+
+            areasToBreakdown = parentArea ? [parentArea, ...descendantAreas] : descendantAreas;
+        } else {
+            // When not filtered, show all areas
+            areasToBreakdown = await this.geographicAreaRepository.findAll();
+        }
+
+        for (const area of areasToBreakdown) {
+            const areaVenueIds = await this.getVenueIdsForArea(area.id);
+            const areaActivities = allActivities.filter(a =>
+                a.activityVenueHistory?.some(vh => areaVenueIds.includes(vh.venueId))
+            );
+            const areaParticipantIds = new Set(
+                areaActivities.flatMap(a => a.assignments.map(as => as.participantId))
+            );
+
+            // Check if this area has children
+            const childrenCount = await this.geographicAreaRepository.countChildReferences(area.id);
+
+            geographicBreakdown.push({
+                geographicAreaId: area.id,
+                geographicAreaName: area.name,
+                activityCount: areaActivities.length,
+                participantCount: areaParticipantIds.size,
+                hasChildren: childrenCount > 0,
+            });
         }
 
         return {

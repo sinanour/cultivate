@@ -157,6 +157,7 @@ export interface GeographicBreakdown {
     geographicAreaName: string;
     activityCount: number;
     participantCount: number;
+    hasChildren: boolean;
 }
 
 export interface GroupedMetrics {

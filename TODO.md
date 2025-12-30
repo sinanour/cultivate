@@ -12,7 +12,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Add segmented control to toggle between activity type and activity category views
   - Similar UX pattern to the map view toggle functionality
 
-- [ ] 3. Fix Geographic Breakdown chart to show only leaf nodes
+- [x] 3. Fix Geographic Breakdown chart to show only leaf nodes
   - Chart should only render leaf-node geographic areas (areas without child areas)
   - Prevents double-counting and provides clearer geographic distribution
 
