@@ -258,16 +258,22 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       }
     } else {
       // Add to pending list for new participant (will be created after participant is created)
-      const tempAddress: ParticipantAddressHistory = {
-        id: `temp-${Date.now()}`,
-        participantId: '',
-        venueId: newAddressVenueId,
-        effectiveFrom: isoDate,
-        // Venue details will be populated when displayed
-        venue: undefined,
-      };
-      setAddressHistory(prev => [...prev, tempAddress]);
-      setShowAddressForm(false);
+      try {
+        // Fetch venue details so we can display the name
+        const venue = await VenueService.getVenue(newAddressVenueId);
+        
+        const tempAddress: ParticipantAddressHistory = {
+          id: `temp-${Date.now()}`,
+          participantId: '',
+          venueId: newAddressVenueId,
+          effectiveFrom: isoDate,
+          venue: venue,
+        };
+        setAddressHistory(prev => [...prev, tempAddress]);
+        setShowAddressForm(false);
+      } catch (err) {
+        setError('Failed to fetch venue details');
+      }
     }
   };
 

@@ -174,6 +174,8 @@ src/
 - Allows deleting existing address history records (edit mode only)
 - Displays address history table in reverse chronological order within the form
 - Validates address history records for required fields and duplicate prevention
+- When adding address history to a new participant (before participant is created), fetches venue details from backend and stores in temporary record for display
+- Displays venue name in address history table by accessing venue object from temporary records
 
 **ParticipantDetail**
 - Shows participant information in detail view
@@ -230,6 +232,8 @@ src/
 - Allows deleting existing venue associations (edit mode only)
 - Displays venue history table in reverse chronological order within the form
 - Validates venue associations for required fields and duplicate prevention
+- When adding venue associations to a new activity (before activity is created), fetches venue details from backend and stores in temporary record for display
+- Displays venue name in venue history table by accessing venue object from temporary records
 
 **ActivityDetail**
 - Shows activity information in detail view
@@ -1125,6 +1129,12 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 4.16**
 
+### Property 13a: Address History Venue Name Display
+
+*For any* address history record added to a new participant before the participant is created, the venue name should be fetched from the backend and displayed in the address history table.
+
+**Validates: Requirements 4.19, 4.20**
+
 ### Property 14: Activity List Display
 
 *For any* activity, the list view should include the activity category, activity type, dates, and status in the rendered output.
@@ -1160,6 +1170,12 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* activity, the detail view should display the activity information and all assigned participants with their roles.
 
 **Validates: Requirements 5.12**
+
+### Property 19a: Activity Venue Association Name Display
+
+*For any* venue association added to a new activity before the activity is created, the venue name should be fetched from the backend and displayed in the venue history table.
+
+**Validates: Requirements 5.18, 5.19**
 
 ### Property 20: Assignment Role Requirement
 

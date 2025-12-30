@@ -268,16 +268,22 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       }
     } else {
       // Add to pending list for new activity (will be created after activity is created)
-      const tempVenue: ActivityVenueHistory = {
-        id: `temp-${Date.now()}`,
-        activityId: '',
-        venueId: newVenueId,
-        effectiveFrom: isoDate,
-        // Venue details will be populated when displayed
-        venue: undefined,
-      };
-      setVenueHistory(prev => [...prev, tempVenue]);
-      setShowVenueForm(false);
+      try {
+        // Fetch venue details so we can display the name
+        const venue = await VenueService.getVenue(newVenueId);
+        
+        const tempVenue: ActivityVenueHistory = {
+          id: `temp-${Date.now()}`,
+          activityId: '',
+          venueId: newVenueId,
+          effectiveFrom: isoDate,
+          venue: venue,
+        };
+        setVenueHistory(prev => [...prev, tempVenue]);
+        setShowVenueForm(false);
+      } catch (err) {
+        setError('Failed to fetch venue details');
+      }
     }
   };
 

@@ -170,7 +170,9 @@ This implementation plan covers the React-based web application built with TypeS
     - Allow deleting existing address history records (edit mode only)
     - Display address history table in reverse chronological order within the form
     - Validate address history for required fields and duplicate prevention
-    - _Requirements: 4.4, 4.5, 4.7, 4.8, 4.9, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18_
+    - Fetch venue details when venue is selected for new address history records
+    - Store venue object in temporary records for display before participant is created
+    - _Requirements: 4.4, 4.5, 4.7, 4.8, 4.9, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18, 4.19, 4.20_
 
   - [ ]* 7.4 Write property tests for participant validation
     - **Property 7: Required Field Validation**
@@ -401,7 +403,9 @@ This implementation plan covers the React-based web application built with TypeS
     - Allow deleting existing venue associations (edit mode only)
     - Display venue history table in reverse chronological order within the form
     - Validate venue associations for required fields and duplicate prevention
-    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17_
+    - Fetch venue details when venue is selected for new venue associations
+    - Store venue object in temporary records for display before activity is created
+    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19_
 
   - [ ]* 11.3 Write property tests for activity validation
     - **Property 14: Finite Activity End Date Requirement**

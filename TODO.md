@@ -48,10 +48,10 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Data Entry & Forms
 
-- [ ] 9. Fix venue name rendering in create modals
+- [x] 9. Fix venue name rendering in create modals
   - Issue: When assigning venue to address history (create participant) or venue history (create activity), newly-associated venue name doesn't render
   - Root cause: Parent entity not fully created when venue association occurs
-  - Need solution to handle this scenario gracefully
+  - Solution: Fetch venue details when venue is selected and store in temporary record for display
 
 ## User Administration
 
