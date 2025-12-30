@@ -7,14 +7,12 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
-import Select from '@cloudscape-design/components/select';
 import Multiselect from '@cloudscape-design/components/multiselect';
 import PropertyFilter from '@cloudscape-design/components/property-filter';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
-import type { SelectProps } from '@cloudscape-design/components/select';
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -25,7 +23,7 @@ import { VenueService } from '../../services/api/venue.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActivityLifecycleChart } from './ActivityLifecycleChart';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
-import { GroupingDimension, DateGranularity } from '../../utils/constants';
+import { GroupingDimension } from '../../utils/constants';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -117,17 +115,8 @@ export function EngagementDashboard() {
     });
   };
 
-  const initializeDateGranularity = (): SelectProps.Option | null => {
-    const granularity = searchParams.get('dateGranularity');
-    if (!granularity) return null;
-    
-    const label = granularity.charAt(0) + granularity.slice(1).toLowerCase();
-    return { label, value: granularity };
-  };
-
   const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(initializeDateRange);
   const [groupByDimensions, setGroupByDimensions] = useState<MultiselectProps.Options>(initializeGroupByDimensions);
-  const [dateGranularity, setDateGranularity] = useState<SelectProps.Option | null>(initializeDateGranularity);
   
   // Activities chart view mode state with localStorage persistence
   const [activitiesViewMode, setActivitiesViewMode] = useState<ActivitiesViewMode>(() => {
@@ -376,16 +365,12 @@ export function EngagementDashboard() {
       params.set('groupBy', groupByValues);
     }
     
-    if (dateGranularity?.value) {
-      params.set('dateGranularity', dateGranularity.value);
-    }
-    
     // Update URL without causing navigation/reload
     setSearchParams(params, { replace: true });
-  }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, groupByDimensions, dateGranularity, setSearchParams]);
+  }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, groupByDimensions, setSearchParams]);
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['engagementMetrics', dateRange, selectedGeographicAreaId, propertyFilterQuery, groupByDimensions, dateGranularity],
+    queryKey: ['engagementMetrics', dateRange, selectedGeographicAreaId, propertyFilterQuery, groupByDimensions],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
@@ -439,7 +424,6 @@ export function EngagementDashboard() {
         activityTypeId,
         venueId,
         groupBy: groupByDimensions.map(d => d.value as GroupingDimension),
-        dateGranularity: dateGranularity?.value as DateGranularity | undefined,
       };
       
       return AnalyticsService.getEngagementMetrics(params);
@@ -562,19 +546,6 @@ export function EngagementDashboard() {
                 applyButtonLabel: 'Apply',
               }}
             />
-            
-            <Select
-              selectedOption={dateGranularity}
-              onChange={({ detail }) => setDateGranularity(detail.selectedOption)}
-              options={[
-                { label: 'Weekly', value: DateGranularity.WEEKLY },
-                { label: 'Monthly', value: DateGranularity.MONTHLY },
-                { label: 'Quarterly', value: DateGranularity.QUARTERLY },
-                { label: 'Yearly', value: DateGranularity.YEARLY },
-              ]}
-              placeholder="Date granularity (for date grouping)"
-              selectedAriaLabel="Selected"
-            />
           </ColumnLayout>
 
           {/* PropertyFilter for Activity Category, Activity Type, and Venue */}
@@ -621,21 +592,18 @@ export function EngagementDashboard() {
           />
 
           {/* Grouping Dimensions */}
-          <ColumnLayout columns={2}>
-            <Multiselect
-              selectedOptions={groupByDimensions}
-              onChange={({ detail }) => setGroupByDimensions(detail.selectedOptions)}
-              options={[
-                { label: 'Activity Category', value: GroupingDimension.ACTIVITY_CATEGORY },
-                { label: 'Activity Type', value: GroupingDimension.ACTIVITY_TYPE },
-                { label: 'Venue', value: GroupingDimension.VENUE },
-                { label: 'Geographic Area', value: GroupingDimension.GEOGRAPHIC_AREA },
-                { label: 'Date', value: GroupingDimension.DATE },
-              ]}
-              placeholder="Group by dimensions"
-              selectedAriaLabel="Selected"
-            />
-          </ColumnLayout>
+          <Multiselect
+            selectedOptions={groupByDimensions}
+            onChange={({ detail }) => setGroupByDimensions(detail.selectedOptions)}
+            options={[
+              { label: 'Activity Category', value: GroupingDimension.ACTIVITY_CATEGORY },
+              { label: 'Activity Type', value: GroupingDimension.ACTIVITY_TYPE },
+              { label: 'Venue', value: GroupingDimension.VENUE },
+              { label: 'Geographic Area', value: GroupingDimension.GEOGRAPHIC_AREA },
+            ]}
+            placeholder="Group by dimensions"
+            selectedAriaLabel="Selected"
+          />
         </SpaceBetween>
       </Container>
 

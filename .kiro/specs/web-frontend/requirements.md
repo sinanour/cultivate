@@ -226,7 +226,7 @@ The Web Frontend package provides a responsive React-based web application that 
 12. THE Web_App SHALL display all participant counts in aggregate across all activity categories and types
 13. THE Web_App SHALL display all participant counts broken down by activity category
 14. THE Web_App SHALL display all participant counts broken down by activity type
-15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity category, activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
+15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity category, activity type, venue, and geographic area
 16. THE Web_App SHALL provide filter controls for activity category (point filter)
 17. THE Web_App SHALL provide filter controls for activity type (point filter)
 18. THE Web_App SHALL provide filter controls for venue (point filter)
@@ -245,7 +245,7 @@ The Web Frontend package provides a responsive React-based web application that 
 31. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
 32. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
 33. THE Web_App SHALL synchronize all filter parameters (activity category, activity type, venue, geographic area, start date, end date) with URL query parameters
-34. THE Web_App SHALL synchronize all grouping parameters (group by dimensions and date granularity) with URL query parameters
+34. THE Web_App SHALL synchronize all grouping parameters (group by dimensions) with URL query parameters
 35. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
 36. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
 37. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations

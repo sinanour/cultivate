@@ -537,7 +537,6 @@ This implementation plan covers the React-based web application built with TypeS
       - Activity type grouping
       - Venue grouping
       - Geographic area grouping
-      - Date grouping (weekly, monthly, quarterly, yearly)
     - Provide flexible filter controls:
       - Activity category filter (dropdown)
       - Activity type filter (dropdown)
@@ -550,7 +549,7 @@ This implementation plan covers the React-based web application built with TypeS
       - When multiple grouping dimensions selected, leave subsequent dimension cells blank in Total row
       - Display metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
       - When grouping dimensions selected, render additional rows below Total row showing dimensional breakdowns:
-        - Display breakdown dimension columns first (activity category, activity type, venue, geographic area, date period)
+        - Display breakdown dimension columns first (activity category, activity type, venue, geographic area)
         - Display metric aggregation columns after dimensions
         - Render activity category names as hyperlinks to edit forms or detail views
         - Render activity type names as hyperlinks to edit forms or detail views
@@ -564,7 +563,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Synchronize all filter and grouping parameters with URL query parameters:
       - Read URL parameters on component mount to initialize dashboard state
       - Update URL when user changes filters or grouping (using React Router's useSearchParams or similar)
-      - Support parameters: activityCategory, activityType, venue, geographicArea, startDate, endDate, groupBy (array), dateGranularity
+      - Support parameters: activityCategory, activityType, venue, geographicArea, startDate, endDate, groupBy (array)
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters

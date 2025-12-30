@@ -425,7 +425,6 @@ src/
   - Activity type grouping
   - Venue grouping
   - Geographic area grouping
-  - Date grouping (weekly, monthly, quarterly, yearly)
 - **PropertyFilter Component** for unified filtering:
   - Replaces separate activity type and venue filter dropdowns
   - Uses CloudScape PropertyFilter component
@@ -466,7 +465,7 @@ src/
 - Displays all-time metrics when no date range specified
 - Synchronizes all filter and grouping parameters with URL query parameters:
   - Filter parameters: activityCategory, activityType, venue, geographicArea, startDate, endDate
-  - Grouping parameters: groupBy (array), dateGranularity
+  - Grouping parameters: groupBy (array)
   - Reads URL parameters on component mount to initialize dashboard state
   - Updates URL when user changes filters or grouping
   - Enables browser back/forward navigation between different configurations
@@ -667,7 +666,7 @@ src/
 
 **AnalyticsService**
 - `getEngagementMetrics(params)`: Fetches comprehensive engagement data from `/analytics/engagement` with flexible parameters
-  - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityCategoryId?`, `activityTypeId?`, `venueId?`, `groupBy?` (array of dimensions), `dateGranularity?` (WEEKLY, MONTHLY, QUARTERLY, YEARLY)
+  - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityCategoryId?`, `activityTypeId?`, `venueId?`, `groupBy?` (array of dimensions)
   - Returns temporal analysis: activities/participants at start/end, activities started/completed/cancelled
   - Returns aggregate counts and breakdowns by activity category and activity type
   - Returns hierarchically grouped results when multiple dimensions specified
@@ -1215,7 +1214,7 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 26: Multi-dimensional grouping controls
 
-*For any* engagement dashboard, the UI should provide controls to select one or more grouping dimensions (activity category, activity type, venue, geographic area, date with granularity selection).
+*For any* engagement dashboard, the UI should provide controls to select one or more grouping dimensions (activity category, activity type, venue, geographic area).
 
 **Validates: Requirements 7.15**
 
@@ -1281,7 +1280,7 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 31a: Analytics URL Parameter Synchronization
 
-*For any* engagement dashboard state (filters and grouping), the browser URL query parameters should accurately reflect all current filter values (activityCategory, activityType, venue, geographicArea, startDate, endDate) and grouping configuration (groupBy dimensions, dateGranularity).
+*For any* engagement dashboard state (filters and grouping), the browser URL query parameters should accurately reflect all current filter values (activityCategory, activityType, venue, geographicArea, startDate, endDate) and grouping configuration (groupBy dimensions).
 
 **Validates: Requirements 7.33, 7.34**
 
