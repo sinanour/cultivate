@@ -341,6 +341,7 @@ export function EngagementDashboard() {
               selectedOptions={groupByDimensions}
               onChange={({ detail }) => setGroupByDimensions(detail.selectedOptions)}
               options={[
+                { label: 'Activity Category', value: GroupingDimension.ACTIVITY_CATEGORY },
                 { label: 'Activity Type', value: GroupingDimension.ACTIVITY_TYPE },
                 { label: 'Venue', value: GroupingDimension.VENUE },
                 { label: 'Geographic Area', value: GroupingDimension.GEOGRAPHIC_AREA },
@@ -377,7 +378,22 @@ export function EngagementDashboard() {
                 const idValue = item.dimensions[`${dimension}Id`];
                 
                 // Render hyperlinks for specific dimensions
-                if (dimension === GroupingDimension.ACTIVITY_TYPE) {
+                if (dimension === GroupingDimension.ACTIVITY_CATEGORY) {
+                  if (idValue) {
+                    return (
+                      <Link 
+                        href={`/activity-categories`}
+                        onFollow={(e) => {
+                          e.preventDefault();
+                          navigate('/activity-categories');
+                        }}
+                      >
+                        {nameValue}
+                      </Link>
+                    );
+                  }
+                  return nameValue || '-';
+                } else if (dimension === GroupingDimension.ACTIVITY_TYPE) {
                   if (idValue) {
                     return (
                       <Link 
@@ -443,7 +459,22 @@ export function EngagementDashboard() {
                     const idValue = item.dimensions[`${dimension}Id`];
                     
                     // Render hyperlinks for specific dimensions
-                    if (dimension === GroupingDimension.ACTIVITY_TYPE) {
+                    if (dimension === GroupingDimension.ACTIVITY_CATEGORY) {
+                      if (idValue) {
+                        return (
+                          <Link 
+                            href={`/activity-categories`}
+                            onFollow={(e) => {
+                              e.preventDefault();
+                              navigate('/activity-categories');
+                            }}
+                          >
+                            {nameValue}
+                          </Link>
+                        );
+                      }
+                      return nameValue || '-';
+                    } else if (dimension === GroupingDimension.ACTIVITY_TYPE) {
                       if (idValue) {
                         return (
                           <Link 

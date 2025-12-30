@@ -4,7 +4,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Dashboard & Analytics
 
-- [ ] 1. Add activity category as a dimension for grouping statistics on the Engagement Dashboard
+- [x] 1. Add activity category as a dimension for grouping statistics on the Engagement Dashboard
   - Activity category should be available alongside activity type for statistical analysis
 
 - [ ] 2. Rename and enhance "Activities by Type" chart on Engagement Dashboard
@@ -21,26 +21,26 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Metric appears to be calculated incorrectly in these scenarios
   - Requires investigation and correction
 
-- [ ] 11. Simplify activities chart on Engagement Dashboard
+- [ ] 5. Simplify activities chart on Engagement Dashboard
   - Show only activity counts at start and end of period
   - Remove cancelled, started, and completed counts from this chart
   - Keep visualization focused on net change
 
-- [ ] 12. Add new chart for activity lifecycle events
+- [ ] 6. Add new chart for activity lifecycle events
   - Create separate chart showing activities started and completed
   - Include toggle to render by activity category or activity type
   - Similar pattern to existing activity chart
 
 ## Navigation & UI Organization
 
-- [ ] 5. Reorder management views in navigation
+- [ ] 7. Reorder management views in navigation
   - Update order in main dashboard quick links
   - Update order in side-panel navigation
   - New order: Geographic Areas, Venues, Activities, Participants
 
 ## Filtering & Search
 
-- [ ] 6. Replace Engagement Dashboard filters with PropertyFilter component
+- [ ] 8. Replace Engagement Dashboard filters with PropertyFilter component
   - Current activity type and venue filters are not working/populating
   - Replace with single CloudScape PropertyFilter component
   - Include Activity Category as a filterable property
@@ -48,14 +48,14 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Data Entry & Forms
 
-- [ ] 7. Fix venue name rendering in create modals
+- [ ] 9. Fix venue name rendering in create modals
   - Issue: When assigning venue to address history (create participant) or venue history (create activity), newly-associated venue name doesn't render
   - Root cause: Parent entity not fully created when venue association occurs
   - Need solution to handle this scenario gracefully
 
 ## User Administration
 
-- [ ] 8. Fix User Administration page integration
+- [ ] 10. Fix User Administration page integration
   - Page doesn't list any users
   - Create workflow fails
   - Backend integration appears broken
@@ -63,14 +63,14 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Entity Management
 
-- [ ] 9. Add Delete button to all entity detail pages
+- [ ] 11. Add Delete button to all entity detail pages
   - Applies to: Participants, Venues, Activities, Geographic Areas, etc.
   - Position: Next to Edit button
   - Style: Red color to indicate destructive action
 
 ## Import/Export
 
-- [ ] 10. Implement CSV import/export functionality
+- [ ] 12. Implement CSV import/export functionality
   - Applies to: Participants, Venues, Activities, Geographic Areas
   - Import CTA should be available on each entity list page
   - Export CTA should be available on each entity list page
@@ -81,6 +81,6 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Notes
 
-- Items are numbered according to original specification
+- Items are numbered sequentially based on document order
 - Priority and dependencies should be assessed before implementation
 - Some items may require spec updates before implementation

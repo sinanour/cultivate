@@ -72,6 +72,7 @@ export interface EngagementMetrics {
     periodStart: string;
     periodEnd: string;
     appliedFilters: {
+        activityCategoryId?: string;
         activityTypeId?: string;
         venueId?: string;
         geographicAreaId?: string;
@@ -97,6 +98,7 @@ export interface AnalyticsFilters {
     startDate?: Date;
     endDate?: Date;
     geographicAreaId?: string;
+    activityCategoryId?: string;
     activityTypeId?: string;
     venueId?: string;
     groupBy?: GroupingDimension[];
@@ -110,7 +112,7 @@ export class AnalyticsService {
     ) { }
 
     async getEngagementMetrics(filters: AnalyticsFilters = {}): Promise<EngagementMetrics> {
-        const { startDate, geographicAreaId, activityTypeId, venueId, groupBy } = filters;
+        const { startDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, groupBy } = filters;
 
         // Default endDate to now if startDate is provided but endDate is not
         const endDate = filters.endDate || (startDate ? new Date() : undefined);
@@ -130,6 +132,12 @@ export class AnalyticsService {
 
         // Build base activity filter
         const activityWhere: any = {};
+
+        if (activityCategoryId) {
+            activityWhere.activityType = {
+                activityCategoryId,
+            };
+        }
 
         if (activityTypeId) {
             activityWhere.activityTypeId = activityTypeId;
@@ -415,6 +423,7 @@ export class AnalyticsService {
             periodStart: startDate?.toISOString() || '',
             periodEnd: endDate?.toISOString() || new Date().toISOString(),
             appliedFilters: {
+                activityCategoryId,
                 activityTypeId,
                 venueId,
                 geographicAreaId,
@@ -475,7 +484,7 @@ export class AnalyticsService {
         dimensions: GroupingDimension[]
     ): Promise<Array<{ dimensions: Record<string, string>; filters: Partial<AnalyticsFilters> }>> {
         // Build base activity filter from existing filters
-        const { startDate, endDate, geographicAreaId, activityTypeId, venueId } = filters;
+        const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, venueId } = filters;
 
         let venueIds: string[] | undefined;
         if (geographicAreaId) {
@@ -485,6 +494,11 @@ export class AnalyticsService {
         }
 
         const activityWhere: any = {};
+        if (activityCategoryId) {
+            activityWhere.activityType = {
+                activityCategoryId,
+            };
+        }
         if (activityTypeId) {
             activityWhere.activityTypeId = activityTypeId;
         }
@@ -500,7 +514,11 @@ export class AnalyticsService {
         const activities = await this.prisma.activity.findMany({
             where: activityWhere,
             include: {
-                activityType: true,
+                activityType: {
+                    include: {
+                        activityCategory: true,
+                    },
+                },
                 activityVenueHistory: {
                     include: {
                         venue: {
@@ -526,6 +544,10 @@ export class AnalyticsService {
 
             // Build dimension values for this activity
             const dimensionValues: Record<string, any> = {
+                [GroupingDimension.ACTIVITY_CATEGORY]: {
+                    id: activity.activityType.activityCategoryId,
+                    name: activity.activityType.activityCategory.name,
+                },
                 [GroupingDimension.ACTIVITY_TYPE]: {
                     id: activity.activityTypeId,
                     name: activity.activityType.name,
@@ -603,6 +625,13 @@ export class AnalyticsService {
                 if (!value) continue;
 
                 switch (dim) {
+                    case GroupingDimension.ACTIVITY_CATEGORY:
+                        combination.dimensions[DimensionKeys.ACTIVITY_CATEGORY.name] = value.name;
+                        combination.dimensions[DimensionKeys.ACTIVITY_CATEGORY.id] = value.id;
+                        combination.filters.activityCategoryId = value.id;
+                        combinationKey += `category:${value.id}|`;
+                        break;
+
                     case GroupingDimension.ACTIVITY_TYPE:
                         combination.dimensions[DimensionKeys.ACTIVITY_TYPE.name] = value.name;
                         combination.dimensions[DimensionKeys.ACTIVITY_TYPE.id] = value.id;

@@ -67,6 +67,7 @@ export type DateGranularity = typeof DateGranularity[keyof typeof DateGranularit
 // Grouping Dimensions for Analytics
 export const GroupingDimension = {
     ACTIVITY_TYPE: 'activityType',
+    ACTIVITY_CATEGORY: 'activityCategory',
     VENUE: 'venue',
     GEOGRAPHIC_AREA: 'geographicArea',
     DATE: 'date',
@@ -79,6 +80,10 @@ export const DimensionKeys = {
     ACTIVITY_TYPE: {
         name: 'activityType',
         id: 'activityTypeId',
+    },
+    ACTIVITY_CATEGORY: {
+        name: 'activityCategory',
+        id: 'activityCategoryId',
     },
     VENUE: {
         name: 'venue',

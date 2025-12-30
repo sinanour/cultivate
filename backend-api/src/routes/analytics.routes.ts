@@ -47,12 +47,13 @@ export class AnalyticsRoutes {
 
     private async getEngagement(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { startDate, endDate, geographicAreaId, activityTypeId, venueId, groupBy, dateGranularity } = req.query;
+            const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, groupBy, dateGranularity } = req.query;
 
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
                 geographicAreaId: geographicAreaId as string | undefined,
+                activityCategoryId: activityCategoryId as string | undefined,
                 activityTypeId: activityTypeId as string | undefined,
                 venueId: venueId as string | undefined,
                 groupBy: groupBy as any[] | undefined, // Already normalized by Zod transform

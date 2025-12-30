@@ -6,6 +6,7 @@ export interface EngagementMetricsParams {
     startDate?: string;
     endDate?: string;
     geographicAreaId?: string;
+    activityCategoryId?: string;
     activityTypeId?: string;
     venueId?: string;
     groupBy?: GroupingDimension[];
@@ -26,6 +27,7 @@ export class AnalyticsService {
         if (params.startDate) queryParams.append('startDate', params.startDate);
         if (params.endDate) queryParams.append('endDate', params.endDate);
         if (params.geographicAreaId) queryParams.append('geographicAreaId', params.geographicAreaId);
+        if (params.activityCategoryId) queryParams.append('activityCategoryId', params.activityCategoryId);
         if (params.activityTypeId) queryParams.append('activityTypeId', params.activityTypeId);
         if (params.venueId) queryParams.append('venueId', params.venueId);
         if (params.dateGranularity) queryParams.append('dateGranularity', params.dateGranularity);
