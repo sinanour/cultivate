@@ -33,10 +33,10 @@ export function AppLayout() {
       type: 'section',
       text: 'Management',
       items: [
-        { type: 'link', text: 'Participants', href: '/participants' },
-        { type: 'link', text: 'Activities', href: '/activities' },
-        { type: 'link', text: 'Venues', href: '/venues' },
         { type: 'link', text: 'Geographic Areas', href: '/geographic-areas' },
+        { type: 'link', text: 'Venues', href: '/venues' },
+        { type: 'link', text: 'Activities', href: '/activities' },
+        { type: 'link', text: 'Participants', href: '/participants' },
       ],
     },
     { type: 'divider' },

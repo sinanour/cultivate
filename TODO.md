@@ -33,7 +33,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Navigation & UI Organization
 
-- [ ] 7. Reorder management views in navigation
+- [x] 7. Reorder management views in navigation
   - Update order in main dashboard quick links
   - Update order in side-panel navigation
   - New order: Geographic Areas, Venues, Activities, Participants

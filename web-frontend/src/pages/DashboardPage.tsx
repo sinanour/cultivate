@@ -13,16 +13,10 @@ export default function DashboardPage() {
 
   const quickLinks = [
     {
-      href: '/participants',
-      icon: 'user-profile',
-      title: 'Manage Participants',
-      description: 'View and manage community participants',
-    },
-    {
-      href: '/activities',
-      icon: 'group',
-      title: 'Manage Activities',
-      description: 'View and manage community activities',
+      href: '/geographic-areas',
+      icon: 'globe',
+      title: 'Manage Geographic Areas',
+      description: 'View and manage geographic hierarchy',
     },
     {
       href: '/venues',
@@ -31,10 +25,16 @@ export default function DashboardPage() {
       description: 'View and manage activity venues',
     },
     {
-      href: '/geographic-areas',
-      icon: 'globe',
-      title: 'Manage Geographic Areas',
-      description: 'View and manage geographic hierarchy',
+      href: '/activities',
+      icon: 'group',
+      title: 'Manage Activities',
+      description: 'View and manage community activities',
+    },
+    {
+      href: '/participants',
+      icon: 'user-profile',
+      title: 'Manage Participants',
+      description: 'View and manage community participants',
     },
     {
       href: '/map',
