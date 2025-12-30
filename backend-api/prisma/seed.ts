@@ -35,42 +35,68 @@ async function main() {
         console.log(`Seeded root administrator user: ${rootAdminEmail}`);
     }
 
-    // Seed predefined activity types
-    const activityTypes = [
-        { name: "Children's Class" },
-        { name: 'Junior Youth Group' },
-        { name: 'Devotional Gathering' },
-        { name: 'Ruhi Book 1' },
-        { name: 'Ruhi Book 2' },
-        { name: 'Ruhi Book 3' },
-        { name: 'Ruhi Book 3A' },
-        { name: 'Ruhi Book 3B' },
-        { name: 'Ruhi Book 3C' },
-        { name: 'Ruhi Book 3D' },
-        { name: 'Ruhi Book 4' },
-        { name: 'Ruhi Book 5' },
-        { name: 'Ruhi Book 5A' },
-        { name: 'Ruhi Book 5B' },
-        { name: 'Ruhi Book 6' },
-        { name: 'Ruhi Book 7' },
-        { name: 'Ruhi Book 8' },
-        { name: 'Ruhi Book 9' },
-        { name: 'Ruhi Book 10' },
-        { name: 'Ruhi Book 11' },
-        { name: 'Ruhi Book 12' },
-        { name: 'Ruhi Book 13' },
-        { name: 'Ruhi Book 14' },
+    // Seed predefined activity categories
+    const activityCategories = [
+        { name: 'Study Circles' },
+        { name: "Children's Classes" },
+        { name: 'Junior Youth Groups' },
+        { name: 'Devotional Gatherings' },
     ];
 
-    for (const activityType of activityTypes) {
+    const categoryMap: Record<string, string> = {};
+
+    for (const category of activityCategories) {
+        const createdCategory = await prisma.activityCategory.upsert({
+            where: { name: category.name },
+            update: { isPredefined: true },
+            create: { ...category, isPredefined: true },
+        });
+        categoryMap[category.name] = createdCategory.id;
+    }
+
+    console.log(`Seeded ${activityCategories.length} activity categories`);
+
+    // Seed predefined activity types with category mappings
+    const activityTypesWithCategories = [
+        { name: "Children's Class", categoryName: "Children's Classes" },
+        { name: 'Junior Youth Group', categoryName: 'Junior Youth Groups' },
+        { name: 'Devotional Gathering', categoryName: 'Devotional Gatherings' },
+        { name: 'Ruhi Book 1', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 2', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 3', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 3A', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 3B', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 3C', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 3D', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 4', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 5', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 5A', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 5B', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 6', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 7', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 8', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 9', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 10', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 11', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 12', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 13', categoryName: 'Study Circles' },
+        { name: 'Ruhi Book 14', categoryName: 'Study Circles' },
+    ];
+
+    for (const activityType of activityTypesWithCategories) {
         await prisma.activityType.upsert({
             where: { name: activityType.name },
-            update: {},
-            create: activityType,
+            update: { isPredefined: true },
+            create: {
+                name: activityType.name,
+                activityCategoryId: categoryMap[activityType.categoryName],
+                isPredefined: true,
+            },
         });
     }
 
-    console.log(`Seeded ${activityTypes.length} activity types`);
+    console.log(`Seeded ${activityTypesWithCategories.length} activity types`);
+
 
     // Seed predefined roles
     const roles = [

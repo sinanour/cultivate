@@ -7,7 +7,7 @@ import { GlobalGeographicFilterProvider } from '../contexts/GlobalGeographicFilt
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
-const ActivityTypesPage = lazy(() => import('../pages/ActivityTypesPage'));
+const ConfigurationPage = lazy(() => import('../pages/ConfigurationPage'));
 const ParticipantRolesPage = lazy(() => import('../pages/ParticipantRolesPage'));
 const ParticipantsPage = lazy(() => import('../pages/ParticipantsPage'));
 const ParticipantDetailPage = lazy(() => import('../pages/ParticipantDetailPage'));
@@ -47,8 +47,8 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
-        path: 'activity-types',
-        element: <ActivityTypesPage />,
+        path: 'configuration',
+        element: <ConfigurationPage />,
       },
       {
         path: 'participant-roles',

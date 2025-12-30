@@ -66,6 +66,12 @@ The API follows a three-layer architecture:
 Route handlers define API endpoints and delegate to service layer:
 
 ```typescript
+// Activity Category Routes
+GET    /api/v1/activity-categories     -> List all activity categories
+POST   /api/v1/activity-categories     -> Create activity category
+PUT    /api/v1/activity-categories/:id -> Update activity category
+DELETE /api/v1/activity-categories/:id -> Delete activity category
+
 // Activity Type Routes
 GET    /api/v1/activity-types          -> List all activity types
 POST   /api/v1/activity-types          -> Create activity type
@@ -152,14 +158,15 @@ GET    /api/v1/docs/openapi.json       -> OpenAPI specification
 
 Services implement business logic and coordinate operations:
 
-- **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, prevents deletion of referenced types
+- **ActivityCategoryService**: Manages activity category CRUD operations, validates uniqueness, prevents deletion of referenced categories
+- **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, validates activity category references, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
 - **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
-- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters and range filters), aggregates data hierarchically by specified dimensions
+- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area; range filter for dates), aggregates data hierarchically by specified dimensions
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
 - **AuditService**: Logs user actions, stores audit records
@@ -168,6 +175,7 @@ Services implement business logic and coordinate operations:
 
 Repositories encapsulate Prisma database access:
 
+- **ActivityCategoryRepository**: CRUD operations for activity categories
 - **ActivityTypeRepository**: CRUD operations for activity types
 - **RoleRepository**: CRUD operations for roles
 - **ParticipantRepository**: CRUD operations and text-based search for participants (supports filtering by name/email and geographic area with pagination)
@@ -213,9 +221,15 @@ Repositories encapsulate Prisma database access:
 Zod schemas define request validation rules:
 
 ```typescript
+// Activity Category Schema
+ActivityCategoryCreateSchema = {
+  name: string (required, min 1 char, max 100 chars)
+}
+
 // Activity Type Schema
 ActivityTypeCreateSchema = {
-  name: string (required, min 1 char, max 100 chars)
+  name: string (required, min 1 char, max 100 chars),
+  activityCategoryId: string (required, valid UUID)
 }
 
 // Role Schema
@@ -294,11 +308,22 @@ The API uses Prisma to define the following database models:
 - createdAt: DateTime
 - updatedAt: DateTime
 
+**ActivityCategory**
+- id: UUID (primary key)
+- name: String (unique)
+- isPredefined: Boolean
+- createdAt: DateTime
+- updatedAt: DateTime
+- activityTypes: ActivityType[] (relation)
+
 **ActivityType**
 - id: UUID (primary key)
 - name: String (unique)
+- activityCategoryId: UUID (foreign key)
+- isPredefined: Boolean
 - createdAt: DateTime
 - updatedAt: DateTime
+- activityCategory: ActivityCategory (relation)
 - activities: Activity[] (relation)
 
 **Role**
@@ -398,6 +423,8 @@ The API uses Prisma to define the following database models:
 
 ### Data Relationships
 
+- ActivityCategory has many ActivityTypes (one-to-many)
+- ActivityType belongs to one ActivityCategory (many-to-one)
 - ActivityType has many Activities (one-to-many)
 - Activity belongs to one ActivityType (many-to-one)
 - Activity has many Assignments (one-to-many)
@@ -420,7 +447,7 @@ The API uses Prisma to define the following database models:
 
 - Foreign key constraints enforce referential integrity
 - Cascade deletes are NOT used to prevent accidental data loss
-- Deletion of referenced entities (ActivityType, Role, Venue, GeographicArea) is prevented by checking for existing references
+- Deletion of referenced entities (ActivityCategory, ActivityType, Role, Venue, GeographicArea) is prevented by checking for existing references
 - Deletion of Activities cascades to Assignments and ActivityVenueHistory (business rule: removing an activity removes all assignments and venue history)
 - Deletion of Participants cascades to Assignments and ParticipantAddressHistory (business rule: removing a participant removes all assignments and address history)
 - Circular parent-child relationships in GeographicArea are prevented by validation logic
@@ -432,22 +459,22 @@ The API uses Prisma to define the following database models:
 ### Resource Management Properties
 
 **Property 1: Resource creation persistence**
-*For any* valid resource (activity type, role, participant, activity), creating it via POST should result in the resource being retrievable via GET with the same data.
-**Validates: Requirements 1.2, 2.2, 3.3, 4.3**
+*For any* valid resource (activity category, activity type, role, participant, activity), creating it via POST should result in the resource being retrievable via GET with the same data.
+**Validates: Requirements 1.2, 1.9, 2.2, 3.3, 4.3**
 
 **Property 2: Resource update persistence**
 *For any* existing resource and valid update data, updating it via PUT should result in the resource reflecting the new data when retrieved via GET.
-**Validates: Requirements 1.3, 2.3, 3.4, 4.4**
+**Validates: Requirements 1.3, 1.10, 2.3, 3.4, 4.4**
 
 **Property 3: Resource deletion removes resource**
 *For any* existing resource without references, deleting it via DELETE should result in the resource no longer being retrievable via GET (404 response).
-**Validates: Requirements 1.4, 2.4, 3.5, 4.5**
+**Validates: Requirements 1.4, 1.11, 2.4, 3.5, 4.5**
 
 ### Validation Properties
 
 **Property 4: Name uniqueness enforcement**
-*For any* activity type or role, attempting to create a duplicate with the same name should be rejected with a 400 error.
-**Validates: Requirements 1.5, 2.5**
+*For any* activity category, activity type, or role, attempting to create a duplicate with the same name should be rejected with a 400 error.
+**Validates: Requirements 1.5, 1.12, 2.5**
 
 **Property 5: Required field validation**
 *For any* resource creation request missing required fields, the API should reject it with a 400 error and detailed validation message.
@@ -484,8 +511,8 @@ The API uses Prisma to define the following database models:
 ### Referential Integrity Properties
 
 **Property 13: Referenced entity deletion prevention**
-*For any* activity type or role that is referenced by existing activities or assignments, attempting to delete it should be rejected with a 400 error.
-**Validates: Requirements 1.6, 2.6**
+*For any* activity category, activity type, or role that is referenced by existing activity types, activities, or assignments, attempting to delete it should be rejected with a 400 error.
+**Validates: Requirements 1.6, 1.15, 2.6**
 
 **Property 14: Assignment reference validation**
 *For any* assignment creation with non-existent activity, participant, or role IDs, the API should reject it with a 400 error.
@@ -548,56 +575,68 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 6.8**
 
 **Property 27: Aggregate activity counts**
-*For any* engagement metrics request, activity counts should be provided in aggregate across all activity types.
+*For any* engagement metrics request, activity counts should be provided in aggregate across all activity categories and types.
 **Validates: Requirements 6.9**
+
+**Property 27A: Activity counts by category breakdown**
+*For any* engagement metrics request, activity counts should be broken down by activity category.
+**Validates: Requirements 6.10**
 
 **Property 28: Activity counts by type breakdown**
 *For any* engagement metrics request, activity counts should be broken down by activity type.
-**Validates: Requirements 6.10**
+**Validates: Requirements 6.11**
 
 **Property 29: Aggregate participant counts**
-*For any* engagement metrics request, participant counts should be provided in aggregate across all activity types.
-**Validates: Requirements 6.11**
+*For any* engagement metrics request, participant counts should be provided in aggregate across all activity categories and types.
+**Validates: Requirements 6.12**
+
+**Property 29A: Participant counts by category breakdown**
+*For any* engagement metrics request, participant counts should be broken down by activity category.
+**Validates: Requirements 6.13**
 
 **Property 30: Participant counts by type breakdown**
 *For any* engagement metrics request, participant counts should be broken down by activity type.
-**Validates: Requirements 6.12**
+**Validates: Requirements 6.14**
 
 **Property 31: Multi-dimensional grouping support**
 *For any* engagement metrics request with multiple grouping dimensions, the response should organize metrics hierarchically by the specified dimensions in order.
-**Validates: Requirements 6.13, 6.18**
+**Validates: Requirements 6.15, 6.21**
+
+**Property 31A: Activity category point filter**
+*For any* engagement metrics request with an activity category filter, only activities of the specified category should be included.
+**Validates: Requirements 6.16**
 
 **Property 32: Activity type point filter**
 *For any* engagement metrics request with an activity type filter, only activities of the specified type should be included.
-**Validates: Requirements 6.14**
+**Validates: Requirements 6.17**
 
 **Property 33: Venue point filter**
 *For any* engagement metrics request with a venue filter, only activities associated with the specified venue should be included.
-**Validates: Requirements 6.15**
+**Validates: Requirements 6.18**
 
 **Property 34: Geographic area point filter**
 *For any* engagement metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
-**Validates: Requirements 6.16, 6.21**
+**Validates: Requirements 6.19, 6.24**
 
 **Property 35: Date range filter**
 *For any* engagement metrics request with a date range filter, only activities and participants within the specified date range should be included.
-**Validates: Requirements 6.17**
+**Validates: Requirements 6.20**
 
 **Property 36: Multiple filter AND logic**
 *For any* engagement metrics request with multiple filters, all filters should be applied using AND logic.
-**Validates: Requirements 6.19**
+**Validates: Requirements 6.22**
 
 **Property 37: All-time metrics without date range**
 *For any* engagement metrics request without a date range, metrics should be calculated for all time.
-**Validates: Requirements 6.20**
+**Validates: Requirements 6.23**
 
 **Property 38: Role distribution calculation**
 *For any* engagement metrics request, the response should include role distribution across all activities within the filtered and grouped results.
-**Validates: Requirements 6.22**
+**Validates: Requirements 6.25**
 
 **Property 39: Date grouping granularity**
 *For any* engagement metrics request with date grouping, the system should support weekly, monthly, quarterly, and yearly granularity.
-**Validates: Requirements 6.13**
+**Validates: Requirements 6.15**
 
 **Property 40: Time period grouping**
 *For any* time period parameter (DAY, WEEK, MONTH, YEAR), growth metrics should correctly group data into the specified periods.

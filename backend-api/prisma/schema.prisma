@@ -29,15 +29,32 @@ enum UserRole {
   READ_ONLY
 }
 
+// Activity Category model
+model ActivityCategory {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  isPredefined  Boolean        @default(false)
+  version       Int            @default(1)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  activityTypes ActivityType[]
+
+  @@map("activity_categories")
+}
+
 // Activity Type model
 model ActivityType {
-  id         String     @id @default(uuid())
-  name       String     @unique
-  version    Int        @default(1)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  activities Activity[]
+  id                 String           @id @default(uuid())
+  name               String           @unique
+  activityCategoryId String
+  isPredefined       Boolean          @default(false)
+  version            Int              @default(1)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  activityCategory   ActivityCategory @relation(fields: [activityCategoryId], references: [id])
+  activities         Activity[]
 
+  @@index([activityCategoryId])
   @@map("activity_types")
 }
 

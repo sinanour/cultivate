@@ -1,13 +1,15 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
+import Select from '@cloudscape-design/components/select';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
 import type { ActivityType } from '../../types';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
+import { activityCategoryService } from '../../services/api/activity-category.service';
 import { VersionConflictModal } from '../common/VersionConflictModal';
 import {
     isVersionConflict,
@@ -25,26 +27,37 @@ interface ActivityTypeFormProps {
 export function ActivityTypeForm({ activityType, onSuccess, onCancel }: ActivityTypeFormProps) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
+  const [activityCategoryId, setActivityCategoryId] = useState('');
   const [nameError, setNameError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
   const [error, setError] = useState('');
   const [conflictInfo, setConflictInfo] = useState<VersionConflictInfo | null>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
+
+  // Fetch activity categories for dropdown
+  const { data: categories = [] } = useQuery({
+    queryKey: ['activityCategories'],
+    queryFn: () => activityCategoryService.getActivityCategories(),
+  });
 
   // Update form state when activityType prop changes
   useEffect(() => {
     if (activityType) {
       setName(activityType.name || '');
+      setActivityCategoryId(activityType.activityCategoryId || '');
     } else {
       // Reset to defaults for create mode
       setName('');
+      setActivityCategoryId('');
     }
     // Clear errors when switching modes
     setNameError('');
+    setCategoryError('');
     setError('');
   }, [activityType]);
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string }) => ActivityTypeService.createActivityType(data),
+    mutationFn: (data: { name: string; activityCategoryId: string }) => ActivityTypeService.createActivityType(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activityTypes'] });
       onSuccess();
@@ -55,8 +68,8 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { id: string; name: string; version?: number }) =>
-      ActivityTypeService.updateActivityType(data.id, { name: data.name, version: data.version }),
+    mutationFn: (data: { id: string; name?: string; activityCategoryId?: string; version?: number }) =>
+      ActivityTypeService.updateActivityType(data.id, { name: data.name, activityCategoryId: data.activityCategoryId, version: data.version }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activityTypes'] });
       onSuccess();
@@ -83,11 +96,23 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
     return true;
   };
 
+  const validateCategory = (value: string): boolean => {
+    if (!value) {
+      setCategoryError('Activity category is required');
+      return false;
+    }
+    setCategoryError('');
+    return true;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!validateName(name)) {
+    const isNameValid = validateName(name);
+    const isCategoryValid = validateCategory(activityCategoryId);
+
+    if (!isNameValid || !isCategoryValid) {
       return;
     }
 
@@ -95,10 +120,11 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
       updateMutation.mutate({
         id: activityType.id,
         name: name.trim(),
+        activityCategoryId,
         version: getEntityVersion(activityType),
       });
     } else {
-      createMutation.mutate({ name: name.trim() });
+      createMutation.mutate({ name: name.trim(), activityCategoryId });
     }
   };
 
@@ -118,6 +144,13 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
+
+  const categoryOptions = categories.map((cat) => ({
+    label: cat.name,
+    value: cat.id,
+  }));
+
+  const selectedCategory = categoryOptions.find((opt) => opt.value === activityCategoryId) || null;
 
   return (
     <>
@@ -150,6 +183,19 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
                 onBlur={() => validateName(name)}
                 placeholder="Enter activity type name"
                 disabled={isLoading}
+              />
+            </FormField>
+            <FormField label="Activity Category" errorText={categoryError}>
+              <Select
+                selectedOption={selectedCategory}
+                onChange={({ detail }) => {
+                  setActivityCategoryId(detail.selectedOption.value || '');
+                  if (categoryError) validateCategory(detail.selectedOption.value || '');
+                }}
+                options={categoryOptions}
+                placeholder="Select activity category"
+                disabled={isLoading}
+                empty="No categories available"
               />
             </FormField>
           </SpaceBetween>

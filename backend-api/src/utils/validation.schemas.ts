@@ -19,13 +19,25 @@ export const RefreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
-// Activity Type schemas
-export const ActivityTypeCreateSchema = z.object({
+// Activity Category schemas
+export const ActivityCategoryCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
 });
 
-export const ActivityTypeUpdateSchema = z.object({
+export const ActivityCategoryUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
+  version: z.number().int().positive().optional(),
+});
+
+// Activity Type schemas
+export const ActivityTypeCreateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
+  activityCategoryId: z.string().uuid('Invalid activity category ID format'),
+});
+
+export const ActivityTypeUpdateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters').optional(),
+  activityCategoryId: z.string().uuid('Invalid activity category ID format').optional(),
   version: z.number().int().positive().optional(),
 });
 
@@ -139,6 +151,7 @@ export const EngagementQuerySchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  activityCategoryId: z.string().uuid('Invalid activity category ID format').optional(),
   activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
   venueId: z.string().uuid('Invalid venue ID format').optional(),
   groupBy: z.union([
@@ -191,6 +204,8 @@ export const ParticipantAddressHistoryUpdateSchema = z.object({
 
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
+export type ActivityCategoryCreateInput = z.infer<typeof ActivityCategoryCreateSchema>;
+export type ActivityCategoryUpdateInput = z.infer<typeof ActivityCategoryUpdateSchema>;
 export type ActivityTypeCreateInput = z.infer<typeof ActivityTypeCreateSchema>;
 export type ActivityTypeUpdateInput = z.infer<typeof ActivityTypeUpdateSchema>;
 export type RoleCreateInput = z.infer<typeof RoleCreateSchema>;

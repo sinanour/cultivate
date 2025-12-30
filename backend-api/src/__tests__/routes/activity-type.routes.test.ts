@@ -17,7 +17,7 @@ describe('ActivityTypeRoutes', () => {
         app = express();
         app.use(express.json());
 
-        mockService = new ActivityTypeService(null as any) as jest.Mocked<ActivityTypeService>;
+        mockService = new ActivityTypeService(null as any, null as any) as jest.Mocked<ActivityTypeService>;
         mockAuthMiddleware = new AuthMiddleware(null as any) as jest.Mocked<AuthMiddleware>;
         mockAuthzMiddleware = new AuthorizationMiddleware() as jest.Mocked<AuthorizationMiddleware>;
 
@@ -59,7 +59,7 @@ describe('ActivityTypeRoutes', () => {
 
     describe('POST /api/activity-types', () => {
         it('should create activity type', async () => {
-            const input = { name: 'Workshop' };
+            const input = { name: 'Workshop', activityCategoryId: '123e4567-e89b-12d3-a456-426614174000' };
             const mockType = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date() };
             mockService.createActivityType = jest.fn().mockResolvedValue(mockType);
 
@@ -74,12 +74,13 @@ describe('ActivityTypeRoutes', () => {
         });
 
         it('should return 400 for duplicate name', async () => {
+            const input = { name: 'Workshop', activityCategoryId: '123e4567-e89b-12d3-a456-426614174000' };
             mockService.createActivityType = jest.fn().mockRejectedValue(new Error('Activity type with this name already exists'));
 
             const response = await request(app)
                 .post('/api/activity-types')
                 .set('Authorization', 'Bearer valid-token')
-                .send({ name: 'Workshop' });
+                .send(input);
 
             expect(response.status).toBe(400);
             expect(response.body).toHaveProperty('code', 'DUPLICATE_NAME');

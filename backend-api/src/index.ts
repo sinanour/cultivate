@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import { getPrismaClient, disconnectPrisma } from './utils/prisma.client';
 import { openApiSpec } from './utils/openapi.spec';
 import { UserRepository } from './repositories/user.repository';
+import { ActivityCategoryRepository } from './repositories/activity-category.repository';
 import { ActivityTypeRepository } from './repositories/activity-type.repository';
 import { RoleRepository } from './repositories/role.repository';
 import { ParticipantRepository } from './repositories/participant.repository';
@@ -15,6 +16,7 @@ import { ActivityRepository } from './repositories/activity.repository';
 import { ActivityVenueHistoryRepository } from './repositories/activity-venue-history.repository';
 import { AssignmentRepository } from './repositories/assignment.repository';
 import { AuthService } from './services/auth.service';
+import { ActivityCategoryService } from './services/activity-category.service';
 import { ActivityTypeService } from './services/activity-type.service';
 import { RoleService } from './services/role.service';
 import { ParticipantService } from './services/participant.service';
@@ -33,6 +35,7 @@ import {
   addRateLimitHeaders,
 } from './middleware/rate-limit.middleware';
 import { AuthRoutes } from './routes/auth.routes';
+import { ActivityCategoryRoutes } from './routes/activity-category.routes';
 import { ActivityTypeRoutes } from './routes/activity-type.routes';
 import { RoleRoutes } from './routes/role.routes';
 import { ParticipantRoutes } from './routes/participant.routes';
@@ -54,6 +57,7 @@ const prisma = getPrismaClient();
 
 // Initialize repositories
 const userRepository = new UserRepository(prisma);
+const activityCategoryRepository = new ActivityCategoryRepository(prisma);
 const activityTypeRepository = new ActivityTypeRepository(prisma);
 const roleRepository = new RoleRepository(prisma);
 const participantRepository = new ParticipantRepository(prisma);
@@ -66,7 +70,8 @@ const assignmentRepository = new AssignmentRepository(prisma);
 
 // Initialize services
 const authService = new AuthService(userRepository);
-const activityTypeService = new ActivityTypeService(activityTypeRepository);
+const activityCategoryService = new ActivityCategoryService(activityCategoryRepository);
+const activityTypeService = new ActivityTypeService(activityTypeRepository, activityCategoryRepository);
 const roleService = new RoleService(roleRepository);
 const participantService = new ParticipantService(
   participantRepository,
@@ -100,6 +105,11 @@ const authorizationMiddleware = new AuthorizationMiddleware();
 
 // Initialize routes
 const authRoutes = new AuthRoutes(authService, authMiddleware);
+const activityCategoryRoutes = new ActivityCategoryRoutes(
+  activityCategoryService,
+  authMiddleware,
+  authorizationMiddleware
+);
 const activityTypeRoutes = new ActivityTypeRoutes(
   activityTypeService,
   authMiddleware,
@@ -156,6 +166,7 @@ app.get('/api/v1/docs/openapi.json', (_req, res) => {
 
 // API Routes (v1)
 app.use('/api/v1/auth', authRateLimiter, authRoutes.getRouter());
+app.use('/api/v1/activity-categories', smartRateLimiter, activityCategoryRoutes.getRouter());
 app.use('/api/v1/activity-types', smartRateLimiter, activityTypeRoutes.getRouter());
 app.use('/api/v1/roles', smartRateLimiter, roleRoutes.getRouter());
 app.use('/api/v1/participants', smartRateLimiter, participantRoutes.getRouter());

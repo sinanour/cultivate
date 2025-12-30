@@ -24,9 +24,14 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 
   - [x] 2.2 Create initial database migration
     - Generate migration from Prisma schema
-    - Include seed data for predefined activity types: "Children's Class", "Junior Youth Group", "Devotional Gathering", "Ruhi Book 1", "Ruhi Book 2", "Ruhi Book 3", "Ruhi Book 3A", "Ruhi Book 3B", "Ruhi Book 3C", "Ruhi Book 3D", "Ruhi Book 4", "Ruhi Book 5", "Ruhi Book 5A", "Ruhi Book 5B", "Ruhi Book 6", "Ruhi Book 7", "Ruhi Book 8", "Ruhi Book 9", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
+    - Include seed data for predefined activity categories: "Study Circles", "Children's Classes", "Junior Youth Groups", "Devotional Gatherings"
+    - Include seed data for predefined activity types with category mappings:
+      - Category "Children's Classes": "Children's Class"
+      - Category "Junior Youth Groups": "Junior Youth Group"
+      - Category "Devotional Gatherings": "Devotional Gathering"
+      - Category "Study Circles": "Ruhi Book 1", "Ruhi Book 2", "Ruhi Book 3", "Ruhi Book 3A", "Ruhi Book 3B", "Ruhi Book 3C", "Ruhi Book 3D", "Ruhi Book 4", "Ruhi Book 5", "Ruhi Book 5A", "Ruhi Book 5B", "Ruhi Book 6", "Ruhi Book 7", "Ruhi Book 8", "Ruhi Book 9", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
     - Include seed data for predefined roles: "Tutor", "Teacher", "Animator", "Host", "Participant"
-    - _Requirements: 1.7, 2.7, 8.6_
+    - _Requirements: 1.7, 1.16, 2.7, 8.6_
 
   - [ ]* 2.3 Write property test for foreign key constraint enforcement
     - **Property 34: Foreign Key Constraint Enforcement**
@@ -105,19 +110,19 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 - [x] 4. Checkpoint - Verify authentication and authorization
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 5. Implement activity type management
-  - [x] 5.1 Create activity type repository
+- [x] 5. Implement activity category and type management
+  - [x] 5.1 Create activity category repository
     - Implement CRUD operations using Prisma
     - Implement reference counting for deletion validation
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.6_
 
-  - [x] 5.2 Create activity type service
+  - [x] 5.2 Create activity category service
     - Implement business logic for CRUD operations
     - Validate name uniqueness
-    - Prevent deletion if activities reference the type
+    - Prevent deletion if activity types reference the category
     - _Requirements: 1.5, 1.6_
 
-  - [ ]* 5.3 Write property tests for activity type operations
+  - [ ]* 5.3 Write property tests for activity category operations
     - **Property 1: Resource Creation Persistence**
     - **Property 2: Resource Update Persistence**
     - **Property 3: Resource Deletion Removes Resource**
@@ -125,15 +130,45 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 13: Referenced Entity Deletion Prevention**
     - **Validates: Requirements 1.2, 1.3, 1.4, 1.5, 1.6**
 
-  - [x] 5.4 Create activity type routes
-    - GET /api/activity-types
-    - POST /api/activity-types
-    - PUT /api/activity-types/:id
-    - DELETE /api/activity-types/:id
+  - [x] 5.4 Create activity category routes
+    - GET /api/v1/activity-categories
+    - POST /api/v1/activity-categories
+    - PUT /api/v1/activity-categories/:id
+    - DELETE /api/v1/activity-categories/:id
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-  - [x] 5.5 Create Zod validation schemas
-    - ActivityTypeCreateSchema
+  - [x] 5.5 Create activity type repository
+    - Implement CRUD operations using Prisma
+    - Implement reference counting for deletion validation
+    - Include activity category relation in queries
+    - _Requirements: 1.8, 1.9, 1.10, 1.11, 1.15, 1.17_
+
+  - [x] 5.6 Create activity type service
+    - Implement business logic for CRUD operations
+    - Validate name uniqueness
+    - Validate activity category exists
+    - Prevent deletion if activities reference the type
+    - _Requirements: 1.12, 1.13, 1.14, 1.15_
+
+  - [ ]* 5.7 Write property tests for activity type operations
+    - **Property 1: Resource Creation Persistence**
+    - **Property 2: Resource Update Persistence**
+    - **Property 3: Resource Deletion Removes Resource**
+    - **Property 4: Name Uniqueness Enforcement**
+    - **Property 13: Referenced Entity Deletion Prevention**
+    - **Validates: Requirements 1.9, 1.10, 1.11, 1.12, 1.15**
+
+  - [x] 5.8 Create activity type routes
+    - GET /api/v1/activity-types
+    - POST /api/v1/activity-types
+    - PUT /api/v1/activity-types/:id
+    - DELETE /api/v1/activity-types/:id
+    - _Requirements: 1.8, 1.9, 1.10, 1.11_
+
+  - [x] 5.9 Create Zod validation schemas
+    - ActivityCategoryCreateSchema
+    - ActivityCategoryUpdateSchema
+    - ActivityTypeCreateSchema (with activityCategoryId)
     - ActivityTypeUpdateSchema
     - _Requirements: 15.1, 15.4_
 
@@ -351,16 +386,16 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Calculate activities at start and end of date range
     - Calculate activities started, completed, and cancelled within date range
     - Calculate participants at start and end of date range
-    - Provide aggregate counts and breakdowns by activity type
-    - Support multi-dimensional grouping (activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity)
-    - Support flexible filtering (point filters for activity type, venue, geographic area; range filter for dates)
+    - Provide aggregate counts and breakdowns by activity category and activity type
+    - Support multi-dimensional grouping (activity category, activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity)
+    - Support flexible filtering (point filters for activity category, activity type, venue, geographic area; range filter for dates)
     - Apply multiple filters using AND logic
     - Calculate role distribution within filtered and grouped results
     - Implement growth metrics calculation
     - Implement geographic breakdown calculation
     - Support date range filtering
     - Support geographic area filtering
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
 
   - [ ]* 13.2 Write property tests for analytics calculations
     - **Property 20: Activities at Start of Date Range Counting**
@@ -371,10 +406,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 25: Participants at Start of Date Range Counting**
     - **Property 26: Participants at End of Date Range Counting**
     - **Property 27: Aggregate Activity Counts**
+    - **Property 27A: Activity Counts by Category Breakdown**
     - **Property 28: Activity Counts by Type Breakdown**
     - **Property 29: Aggregate Participant Counts**
+    - **Property 29A: Participant Counts by Category Breakdown**
     - **Property 30: Participant Counts by Type Breakdown**
     - **Property 31: Multi-Dimensional Grouping Support**
+    - **Property 31A: Activity Category Point Filter**
     - **Property 32: Activity Type Point Filter**
     - **Property 33: Venue Point Filter**
     - **Property 34: Geographic Area Point Filter**
@@ -387,7 +425,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 41: New Activity Counting Per Period**
     - **Property 42: Chronological Ordering**
     - **Property 43: Percentage Change Calculation for Activities**
-    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 7.2, 7.4, 7.5, 7.6**
+    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.2, 7.4, 7.5, 7.6**
 
   - [x] 13.3 Create analytics routes
     - GET /api/analytics/engagement

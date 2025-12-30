@@ -24,7 +24,7 @@ export function AppLayout() {
       type: 'section',
       text: 'Configuration',
       items: [
-        { type: 'link', text: 'Activity Types', href: '/activity-types' },
+        { type: 'link', text: 'Activity Configuration', href: '/configuration' },
         { type: 'link', text: 'Participant Roles', href: '/participant-roles' },
       ],
     },

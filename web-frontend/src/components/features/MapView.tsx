@@ -5,7 +5,6 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Icon, divIcon, point, type LatLngBoundsExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Box from '@cloudscape-design/components/box';
-import Badge from '@cloudscape-design/components/badge';
 import Link from '@cloudscape-design/components/link';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import { ActivityService } from '../../services/api/activity.service';
@@ -65,7 +64,7 @@ const createClusterCustomIcon = (cluster: any) => {
   });
 };
 
-type MapMode = 'activities' | 'participantHomes' | 'venues';
+type MapMode = 'activities' | 'participantHomes' | 'venues' | 'activityCategories';
 
 interface MapViewProps {
   mode: MapMode;
@@ -164,15 +163,33 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
     enabled: participants.length > 0 && mapMode === 'participantHomes',
   });
 
-  // Build activity type color map
+  // Build activity category color map (for Activity Categories mode)
+  const activityCategoryColorMap = new Map<string, string>();
+  const uniqueCategories = new Map<string, { id: string; name: string }>();
+  
+  activityTypes.forEach((type) => {
+    if (type.activityCategory) {
+      uniqueCategories.set(type.activityCategory.id, {
+        id: type.activityCategory.id,
+        name: type.activityCategory.name,
+      });
+    }
+  });
+
+  const categoryColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+  Array.from(uniqueCategories.values()).forEach((category, index) => {
+    activityCategoryColorMap.set(category.id, categoryColors[index % categoryColors.length]);
+  });
+
+  // Build activity type color map (for Activities mode)
   const activityTypeColorMap = new Map<string, string>();
+  const typeColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#a855f7', '#f43f5e'];
   activityTypes.forEach((type, index) => {
-    const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
-    activityTypeColorMap.set(type.id, colors[index % colors.length]);
+    activityTypeColorMap.set(type.id, typeColors[index % typeColors.length]);
   });
 
   // Prepare markers based on mode
-  const markers = mapMode === 'activities'
+  const markers = mapMode === 'activities' || mapMode === 'activityCategories'
     ? activities
         .map((activity) => {
           const venueHistory = activityVenueMap.get(activity.id);
@@ -239,8 +256,22 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
       );
       return map;
     },
-    enabled: activities.length > 0 && mapMode === 'activities',
+    enabled: activities.length > 0 && (mapMode === 'activities' || mapMode === 'activityCategories'),
   });
+
+  // Group activities by category for Activity Categories mode
+  const activitiesByCategory = new Map<string, Activity[]>();
+  if (mapMode === 'activityCategories') {
+    activities.forEach((activity) => {
+      const categoryId = activity.activityType?.activityCategory?.id;
+      if (categoryId) {
+        if (!activitiesByCategory.has(categoryId)) {
+          activitiesByCategory.set(categoryId, []);
+        }
+        activitiesByCategory.get(categoryId)!.push(activity);
+      }
+    });
+  }
 
   // Default center
   const defaultCenter: [number, number] = markers.length > 0
@@ -252,11 +283,12 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
       activities: 'Activities need venues with coordinates to display on the map.',
       participantHomes: 'Participants need home addresses with coordinates to display on the map.',
       venues: 'No venues with coordinates found. Add latitude and longitude to venues to display them on the map.',
+      activityCategories: 'Activities need venues with coordinates to display on the map.',
     };
 
     return (
       <Box textAlign="center" padding="xxl">
-        <b>No {mapMode === 'activities' ? 'activities' : mapMode === 'participantHomes' ? 'participant homes' : 'venues'} with coordinates</b>
+        <b>No {mapMode === 'activities' ? 'activities' : mapMode === 'participantHomes' ? 'participant homes' : mapMode === 'activityCategories' ? 'activities' : 'venues'} with coordinates</b>
         <Box padding={{ top: 's' }} variant="p">
           {emptyMessages[mapMode]}
         </Box>
@@ -340,7 +372,7 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
         }
       `}</style>
 
-      {/* Legend (only in Activities mode) - positioned BEFORE MapContainer */}
+      {/* Legend - positioned BEFORE MapContainer */}
       {mapMode === 'activities' && activityTypes.length > 0 && (
         <div className="map-legend">
           <Box variant="strong" fontSize="body-s" padding={{ bottom: 'xs' }}>
@@ -353,6 +385,22 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
                 style={{ backgroundColor: activityTypeColorMap.get(type.id) || '#3b82f6' }}
               />
               <span className="legend-label">{type.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {mapMode === 'activityCategories' && uniqueCategories.size > 0 && (
+        <div className="map-legend">
+          <Box variant="strong" fontSize="body-s" padding={{ bottom: 'xs' }}>
+            Activity Categories
+          </Box>
+          {Array.from(uniqueCategories.values()).map((category) => (
+            <div key={category.id} className="legend-item">
+              <div
+                className="legend-color"
+                style={{ backgroundColor: activityCategoryColorMap.get(category.id) || '#3b82f6' }}
+              />
+              <span className="legend-label">{category.name}</span>
             </div>
           ))}
         </div>
@@ -377,7 +425,7 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
           iconCreateFunction={createClusterCustomIcon}
         >
           {mapMode === 'activities'
-            ? // Activities mode: show activity markers
+            ? // Activities mode: show activity markers colored by activity type
               markers.map((marker: any) => {
                 const activity = marker.activity as Activity;
                 const color = activityTypeColorMap.get(activity.activityTypeId) || '#3b82f6';
@@ -397,14 +445,78 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
                           </Link>
                         </Box>
                         <SpaceBetween size="xs" direction="vertical">
+                          {activity.activityType?.activityCategory && (
+                            <Box variant="small" color="text-body-secondary">
+                              <strong>Category:</strong> {activity.activityType.activityCategory.name}
+                            </Box>
+                          )}
+                          {activity.activityType && (
+                            <Box variant="small" color="text-body-secondary">
+                              <strong>Type:</strong> {activity.activityType.name}
+                            </Box>
+                          )}
                           <Box variant="small" color="text-body-secondary">
                             <strong>Start Date:</strong> {formatDate(activity.startDate)}
                           </Box>
                           <Box variant="small" color="text-body-secondary">
                             <strong>Participants:</strong> {participantCount}
                           </Box>
+                        </SpaceBetween>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })
+            : mapMode === 'activityCategories'
+            ? // Activity Categories mode: show activity markers colored by category
+              markers.map((marker: any) => {
+                const activity = marker.activity as Activity;
+                const categoryId = activity.activityType?.activityCategory?.id;
+                const color = categoryId ? (activityCategoryColorMap.get(categoryId) || '#3b82f6') : '#3b82f6';
+                const participantCount = activityParticipantCounts.get(activity.id) || 0;
+
+                return (
+                  <Marker
+                    key={activity.id}
+                    position={marker.position}
+                    icon={createColoredIcon(color)}
+                  >
+                    <Popup>
+                      <div style={{ minWidth: '200px' }}>
+                        <Box variant="h4">
+                          <Link href={`/activities/${activity.id}`} fontSize="heading-m">
+                            {activity.name}
+                          </Link>
+                        </Box>
+                        <SpaceBetween size="xs" direction="vertical">
+                          {activity.activityType?.activityCategory && (
+                            <Box variant="small" color="text-body-secondary">
+                              <strong>Category:</strong> {activity.activityType.activityCategory.name}
+                            </Box>
+                          )}
                           {activity.activityType && (
-                            <Badge color="blue">{activity.activityType.name}</Badge>
+                            <Box variant="small" color="text-body-secondary">
+                              <strong>Type:</strong> {activity.activityType.name}
+                            </Box>
+                          )}
+                          <Box variant="small" color="text-body-secondary">
+                            <strong>Start Date:</strong> {formatDate(activity.startDate)}
+                          </Box>
+                          <Box variant="small" color="text-body-secondary">
+                            <strong>Participants:</strong> {participantCount}
+                          </Box>
+                          {activity.activityType?.activityCategory && (
+                            <div style={{ 
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: color,
+                              color: 'white',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                            }}>
+                              {activity.activityType.activityCategory.name}
+                            </div>
                           )}
                         </SpaceBetween>
                       </div>

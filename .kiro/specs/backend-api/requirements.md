@@ -16,22 +16,38 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Audit_Log**: A record of user actions for security and compliance
 - **Venue**: A physical location where activities occur, representing either a public building or private residence with an address
 - **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, county, province, state, country, etc.)
+- **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
+- **Activity_Type**: A specific category of activity that belongs to an Activity_Category
 
 ## Requirements
 
-### Requirement 1: Manage Activity Types
+### Requirement 1: Manage Activity Categories and Types
 
-**User Story:** As a community organizer, I want to define and manage activity types via API, so that I can categorize different kinds of community-building activities.
+**User Story:** As a community organizer, I want to define and manage activity categories and types via API, so that I can organize and categorize different kinds of community-building activities at multiple levels of granularity.
 
 #### Acceptance Criteria
 
-1. THE API SHALL provide a GET /api/v1/activity-types endpoint that returns all activity types
-2. THE API SHALL provide a POST /api/v1/activity-types endpoint that creates a new activity type
-3. THE API SHALL provide a PUT /api/v1/activity-types/:id endpoint that updates an activity type
-4. THE API SHALL provide a DELETE /api/v1/activity-types/:id endpoint that deletes an activity type
-5. WHEN creating an activity type, THE API SHALL validate that the name is provided and unique
-6. WHEN deleting an activity type, THE API SHALL prevent deletion if activities reference it
-7. THE API SHALL seed the following predefined activity types on initial database setup: "Children's Class", "Junior Youth Group", "Devotional Gathering", "Ruhi Book 1", "Ruhi Book 2", "Ruhi Book 3", "Ruhi Book 3A", "Ruhi Book 3B", "Ruhi Book 3C", "Ruhi Book 3D", "Ruhi Book 4", "Ruhi Book 5", "Ruhi Book 5A", "Ruhi Book 5B", "Ruhi Book 6", "Ruhi Book 7", "Ruhi Book 8", "Ruhi Book 9", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
+1. THE API SHALL provide a GET /api/v1/activity-categories endpoint that returns all activity categories
+2. THE API SHALL provide a POST /api/v1/activity-categories endpoint that creates a new activity category
+3. THE API SHALL provide a PUT /api/v1/activity-categories/:id endpoint that updates an activity category
+4. THE API SHALL provide a DELETE /api/v1/activity-categories/:id endpoint that deletes an activity category
+5. WHEN creating an activity category, THE API SHALL validate that the name is provided and unique
+6. WHEN deleting an activity category, THE API SHALL prevent deletion if activity types reference it
+7. THE API SHALL seed the following predefined activity categories on initial database setup: "Study Circles", "Children's Classes", "Junior Youth Groups", "Devotional Gatherings"
+8. THE API SHALL provide a GET /api/v1/activity-types endpoint that returns all activity types
+9. THE API SHALL provide a POST /api/v1/activity-types endpoint that creates a new activity type
+10. THE API SHALL provide a PUT /api/v1/activity-types/:id endpoint that updates an activity type
+11. THE API SHALL provide a DELETE /api/v1/activity-types/:id endpoint that deletes an activity type
+12. WHEN creating an activity type, THE API SHALL validate that the name is provided and unique
+13. WHEN creating an activity type, THE API SHALL require an activity category ID
+14. WHEN creating an activity type, THE API SHALL validate that the activity category exists
+15. WHEN deleting an activity type, THE API SHALL prevent deletion if activities reference it
+16. THE API SHALL seed the following predefined activity types on initial database setup with their corresponding categories:
+    - Category "Children's Classes": "Children's Class"
+    - Category "Junior Youth Groups": "Junior Youth Group"
+    - Category "Devotional Gatherings": "Devotional Gathering"
+    - Category "Study Circles": "Ruhi Book 1", "Ruhi Book 2", "Ruhi Book 3", "Ruhi Book 3A", "Ruhi Book 3B", "Ruhi Book 3C", "Ruhi Book 3D", "Ruhi Book 4", "Ruhi Book 5", "Ruhi Book 5A", "Ruhi Book 5B", "Ruhi Book 6", "Ruhi Book 7", "Ruhi Book 8", "Ruhi Book 9", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
+17. WHEN retrieving activity types, THE API SHALL include the associated activity category information
 
 ### Requirement 2: Manage Participant Roles
 
@@ -169,20 +185,23 @@ The Backend API package provides the RESTful API service that implements all bus
 6. WHEN calculating engagement metrics with a date range, THE API SHALL count activities that were cancelled within the date range
 7. WHEN calculating engagement metrics with a date range, THE API SHALL count unique participants at the start of the date range
 8. WHEN calculating engagement metrics with a date range, THE API SHALL count unique participants at the end of the date range
-9. THE API SHALL provide activity counts in aggregate across all activity types
-10. THE API SHALL provide activity counts broken down by activity type
-11. THE API SHALL provide participant counts in aggregate across all activity types
-12. THE API SHALL provide participant counts broken down by activity type
-13. THE API SHALL support grouping engagement metrics by one or more dimensions: activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
-14. THE API SHALL support filtering engagement metrics by activity type (point filter)
-15. THE API SHALL support filtering engagement metrics by venue (point filter)
-16. THE API SHALL support filtering engagement metrics by geographic area (point filter, includes descendants)
-17. THE API SHALL support filtering engagement metrics by date range (range filter with start and end dates)
-18. WHEN multiple grouping dimensions are specified, THE API SHALL return metrics organized hierarchically by the specified dimensions in order
-19. WHEN multiple filters are specified, THE API SHALL apply all filters using AND logic
-20. WHEN no date range is provided, THE API SHALL calculate metrics for all time
-21. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
-22. THE API SHALL return role distribution across all activities within the filtered and grouped results
+9. THE API SHALL provide activity counts in aggregate across all activity categories and types
+10. THE API SHALL provide activity counts broken down by activity category
+11. THE API SHALL provide activity counts broken down by activity type
+12. THE API SHALL provide participant counts in aggregate across all activity categories and types
+13. THE API SHALL provide participant counts broken down by activity category
+14. THE API SHALL provide participant counts broken down by activity type
+15. THE API SHALL support grouping engagement metrics by one or more dimensions: activity category, activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
+16. THE API SHALL support filtering engagement metrics by activity category (point filter)
+17. THE API SHALL support filtering engagement metrics by activity type (point filter)
+18. THE API SHALL support filtering engagement metrics by venue (point filter)
+19. THE API SHALL support filtering engagement metrics by geographic area (point filter, includes descendants)
+20. THE API SHALL support filtering engagement metrics by date range (range filter with start and end dates)
+21. WHEN multiple grouping dimensions are specified, THE API SHALL return metrics organized hierarchically by the specified dimensions in order
+22. WHEN multiple filters are specified, THE API SHALL apply all filters using AND logic
+23. WHEN no date range is provided, THE API SHALL calculate metrics for all time
+24. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
+25. THE API SHALL return role distribution across all activities within the filtered and grouped results
 
 ### Requirement 7: Track Growth Over Time
 

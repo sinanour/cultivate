@@ -1,15 +1,19 @@
 import { ActivityTypeService } from '../../services/activity-type.service';
 import { ActivityTypeRepository } from '../../repositories/activity-type.repository';
+import { ActivityCategoryRepository } from '../../repositories/activity-category.repository';
 
 jest.mock('../../repositories/activity-type.repository');
+jest.mock('../../repositories/activity-category.repository');
 
 describe('ActivityTypeService', () => {
     let service: ActivityTypeService;
     let mockRepository: jest.Mocked<ActivityTypeRepository>;
+    let mockCategoryRepository: jest.Mocked<ActivityCategoryRepository>;
 
     beforeEach(() => {
         mockRepository = new ActivityTypeRepository(null as any) as jest.Mocked<ActivityTypeRepository>;
-        service = new ActivityTypeService(mockRepository);
+        mockCategoryRepository = new ActivityCategoryRepository(null as any) as jest.Mocked<ActivityCategoryRepository>;
+        service = new ActivityTypeService(mockRepository, mockCategoryRepository);
         jest.clearAllMocks();
     });
 
@@ -38,22 +42,24 @@ describe('ActivityTypeService', () => {
 
     describe('createActivityType', () => {
         it('should create activity type with valid data', async () => {
-            const input = { name: 'Ruhi Book 1' };
-            const mockType = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date(), version: 1 };
+            const input = { name: 'Ruhi Book 1', activityCategoryId: 'cat-1' };
+            const mockType = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false, activityCategory: { id: 'cat-1', name: 'Study Circles', isPredefined: true, version: 1, createdAt: new Date(), updatedAt: new Date() } };
 
             mockRepository.findByName = jest.fn().mockResolvedValue(null);
+            mockCategoryRepository.findById = jest.fn().mockResolvedValue({ id: 'cat-1', name: 'Study Circles', isPredefined: true, version: 1, createdAt: new Date(), updatedAt: new Date() });
             mockRepository.create = jest.fn().mockResolvedValue(mockType);
 
             const result = await service.createActivityType(input);
 
             expect(result).toEqual({ ...mockType, isPredefined: true });
             expect(mockRepository.findByName).toHaveBeenCalledWith('Ruhi Book 1');
+            expect(mockCategoryRepository.findById).toHaveBeenCalledWith('cat-1');
             expect(mockRepository.create).toHaveBeenCalledWith(input);
         });
 
         it('should throw error for duplicate name', async () => {
-            const input = { name: 'Ruhi Book 1' };
-            const existing = { id: '1', name: 'Ruhi Book 1', createdAt: new Date(), updatedAt: new Date() };
+            const input = { name: 'Ruhi Book 1', activityCategoryId: 'cat-1' };
+            const existing = { id: '1', name: 'Ruhi Book 1', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findByName = jest.fn().mockResolvedValue(existing);
 
@@ -61,9 +67,18 @@ describe('ActivityTypeService', () => {
         });
 
         it('should throw error for missing name', async () => {
-            const input = { name: '' };
+            const input = { name: '', activityCategoryId: 'cat-1' };
 
             await expect(service.createActivityType(input)).rejects.toThrow('required');
+        });
+
+        it('should throw error for non-existent category', async () => {
+            const input = { name: 'New Type', activityCategoryId: 'invalid-cat' };
+
+            mockRepository.findByName = jest.fn().mockResolvedValue(null);
+            mockCategoryRepository.findById = jest.fn().mockResolvedValue(null);
+
+            await expect(service.createActivityType(input)).rejects.toThrow('does not exist');
         });
     });
 
@@ -125,12 +140,12 @@ describe('ActivityTypeService', () => {
 
         it('should throw error when activity type is referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Custom Type', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Custom Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date() };
 
             mockRepository.findById = jest.fn().mockResolvedValue(existing);
             mockRepository.countReferences = jest.fn().mockResolvedValue(5);
 
-            await expect(service.deleteActivityType(id)).rejects.toThrow('referenced by');
+            await expect(service.deleteActivityType(id)).rejects.toThrow('reference');
         });
     });
 });

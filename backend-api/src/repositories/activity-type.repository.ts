@@ -4,20 +4,26 @@ export class ActivityTypeRepository {
   constructor(private prisma: PrismaClient) {}
 
   /**
-   * Find all activity types
+   * Find all activity types with category information
    */
   async findAll(): Promise<ActivityType[]> {
     return this.prisma.activityType.findMany({
+      include: {
+        activityCategory: true,
+      },
       orderBy: { name: 'asc' },
     });
   }
 
   /**
-   * Find activity type by ID
+   * Find activity type by ID with category information
    */
   async findById(id: string): Promise<ActivityType | null> {
     return this.prisma.activityType.findUnique({
       where: { id },
+      include: {
+        activityCategory: true,
+      },
     });
   }
 
@@ -33,16 +39,26 @@ export class ActivityTypeRepository {
   /**
    * Create a new activity type
    */
-  async create(data: { name: string }): Promise<ActivityType> {
+  async create(data: { name: string; activityCategoryId: string }): Promise<ActivityType> {
     return this.prisma.activityType.create({
-      data,
+      data: {
+        name: data.name,
+        activityCategoryId: data.activityCategoryId,
+        isPredefined: false,
+      },
+      include: {
+        activityCategory: true,
+      },
     });
   }
 
   /**
    * Update an activity type
    */
-  async update(id: string, data: { name: string; version?: number }): Promise<ActivityType> {
+  async update(
+    id: string,
+    data: { name?: string; activityCategoryId?: string; version?: number }
+  ): Promise<ActivityType> {
     const { version, ...updateData } = data;
 
     // If version is provided, check for conflicts
@@ -66,6 +82,9 @@ export class ActivityTypeRepository {
       data: {
         ...updateData,
         version: { increment: 1 },
+      },
+      include: {
+        activityCategory: true,
       },
     });
   }

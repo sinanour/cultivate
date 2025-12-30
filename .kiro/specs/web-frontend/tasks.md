@@ -77,37 +77,63 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 4. Checkpoint - Verify authentication and routing
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 5. Implement activity type management UI
-  - [x] 5.1 Create ActivityTypeList component
+- [x] 5. Implement activity configuration UI
+  - [x] 5.1 Create ActivityCategoryList component
     - Display table using CloudScape Table
-    - Distinguish predefined vs custom types with badges
+    - Distinguish predefined vs custom categories with badges
     - Provide edit and delete actions
-    - Handle delete validation (REFERENCED_ENTITY error)
+    - Handle delete validation (REFERENCED_ENTITY error when activity types reference it)
     - Display version number for debugging
-    - _Requirements: 2.1, 2.4, 2.5, 2.6_
+    - _Requirements: 2.2, 2.6, 2.7, 2.8_
 
-  - [ ]* 5.2 Write property test for type/role distinction
-    - **Property 1: Type/Role Distinction in Lists**
-    - **Validates: Requirements 2.1, 3.1**
-
-  - [ ]* 5.3 Write property test for referential integrity on deletion
-    - **Property 2: Referential Integrity on Deletion**
-    - **Validates: Requirements 2.5, 3.5**
-
-  - [ ]* 5.4 Write property test for deletion error messages
-    - **Property 3: Deletion Error Messages**
-    - **Validates: Requirements 2.6, 3.6**
-
-  - [x] 5.2 Create ActivityTypeForm component
+  - [x] 5.2 Create ActivityCategoryForm component
     - Modal form for create/edit
     - Validate name is not empty
     - Include version field in update requests for optimistic locking
     - Submit to API and update cache
-    - _Requirements: 2.2, 2.3, 2.7_
+    - _Requirements: 2.4, 2.5, 2.9_
 
-  - [ ]* 5.5 Write property test for non-empty name validation
+  - [x] 5.3 Create ActivityTypeList component
+    - Display table using CloudScape Table
+    - Group activity types by their category
+    - Distinguish predefined vs custom types with badges
+    - Show associated activity category for each type
+    - Provide edit and delete actions
+    - Handle delete validation (REFERENCED_ENTITY error when activities reference it)
+    - Display version number for debugging
+    - _Requirements: 2.3, 2.12, 2.14, 2.15_
+
+  - [ ]* 5.4 Write property test for type/role distinction
+    - **Property 1: Type/Role Distinction in Lists**
+    - **Validates: Requirements 2.1, 3.1**
+
+  - [ ]* 5.5 Write property test for referential integrity on deletion
+    - **Property 2: Referential Integrity on Deletion**
+    - **Validates: Requirements 2.5, 3.5**
+
+  - [ ]* 5.6 Write property test for deletion error messages
+    - **Property 3: Deletion Error Messages**
+    - **Validates: Requirements 2.6, 3.6**
+
+  - [x] 5.4 Create ActivityTypeForm component
+    - Modal form for create/edit
+    - Require activity category selection from dropdown
+    - Validate name is not empty
+    - Validate activity category is selected
+    - Include version field in update requests for optimistic locking
+    - Submit to API and update cache
+    - _Requirements: 2.10, 2.11, 2.13, 2.16_
+
+  - [ ]* 5.7 Write property test for non-empty name validation
     - **Property 4: Non-Empty Name Validation**
-    - **Validates: Requirements 2.7, 3.7**
+    - **Validates: Requirements 2.9, 2.16, 3.7**
+
+  - [x] 5.5 Create ConfigurationView page
+    - Unified interface for managing both categories and types
+    - Display categories and types in cohesive layout
+    - Show hierarchical relationship
+    - Provide easy navigation between category and type management
+    - _Requirements: 2.1_
 
 - [x] 6. Implement participant role management UI
   - [x] 6.1 Create ParticipantRoleList and ParticipantRoleForm components
@@ -349,7 +375,8 @@ This implementation plan covers the React-based web application built with TypeS
 
 - [x] 11. Implement activity management UI
   - [x] 11.1 Create ActivityList component
-    - Display table with filtering by type and status (PLANNED, ACTIVE, COMPLETED, CANCELLED)
+    - Display table with filtering by category, type, and status (PLANNED, ACTIVE, COMPLETED, CANCELLED)
+    - Show activity category and type
     - Visually distinguish finite vs ongoing
     - Provide sort capabilities
     - Support optional pagination
@@ -441,13 +468,13 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 13.1 Create MapView component
     - Render interactive map using Leaflet or Mapbox
     - Provide mode selector control to switch between "Activities", "Participant Homes", and "Venues" modes
-    - In Activities mode: display activity markers at current venue locations, color-coded by activity type
+    - In Activities mode: display activity markers at current venue locations, color-coded by activity category
     - In Participant Homes mode: display markers for participant home addresses (current venue from address history)
     - In Venues mode: display markers for all venues with coordinates, regardless of activities or participants
     - Implement marker clustering for dense areas
     - Provide mode-specific popup with information on marker click
     - Include map controls for zoom, pan, and center
-    - Display right-aligned legend in Activities mode showing activity type color mapping
+    - Display right-aligned legend in Activities mode showing activity category color mapping
     - Respect global geographic area filter across all modes
     - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22_
 
@@ -465,14 +492,14 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.19, 6C.20, 6C.21, 6C.22**
 
   - [x] 13.3 Create MapFilters component
-    - Provide filter controls for type, status, date range
+    - Provide filter controls for category, type, status, date range
     - Update markers based on filters
     - Support geographic area boundary toggle
     - Provide center button
     - _Requirements: 6C.14, 6C.15, 6C.17_
 
   - [x] 13.4 Create MapPopup component
-    - In Activities mode: display activity name (hyperlinked to /activities/:id), start date, and participant count
+    - In Activities mode: display activity name (hyperlinked to /activities/:id), category, type, start date, and participant count
     - In Participant Homes mode: display venue name (hyperlinked to /venues/:id) and count of participants at that address
     - In Venues mode: display venue name (hyperlinked to /venues/:id), address, and geographic area
     - Provide navigation to detail pages via hyperlinked names
@@ -488,14 +515,16 @@ This implementation plan covers the React-based web application built with TypeS
       - Activities at start/end of date range
       - Activities started, completed, cancelled within range
       - Participants at start/end of date range
-    - Display aggregate counts and breakdowns by activity type
-    - Render charts for activities by type and role distribution
+    - Display aggregate counts and breakdowns by activity category and activity type
+    - Render charts for activities by category, activities by type, and role distribution
     - Provide multi-dimensional grouping controls:
+      - Activity category grouping
       - Activity type grouping
       - Venue grouping
       - Geographic area grouping
       - Date grouping (weekly, monthly, quarterly, yearly)
     - Provide flexible filter controls:
+      - Activity category filter (dropdown)
       - Activity type filter (dropdown)
       - Venue filter (dropdown)
       - Geographic area filter (dropdown, includes descendants)
@@ -506,8 +535,9 @@ This implementation plan covers the React-based web application built with TypeS
       - When multiple grouping dimensions selected, leave subsequent dimension cells blank in Total row
       - Display metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
       - When grouping dimensions selected, render additional rows below Total row showing dimensional breakdowns:
-        - Display breakdown dimension columns first (activity type, venue, geographic area, date period)
+        - Display breakdown dimension columns first (activity category, activity type, venue, geographic area, date period)
         - Display metric aggregation columns after dimensions
+        - Render activity category names as hyperlinks to edit forms or detail views
         - Render activity type names as hyperlinks to edit forms or detail views
         - Render venue names as hyperlinks to /venues/:id using CloudScape Link component
         - Render geographic area names as hyperlinks to /geographic-areas/:id using CloudScape Link component
@@ -519,11 +549,11 @@ This implementation plan covers the React-based web application built with TypeS
     - Synchronize all filter and grouping parameters with URL query parameters:
       - Read URL parameters on component mount to initialize dashboard state
       - Update URL when user changes filters or grouping (using React Router's useSearchParams or similar)
-      - Support parameters: activityType, venue, geographicArea, startDate, endDate, groupBy (array), dateGranularity
+      - Support parameters: activityCategory, activityType, venue, geographicArea, startDate, endDate, groupBy (array), dateGranularity
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46_
 
   - [ ]* 14.2 Write property tests for engagement metrics
     - **Property 23: Temporal Activity Metrics Display**
@@ -545,7 +575,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31c: Analytics URL Update on State Change**
     - **Property 31d: Analytics Browser Navigation Support**
     - **Property 31e: Analytics URL Shareability**
-    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34**
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38**
 
   - [x] 14.2 Create GrowthDashboard component
     - Display time-series charts for new activities

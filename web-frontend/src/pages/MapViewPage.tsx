@@ -7,7 +7,7 @@ import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import { MapView } from '../components/features/MapView';
 import { ActivityTypeService } from '../services/api/activity-type.service';
 
-type MapMode = 'activities' | 'participantHomes' | 'venues';
+type MapMode = 'activities' | 'participantHomes' | 'venues' | 'activityCategories';
 
 export default function MapViewPage() {
   const [mapMode, setMapMode] = useState<MapMode>('activities');
@@ -30,6 +30,7 @@ export default function MapViewPage() {
                 onChange={({ detail }) => setMapMode(detail.selectedId as MapMode)}
                 options={[
                   { id: 'activities', text: 'Activities' },
+                  { id: 'activityCategories', text: 'By Category' },
                   { id: 'participantHomes', text: 'Participant Homes' },
                   { id: 'venues', text: 'Venues' }
                 ]}

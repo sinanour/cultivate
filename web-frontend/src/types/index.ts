@@ -1,8 +1,19 @@
 export * from './auth.types';
 
+export interface ActivityCategory {
+    id: string;
+    name: string;
+    isPredefined: boolean;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface ActivityType {
     id: string;
     name: string;
+    activityCategoryId: string;
+    activityCategory?: ActivityCategory;
     isPredefined: boolean;
     version: number;
     createdAt: string;
@@ -109,9 +120,23 @@ export interface Assignment {
     createdAt: string;
 }
 
+export interface ActivityCategoryBreakdown {
+    activityCategoryId: string;
+    activityCategoryName: string;
+    activitiesAtStart: number;
+    activitiesAtEnd: number;
+    activitiesStarted: number;
+    activitiesCompleted: number;
+    activitiesCancelled: number;
+    participantsAtStart: number;
+    participantsAtEnd: number;
+}
+
 export interface ActivityTypeBreakdown {
     activityTypeId: string;
     activityTypeName: string;
+    activityCategoryId: string;
+    activityCategoryName: string;
     activitiesAtStart: number;
     activitiesAtEnd: number;
     activitiesStarted: number;
@@ -155,6 +180,9 @@ export interface EngagementMetrics {
     totalActivities: number;
     totalParticipants: number;
 
+    // Breakdown by activity category
+    activitiesByCategory: ActivityCategoryBreakdown[];
+
     // Breakdown by activity type
     activitiesByType: ActivityTypeBreakdown[];
 
@@ -167,10 +195,11 @@ export interface EngagementMetrics {
     // Grouped results (when groupBy dimensions specified)
     groupedResults?: GroupedMetrics[];
 
-// Metadata
+    // Metadata
     periodStart: string;
     periodEnd: string;
     appliedFilters: {
+        activityCategoryId?: string;
         activityTypeId?: string;
         venueId?: string;
         geographicAreaId?: string;

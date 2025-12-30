@@ -24,7 +24,11 @@ export class ActivityRepository {
     return this.prisma.activity.findMany({
       orderBy: { startDate: 'desc' },
       include: {
-        activityType: true,
+        activityType: {
+          include: {
+            activityCategory: true,
+          },
+        },
       },
     });
   }
@@ -38,7 +42,11 @@ export class ActivityRepository {
         take: limit,
         orderBy: { startDate: 'desc' },
         include: {
-          activityType: true,
+          activityType: {
+            include: {
+              activityCategory: true,
+            },
+          },
         },
       }),
       this.prisma.activity.count(),
@@ -51,7 +59,11 @@ export class ActivityRepository {
     return this.prisma.activity.findUnique({
       where: { id },
       include: {
-        activityType: true,
+        activityType: {
+          include: {
+            activityCategory: true,
+          },
+        },
       },
     });
   }
@@ -61,7 +73,11 @@ export class ActivityRepository {
       where: { activityTypeId },
       orderBy: { startDate: 'desc' },
       include: {
-        activityType: true,
+        activityType: {
+          include: {
+            activityCategory: true,
+          },
+        },
       },
     });
   }
@@ -71,7 +87,11 @@ export class ActivityRepository {
       where: { status },
       orderBy: { startDate: 'desc' },
       include: {
-        activityType: true,
+        activityType: {
+          include: {
+            activityCategory: true,
+          },
+        },
       },
     });
   }
@@ -80,7 +100,11 @@ export class ActivityRepository {
     return this.prisma.activity.create({
       data,
       include: {
-        activityType: true,
+        activityType: {
+          include: {
+            activityCategory: true,
+          },
+        },
       },
     });
   }
@@ -111,7 +135,11 @@ export class ActivityRepository {
         version: { increment: 1 },
       },
       include: {
-        activityType: true,
+        activityType: {
+          include: {
+            activityCategory: true,
+          },
+        },
       },
     });
   }

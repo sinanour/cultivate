@@ -102,19 +102,41 @@ src/
 - Hides admin-only sections from non-administrators
 - Maintains navigation state across route changes
 
-#### 3. Activity Type Management
+#### 3. Activity Configuration Management
+
+**ActivityCategoryList**
+- Displays table of activity categories using CloudScape Table
+- Distinguishes predefined vs custom categories with badges
+- Renders activity category name as hyperlink in primary column (links to edit form or detail view)
+- Provides edit and delete actions per row (no separate View button)
+- Handles delete validation (prevents deletion if activity types reference it)
+
+**ActivityCategoryForm**
+- Modal form for creating/editing activity categories
+- Validates name is not empty
+- Submits to API and updates cache
 
 **ActivityTypeList**
 - Displays table of activity types using CloudScape Table
+- Groups activity types by their category
 - Distinguishes predefined vs custom types with badges
 - Renders activity type name as hyperlink in primary column (links to edit form or detail view)
+- Shows associated activity category for each type
 - Provides edit and delete actions per row (no separate View button)
-- Handles delete validation (prevents deletion if referenced)
+- Handles delete validation (prevents deletion if activities reference it)
 
 **ActivityTypeForm**
 - Modal form for creating/editing activity types
+- Requires activity category selection from dropdown
 - Validates name is not empty
+- Validates activity category is selected
 - Submits to API and updates cache
+
+**ConfigurationView**
+- Unified page/view for managing both activity categories and types
+- Displays categories and types in a cohesive interface
+- Shows hierarchical relationship between categories and types
+- Provides easy navigation between category and type management
 
 #### 4. Participant Role Management
 
@@ -186,8 +208,9 @@ src/
 #### 6. Activity Management
 
 **ActivityList**
-- Displays table with filtering by type and status
+- Displays table with filtering by category, type, and status
 - Renders activity name as hyperlink in primary column (links to /activities/:id)
+- Shows activity category and type
 - Visually distinguishes finite vs ongoing activities
 - Provides sort capabilities
 - Provides edit and delete actions per row (no separate View button)
@@ -343,23 +366,23 @@ src/
 **MapView**
 - Renders interactive map using Leaflet or Mapbox GL JS
 - Provides mode selector control to switch between "Activities", "Participant Homes", and "Venues" modes
-- In Activities mode: displays activity markers at current venue locations, color-coded by activity type
+- In Activities mode: displays activity markers at current venue locations, color-coded by activity category
 - In Participant Homes mode: displays markers for participant home addresses (current venue from address history)
 - In Venues mode: displays markers for all venues with coordinates, regardless of activities or participants
 - Implements marker clustering for dense areas
 - Provides popup with mode-specific information on marker click
 - Includes map controls for zoom, pan, and center
-- Displays right-aligned legend in Activities mode showing activity type color mapping
+- Displays right-aligned legend in Activities mode showing activity category color mapping
 - Respects global geographic area filter across all modes
 
 **MapFilters**
-- Provides filter controls for activity type, status, and date range
+- Provides filter controls for activity category, activity type, status, and date range
 - Updates map markers based on selected filters
 - Provides geographic area boundary toggle
 - Includes button to center map on specific venue or geographic area
 
 **MapPopup**
-- In Activities mode: displays activity name (hyperlinked to /activities/:id), start date, and participant count
+- In Activities mode: displays activity name (hyperlinked to /activities/:id), category, type, start date, and participant count
 - In Participant Homes mode: displays venue name (hyperlinked to /venues/:id) and count of participants living at that address
 - In Venues mode: displays venue name (hyperlinked to /venues/:id), address, and geographic area
 - Provides navigation to detail pages via hyperlinked names
@@ -371,14 +394,16 @@ src/
   - Activities at start/end of date range
   - Activities started, completed, cancelled within range
   - Participants at start/end of date range
-- Displays aggregate counts and breakdowns by activity type
-- Renders charts for activities by type and role distribution
+- Displays aggregate counts and breakdowns by activity category and activity type
+- Renders charts for activities by category, activities by type, and role distribution
 - Provides multi-dimensional grouping controls:
+  - Activity category grouping
   - Activity type grouping
   - Venue grouping
   - Geographic area grouping
   - Date grouping (weekly, monthly, quarterly, yearly)
 - Provides flexible filter controls:
+  - Activity category filter (dropdown)
   - Activity type filter (dropdown)
   - Venue filter (dropdown)
   - Geographic area filter (dropdown, includes descendants)
@@ -389,7 +414,8 @@ src/
   - When multiple grouping dimensions selected, subsequent dimension cells in Total row are left blank
   - Metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
   - When grouping dimensions selected, additional rows show dimensional breakdowns:
-    - Breakdown dimension columns appear first (activity type, venue, geographic area, date period)
+    - Breakdown dimension columns appear first (activity category, activity type, venue, geographic area, date period)
+    - Activity category names rendered as hyperlinks to edit forms or detail views
     - Activity type names rendered as hyperlinks to edit forms or detail views
     - Venue names rendered as hyperlinks to /venues/:id
     - Geographic area names rendered as hyperlinks to /geographic-areas/:id
@@ -400,7 +426,7 @@ src/
 - Uses recharts library for data visualization
 - Displays all-time metrics when no date range specified
 - Synchronizes all filter and grouping parameters with URL query parameters:
-  - Filter parameters: activityType, venue, geographicArea, startDate, endDate
+  - Filter parameters: activityCategory, activityType, venue, geographicArea, startDate, endDate
   - Grouping parameters: groupBy (array), dateGranularity
   - Reads URL parameters on component mount to initialize dashboard state
   - Updates URL when user changes filters or grouping
@@ -476,9 +502,15 @@ src/
 - `getCurrentUser()`: Fetches current user info from `/auth/me` endpoint
 - `decodeToken(token)`: Decodes JWT to extract user information (userId, email, role)
 
+**ActivityCategoryService**
+- `getActivityCategories()`: Fetches all activity categories from `/activity-categories`
+- `createActivityCategory(data)`: Creates new activity category
+- `updateActivityCategory(id, data, version?)`: Updates existing activity category with optional version for optimistic locking
+- `deleteActivityCategory(id)`: Deletes activity category (validates references, returns REFERENCED_ENTITY error if activity types reference it)
+
 **ActivityTypeService**
-- `getActivityTypes()`: Fetches all activity types from `/activity-types`
-- `createActivityType(data)`: Creates new activity type
+- `getActivityTypes()`: Fetches all activity types from `/activity-types` with category information populated
+- `createActivityType(data)`: Creates new activity type (requires activityCategoryId)
 - `updateActivityType(id, data, version?)`: Updates existing activity type with optional version for optimistic locking
 - `deleteActivityType(id)`: Deletes activity type (validates references, returns REFERENCED_ENTITY error if referenced)
 
@@ -557,9 +589,9 @@ src/
 
 **AnalyticsService**
 - `getEngagementMetrics(params)`: Fetches comprehensive engagement data from `/analytics/engagement` with flexible parameters
-  - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityTypeId?`, `venueId?`, `groupBy?` (array of dimensions), `dateGranularity?` (WEEKLY, MONTHLY, QUARTERLY, YEARLY)
+  - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityCategoryId?`, `activityTypeId?`, `venueId?`, `groupBy?` (array of dimensions), `dateGranularity?` (WEEKLY, MONTHLY, QUARTERLY, YEARLY)
   - Returns temporal analysis: activities/participants at start/end, activities started/completed/cancelled
-  - Returns aggregate counts and breakdowns by activity type
+  - Returns aggregate counts and breakdowns by activity category and activity type
   - Returns hierarchically grouped results when multiple dimensions specified
   - Returns role distribution within filtered results
 - `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR)
@@ -611,9 +643,20 @@ interface User {
   updatedAt: string;
 }
 
+interface ActivityCategory {
+  id: string;
+  name: string;
+  isPredefined: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ActivityType {
   id: string;
   name: string;
+  activityCategoryId: string;
+  activityCategory?: ActivityCategory;
   isPredefined: boolean;
   version: number;
   createdAt: string;
@@ -732,10 +775,25 @@ interface EngagementMetrics {
   totalActivities: number;
   totalParticipants: number;
   
+  // Breakdown by activity category
+  activitiesByCategory: {
+    activityCategoryId: string;
+    activityCategoryName: string;
+    activitiesAtStart: number;
+    activitiesAtEnd: number;
+    activitiesStarted: number;
+    activitiesCompleted: number;
+    activitiesCancelled: number;
+    participantsAtStart: number;
+    participantsAtEnd: number;
+  }[];
+  
   // Breakdown by activity type
   activitiesByType: {
     activityTypeId: string;
     activityTypeName: string;
+    activityCategoryId: string;
+    activityCategoryName: string;
     activitiesAtStart: number;
     activitiesAtEnd: number;
     activitiesStarted: number;
@@ -770,6 +828,7 @@ interface EngagementMetrics {
   periodStart: string;
   periodEnd: string;
   appliedFilters: {
+    activityCategoryId?: string;
     activityTypeId?: string;
     venueId?: string;
     geographicAreaId?: string;
@@ -904,29 +963,29 @@ All entities support optimistic locking via the `version` field. When updating a
 *A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
 
 
-### Property 1: Type/Role Distinction in Lists
+### Property 1: Category/Type/Role Distinction in Lists
 
-*For any* list of activity types or participant roles, the rendered output should visually distinguish predefined items from custom items.
+*For any* list of activity categories, activity types, or participant roles, the rendered output should visually distinguish predefined items from custom items.
 
-**Validates: Requirements 2.1, 3.1**
+**Validates: Requirements 2.2, 2.3, 3.1**
 
 ### Property 2: Referential Integrity on Deletion
 
-*For any* entity (activity type or participant role) that has references from other entities, attempting to delete it should be prevented and return an error.
+*For any* entity (activity category, activity type, or participant role) that has references from other entities, attempting to delete it should be prevented and return an error.
 
-**Validates: Requirements 2.5, 3.5**
+**Validates: Requirements 2.7, 2.14, 3.5**
 
 ### Property 3: Deletion Error Messages
 
 *For any* failed deletion operation, the application should display an error message explaining why the deletion failed.
 
-**Validates: Requirements 2.6, 3.6**
+**Validates: Requirements 2.8, 2.15, 3.6**
 
 ### Property 4: Non-Empty Name Validation
 
-*For any* string composed entirely of whitespace or empty string, attempting to use it as a name for activity types or participant roles should be rejected.
+*For any* string composed entirely of whitespace or empty string, attempting to use it as a name for activity categories, activity types, or participant roles should be rejected.
 
-**Validates: Requirements 2.7, 3.7**
+**Validates: Requirements 2.9, 2.16, 3.7**
 
 ### Property 5: Participant List Display
 
@@ -984,13 +1043,13 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 14: Activity List Display
 
-*For any* activity, the list view should include the activity type, dates, and status in the rendered output.
+*For any* activity, the list view should include the activity category, activity type, dates, and status in the rendered output.
 
 **Validates: Requirements 5.1**
 
 ### Property 15: Activity Filtering
 
-*For any* filter criteria (activity type or status) and activity list, the filtered results should only include activities matching the criteria.
+*For any* filter criteria (activity category, activity type, or status) and activity list, the filtered results should only include activities matching the criteria.
 
 **Validates: Requirements 5.2**
 
@@ -1050,123 +1109,123 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 25: Aggregate and breakdown display
 
-*For any* engagement dashboard, all activity and participant counts should be displayed in both aggregate form and broken down by activity type.
+*For any* engagement dashboard, all activity and participant counts should be displayed in both aggregate form and broken down by activity category and activity type.
 
-**Validates: Requirements 7.9, 7.10, 7.11, 7.12**
+**Validates: Requirements 7.9, 7.10, 7.11, 7.12, 7.13, 7.14**
 
 ### Property 26: Multi-dimensional grouping controls
 
-*For any* engagement dashboard, the UI should provide controls to select one or more grouping dimensions (activity type, venue, geographic area, date with granularity selection).
+*For any* engagement dashboard, the UI should provide controls to select one or more grouping dimensions (activity category, activity type, venue, geographic area, date with granularity selection).
 
-**Validates: Requirements 7.13**
+**Validates: Requirements 7.15**
 
 ### Property 27: Filter control availability
 
-*For any* engagement dashboard, the UI should provide filter controls for activity type, venue, geographic area, and date range.
+*For any* engagement dashboard, the UI should provide filter controls for activity category, activity type, venue, geographic area, and date range.
 
-**Validates: Requirements 7.14, 7.15, 7.16, 7.17**
+**Validates: Requirements 7.16, 7.17, 7.18, 7.19, 7.20**
 
 ### Property 28: Engagement Summary Table Display
 
 *For any* engagement dashboard state (with or without grouping dimensions), an "Engagement Summary" table should always be displayed with the first row labeled "Total" containing aggregate metrics.
 
-**Validates: Requirements 7.18, 7.19**
+**Validates: Requirements 7.21, 7.22**
 
 ### Property 28a: Total Row Aggregate Metrics
 
 *For any* engagement dashboard, the first row of the Engagement Summary table should display "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end) in subsequent columns.
 
-**Validates: Requirements 7.19**
+**Validates: Requirements 7.22**
 
 ### Property 28b: Total Row Blank Dimension Cells
 
 *For any* engagement dashboard with multiple grouping dimensions selected, the dimension cells in the Total row (after the first column) should be left blank.
 
-**Validates: Requirements 7.20**
+**Validates: Requirements 7.23**
 
 ### Property 28c: Dimensional Breakdown Rows
 
 *For any* engagement dashboard with grouping dimensions selected, rows below the Total row should display dimensional breakdowns where breakdown dimension columns appear first, followed by metric aggregation columns.
 
-**Validates: Requirements 7.21**
+**Validates: Requirements 7.24**
 
 ### Property 28d: Dimension Hyperlinks in Breakdown Rows
 
-*For any* dimensional breakdown row in the Engagement Summary table, dimension values (activity type names, venue names, geographic area names) should be rendered as hyperlinks that navigate to their respective detail views.
+*For any* dimensional breakdown row in the Engagement Summary table, dimension values (activity category names, activity type names, venue names, geographic area names) should be rendered as hyperlinks that navigate to their respective detail views.
 
-**Validates: Requirements 7.22, 7.23, 7.24**
+**Validates: Requirements 7.25, 7.26, 7.27, 7.28**
 
 ### Property 28e: Metric Columns in Engagement Summary
 
 *For any* row in the Engagement Summary table, each metric aggregation (activities at start, at end, started, completed, cancelled, participants at start, at end) should be displayed in its own separate column.
 
-**Validates: Requirements 7.25**
+**Validates: Requirements 7.29**
 
 ### Property 29: Multiple filter application
 
 *For any* engagement dashboard with multiple filters applied, all filters should be applied using AND logic and the UI should clearly indicate which filters are active.
 
-**Validates: Requirements 7.23**
+**Validates: Requirements 7.30**
 
 ### Property 30: All-time metrics display
 
 *For any* engagement dashboard without a date range specified, the UI should display all-time metrics and clearly indicate that no date filter is active.
 
-**Validates: Requirements 7.24**
+**Validates: Requirements 7.31**
 
 ### Property 31: Role distribution display
 
 *For any* engagement dashboard, the role distribution chart should display counts for all roles within the filtered and grouped results.
 
-**Validates: Requirements 7.25**
+**Validates: Requirements 7.32**
 
 ### Property 31a: Analytics URL Parameter Synchronization
 
-*For any* engagement dashboard state (filters and grouping), the browser URL query parameters should accurately reflect all current filter values (activityType, venue, geographicArea, startDate, endDate) and grouping configuration (groupBy dimensions, dateGranularity).
+*For any* engagement dashboard state (filters and grouping), the browser URL query parameters should accurately reflect all current filter values (activityCategory, activityType, venue, geographicArea, startDate, endDate) and grouping configuration (groupBy dimensions, dateGranularity).
 
-**Validates: Requirements 7.26, 7.27**
+**Validates: Requirements 7.33, 7.34**
 
 ### Property 31b: Analytics URL Parameter Application
 
 *For any* URL with analytics query parameters, when a user navigates to that URL, the engagement dashboard should automatically apply all filter and grouping parameters from the URL to initialize the dashboard state.
 
-**Validates: Requirements 7.28**
+**Validates: Requirements 7.35**
 
 ### Property 31c: Analytics URL Update on State Change
 
 *For any* change to filters or grouping parameters in the engagement dashboard, the browser URL should be updated to reflect the new state without causing a page reload.
 
-**Validates: Requirements 7.29**
+**Validates: Requirements 7.36**
 
 ### Property 31d: Analytics Browser Navigation Support
 
 *For any* sequence of filter or grouping changes in the engagement dashboard, using browser back/forward buttons should navigate through the history of configurations and restore the corresponding dashboard state.
 
-**Validates: Requirements 7.30**
+**Validates: Requirements 7.37**
 
 ### Property 31e: Analytics URL Shareability
 
 *For any* engagement dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered and grouped results as the original user.
 
-**Validates: Requirements 7.31**
+**Validates: Requirements 7.38**
 
 ### Property 32: Time-series data calculation
 
 *For any* time period and dataset, the time-series charts should correctly calculate new activities for each time unit.
 
-**Validates: Requirements 7.33**
+**Validates: Requirements 7.40**
 
 ### Property 33: Percentage change calculation
 
 *For any* two time periods, the percentage change calculation for activities should correctly compute the relative change between periods.
 
-**Validates: Requirements 7.34**
+**Validates: Requirements 7.41**
 
 ### Property 34: Cumulative count calculation
 
 *For any* time series data, the cumulative participant counts should correctly sum all participant counts up to each point in time.
 
-**Validates: Requirements 7.35**
+**Validates: Requirements 7.42**
 
 ### Property 35: Unauthenticated access protection
 
@@ -1362,19 +1421,19 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 62: Activity Marker Color Coding
 
-*For any* set of activities displayed on the map in "Activities" mode, markers should be color-coded based on activity type to visually distinguish them.
+*For any* set of activities displayed on the map in "Activities" mode, markers should be color-coded based on activity category to visually distinguish them.
 
 **Validates: Requirements 6C.4**
 
 ### Property 63: Activity Legend Display
 
-*For any* map view in "Activities" mode, a right-aligned legend should be displayed showing the mapping between marker colors and activity types.
+*For any* map view in "Activities" mode, a right-aligned legend should be displayed showing the mapping between marker colors and activity categories.
 
 **Validates: Requirements 6C.5**
 
 ### Property 64: Activity Popup Information
 
-*For any* activity marker clicked in "Activities" mode, a popup should display showing the activity name (as a hyperlink to /activities/:id), start date, and participant count.
+*For any* activity marker clicked in "Activities" mode, a popup should display showing the activity name (as a hyperlink to /activities/:id), category, type, start date, and participant count.
 
 **Validates: Requirements 6C.6, 6C.7**
 
@@ -1404,7 +1463,7 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 69: Map Filter Application
 
-*For any* filter criteria (activity type, status, or date range) applied to the map, only activities matching the criteria should display markers.
+*For any* filter criteria (activity category, activity type, status, or date range) applied to the map, only activities matching the criteria should display markers.
 
 **Validates: Requirements 6C.14**
 

@@ -25,6 +25,16 @@ export function ActivityTypeList() {
     queryFn: () => ActivityTypeService.getActivityTypes(),
   });
 
+  // Group activity types by category
+  // const groupedTypes = activityTypes.reduce((acc, type) => {
+  //   const categoryName = type.activityCategory?.name || 'Uncategorized';
+  //   if (!acc[categoryName]) {
+  //     acc[categoryName] = [];
+  //   }
+  //   acc[categoryName].push(type);
+  //   return acc;
+  // }, {} as Record<string, ActivityType[]>);
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => ActivityTypeService.deleteActivityType(id),
     onSuccess: () => {
@@ -82,6 +92,12 @@ export function ActivityTypeList() {
               </Button>
             ),
             sortingField: 'name',
+          },
+          {
+            id: 'category',
+            header: 'Category',
+            cell: (item) => item.activityCategory?.name || 'Uncategorized',
+            sortingField: 'activityCategory.name',
           },
           {
             id: 'type',

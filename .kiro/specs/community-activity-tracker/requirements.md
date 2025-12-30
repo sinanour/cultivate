@@ -11,7 +11,8 @@ This document defines the overall system requirements and references detailed sp
 - **System**: The complete Community Activity Tracker application including all five packages
 - **Package**: An independent, deployable component of the system
 - **Activity**: A community-building event or program that involves participants
-- **Activity_Type**: A category of activity (e.g., workshop, meetup, class) that can be predefined or custom-defined
+- **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
+- **Activity_Type**: A specific category of activity (e.g., Ruhi Book 1, Children's Class) that belongs to an Activity_Category and can be predefined or custom-defined
 - **Participant**: An individual who takes part in activities
 - **Role**: The function a participant performs in an activity (e.g., Facilitator, Animator, Host, Teacher)
 - **Community**: A group of participants and their associated activities

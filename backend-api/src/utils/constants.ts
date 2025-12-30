@@ -61,6 +61,7 @@ export enum DateGranularity {
 
 // Grouping Dimensions for Analytics
 export enum GroupingDimension {
+    ACTIVITY_CATEGORY = 'activityCategory',
     ACTIVITY_TYPE = 'activityType',
     VENUE = 'venue',
     GEOGRAPHIC_AREA = 'geographicArea',
@@ -69,6 +70,10 @@ export enum GroupingDimension {
 
 // Dimension key constants for grouped results
 export const DimensionKeys = {
+    ACTIVITY_CATEGORY: {
+        name: 'activityCategory',
+        id: 'activityCategoryId',
+    },
     ACTIVITY_TYPE: {
         name: 'activityType',
         id: 'activityTypeId',

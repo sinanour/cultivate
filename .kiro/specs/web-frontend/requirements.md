@@ -19,6 +19,9 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Geocoding**: The process of converting a physical address into latitude and longitude coordinates
 - **Global_Filter**: A persistent filter applied across all views in the application
 - **Recursive_Filter**: A filter that includes the selected entity and all its descendants in a hierarchy
+- **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
+- **Activity_Type**: A specific category of activity that belongs to an Activity_Category
+- **Configuration_View**: A unified interface for managing both activity categories and activity types
 
 ## Requirements
 
@@ -35,19 +38,28 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL follow CloudScape design patterns and guidelines
 6. THE Web_App SHALL provide a consistent look and feel across all pages
 
-### Requirement 2: Activity Type Management UI
+### Requirement 2: Activity Configuration UI
 
-**User Story:** As a community organizer, I want to manage activity types in the web interface, so that I can categorize activities.
+**User Story:** As a community organizer, I want to manage activity categories and types in a unified interface, so that I can organize activities at multiple levels of granularity.
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL display a list of all activity types with predefined and custom types distinguished
-2. THE Web_App SHALL provide a form to create new activity types
-3. THE Web_App SHALL provide a form to edit existing activity types
-4. THE Web_App SHALL provide a delete button for activity types
-5. WHEN deleting an activity type, THE Web_App SHALL prevent deletion if activities reference it
-6. WHEN deleting an activity type, THE Web_App SHALL display an error message explaining why deletion failed
-7. THE Web_App SHALL validate that activity type names are not empty
+1. THE Web_App SHALL provide a unified configuration view for managing both activity categories and activity types
+2. THE Web_App SHALL display a list of all activity categories with predefined and custom categories distinguished
+3. THE Web_App SHALL display a list of all activity types grouped by their category with predefined and custom types distinguished
+4. THE Web_App SHALL provide a form to create new activity categories
+5. THE Web_App SHALL provide a form to edit existing activity categories
+6. THE Web_App SHALL provide a delete button for activity categories
+7. WHEN deleting an activity category, THE Web_App SHALL prevent deletion if activity types reference it
+8. WHEN deleting an activity category, THE Web_App SHALL display an error message explaining why deletion failed
+9. THE Web_App SHALL validate that activity category names are not empty
+10. THE Web_App SHALL provide a form to create new activity types
+11. THE Web_App SHALL provide a form to edit existing activity types
+12. THE Web_App SHALL provide a delete button for activity types
+13. WHEN creating or editing an activity type, THE Web_App SHALL require selection of an activity category
+14. WHEN deleting an activity type, THE Web_App SHALL prevent deletion if activities reference it
+15. WHEN deleting an activity type, THE Web_App SHALL display an error message explaining why deletion failed
+16. THE Web_App SHALL validate that activity type names are not empty
 
 ### Requirement 3: Participant Role Management UI
 
@@ -94,8 +106,8 @@ The Web Frontend package provides a responsive React-based web application that 
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL display a list of all activities with type, dates, and status
-2. THE Web_App SHALL provide filtering by activity type and status
+1. THE Web_App SHALL display a list of all activities with category, type, dates, and status
+2. THE Web_App SHALL provide filtering by activity category, activity type, and status
 3. THE Web_App SHALL provide sorting for the activity list
 4. THE Web_App SHALL distinguish finite and ongoing activities visually
 5. THE Web_App SHALL provide a form to create new activities
@@ -170,9 +182,9 @@ The Web Frontend package provides a responsive React-based web application that 
 1. THE Web_App SHALL provide an interactive map view using a mapping library (e.g., Leaflet, Mapbox)
 2. THE Web_App SHALL provide a mode selector control to switch between three map modes: "Activities", "Participant Homes", and "Venues"
 3. WHEN in "Activities" mode, THE Web_App SHALL display markers for all activities at their current venue locations
-4. WHEN in "Activities" mode, THE Web_App SHALL color-code activity markers by activity type
-5. WHEN in "Activities" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity types
-6. WHEN an activity marker is clicked, THE Web_App SHALL display a popup showing the activity name, start date, and number of participants
+4. WHEN in "Activities" mode, THE Web_App SHALL color-code activity markers by activity category
+5. WHEN in "Activities" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity categories
+6. WHEN an activity marker is clicked, THE Web_App SHALL display a popup showing the activity name, category, type, start date, and number of participants
 7. WHEN an activity marker popup is displayed, THE Web_App SHALL render the activity name as a hyperlink to the activity detail page (/activities/:id)
 8. WHEN in "Participant Homes" mode, THE Web_App SHALL display markers for all participant home addresses (current venue from address history)
 9. WHEN a participant home marker is clicked, THE Web_App SHALL display a popup showing the venue name and the number of participants living at that address
@@ -180,7 +192,7 @@ The Web Frontend package provides a responsive React-based web application that 
 11. WHEN in "Venues" mode, THE Web_App SHALL display markers for all venues with latitude and longitude coordinates, regardless of whether they have activities or participants
 12. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL display a popup showing the venue name, address, and geographic area
 13. WHEN a venue marker popup is displayed in "Venues" mode, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
-14. THE Web_App SHALL provide filtering controls to show/hide activities by type, status, or date range
+14. THE Web_App SHALL provide filtering controls to show/hide activities by category, type, status, or date range
 15. THE Web_App SHALL provide geographic area boundary overlays when available
 16. THE Web_App SHALL allow zooming and panning of the map
 17. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
@@ -204,40 +216,44 @@ The Web Frontend package provides a responsive React-based web application that 
 6. THE Web_App SHALL display activities cancelled within the selected date range
 7. THE Web_App SHALL display participants at the start of the selected date range
 8. THE Web_App SHALL display participants at the end of the selected date range
-9. THE Web_App SHALL display all activity counts in aggregate across all activity types
-10. THE Web_App SHALL display all activity counts broken down by activity type
-11. THE Web_App SHALL display all participant counts in aggregate across all activity types
-12. THE Web_App SHALL display all participant counts broken down by activity type
-13. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
-14. THE Web_App SHALL provide filter controls for activity type (point filter)
-15. THE Web_App SHALL provide filter controls for venue (point filter)
-16. THE Web_App SHALL provide filter controls for geographic area (point filter, includes descendants)
-17. THE Web_App SHALL provide filter controls for date range (range filter with start and end dates)
-18. THE Web_App SHALL render an "Engagement Summary" table that displays aggregate metrics and dimensional breakdowns
-19. THE Web_App SHALL render the first row of the Engagement Summary table with the label "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end) in subsequent columns
-20. WHEN multiple grouping dimensions are selected, THE Web_App SHALL leave subsequent dimension cells blank in the first row (Total row)
-21. WHEN grouping dimensions are selected, THE Web_App SHALL render additional rows below the Total row showing dimensional breakdowns where breakdown dimension columns appear first followed by metric aggregation columns
-22. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity type names as hyperlinks to their respective edit forms or detail views
-23. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render venue names as hyperlinks to their respective detail views at /venues/:id
-24. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render geographic area names as hyperlinks to their respective detail views at /geographic-areas/:id
-25. THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end) in its own column in the Engagement Summary table
-26. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
-27. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
-28. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
-29. THE Web_App SHALL synchronize all filter parameters (activity type, venue, geographic area, start date, end date) with URL query parameters
-30. THE Web_App SHALL synchronize all grouping parameters (group by dimensions and date granularity) with URL query parameters
-31. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
-32. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
-33. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
-34. THE Web_App SHALL allow users to share the current analytics view URL with other users to display the same filtered and grouped results
-35. THE Web_App SHALL provide a growth analytics dashboard
-36. THE Web_App SHALL display time-series charts for new activities
-37. THE Web_App SHALL provide time period selection (day, week, month, year)
-38. THE Web_App SHALL display percentage changes between periods for activities
-39. THE Web_App SHALL display cumulative participant counts over time
-40. THE Web_App SHALL provide a geographic area filter for all analytics
-41. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
-42. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
+9. THE Web_App SHALL display all activity counts in aggregate across all activity categories and types
+10. THE Web_App SHALL display all activity counts broken down by activity category
+11. THE Web_App SHALL display all activity counts broken down by activity type
+12. THE Web_App SHALL display all participant counts in aggregate across all activity categories and types
+13. THE Web_App SHALL display all participant counts broken down by activity category
+14. THE Web_App SHALL display all participant counts broken down by activity type
+15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity category, activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
+16. THE Web_App SHALL provide filter controls for activity category (point filter)
+17. THE Web_App SHALL provide filter controls for activity type (point filter)
+18. THE Web_App SHALL provide filter controls for venue (point filter)
+19. THE Web_App SHALL provide filter controls for geographic area (point filter, includes descendants)
+20. THE Web_App SHALL provide filter controls for date range (range filter with start and end dates)
+21. THE Web_App SHALL render an "Engagement Summary" table that displays aggregate metrics and dimensional breakdowns
+22. THE Web_App SHALL render the first row of the Engagement Summary table with the label "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end) in subsequent columns
+23. WHEN multiple grouping dimensions are selected, THE Web_App SHALL leave subsequent dimension cells blank in the first row (Total row)
+24. WHEN grouping dimensions are selected, THE Web_App SHALL render additional rows below the Total row showing dimensional breakdowns where breakdown dimension columns appear first followed by metric aggregation columns
+25. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity category names as hyperlinks to their respective edit forms or detail views
+26. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity type names as hyperlinks to their respective edit forms or detail views
+27. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render venue names as hyperlinks to their respective detail views at /venues/:id
+28. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render geographic area names as hyperlinks to their respective detail views at /geographic-areas/:id
+29. THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end) in its own column in the Engagement Summary table
+30. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
+31. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
+32. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
+33. THE Web_App SHALL synchronize all filter parameters (activity category, activity type, venue, geographic area, start date, end date) with URL query parameters
+34. THE Web_App SHALL synchronize all grouping parameters (group by dimensions and date granularity) with URL query parameters
+35. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
+36. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
+37. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
+38. THE Web_App SHALL allow users to share the current analytics view URL with other users to display the same filtered and grouped results
+39. THE Web_App SHALL provide a growth analytics dashboard
+40. THE Web_App SHALL display time-series charts for new activities
+41. THE Web_App SHALL provide time period selection (day, week, month, year)
+42. THE Web_App SHALL display percentage changes between periods for activities
+43. THE Web_App SHALL display cumulative participant counts over time
+44. THE Web_App SHALL provide a geographic area filter for all analytics
+45. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
+46. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
 
 ### Requirement 8: Authentication UI
 
