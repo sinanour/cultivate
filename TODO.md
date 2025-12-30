@@ -39,10 +39,10 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Simplifies the UI and focuses on entity-based grouping (category, type, venue, geographic area)
   - Solution: Removed Date option from grouping dimensions multiselect, removed date granularity Select component, removed dateGranularity from state and API calls
 
-- [ ] 8. Fix broken links for Activity Category and Activity Type on Engagement Dashboard
+- [x] 8. Fix broken links for Activity Category and Activity Type on Engagement Dashboard
   - Issue: When grouping by activity category or activity type, the hyperlinked names in the Engagement Summary table are broken
   - Root cause: No detail pages exist for activity categories or activity types
-  - Solution: Update links to navigate to /configuration (Activity Configuration page) instead
+  - Solution: Updated links to navigate to /configuration (Activity Configuration page) instead
   - Provides consistent navigation experience
   - Users can view and edit categories/types on the Configuration page
 

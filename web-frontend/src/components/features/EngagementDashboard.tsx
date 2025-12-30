@@ -635,10 +635,10 @@ export function EngagementDashboard() {
                   if (idValue) {
                     return (
                       <Link 
-                        href={`/activity-categories`}
+                        href={`/configuration`}
                         onFollow={(e) => {
                           e.preventDefault();
-                          navigate('/activity-categories');
+                          navigate('/configuration');
                         }}
                       >
                         {nameValue}
@@ -650,10 +650,10 @@ export function EngagementDashboard() {
                   if (idValue) {
                     return (
                       <Link 
-                        href={`/activity-types`}
+                        href={`/configuration`}
                         onFollow={(e) => {
                           e.preventDefault();
-                          navigate('/activity-types');
+                          navigate('/configuration');
                         }}
                       >
                         {nameValue}
@@ -716,10 +716,10 @@ export function EngagementDashboard() {
                       if (idValue) {
                         return (
                           <Link 
-                            href={`/activity-categories`}
+                            href={`/configuration`}
                             onFollow={(e) => {
                               e.preventDefault();
-                              navigate('/activity-categories');
+                              navigate('/configuration');
                             }}
                           >
                             {nameValue}
@@ -731,10 +731,10 @@ export function EngagementDashboard() {
                       if (idValue) {
                         return (
                           <Link 
-                            href={`/activity-types`}
+                            href={`/configuration`}
                             onFollow={(e) => {
                               e.preventDefault();
-                              navigate('/activity-types');
+                              navigate('/configuration');
                             }}
                           >
                             {nameValue}

@@ -551,8 +551,8 @@ This implementation plan covers the React-based web application built with TypeS
       - When grouping dimensions selected, render additional rows below Total row showing dimensional breakdowns:
         - Display breakdown dimension columns first (activity category, activity type, venue, geographic area)
         - Display metric aggregation columns after dimensions
-        - Render activity category names as hyperlinks to edit forms or detail views
-        - Render activity type names as hyperlinks to edit forms or detail views
+        - Render activity category names as hyperlinks to /configuration (Activity Configuration page)
+        - Render activity type names as hyperlinks to /configuration (Activity Configuration page)
         - Render venue names as hyperlinks to /venues/:id using CloudScape Link component
         - Render geographic area names as hyperlinks to /geographic-areas/:id using CloudScape Link component
         - Display each metric in its own column for easy comparison

@@ -452,9 +452,9 @@ src/
   - When multiple grouping dimensions selected, subsequent dimension cells in Total row are left blank
   - Metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
   - When grouping dimensions selected, additional rows show dimensional breakdowns:
-    - Breakdown dimension columns appear first (activity category, activity type, venue, geographic area, date period)
-    - Activity category names rendered as hyperlinks to edit forms or detail views
-    - Activity type names rendered as hyperlinks to edit forms or detail views
+    - Breakdown dimension columns appear first (activity category, activity type, venue, geographic area)
+    - Activity category names rendered as hyperlinks to /configuration (Activity Configuration page)
+    - Activity type names rendered as hyperlinks to /configuration (Activity Configuration page)
     - Venue names rendered as hyperlinks to /venues/:id
     - Geographic area names rendered as hyperlinks to /geographic-areas/:id
   - Each metric displayed in its own column for easy comparison
@@ -1250,7 +1250,7 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 28d: Dimension Hyperlinks in Breakdown Rows
 
-*For any* dimensional breakdown row in the Engagement Summary table, dimension values (activity category names, activity type names, venue names, geographic area names) should be rendered as hyperlinks that navigate to their respective detail views.
+*For any* dimensional breakdown row in the Engagement Summary table, dimension values should be rendered as hyperlinks: activity category names and activity type names link to /configuration (Activity Configuration page), venue names link to /venues/:id, and geographic area names link to /geographic-areas/:id.
 
 **Validates: Requirements 7.25, 7.26, 7.27, 7.28**
 
