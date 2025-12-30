@@ -188,37 +188,39 @@ export class AnalyticsService {
 
         // Calculate temporal metrics
         // An activity "exists" at a point in time if:
-        // - It was created before or at that time AND
-        // - It was not completed or cancelled before that time (or has no end date for ongoing)
+        // - Its startDate is on or before that time AND
+        // - It hasn't ended yet (endDate is null OR endDate is after that time)
 
         const activitiesAtStart = startDate
             ? allActivities.filter(a => {
-                // Must be created before or at start date
-                if (a.createdAt > startDate) return false;
+                // Activity must have started on or before the start date
+                if (a.startDate > startDate) return false;
 
-                // If completed or cancelled, check if it happened after start date
-                if (a.status === ActivityStatus.COMPLETED || a.status === ActivityStatus.CANCELLED) {
-                    // For completed/cancelled activities, check if endDate is after startDate
-                    return a.endDate && a.endDate >= startDate;
+                // Activity must not have ended before the start date
+                // If endDate is null (ongoing), it exists
+                // If endDate exists, it must be after startDate
+                if (a.endDate) {
+                    return a.endDate >= startDate;
                 }
 
-                // For planned/active activities, they exist if created before startDate
+                // Ongoing activity (no endDate) that started before startDate
                 return true;
             }).length
             : 0;
 
         const activitiesAtEnd = endDate
             ? allActivities.filter(a => {
-                // Must be created before or at end date
-                if (a.createdAt > endDate) return false;
+                // Activity must have started on or before the end date
+                if (a.startDate > endDate) return false;
 
-                // If completed or cancelled, check if it happened after end date
-                if (a.status === ActivityStatus.COMPLETED || a.status === ActivityStatus.CANCELLED) {
-                    // For completed/cancelled activities, check if endDate is after the reference date
-                    return a.endDate && a.endDate >= endDate;
+                // Activity must not have ended before the end date
+                // If endDate is null (ongoing), it exists
+                // If endDate exists, it must be after the reference date
+                if (a.endDate) {
+                    return a.endDate >= endDate;
                 }
 
-                // For planned/active activities, they exist if created before endDate
+                // Ongoing activity (no endDate) that started before endDate
                 return true;
             }).length
             : allActivities.filter(a =>
@@ -325,26 +327,30 @@ export class AnalyticsService {
 
             // Count activities by temporal category using same logic as aggregate
             if (startDate) {
-                // Activity exists at start if created before start and not completed/cancelled before start
-                if (activity.createdAt <= startDate) {
-                    if (activity.status === ActivityStatus.COMPLETED || activity.status === ActivityStatus.CANCELLED) {
-                        if (activity.endDate && activity.endDate >= startDate) {
+                // Activity must have started on or before the start date
+                if (activity.startDate <= startDate) {
+                    // Activity must not have ended before the start date
+                    if (activity.endDate) {
+                        if (activity.endDate >= startDate) {
                             breakdown.activitiesAtStart++;
                         }
                     } else {
+                        // Ongoing activity (no endDate)
                         breakdown.activitiesAtStart++;
                     }
                 }
             }
 
             if (endDate) {
-                // Activity exists at end if created before end and not completed/cancelled before end
-                if (activity.createdAt <= endDate) {
-                    if (activity.status === ActivityStatus.COMPLETED || activity.status === ActivityStatus.CANCELLED) {
-                        if (activity.endDate && activity.endDate >= endDate) {
+                // Activity must have started on or before the end date
+                if (activity.startDate <= endDate) {
+                    // Activity must not have ended before the end date
+                    if (activity.endDate) {
+                        if (activity.endDate >= endDate) {
                             breakdown.activitiesAtEnd++;
                         }
                     } else {
+                        // Ongoing activity (no endDate)
                         breakdown.activitiesAtEnd++;
                     }
                 }
@@ -409,26 +415,30 @@ export class AnalyticsService {
 
             // Count activities by temporal category using same logic as aggregate
             if (startDate) {
-                // Activity exists at start if created before start and not completed/cancelled before start
-                if (activity.createdAt <= startDate) {
-                    if (activity.status === ActivityStatus.COMPLETED || activity.status === ActivityStatus.CANCELLED) {
-                        if (activity.endDate && activity.endDate >= startDate) {
+                // Activity must have started on or before the start date
+                if (activity.startDate <= startDate) {
+                    // Activity must not have ended before the start date
+                    if (activity.endDate) {
+                        if (activity.endDate >= startDate) {
                             breakdown.activitiesAtStart++;
                         }
                     } else {
+                        // Ongoing activity (no endDate)
                         breakdown.activitiesAtStart++;
                     }
                 }
             }
 
             if (endDate) {
-                // Activity exists at end if created before end and not completed/cancelled before end
-                if (activity.createdAt <= endDate) {
-                    if (activity.status === ActivityStatus.COMPLETED || activity.status === ActivityStatus.CANCELLED) {
-                        if (activity.endDate && activity.endDate >= endDate) {
+                // Activity must have started on or before the end date
+                if (activity.startDate <= endDate) {
+                    // Activity must not have ended before the end date
+                    if (activity.endDate) {
+                        if (activity.endDate >= endDate) {
                             breakdown.activitiesAtEnd++;
                         }
                     } else {
+                        // Ongoing activity (no endDate)
                         breakdown.activitiesAtEnd++;
                     }
                 }

@@ -16,7 +16,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Chart should only render leaf-node geographic areas (areas without child areas)
   - Prevents double-counting and provides clearer geographic distribution
 
-- [ ] 4. Investigate and fix "Activities at Start" metric calculation
+- [x] 4. Investigate and fix "Activities at Start" metric calculation
   - Issue with ongoing activities that started before the analysis period
   - Metric appears to be calculated incorrectly in these scenarios
   - Requires investigation and correction
