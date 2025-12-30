@@ -395,7 +395,27 @@ src/
   - Activities started, completed, cancelled within range
   - Participants at start/end of date range
 - Displays aggregate counts and breakdowns by activity category and activity type
-- Renders charts for activities by category, activities by type, and role distribution
+- Renders charts for activities distribution, role distribution, and geographic breakdown
+- **Activities Chart** (renamed from "Activities by Type"):
+  - Displays chart titled "Activities" (generic name to reflect multiple view modes)
+  - Provides CloudScape SegmentedControl above or within chart area with two options:
+    - "Activity Type" (default selection)
+    - "Activity Category"
+  - Follows same UX pattern as map view toggle functionality
+  - When "Activity Type" selected: displays activities grouped by activity type
+  - When "Activity Category" selected: displays activities grouped by activity category
+  - Updates data display without page refresh when view mode changes
+  - Preserves current date range and filter selections when switching views
+  - Displays activity counts in descending order by count value
+  - Shows appropriate empty state message when no activities exist for grouping dimension
+  - Handles API errors gracefully with user-friendly error messages
+  - Stores selected view mode in browser localStorage (key: "activitiesChartViewMode")
+  - Restores previously selected view mode from localStorage on dashboard load
+  - Defaults to "Activity Type" view if no localStorage value exists or localStorage unavailable
+  - Segmented control is keyboard navigable (Tab and Arrow keys)
+  - Provides visual focus indicators when segmented control options receive focus
+  - Includes appropriate ARIA labels for screen readers (aria-label="Activities chart view mode")
+  - Announces view mode changes to screen readers using aria-live region
 - Provides multi-dimensional grouping controls:
   - Activity category grouping
   - Activity type grouping
@@ -1208,6 +1228,60 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* engagement dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered and grouped results as the original user.
 
 **Validates: Requirements 7.38**
+
+### Property 31f: Activities Chart Title Display
+
+*For any* engagement dashboard rendering, the activities distribution chart should display the title "Activities" (not "Activities by Type").
+
+**Validates: Requirements 7.47**
+
+### Property 31g: Activities Chart Segmented Control Presence
+
+*For any* engagement dashboard rendering, the Activities chart should display a segmented control with two options: "Activity Type" and "Activity Category".
+
+**Validates: Requirements 7.48**
+
+### Property 31h: Activities Chart Default View Mode
+
+*For any* engagement dashboard initial rendering without a stored preference, the Activities chart segmented control should default to "Activity Type" as the selected option.
+
+**Validates: Requirements 7.49**
+
+### Property 31i: Activities Chart View Mode Switching
+
+*For any* Activities chart view mode selection (Activity Type or Activity Category), the chart should display activities grouped by the selected dimension without requiring a page refresh.
+
+**Validates: Requirements 7.51, 7.52, 7.53**
+
+### Property 31j: Activities Chart Filter Preservation
+
+*For any* Activities chart view mode change, the current date range and filter selections should be preserved and applied to the new view.
+
+**Validates: Requirements 7.54**
+
+### Property 31k: Activities Chart Data Ordering
+
+*For any* Activities chart rendering with data, activity counts should be displayed in descending order by count value.
+
+**Validates: Requirements 7.56**
+
+### Property 31l: Activities Chart State Persistence
+
+*For any* Activities chart view mode selection, the selection should be stored in browser localStorage and restored when the user returns to the Engagement Dashboard.
+
+**Validates: Requirements 7.58, 7.59, 7.60, 7.61**
+
+### Property 31m: Activities Chart Keyboard Navigation
+
+*For any* Activities chart segmented control, users should be able to navigate between options using Tab and Arrow keys, with visual focus indicators displayed.
+
+**Validates: Requirements 7.62, 7.63**
+
+### Property 31n: Activities Chart Screen Reader Support
+
+*For any* Activities chart segmented control, appropriate ARIA labels should be present and view mode changes should be announced to screen readers.
+
+**Validates: Requirements 7.64, 7.65**
 
 ### Property 32: Time-series data calculation
 

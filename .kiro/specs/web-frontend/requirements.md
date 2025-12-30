@@ -254,6 +254,25 @@ The Web Frontend package provides a responsive React-based web application that 
 44. THE Web_App SHALL provide a geographic area filter for all analytics
 45. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
 46. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
+47. THE Web_App SHALL display a chart titled "Activities" (renamed from "Activities by Type") on the Engagement Dashboard
+48. THE Web_App SHALL provide a segmented control above or within the Activities chart to toggle between "Activity Type" and "Activity Category" views
+49. WHEN the Activities chart is first rendered, THE Segmented_Control SHALL default to "Activity Type" as the selected option
+50. THE Segmented_Control SHALL follow the same UX pattern as the map view toggle functionality
+51. WHEN "Activity Type" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity type
+52. WHEN "Activity Category" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity category
+53. WHEN the view mode changes, THE Activities chart SHALL update its data display without requiring a page refresh
+54. WHEN switching between views, THE Activities chart SHALL preserve the current date range and filter selections
+55. WHEN no activities exist for a grouping dimension, THE Activities chart SHALL display an appropriate empty state message
+56. THE Activities chart SHALL display activity counts in descending order by count value
+57. THE Activities chart SHALL handle API errors gracefully and display an error message to the user
+58. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage
+59. WHEN a user returns to the Engagement Dashboard, THE Activities chart SHALL restore the previously selected view mode from local storage
+60. IF no previous selection exists in local storage, THE Activities chart SHALL default to "Activity Type" view
+61. WHEN local storage is unavailable, THE Activities chart SHALL function normally with "Activity Type" as the default
+62. THE Segmented_Control SHALL be keyboard navigable using Tab and Arrow keys
+63. WHEN a segmented control option receives focus, THE System SHALL provide visual focus indicators
+64. THE Segmented_Control SHALL include appropriate ARIA labels for screen readers
+65. WHEN the view mode changes, THE System SHALL announce the change to screen readers
 
 ### Requirement 8: Authentication UI
 

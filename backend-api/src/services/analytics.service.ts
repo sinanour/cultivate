@@ -22,6 +22,18 @@ export interface ActivityTypeBreakdown {
     participantsAtEnd: number;
 }
 
+export interface ActivityCategoryBreakdown {
+    activityCategoryId: string;
+    activityCategoryName: string;
+    activitiesAtStart: number;
+    activitiesAtEnd: number;
+    activitiesStarted: number;
+    activitiesCompleted: number;
+    activitiesCancelled: number;
+    participantsAtStart: number;
+    participantsAtEnd: number;
+}
+
 export interface RoleDistribution {
     roleId: string;
     roleName: string;
@@ -55,6 +67,9 @@ export interface EngagementMetrics {
     // Aggregate counts
     totalActivities: number;
     totalParticipants: number;
+
+    // Breakdown by activity category
+    activitiesByCategory: ActivityCategoryBreakdown[];
 
     // Breakdown by activity type
     activitiesByType: ActivityTypeBreakdown[];
@@ -155,7 +170,11 @@ export class AnalyticsService {
         const allActivities = await this.prisma.activity.findMany({
             where: activityWhere,
             include: {
-                activityType: true,
+                activityType: {
+                    include: {
+                        activityCategory: true,
+                    },
+                },
                 activityVenueHistory: true,
                 assignments: {
                     include: {
@@ -364,6 +383,90 @@ export class AnalyticsService {
 
         const activitiesByType = Array.from(activitiesByTypeMap.values());
 
+        // Calculate breakdown by activity category
+        const activitiesByCategoryMap = new Map<string, ActivityCategoryBreakdown>();
+
+        for (const activity of allActivities) {
+            const categoryId = activity.activityType.activityCategoryId;
+            const categoryName = activity.activityType.activityCategory.name;
+
+            if (!activitiesByCategoryMap.has(categoryId)) {
+                activitiesByCategoryMap.set(categoryId, {
+                    activityCategoryId: categoryId,
+                    activityCategoryName: categoryName,
+                    activitiesAtStart: 0,
+                    activitiesAtEnd: 0,
+                    activitiesStarted: 0,
+                    activitiesCompleted: 0,
+                    activitiesCancelled: 0,
+                    participantsAtStart: 0,
+                    participantsAtEnd: 0,
+                });
+            }
+
+            const breakdown = activitiesByCategoryMap.get(categoryId)!;
+
+            // Count activities by temporal category using same logic as aggregate
+            if (startDate) {
+                // Activity exists at start if created before start and not completed/cancelled before start
+                if (activity.createdAt <= startDate) {
+                    if (activity.status === ActivityStatus.COMPLETED || activity.status === ActivityStatus.CANCELLED) {
+                        if (activity.endDate && activity.endDate >= startDate) {
+                            breakdown.activitiesAtStart++;
+                        }
+                    } else {
+                        breakdown.activitiesAtStart++;
+                    }
+                }
+            }
+
+            if (endDate) {
+                // Activity exists at end if created before end and not completed/cancelled before end
+                if (activity.createdAt <= endDate) {
+                    if (activity.status === ActivityStatus.COMPLETED || activity.status === ActivityStatus.CANCELLED) {
+                        if (activity.endDate && activity.endDate >= endDate) {
+                            breakdown.activitiesAtEnd++;
+                        }
+                    } else {
+                        breakdown.activitiesAtEnd++;
+                    }
+                }
+            }
+
+            if (startDate && endDate && activity.startDate >= startDate && activity.startDate <= endDate) {
+                breakdown.activitiesStarted++;
+            } else if (startDate && !endDate && activity.startDate >= startDate) {
+                breakdown.activitiesStarted++;
+            } else if (!startDate && endDate && activity.startDate <= endDate) {
+                breakdown.activitiesStarted++;
+            } else if (!startDate && !endDate) {
+                breakdown.activitiesStarted++;
+            }
+
+            if (startDate && endDate && activity.status === ActivityStatus.COMPLETED &&
+                activity.endDate && activity.endDate >= startDate && activity.endDate <= endDate) {
+                breakdown.activitiesCompleted++;
+            }
+
+            if (startDate && endDate && activity.status === ActivityStatus.CANCELLED &&
+                activity.endDate && activity.endDate >= startDate && activity.endDate <= endDate) {
+                breakdown.activitiesCancelled++;
+            }
+
+            // Count participants by category
+            if (startDate) {
+                const participantsAtStartForCategory = activity.assignments.filter(a => a.createdAt <= startDate);
+                breakdown.participantsAtStart += new Set(participantsAtStartForCategory.map(a => a.participantId)).size;
+            }
+
+            if (endDate) {
+                const participantsAtEndForCategory = activity.assignments.filter(a => a.createdAt <= endDate);
+                breakdown.participantsAtEnd += new Set(participantsAtEndForCategory.map(a => a.participantId)).size;
+            }
+        }
+
+        const activitiesByCategory = Array.from(activitiesByCategoryMap.values());
+
         // Calculate role distribution
         const roleDistributionMap = new Map<string, RoleDistribution>();
         allActivities.forEach(activity => {
@@ -417,6 +520,7 @@ export class AnalyticsService {
             participantsAtEnd,
             totalActivities,
             totalParticipants,
+            activitiesByCategory,
             activitiesByType,
             roleDistribution,
             geographicBreakdown,

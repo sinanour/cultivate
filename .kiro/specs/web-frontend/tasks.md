@@ -516,7 +516,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Activities started, completed, cancelled within range
       - Participants at start/end of date range
     - Display aggregate counts and breakdowns by activity category and activity type
-    - Render charts for activities by category, activities by type, and role distribution
+    - Render charts for activities distribution, role distribution, and geographic breakdown
     - Provide multi-dimensional grouping controls:
       - Activity category grouping
       - Activity type grouping
@@ -554,6 +554,51 @@ This implementation plan covers the React-based web application built with TypeS
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46_
+
+  - [x] 14.1a Enhance Activities chart with segmented control toggle
+    - Rename chart title from "Activities by Type" to "Activities"
+    - Add CloudScape SegmentedControl component above or within chart area
+    - Configure segmented control with two options:
+      - "Activity Type" (default)
+      - "Activity Category"
+    - Follow same UX pattern as map view toggle functionality
+    - Implement view mode state management using React useState hook
+    - When "Activity Type" selected:
+      - Fetch activities grouped by activity type from API
+      - Display chart with activity type labels on x-axis
+    - When "Activity Category" selected:
+      - Fetch activities grouped by activity category from API
+      - Display chart with activity category labels on x-axis
+    - Update chart data without page refresh when view mode changes
+    - Preserve current date range and filter selections when switching views
+    - Display activity counts in descending order by count value
+    - Show empty state message when no activities exist for grouping dimension
+    - Handle API errors gracefully with CloudScape Alert component
+    - Implement localStorage persistence:
+      - Store selected view mode in localStorage with key "activitiesChartViewMode"
+      - Read from localStorage on component mount to restore previous selection
+      - Default to "Activity Type" if no localStorage value exists
+      - Handle localStorage unavailability gracefully
+    - Implement keyboard navigation:
+      - Make segmented control keyboard navigable using Tab and Arrow keys
+      - Provide visual focus indicators using CloudScape focus styles
+    - Implement accessibility features:
+      - Add aria-label="Activities chart view mode" to segmented control
+      - Add aria-live="polite" region to announce view mode changes
+      - Ensure screen readers announce "Activity Type view selected" or "Activity Category view selected"
+    - _Requirements: 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65_
+
+  - [ ]* 14.1b Write property tests for Activities chart enhancement
+    - **Property 31f: Activities Chart Title Display**
+    - **Property 31g: Activities Chart Segmented Control Presence**
+    - **Property 31h: Activities Chart Default View Mode**
+    - **Property 31i: Activities Chart View Mode Switching**
+    - **Property 31j: Activities Chart Filter Preservation**
+    - **Property 31k: Activities Chart Data Ordering**
+    - **Property 31l: Activities Chart State Persistence**
+    - **Property 31m: Activities Chart Keyboard Navigation**
+    - **Property 31n: Activities Chart Screen Reader Support**
+    - **Validates: Requirements 7.47, 7.48, 7.49, 7.51, 7.52, 7.53, 7.54, 7.56, 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65**
 
   - [ ]* 14.2 Write property tests for engagement metrics
     - **Property 23: Temporal Activity Metrics Display**

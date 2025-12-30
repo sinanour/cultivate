@@ -7,7 +7,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 - [x] 1. Add activity category as a dimension for grouping statistics on the Engagement Dashboard
   - Activity category should be available alongside activity type for statistical analysis
 
-- [ ] 2. Rename and enhance "Activities by Type" chart on Engagement Dashboard
+- [x] 2. Rename and enhance "Activities by Type" chart on Engagement Dashboard
   - Rename chart from "Activities by Type" to "Activities"
   - Add segmented control to toggle between activity type and activity category views
   - Similar UX pattern to the map view toggle functionality

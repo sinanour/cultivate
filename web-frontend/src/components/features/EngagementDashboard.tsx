@@ -11,6 +11,7 @@ import Select from '@cloudscape-design/components/select';
 import Multiselect from '@cloudscape-design/components/multiselect';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
+import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import type { SelectProps } from '@cloudscape-design/components/select';
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
@@ -32,6 +33,12 @@ function toISODateTime(dateString: string, isEndOfDay = false): string {
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+// LocalStorage key for Activities chart view mode
+const ACTIVITIES_CHART_VIEW_MODE_KEY = 'activitiesChartViewMode';
+
+// View mode options
+type ActivitiesViewMode = 'type' | 'category';
 
 export function EngagementDashboard() {
   const navigate = useNavigate();
@@ -131,7 +138,27 @@ export function EngagementDashboard() {
   const [groupByDimensions, setGroupByDimensions] = useState<MultiselectProps.Options>(initializeGroupByDimensions);
   const [dateGranularity, setDateGranularity] = useState<SelectProps.Option | null>(initializeDateGranularity);
   
+  // Activities chart view mode state with localStorage persistence
+  const [activitiesViewMode, setActivitiesViewMode] = useState<ActivitiesViewMode>(() => {
+    try {
+      const stored = localStorage.getItem(ACTIVITIES_CHART_VIEW_MODE_KEY);
+      return (stored === 'category' || stored === 'type') ? stored : 'type';
+    } catch {
+      // If localStorage is unavailable, default to 'type'
+      return 'type';
+    }
+  });
+  
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+
+  // Persist activities view mode to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(ACTIVITIES_CHART_VIEW_MODE_KEY, activitiesViewMode);
+    } catch {
+      // Silently fail if localStorage is unavailable
+    }
+  }, [activitiesViewMode]);
 
   // Sync state to URL whenever filters or grouping changes
   useEffect(() => {
@@ -239,17 +266,32 @@ export function EngagementDashboard() {
   }
 
   // Prepare chart data for activities by type
-  const activitiesByTypeChartData = metrics.activitiesByType.map(type => ({
+  const activitiesByTypeChartData = (metrics.activitiesByType || []).map(type => ({
     name: type.activityTypeName,
     'At Start': type.activitiesAtStart,
     'At End': type.activitiesAtEnd,
     'Started': type.activitiesStarted,
     'Completed': type.activitiesCompleted,
     'Cancelled': type.activitiesCancelled,
-  }));
+  })).sort((a, b) => b['At End'] - a['At End']); // Sort by count descending
+
+  // Prepare chart data for activities by category
+  const activitiesByCategoryChartData = (metrics.activitiesByCategory || []).map(category => ({
+    name: category.activityCategoryName,
+    'At Start': category.activitiesAtStart,
+    'At End': category.activitiesAtEnd,
+    'Started': category.activitiesStarted,
+    'Completed': category.activitiesCompleted,
+    'Cancelled': category.activitiesCancelled,
+  })).sort((a, b) => b['At End'] - a['At End']); // Sort by count descending
+
+  // Select chart data based on view mode
+  const activitiesChartData = activitiesViewMode === 'type' 
+    ? activitiesByTypeChartData 
+    : activitiesByCategoryChartData;
 
   // Prepare chart data for role distribution
-  const roleDistributionChartData = metrics.roleDistribution.map(role => ({
+  const roleDistributionChartData = (metrics.roleDistribution || []).map(role => ({
     name: role.roleName,
     value: role.count,
   }));
@@ -599,25 +641,60 @@ export function EngagementDashboard() {
         />
       </Container>
 
-      {/* Activities by Type Breakdown */}
-      {metrics.activitiesByType && metrics.activitiesByType.length > 0 && (
-        <Container header={<Header variant="h3">Activities by Type</Header>}>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={activitiesByTypeChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="At Start" fill="#0088FE" />
-              <Bar dataKey="At End" fill="#00C49F" />
-              <Bar dataKey="Started" fill="#FFBB28" />
-              <Bar dataKey="Completed" fill="#FF8042" />
-              <Bar dataKey="Cancelled" fill="#8884D8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Container>
-      )}
+      {/* Activities Chart with Segmented Control */}
+      <Container 
+        header={
+          <Header 
+            variant="h3"
+            actions={
+              <SegmentedControl
+                selectedId={activitiesViewMode}
+                onChange={({ detail }) => setActivitiesViewMode(detail.selectedId as ActivitiesViewMode)}
+                label="Activities chart view mode"
+                options={[
+                  { text: 'Activity Type', id: 'type' },
+                  { text: 'Activity Category', id: 'category' },
+                ]}
+              />
+            }
+          >
+            Activities
+          </Header>
+        }
+      >
+        {activitiesChartData.length > 0 ? (
+          <>
+            {/* Screen reader announcement for view mode changes */}
+            <div 
+              role="status" 
+              aria-live="polite" 
+              aria-atomic="true"
+              className="sr-only"
+              style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}
+            >
+              {activitiesViewMode === 'type' ? 'Activity Type view selected' : 'Activity Category view selected'}
+            </div>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={activitiesChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="At Start" fill="#0088FE" />
+                <Bar dataKey="At End" fill="#00C49F" />
+                <Bar dataKey="Started" fill="#FFBB28" />
+                <Bar dataKey="Completed" fill="#FF8042" />
+                <Bar dataKey="Cancelled" fill="#8884D8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </>
+        ) : (
+          <Box textAlign="center" padding="l">
+            <b>No activities available for the selected {activitiesViewMode === 'type' ? 'activity types' : 'activity categories'}</b>
+          </Box>
+        )}
+      </Container>
 
       {/* Role Distribution */}
       {metrics.roleDistribution && metrics.roleDistribution.length > 0 && (

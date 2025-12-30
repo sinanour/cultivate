@@ -40,7 +40,12 @@ describe('AnalyticsService', () => {
                     startDate: new Date('2024-01-01'),
                     endDate: null,
                     activityTypeId: 'type1',
-                    activityType: { id: 'type1', name: 'Workshop' },
+                    activityType: {
+                        id: 'type1',
+                        name: 'Workshop',
+                        activityCategoryId: 'cat1',
+                        activityCategory: { id: 'cat1', name: 'Educational' },
+                    },
                     activityVenueHistory: [],
                     assignments: [
                         {
@@ -68,7 +73,12 @@ describe('AnalyticsService', () => {
                     startDate: new Date('2024-01-01'),
                     endDate: new Date('2024-02-01'),
                     activityTypeId: 'type2',
-                    activityType: { id: 'type2', name: 'Meeting' },
+                    activityType: {
+                        id: 'type2',
+                        name: 'Meeting',
+                        activityCategoryId: 'cat2',
+                        activityCategory: { id: 'cat2', name: 'Social' },
+                    },
                     activityVenueHistory: [],
                     assignments: [
                         {
@@ -93,6 +103,9 @@ describe('AnalyticsService', () => {
             expect(result.activitiesByType).toHaveLength(2);
             expect(result.activitiesByType.find(t => t.activityTypeName === 'Workshop')).toBeDefined();
             expect(result.activitiesByType.find(t => t.activityTypeName === 'Meeting')).toBeDefined();
+            expect(result.activitiesByCategory).toHaveLength(2);
+            expect(result.activitiesByCategory.find(c => c.activityCategoryName === 'Educational')).toBeDefined();
+            expect(result.activitiesByCategory.find(c => c.activityCategoryName === 'Social')).toBeDefined();
             expect(result.roleDistribution).toHaveLength(2);
             expect(result.roleDistribution.find(r => r.roleName === 'Participant')).toBeDefined();
             expect(result.roleDistribution.find(r => r.roleName === 'Organizer')).toBeDefined();
