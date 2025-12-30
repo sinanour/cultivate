@@ -310,6 +310,29 @@ The Backend API package provides the RESTful API service that implements all bus
 6. WHEN a user attempts an unauthorized action, THE API SHALL return 403 Forbidden
 7. THE API SHALL validate user permissions before executing any operation
 
+### Requirement 11A: Manage Users
+
+**User Story:** As an administrator, I want to manage user accounts via API, so that I can control system access and assign appropriate roles.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a GET /api/v1/users endpoint that returns all users
+2. THE API SHALL provide a POST /api/v1/users endpoint that creates a new user
+3. THE API SHALL provide a PUT /api/v1/users/:id endpoint that updates an existing user
+4. THE API SHALL restrict all user management endpoints to ADMINISTRATOR role only
+5. WHEN a non-administrator attempts to access user management endpoints, THE API SHALL return 403 Forbidden
+6. WHEN creating a user, THE API SHALL validate that email and password are provided
+7. WHEN creating a user, THE API SHALL validate that email is unique
+8. WHEN creating a user, THE API SHALL validate that password is at least 8 characters
+9. WHEN creating a user, THE API SHALL hash the password using bcrypt before storing
+10. WHEN creating a user, THE API SHALL require a role selection (ADMINISTRATOR, EDITOR, or READ_ONLY)
+11. WHEN updating a user, THE API SHALL allow changing email, password, and role
+12. WHEN updating a user with a new password, THE API SHALL hash the password using bcrypt
+13. WHEN updating a user without providing a password, THE API SHALL preserve the existing password
+14. WHEN updating a user's email, THE API SHALL validate that the new email is unique
+15. THE API SHALL return user objects with id, email, role, createdAt, and updatedAt fields
+16. THE API SHALL NOT return password hashes in any API response
+
 ### Requirement 12: Audit User Actions
 
 **User Story:** As a system administrator, I want audit logging via API, so that I can track user actions for security and compliance.

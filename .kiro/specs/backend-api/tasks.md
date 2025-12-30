@@ -194,6 +194,49 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - DELETE /api/roles/:id
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
+- [x] 6A. Implement user management (admin only)
+  - [x] 6A.1 Update user repository
+    - Add findAll() method to list all users
+    - Add update() method for flexible user updates
+    - _Requirements: 11A.1, 11A.11_
+
+  - [x] 6A.2 Create user service
+    - Implement getAllUsers() - returns users without password hashes
+    - Implement createUser() - validates email, password (min 8 chars), role; hashes password with bcrypt
+    - Implement updateUser() - allows updating email, password, role; validates email uniqueness; hashes new passwords
+    - Validate email uniqueness on create and update
+    - Exclude password hashes from all responses
+    - _Requirements: 11A.1, 11A.2, 11A.3, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16_
+
+  - [x] 6A.3 Create user routes
+    - GET /api/v1/users (admin only)
+    - POST /api/v1/users (admin only)
+    - PUT /api/v1/users/:id (admin only)
+    - Restrict all endpoints to ADMINISTRATOR role using requireAdmin() middleware
+    - Return 403 Forbidden for non-administrators
+    - _Requirements: 11A.1, 11A.2, 11A.3, 11A.4, 11A.5_
+
+  - [x] 6A.4 Add validation schemas
+    - Create UserCreateSchema (email, password min 8 chars, role enum)
+    - Create UserUpdateSchema (optional email, password, role)
+    - _Requirements: 11A.6, 11A.7, 11A.8, 11A.10_
+
+  - [x] 6A.5 Register user routes in main app
+    - Import UserService and UserRoutes
+    - Instantiate userService with userRepository
+    - Instantiate userRoutes with userService, authMiddleware, authorizationMiddleware
+    - Register routes at /api/v1/users with smartRateLimiter
+    - _Requirements: 11A.1, 11A.2, 11A.3_
+
+  - [ ]* 6A.6 Write property tests for user management
+    - **Property 68a: User List Retrieval**
+    - **Property 68b: User Creation Validation**
+    - **Property 68c: User Email Uniqueness**
+    - **Property 68d: User Update Flexibility**
+    - **Property 68e: User Management Administrator Restriction**
+    - **Property 68f: Password Hash Exclusion**
+    - **Validates: Requirements 11A.1, 11A.2, 11A.4, 11A.5, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16**
+
 - [x] 7. Implement participant management
   - [x] 7.1 Create participant repository
     - Implement CRUD operations

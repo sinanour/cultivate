@@ -84,6 +84,11 @@ POST   /api/v1/roles                   -> Create role
 PUT    /api/v1/roles/:id               -> Update role
 DELETE /api/v1/roles/:id               -> Delete role
 
+// User Routes (Admin Only)
+GET    /api/v1/users                   -> List all users (admin only)
+POST   /api/v1/users                   -> Create user (admin only)
+PUT    /api/v1/users/:id               -> Update user (admin only)
+
 // Participant Routes
 GET    /api/v1/participants            -> List all participants (supports ?geographicAreaId=<id> and ?search=<text> filters)
 GET    /api/v1/participants/:id        -> Get participant by ID
@@ -162,6 +167,7 @@ Services implement business logic and coordinate operations:
 - **ActivityCategoryService**: Manages activity category CRUD operations, validates uniqueness, prevents deletion of referenced categories
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, validates activity category references, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
+- **UserService**: Manages user CRUD operations (admin only), validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates
 - **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
@@ -179,6 +185,7 @@ Repositories encapsulate Prisma database access:
 - **ActivityCategoryRepository**: CRUD operations for activity categories
 - **ActivityTypeRepository**: CRUD operations for activity types
 - **RoleRepository**: CRUD operations for roles
+- **UserRepository**: CRUD operations for users, includes findAll, findByEmail, findById, create, and update methods
 - **ParticipantRepository**: CRUD operations and text-based search for participants (supports filtering by name/email and geographic area with pagination)
 - **ActivityRepository**: CRUD operations and queries for activities
 - **AssignmentRepository**: CRUD operations for participant assignments
@@ -186,7 +193,6 @@ Repositories encapsulate Prisma database access:
 - **GeographicAreaRepository**: CRUD operations for geographic areas with text-based search (supports filtering by name and geographic area with pagination), hierarchical queries for ancestors and descendants, statistics aggregation
 - **ParticipantAddressHistoryRepository**: Temporal tracking operations for participant home address changes
 - **ActivityVenueHistoryRepository**: Temporal tracking operations for activity-venue associations
-- **UserRepository**: User authentication and management
 - **AuditLogRepository**: Audit log storage and retrieval
 
 ### 4. Middleware Components
@@ -838,6 +844,32 @@ The API uses Prisma to define the following database models:
 **Property 68: Permission validation enforcement**
 *For any* protected operation, the API should validate user permissions before executing the operation.
 **Validates: Requirements 11.7**
+
+### User Management Properties
+
+**Property 68a: User list retrieval**
+*For any* GET /api/v1/users request from an administrator, the API should return all users without password hashes.
+**Validates: Requirements 11A.1, 11A.15, 11A.16**
+
+**Property 68b: User creation validation**
+*For any* POST /api/v1/users request with valid email, password (minimum 8 characters), and role, the API should create a new user with hashed password.
+**Validates: Requirements 11A.2, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10**
+
+**Property 68c: User email uniqueness**
+*For any* attempt to create or update a user with an email that already exists for a different user, the API should return a DUPLICATE_EMAIL error.
+**Validates: Requirements 11A.7, 11A.14**
+
+**Property 68d: User update flexibility**
+*For any* PUT /api/v1/users/:id request, the API should allow updating email, password, and role independently, with password being optional.
+**Validates: Requirements 11A.11, 11A.12, 11A.13**
+
+**Property 68e: User management administrator restriction**
+*For any* user management endpoint request from a non-administrator, the API should return 403 Forbidden.
+**Validates: Requirements 11A.4, 11A.5**
+
+**Property 68f: Password hash exclusion**
+*For any* user object returned by the API, the password hash field should not be included in the response.
+**Validates: Requirements 11A.16**
 
 ### Audit Logging Properties
 

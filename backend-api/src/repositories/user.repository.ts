@@ -3,6 +3,12 @@ import { PrismaClient, User, UserRole } from '@prisma/client';
 export class UserRepository {
   constructor(private prisma: PrismaClient) {}
 
+  async findAll(): Promise<User[]> {
+    return this.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
@@ -21,6 +27,16 @@ export class UserRepository {
     });
   }
 
+  async update(
+    id: string,
+    data: { email?: string; passwordHash?: string; role?: UserRole }
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
+
   async updatePassword(userId: string, passwordHash: string): Promise<User> {
     return this.prisma.user.update({
       where: { id: userId },
@@ -35,3 +51,4 @@ export class UserRepository {
     });
   }
 }
+

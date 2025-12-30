@@ -51,6 +51,23 @@ export const RoleUpdateSchema = z.object({
   version: z.number().int().positive().optional(),
 });
 
+// User schemas
+export const UserCreateSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  role: z.enum(['ADMINISTRATOR', 'EDITOR', 'READ_ONLY'], {
+    errorMap: () => ({ message: 'Role must be ADMINISTRATOR, EDITOR, or READ_ONLY' }),
+  }),
+});
+
+export const UserUpdateSchema = z.object({
+  email: z.string().email('Invalid email format').optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+  role: z.enum(['ADMINISTRATOR', 'EDITOR', 'READ_ONLY'], {
+    errorMap: () => ({ message: 'Role must be ADMINISTRATOR, EDITOR, or READ_ONLY' }),
+  }).optional(),
+});
+
 // Participant schemas
 export const ParticipantCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),
@@ -244,6 +261,8 @@ export type ActivityTypeCreateInput = z.infer<typeof ActivityTypeCreateSchema>;
 export type ActivityTypeUpdateInput = z.infer<typeof ActivityTypeUpdateSchema>;
 export type RoleCreateInput = z.infer<typeof RoleCreateSchema>;
 export type RoleUpdateInput = z.infer<typeof RoleUpdateSchema>;
+export type UserCreateInput = z.infer<typeof UserCreateSchema>;
+export type UserUpdateInput = z.infer<typeof UserUpdateSchema>;
 export type ParticipantCreateInput = z.infer<typeof ParticipantCreateSchema>;
 export type ParticipantUpdateInput = z.infer<typeof ParticipantUpdateSchema>;
 export type ParticipantSearchQuery = z.infer<typeof ParticipantSearchSchema>;

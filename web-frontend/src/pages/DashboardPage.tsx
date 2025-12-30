@@ -11,7 +11,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const quickLinks = [
+  const allQuickLinks = [
     {
       href: '/geographic-areas',
       icon: 'globe',
@@ -59,8 +59,17 @@ export default function DashboardPage() {
       icon: 'lock-private',
       title: 'User Administration',
       description: 'Manage system users and permissions',
+      adminOnly: true,
     },
   ];
+
+  // Filter quick links based on user role
+  const quickLinks = allQuickLinks.filter(link => {
+    if (link.adminOnly) {
+      return user?.role === 'ADMINISTRATOR';
+    }
+    return true;
+  });
 
   return (
     <ContentLayout

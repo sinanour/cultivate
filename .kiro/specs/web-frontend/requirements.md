@@ -419,6 +419,9 @@ The Web Frontend package provides a responsive React-based web application that 
 3. THE Web_App SHALL preserve navigation state when moving between sections
 4. THE Web_App SHALL provide a user menu with logout option
 5. THE Web_App SHALL display the current user's name and role
+6. THE Web_App SHALL provide quick links on the main dashboard page for accessing key sections
+7. WHEN displaying quick links on the main dashboard, THE Web_App SHALL hide the User Administration quick link from users who do not have ADMINISTRATOR role
+8. WHEN a user has ADMINISTRATOR role, THE Web_App SHALL display the User Administration quick link on the main dashboard
 
 ### Requirement 14: Form Validation
 

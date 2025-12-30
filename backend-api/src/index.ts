@@ -16,6 +16,7 @@ import { ActivityRepository } from './repositories/activity.repository';
 import { ActivityVenueHistoryRepository } from './repositories/activity-venue-history.repository';
 import { AssignmentRepository } from './repositories/assignment.repository';
 import { AuthService } from './services/auth.service';
+import { UserService } from './services/user.service';
 import { ActivityCategoryService } from './services/activity-category.service';
 import { ActivityTypeService } from './services/activity-type.service';
 import { RoleService } from './services/role.service';
@@ -35,6 +36,7 @@ import {
   addRateLimitHeaders,
 } from './middleware/rate-limit.middleware';
 import { AuthRoutes } from './routes/auth.routes';
+import { UserRoutes } from './routes/user.routes';
 import { ActivityCategoryRoutes } from './routes/activity-category.routes';
 import { ActivityTypeRoutes } from './routes/activity-type.routes';
 import { RoleRoutes } from './routes/role.routes';
@@ -70,6 +72,7 @@ const assignmentRepository = new AssignmentRepository(prisma);
 
 // Initialize services
 const authService = new AuthService(userRepository);
+const userService = new UserService(userRepository);
 const activityCategoryService = new ActivityCategoryService(activityCategoryRepository);
 const activityTypeService = new ActivityTypeService(activityTypeRepository, activityCategoryRepository);
 const roleService = new RoleService(roleRepository);
@@ -105,6 +108,7 @@ const authorizationMiddleware = new AuthorizationMiddleware();
 
 // Initialize routes
 const authRoutes = new AuthRoutes(authService, authMiddleware);
+const userRoutes = new UserRoutes(userService, authMiddleware, authorizationMiddleware);
 const activityCategoryRoutes = new ActivityCategoryRoutes(
   activityCategoryService,
   authMiddleware,
@@ -166,6 +170,7 @@ app.get('/api/v1/docs/openapi.json', (_req, res) => {
 
 // API Routes (v1)
 app.use('/api/v1/auth', authRateLimiter, authRoutes.getRouter());
+app.use('/api/v1/users', smartRateLimiter, userRoutes.getRouter());
 app.use('/api/v1/activity-categories', smartRateLimiter, activityCategoryRoutes.getRouter());
 app.use('/api/v1/activity-types', smartRateLimiter, activityTypeRoutes.getRouter());
 app.use('/api/v1/roles', smartRateLimiter, roleRoutes.getRouter());

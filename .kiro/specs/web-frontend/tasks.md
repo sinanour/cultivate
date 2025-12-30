@@ -29,6 +29,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Highlight current active section
     - _Requirements: 13.1, 13.2, 13.4, 13.5, 10.5_
 
+  - [x] 2.2a Create DashboardPage with role-based quick links
+    - Display quick links for key sections (Geographic Areas, Venues, Activities, Participants, Map, Analytics)
+    - Filter quick links based on user role
+    - Hide User Administration quick link from non-administrators
+    - Show User Administration quick link only for ADMINISTRATOR role
+    - _Requirements: 13.6, 13.7, 13.8_
+
   - [ ]* 2.3 Write property test for active navigation highlighting
     - **Property 33: Active Navigation Highlighting**
     - **Validates: Requirements 13.2**
@@ -36,6 +43,10 @@ This implementation plan covers the React-based web application built with TypeS
   - [ ]* 2.4 Write property test for navigation state persistence
     - **Property 34: Navigation State Persistence**
     - **Validates: Requirements 13.3**
+
+  - [ ]* 2.5 Write property test for dashboard quick link visibility
+    - **Property 44a: Dashboard Quick Link Visibility**
+    - **Validates: Requirements 13.7, 13.8**
 
 - [x] 3. Implement authentication system
   - [x] 3.1 Create authentication service

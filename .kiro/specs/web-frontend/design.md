@@ -1507,6 +1507,12 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 13.3**
 
+### Property 44a: Dashboard quick link visibility
+
+*For any* user viewing the main dashboard page, the User Administration quick link should only be visible if the user has ADMINISTRATOR role.
+
+**Validates: Requirements 13.7, 13.8**
+
 ### Property 45: Form validation error display
 
 *For any* invalid form field, the field should be visually highlighted and display an inline error message.
