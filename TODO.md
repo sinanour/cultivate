@@ -26,7 +26,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Remove cancelled, started, and completed counts from this chart
   - Keep visualization focused on net change
 
-- [ ] 6. Add new chart for activity lifecycle events
+- [x] 6. Add new chart for activity lifecycle events
   - Create separate chart showing activities started and completed
   - Include toggle to render by activity category or activity type
   - Similar pattern to existing activity chart

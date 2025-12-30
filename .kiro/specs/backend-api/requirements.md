@@ -203,6 +203,36 @@ The Backend API package provides the RESTful API service that implements all bus
 24. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
 25. THE API SHALL return role distribution across all activities within the filtered and grouped results
 
+### Requirement 6A: Activity Lifecycle Events Analytics
+
+**User Story:** As a program manager, I want to retrieve activity lifecycle event data (started and completed activities) via API grouped by category or type, so that I can analyze activity patterns and trends.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a GET /api/analytics/activity-lifecycle endpoint that returns activity lifecycle event data
+2. THE API SHALL accept optional startDate and endDate query parameters in ISO 8601 datetime format
+3. THE API SHALL require a groupBy query parameter with values 'category' or 'type'
+4. WHEN groupBy is 'category', THE API SHALL group results by activity category
+5. WHEN groupBy is 'type', THE API SHALL group results by activity type
+6. WHEN both startDate and endDate are provided, THE API SHALL count activities started within the date range (startDate >= startDate AND startDate <= endDate)
+7. WHEN both startDate and endDate are provided, THE API SHALL count activities completed within the date range (endDate >= startDate AND endDate <= endDate AND status = COMPLETED)
+8. WHEN only startDate is provided, THE API SHALL count activities started on or after startDate and completed on or after startDate
+9. WHEN only endDate is provided, THE API SHALL count activities started on or before endDate and completed on or before endDate
+10. WHEN neither startDate nor endDate is provided, THE API SHALL count all activities started and all activities completed (all-time metrics)
+11. THE API SHALL exclude cancelled activities from both started and completed counts
+12. THE API SHALL support optional geographicAreaIds query parameter to filter by one or more geographic areas
+13. WHEN geographicAreaIds filter is provided, THE API SHALL include only activities at venues in the specified geographic areas or their descendants
+14. THE API SHALL support optional activityTypeIds query parameter to filter by one or more activity types
+15. WHEN activityTypeIds filter is provided, THE API SHALL include only activities of the specified types
+16. THE API SHALL support optional venueIds query parameter to filter by one or more venues
+17. WHEN venueIds filter is provided, THE API SHALL include only activities at the specified venues
+18. WHEN multiple filters are provided, THE API SHALL apply all filters using AND logic
+19. THE API SHALL return an array of objects with groupName, started count, and completed count
+20. THE API SHALL sort results alphabetically by groupName
+21. WHEN no activities match the filters, THE API SHALL return an empty array
+22. THE API SHALL validate all query parameters and return 400 Bad Request for invalid inputs
+23. THE API SHALL return 200 OK with the lifecycle event data on success
+
 ### Requirement 7: Track Growth Over Time
 
 **User Story:** As a community organizer, I want to track how activities and participation grow over time via API, so that I can measure community development.

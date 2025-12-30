@@ -274,6 +274,45 @@ The Web Frontend package provides a responsive React-based web application that 
 64. THE Segmented_Control SHALL include appropriate ARIA labels for screen readers
 65. WHEN the view mode changes, THE System SHALL announce the change to screen readers
 
+### Requirement 7A: Activity Lifecycle Events Chart
+
+**User Story:** As a program manager, I want to see how many activities started and completed during a time period with the ability to toggle between category and type views, so that I can understand activity lifecycle patterns at different levels of granularity.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display an Activity Lifecycle Events chart on the Engagement Dashboard
+2. THE Activity_Lifecycle_Chart SHALL display two data series: "Started" and "Completed"
+3. WHEN the Time_Period changes, THE Activity_Lifecycle_Chart SHALL update to reflect the new period
+4. THE Activity_Lifecycle_Chart SHALL use a bar chart visualization format
+5. THE Activity_Lifecycle_Chart SHALL be positioned after the Activities chart on the dashboard
+6. THE Activity_Lifecycle_Chart SHALL include a Segmented_Control with two options: "By Type" and "By Category"
+7. WHEN "By Category" is selected, THE Activity_Lifecycle_Chart SHALL group and display data by Activity_Category
+8. WHEN "By Type" is selected, THE Activity_Lifecycle_Chart SHALL group and display data by Activity_Type
+9. THE Segmented_Control SHALL default to "By Type" view
+10. WHEN the user switches between views, THE Activity_Lifecycle_Chart SHALL animate the transition smoothly
+11. WHEN counting started activities, THE Activity_Lifecycle_Chart SHALL include only activities with start dates within the Time_Period
+12. WHEN counting completed activities, THE Activity_Lifecycle_Chart SHALL include only activities with completion dates within the Time_Period
+13. WHEN an activity has both started and completed within the Time_Period, THE Activity_Lifecycle_Chart SHALL count it in both series
+14. THE Activity_Lifecycle_Chart SHALL exclude cancelled activities from both series
+15. WHEN no activities exist for a category or type, THE Activity_Lifecycle_Chart SHALL display zero for that group
+16. THE Activity_Lifecycle_Chart SHALL use the same color scheme as other dashboard charts
+17. THE Activity_Lifecycle_Chart SHALL use the CloudScape BarChart component
+18. THE Activity_Lifecycle_Chart SHALL include a descriptive title: "Activity Lifecycle Events"
+19. THE Activity_Lifecycle_Chart SHALL display axis labels for clarity
+20. THE Activity_Lifecycle_Chart SHALL be responsive and adapt to different screen sizes
+21. WHEN geographic area filters are applied, THE Activity_Lifecycle_Chart SHALL display only activities within the selected areas
+22. WHEN activity type filters are applied, THE Activity_Lifecycle_Chart SHALL display only the selected activity types
+23. WHEN venue filters are applied, THE Activity_Lifecycle_Chart SHALL display only activities at the selected venues
+24. WHEN multiple filters are applied, THE Activity_Lifecycle_Chart SHALL apply all filters in combination
+25. WHEN filters are cleared, THE Activity_Lifecycle_Chart SHALL display all activities
+26. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage
+27. WHEN a user returns to the Engagement Dashboard, THE Activity_Lifecycle_Chart SHALL restore the previously selected view mode from local storage
+28. IF no previous selection exists in local storage, THE Activity_Lifecycle_Chart SHALL default to "By Type" view
+29. WHEN local storage is unavailable, THE Activity_Lifecycle_Chart SHALL function normally with "By Type" as the default
+30. THE Activity_Lifecycle_Chart SHALL display for all date range types: absolute ranges, relative ranges, and no date range (all history)
+31. WHEN no date range is selected, THE Activity_Lifecycle_Chart SHALL display lifecycle events for all time
+32. WHEN a relative date range is selected, THE Activity_Lifecycle_Chart SHALL calculate the absolute date range and display lifecycle events for that period
+
 ### Requirement 8: Authentication UI
 
 **User Story:** As a user, I want to log in to the web interface, so that I can access my community data.

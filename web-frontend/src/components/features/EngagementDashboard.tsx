@@ -18,6 +18,7 @@ import type { MultiselectProps } from '@cloudscape-design/components/multiselect
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { AnalyticsService, type EngagementMetricsParams } from '../../services/api/analytics.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { ActivityLifecycleChart } from './ActivityLifecycleChart';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { GroupingDimension, DateGranularity } from '../../utils/constants';
 
@@ -680,8 +681,8 @@ export function EngagementDashboard() {
                 onChange={({ detail }) => setActivitiesViewMode(detail.selectedId as ActivitiesViewMode)}
                 label="Activities chart view mode"
                 options={[
-                  { text: 'Activity Type', id: 'type' },
-                  { text: 'Activity Category', id: 'category' },
+                  { text: 'By Type', id: 'type' },
+                  { text: 'By Category', id: 'category' },
                 ]}
               />
             }
@@ -700,7 +701,7 @@ export function EngagementDashboard() {
               className="sr-only"
               style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}
             >
-              {activitiesViewMode === 'type' ? 'Activity Type view selected' : 'Activity Category view selected'}
+              {activitiesViewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
             </div>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={activitiesChartData}>
@@ -737,6 +738,45 @@ export function EngagementDashboard() {
           </Box>
         )}
       </Container>
+
+      {/* Activity Lifecycle Events Chart */}
+      <ActivityLifecycleChart
+        startDate={
+          dateRange?.type === 'absolute' 
+            ? new Date(dateRange.startDate)
+            : dateRange?.type === 'relative'
+            ? (() => {
+                const now = new Date();
+                const start = new Date(now);
+                switch (dateRange.unit) {
+                  case 'day':
+                    start.setDate(start.getDate() - dateRange.amount);
+                    break;
+                  case 'week':
+                    start.setDate(start.getDate() - (dateRange.amount * 7));
+                    break;
+                  case 'month':
+                    start.setMonth(start.getMonth() - dateRange.amount);
+                    break;
+                  case 'year':
+                    start.setFullYear(start.getFullYear() - dateRange.amount);
+                    break;
+                }
+                return start;
+              })()
+            : undefined
+        }
+        endDate={
+          dateRange?.type === 'absolute'
+            ? new Date(dateRange.endDate)
+            : dateRange?.type === 'relative'
+            ? new Date()
+            : undefined
+        }
+        geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
+        activityTypeIds={activityTypeFilter?.value ? [activityTypeFilter.value] : undefined}
+        venueIds={venueFilter?.value ? [venueFilter.value] : undefined}
+      />
 
       {/* Role Distribution */}
       {metrics.roleDistribution && metrics.roleDistribution.length > 0 && (

@@ -172,6 +172,33 @@ export const GrowthQuerySchema = z.object({
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
 });
 
+export const ActivityLifecycleQuerySchema = z.object({
+  startDate: z.string().datetime('Invalid start date format').optional(),
+  endDate: z.string().datetime('Invalid end date format').optional(),
+  groupBy: z.enum(['category', 'type']),
+  geographicAreaIds: z.union([
+    z.string().uuid('Invalid geographic area ID format'),
+    z.array(z.string().uuid('Invalid geographic area ID format'))
+  ]).optional().transform(val => {
+    if (!val) return undefined;
+    return Array.isArray(val) ? val : [val];
+  }),
+  activityTypeIds: z.union([
+    z.string().uuid('Invalid activity type ID format'),
+    z.array(z.string().uuid('Invalid activity type ID format'))
+  ]).optional().transform(val => {
+    if (!val) return undefined;
+    return Array.isArray(val) ? val : [val];
+  }),
+  venueIds: z.union([
+    z.string().uuid('Invalid venue ID format'),
+    z.array(z.string().uuid('Invalid venue ID format'))
+  ]).optional().transform(val => {
+    if (!val) return undefined;
+    return Array.isArray(val) ? val : [val];
+  }),
+});
+
 // Sync schemas
 export const SyncOperationSchema = z.object({
   operation: z.nativeEnum(SyncOperation),
@@ -225,6 +252,7 @@ export type AssignmentCreateInput = z.infer<typeof AssignmentCreateSchema>;
 export type AssignmentUpdateInput = z.infer<typeof AssignmentUpdateSchema>;
 export type EngagementQuery = z.infer<typeof EngagementQuerySchema>;
 export type GrowthQuery = z.infer<typeof GrowthQuerySchema>;
+export type ActivityLifecycleQuery = z.infer<typeof ActivityLifecycleQuerySchema>;
 export type SyncOperationInput = z.infer<typeof SyncOperationSchema>;
 export type BatchSyncInput = z.infer<typeof BatchSyncSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;

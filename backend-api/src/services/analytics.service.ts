@@ -110,6 +110,12 @@ export interface GrowthMetrics {
     timeSeries: GrowthPeriodData[];
 }
 
+export interface ActivityLifecycleData {
+    groupName: string;
+    started: number;
+    completed: number;
+}
+
 export interface AnalyticsFilters {
     startDate?: Date;
     endDate?: Date;
@@ -950,6 +956,135 @@ export class AnalyticsService {
         }
 
         return breakdown;
+    }
+
+    async getActivityLifecycleEvents(
+        startDate: Date | undefined,
+        endDate: Date | undefined,
+        groupBy: 'category' | 'type',
+        filters: {
+            geographicAreaIds?: string[];
+            activityTypeIds?: string[];
+            venueIds?: string[];
+        } = {}
+    ): Promise<ActivityLifecycleData[]> {
+        const { geographicAreaIds, activityTypeIds, venueIds } = filters;
+
+        // Get venue IDs if geographic filter is provided
+        let effectiveVenueIds: string[] | undefined = venueIds;
+        if (geographicAreaIds && geographicAreaIds.length > 0) {
+            const venueIdsForAreas = await Promise.all(
+                geographicAreaIds.map(areaId => this.getVenueIdsForArea(areaId))
+            );
+            effectiveVenueIds = venueIdsForAreas.flat();
+        }
+
+        // Build base activity filter
+        const activityWhere: any = {
+            status: {
+                not: ActivityStatus.CANCELLED, // Exclude cancelled activities
+            },
+        };
+
+        if (activityTypeIds && activityTypeIds.length > 0) {
+            activityWhere.activityTypeId = { in: activityTypeIds };
+        }
+
+        if (effectiveVenueIds && effectiveVenueIds.length > 0) {
+            activityWhere.activityVenueHistory = {
+                some: {
+                    venueId: { in: effectiveVenueIds },
+                },
+            };
+        }
+
+        // Query activities with necessary relations
+        const activities = await this.prisma.activity.findMany({
+            where: activityWhere,
+            include: {
+                activityType: {
+                    include: {
+                        activityCategory: true,
+                    },
+                },
+            },
+        });
+
+        // Group activities by category or type
+        const groupMap = new Map<string, { groupName: string; started: number; completed: number }>();
+
+        for (const activity of activities) {
+            // Determine group key and name
+            let groupKey: string;
+            let groupName: string;
+
+            if (groupBy === 'category') {
+                groupKey = activity.activityType.activityCategoryId;
+                groupName = activity.activityType.activityCategory.name;
+            } else {
+                groupKey = activity.activityTypeId;
+                groupName = activity.activityType.name;
+            }
+
+            // Initialize group if not exists
+            if (!groupMap.has(groupKey)) {
+                groupMap.set(groupKey, {
+                    groupName,
+                    started: 0,
+                    completed: 0,
+                });
+            }
+
+            const group = groupMap.get(groupKey)!;
+
+            // Count started activities (startDate within period)
+            // Handle different date range scenarios
+            if (startDate && endDate) {
+                // Absolute or relative date range
+                if (activity.startDate >= startDate && activity.startDate <= endDate) {
+                    group.started++;
+                }
+            } else if (startDate && !endDate) {
+                // Only start date provided
+                if (activity.startDate >= startDate) {
+                    group.started++;
+                }
+            } else if (!startDate && endDate) {
+                // Only end date provided
+                if (activity.startDate <= endDate) {
+                    group.started++;
+                }
+            } else {
+                // No date range - count all started activities
+                group.started++;
+            }
+
+            // Count completed activities (endDate within period and status is COMPLETED)
+            if (activity.status === ActivityStatus.COMPLETED && activity.endDate) {
+                if (startDate && endDate) {
+                    // Absolute or relative date range
+                    if (activity.endDate >= startDate && activity.endDate <= endDate) {
+                        group.completed++;
+                    }
+                } else if (startDate && !endDate) {
+                    // Only start date provided
+                    if (activity.endDate >= startDate) {
+                        group.completed++;
+                    }
+                } else if (!startDate && endDate) {
+                    // Only end date provided
+                    if (activity.endDate <= endDate) {
+                        group.completed++;
+                    }
+                } else {
+                    // No date range - count all completed activities
+                    group.completed++;
+                }
+            }
+        }
+
+        // Convert map to array and sort by group name
+        return Array.from(groupMap.values()).sort((a, b) => a.groupName.localeCompare(b.groupName));
     }
 
     private async getVenueIdsForArea(geographicAreaId: string): Promise<string[]> {

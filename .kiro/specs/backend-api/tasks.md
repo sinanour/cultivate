@@ -433,6 +433,22 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - GET /api/analytics/geographic
     - _Requirements: 6.1, 7.1_
 
+  - [x] 13.4 Add activity lifecycle events endpoint
+    - Implement getActivityLifecycleEvents method in AnalyticsService
+    - Handle optional startDate and endDate parameters
+    - When both dates provided: count activities started/completed within range
+    - When only startDate: count activities started/completed on or after startDate
+    - When only endDate: count activities started/completed on or before endDate
+    - When no dates: count all activities started/completed (all-time)
+    - Exclude cancelled activities from both counts
+    - Group by activity category or type based on groupBy parameter
+    - Apply optional filters (geographicAreaIds, activityTypeIds, venueIds) using AND logic
+    - Sort results alphabetically by groupName
+    - Create ActivityLifecycleQuerySchema validation schema with optional dates
+    - Add GET /api/analytics/activity-lifecycle route with validation
+    - Return array of {groupName, started, completed} objects
+    - _Requirements: 6A.1, 6A.2, 6A.3, 6A.4, 6A.5, 6A.6, 6A.7, 6A.8, 6A.9, 6A.10, 6A.11, 6A.12, 6A.13, 6A.14, 6A.15, 6A.16, 6A.17, 6A.18, 6A.19, 6A.20, 6A.21, 6A.22, 6A.23_
+
 - [x] 14. Implement offline synchronization
   - [x] 14.1 Create sync service
     - Process batch sync operations in transactions

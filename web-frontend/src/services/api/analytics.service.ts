@@ -20,6 +20,21 @@ export interface GrowthMetricsParams {
     geographicAreaId?: string;
 }
 
+export interface ActivityLifecycleData {
+    groupName: string;
+    started: number;
+    completed: number;
+}
+
+export interface ActivityLifecycleParams {
+    startDate?: string;
+    endDate?: string;
+    groupBy: 'category' | 'type';
+    geographicAreaIds?: string[];
+    activityTypeIds?: string[];
+    venueIds?: string[];
+}
+
 export class AnalyticsService {
     static async getEngagementMetrics(params: EngagementMetricsParams = {}): Promise<EngagementMetrics> {
         const queryParams = new URLSearchParams();
@@ -65,5 +80,35 @@ export class AnalyticsService {
 
         const query = params.toString();
         return ApiClient.get<GeographicAnalytics[]>(`/analytics/geographic${query ? `?${query}` : ''}`);
+    }
+
+    static async getActivityLifecycleEvents(params: ActivityLifecycleParams): Promise<ActivityLifecycleData[]> {
+        const queryParams = new URLSearchParams();
+
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        queryParams.append('groupBy', params.groupBy);
+
+        // Handle array parameters
+        if (params.geographicAreaIds && params.geographicAreaIds.length > 0) {
+            params.geographicAreaIds.forEach(id => {
+                queryParams.append('geographicAreaIds', id);
+            });
+        }
+
+        if (params.activityTypeIds && params.activityTypeIds.length > 0) {
+            params.activityTypeIds.forEach(id => {
+                queryParams.append('activityTypeIds', id);
+            });
+        }
+
+        if (params.venueIds && params.venueIds.length > 0) {
+            params.venueIds.forEach(id => {
+                queryParams.append('venueIds', id);
+            });
+        }
+
+        const query = queryParams.toString();
+        return ApiClient.get<ActivityLifecycleData[]>(`/analytics/activity-lifecycle?${query}`);
     }
 }

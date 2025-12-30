@@ -136,9 +136,10 @@ GET    /api/v1/geographic-areas/:id/statistics -> Get statistics for geographic 
 GET    /api/v1/participants/:id/address-history -> Get participant's home address history
 
 // Analytics Routes
-GET    /api/v1/analytics/engagement    -> Get engagement metrics (supports geographic filter)
-GET    /api/v1/analytics/growth        -> Get growth metrics (supports geographic filter)
-GET    /api/v1/analytics/geographic    -> Get engagement metrics by geographic area
+GET    /api/v1/analytics/engagement         -> Get engagement metrics (supports geographic filter)
+GET    /api/v1/analytics/growth             -> Get growth metrics (supports geographic filter)
+GET    /api/v1/analytics/geographic         -> Get engagement metrics by geographic area
+GET    /api/v1/analytics/activity-lifecycle -> Get activity lifecycle events (started/completed)
 
 // Sync Routes
 POST   /api/v1/sync/batch              -> Batch sync operations
@@ -166,7 +167,7 @@ Services implement business logic and coordinate operations:
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
-- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area; range filter for dates), aggregates data hierarchically by specified dimensions
+- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support)
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
 - **AuditService**: Logs user actions, stores audit records
@@ -292,7 +293,53 @@ LoginSchema = {
   email: string (required, valid email),
   password: string (required, min 8 chars)
 }
+
+// Activity Lifecycle Query Schema
+ActivityLifecycleQuerySchema = {
+  startDate: string (optional, ISO 8601 datetime format),
+  endDate: string (optional, ISO 8601 datetime format),
+  groupBy: enum (required, 'category' | 'type'),
+  geographicAreaIds: string[] (optional, array of valid UUIDs),
+  activityTypeIds: string[] (optional, array of valid UUIDs),
+  venueIds: string[] (optional, array of valid UUIDs)
+}
 ```
+
+### Activity Lifecycle Events Endpoint
+
+**GET /api/v1/analytics/activity-lifecycle**
+
+Returns activity lifecycle event data showing activities started and completed within a time period (or all time), grouped by activity category or type.
+
+**Query Parameters:**
+- `startDate` (optional): ISO 8601 datetime string - start of analysis period (omit for all history)
+- `endDate` (optional): ISO 8601 datetime string - end of analysis period (omit for all history)
+- `groupBy` (required): 'category' or 'type' - grouping dimension
+- `geographicAreaIds` (optional): Array of geographic area UUIDs - filters to activities at venues in these areas or descendants
+- `activityTypeIds` (optional): Array of activity type UUIDs - filters to specific activity types
+- `venueIds` (optional): Array of venue UUIDs - filters to activities at specific venues
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: Array<{
+    groupName: string,      // Category or type name
+    started: number,        // Count of activities started in period
+    completed: number       // Count of activities completed in period
+  }>
+}
+```
+
+**Business Logic:**
+- When both dates provided: Started count where `startDate >= startDate AND startDate <= endDate`, Completed count where `endDate >= startDate AND endDate <= endDate AND status = COMPLETED`
+- When only startDate provided: Started count where `startDate >= startDate`, Completed count where `endDate >= startDate AND status = COMPLETED`
+- When only endDate provided: Started count where `startDate <= endDate`, Completed count where `endDate <= endDate AND status = COMPLETED`
+- When no dates provided: All started activities, all completed activities (all-time metrics)
+- Excludes cancelled activities from both counts
+- When multiple filters provided, applies AND logic
+- Results sorted alphabetically by groupName
+- Returns empty array when no activities match filters
 
 ## Data Models
 
@@ -653,6 +700,32 @@ The API uses Prisma to define the following database models:
 **Property 43: Percentage change calculation for activities**
 *For any* two consecutive time periods, the percentage change for activities should be calculated as ((current - previous) / previous) * 100.
 **Validates: Requirements 7.6**
+
+### Activity Lifecycle Events Properties
+
+**Property 47A: Lifecycle started count accuracy**
+*For any* activity, if it started within the specified time period, it should be counted exactly once in the "started" series for its corresponding group (category or type).
+**Validates: Requirements 6A.6, 6A.8**
+
+**Property 47B: Lifecycle completed count accuracy**
+*For any* activity, if it completed within the specified time period and has status COMPLETED, it should be counted exactly once in the "completed" series for its corresponding group (category or type).
+**Validates: Requirements 6A.7, 6A.8**
+
+**Property 47C: Lifecycle cancelled exclusion**
+*For any* cancelled activity, it should not be counted in either the "started" or "completed" series, regardless of its dates.
+**Validates: Requirements 6A.8**
+
+**Property 47D: Lifecycle filter combination**
+*For any* combination of filters (geographicAreaIds, activityTypeIds, venueIds), only activities matching all applied filters should be included in the lifecycle event counts.
+**Validates: Requirements 6A.9, 6A.10, 6A.11, 6A.12, 6A.13, 6A.14, 6A.15**
+
+**Property 47E: Lifecycle grouping accuracy**
+*For any* groupBy parameter ('category' or 'type'), the results should be grouped by the specified dimension with accurate group names.
+**Validates: Requirements 6A.4, 6A.5**
+
+**Property 47F: Lifecycle result sorting**
+*For any* lifecycle events response, the results should be sorted alphabetically by groupName.
+**Validates: Requirements 6A.17**
 
 ### Data Persistence Properties
 

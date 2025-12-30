@@ -453,6 +453,45 @@ src/
   - Enables browser back/forward navigation between different configurations
   - Allows URL sharing for collaborative analysis
 
+**ActivityLifecycleChart**
+- Displays activity lifecycle events (started and completed activities) within a selected time period or all time
+- Positioned after the Activities chart on the Engagement Dashboard
+- Uses CloudScape Container with Header component
+- Provides CloudScape SegmentedControl in header actions with two options:
+  - "By Type" (default selection)
+  - "By Category"
+- When "By Type" selected: groups and displays data by activity type
+- When "By Category" selected: groups and displays data by activity category
+- Displays two data series using recharts BarChart:
+  - "Started" series (activities with startDate within time period or all time) - blue color (#0088FE)
+  - "Completed" series (activities with endDate within time period and status COMPLETED, or all completed) - green color (#00C49F)
+- Excludes cancelled activities from both series
+- Updates chart data when view mode toggle changes
+- Animates transitions smoothly when switching between views
+- Fetches data from `/api/analytics/activity-lifecycle` endpoint
+- Accepts props:
+  - `startDate?: Date` (optional - omit for all history)
+  - `endDate?: Date` (optional - omit for all history)
+  - `geographicAreaIds?: string[]` (optional filter)
+  - `activityTypeIds?: string[]` (optional filter)
+  - `venueIds?: string[]` (optional filter)
+- Handles all date range scenarios:
+  - Absolute date range: Uses provided startDate and endDate
+  - Relative date range: Calculates absolute dates from relative amount/unit
+  - No date range: Omits dates to show all-time lifecycle events
+- Applies all provided filters to API request
+- Displays loading state with CloudScape LoadingSpinner while fetching data
+- Displays error state with error message if API request fails
+- Displays empty state message when no lifecycle events exist for selected grouping
+- Stores selected view mode in browser localStorage (key: "lifecycleChartViewMode")
+- Restores previously selected view mode from localStorage on component mount
+- Defaults to "By Type" view if no localStorage value exists or localStorage unavailable
+- Always renders regardless of date range selection (shows all-time data when no range selected)
+- Includes screen reader announcement for view mode changes using aria-live region
+- Responsive design adapts to different screen sizes
+- Chart height: 400px
+- Uses same color scheme as other dashboard charts for consistency
+
 **GrowthDashboard**
 - Displays time-series charts for new activities
 - Provides time period selector (day, week, month, year)
@@ -616,6 +655,10 @@ src/
   - Returns role distribution within filtered results
 - `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR)
 - `getGeographicAnalytics(startDate?, endDate?)`: Fetches geographic breakdown from `/analytics/geographic`
+- `getActivityLifecycleEvents(params)`: Fetches activity lifecycle event data from `/analytics/activity-lifecycle`
+  - Parameters: `startDate` (required), `endDate` (required), `groupBy` ('category' | 'type'), `geographicAreaIds?`, `activityTypeIds?`, `venueIds?`
+  - Returns array of objects with `groupName`, `started` count, and `completed` count
+  - Applies all provided filters using AND logic
 
 **UserService** (Admin only)
 - `getUsers()`: Fetches all users (admin only)
@@ -874,6 +917,12 @@ interface GeographicAnalytics {
   activeActivities: number;
   totalParticipants: number;
   activeParticipants: number;
+}
+
+interface ActivityLifecycleData {
+  groupName: string;
+  started: number;
+  completed: number;
 }
 
 interface QueuedOperation {
@@ -1252,6 +1301,48 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* Activities chart view mode selection (Activity Type or Activity Category), the chart should display activities grouped by the selected dimension without requiring a page refresh.
 
 **Validates: Requirements 7.51, 7.52, 7.53**
+
+### Property 31j: Activity Lifecycle Chart Data Completeness
+
+*For any* time period and grouping mode (category or type), the Activity Lifecycle Chart should display all activity categories or types that have at least one started or completed activity, with no groups omitted.
+
+**Validates: Requirements 7A.1, 7A.7, 7A.8**
+
+### Property 31k: Activity Lifecycle Started Count Accuracy
+
+*For any* activity, if it started within the time period, it should be counted exactly once in the "started" series for its corresponding group.
+
+**Validates: Requirements 7A.11, 7A.13**
+
+### Property 31l: Activity Lifecycle Completed Count Accuracy
+
+*For any* activity, if it completed within the time period, it should be counted exactly once in the "completed" series for its corresponding group.
+
+**Validates: Requirements 7A.12, 7A.13**
+
+### Property 31m: Activity Lifecycle Cancelled Exclusion
+
+*For any* cancelled activity, it should not be counted in either the "started" or "completed" series, regardless of its dates.
+
+**Validates: Requirements 7A.14**
+
+### Property 31n: Activity Lifecycle Filter Application
+
+*For any* combination of filters (geographic area, activity type, venue), only activities matching all applied filters should be included in the lifecycle event counts.
+
+**Validates: Requirements 7A.21, 7A.22, 7A.23, 7A.24, 7A.25**
+
+### Property 31o: Activity Lifecycle Toggle State Consistency
+
+*For any* toggle state change between category and type views, the chart data should update to reflect the new grouping mode without losing filter context.
+
+**Validates: Requirements 7A.7, 7A.8, 7A.10**
+
+### Property 31p: Activity Lifecycle View Mode Persistence
+
+*For any* view mode selection in the Activity Lifecycle Chart, the selection should be stored in localStorage and restored when the user returns to the dashboard.
+
+**Validates: Requirements 7A.26, 7A.27, 7A.28, 7A.29**
 
 ### Property 31j: Activities Chart Filter Preservation
 

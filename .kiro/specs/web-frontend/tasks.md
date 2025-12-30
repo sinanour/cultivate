@@ -643,6 +643,33 @@ This implementation plan covers the React-based web application built with TypeS
     - Provide optional date range filter (startDate, endDate)
     - _Requirements: 7.38, 7.39_
 
+  - [x] 14.4 Create ActivityLifecycleChart component
+    - Create new component file with props interface (startDate?, endDate?, geographicAreaIds, activityTypeIds, venueIds)
+    - Add segmented control toggle for "By Type" and "By Category" views
+    - Implement data fetching from /analytics/activity-lifecycle endpoint
+    - Handle all date range scenarios: absolute, relative, and no date range (all history)
+    - Calculate absolute dates from relative date ranges
+    - Transform data for recharts BarChart format
+    - Display two data series: "Started" (blue) and "Completed" (green)
+    - Handle loading, error, and empty states
+    - Store view mode in localStorage (key: "lifecycleChartViewMode")
+    - Restore view mode from localStorage on mount
+    - Default to "By Type" view
+    - Include screen reader announcements for view mode changes
+    - Position after Activities chart on Engagement Dashboard
+    - Always render regardless of date range selection
+    - Apply all provided filters to API request
+    - _Requirements: 7A.1, 7A.2, 7A.3, 7A.4, 7A.5, 7A.6, 7A.7, 7A.8, 7A.9, 7A.10, 7A.11, 7A.12, 7A.13, 7A.14, 7A.15, 7A.16, 7A.17, 7A.18, 7A.19, 7A.20, 7A.21, 7A.22, 7A.23, 7A.24, 7A.25, 7A.26, 7A.27, 7A.28, 7A.29, 7A.30, 7A.31, 7A.32_
+
+  - [x] 14.5 Integrate ActivityLifecycleChart into EngagementDashboard
+    - Import and render ActivityLifecycleChart component
+    - Calculate date range for all scenarios (absolute, relative, no range)
+    - Pass calculated startDate and endDate (or undefined for all history)
+    - Pass filter props (geographicAreaIds, activityTypeIds, venueIds)
+    - Position after Activities chart
+    - Always render (not conditional on date range type)
+    - _Requirements: 7A.1, 7A.5, 7A.21, 7A.22, 7A.23, 7A.24, 7A.25, 7A.30, 7A.31, 7A.32_
+
 - [x] 15. Implement offline support
   - [x] 15.1 Create OfflineStorage service
     - Use Dexie.js for IndexedDB management

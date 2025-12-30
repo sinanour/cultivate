@@ -3,7 +3,7 @@ import { AnalyticsService, TimePeriod } from '../services/analytics.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
-import { EngagementQuerySchema, GrowthQuerySchema } from '../utils/validation.schemas';
+import { EngagementQuerySchema, GrowthQuerySchema, ActivityLifecycleQuerySchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
 import { ErrorCode, HttpStatus } from '../utils/constants';
 
@@ -42,6 +42,14 @@ export class AnalyticsRoutes {
             this.authorizationMiddleware.requireAuthenticated(),
             ValidationMiddleware.validateQuery(EngagementQuerySchema),
             this.getGeographic.bind(this)
+        );
+
+        this.router.get(
+            '/activity-lifecycle',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
+            ValidationMiddleware.validateQuery(ActivityLifecycleQuerySchema),
+            this.getActivityLifecycle.bind(this)
         );
     }
 
@@ -112,6 +120,32 @@ export class AnalyticsRoutes {
                 code: ErrorCode.INTERNAL_ERROR,
                 message: 'An error occurred while calculating geographic breakdown',
                 details: {},
+            });
+        }
+    }
+
+    private async getActivityLifecycle(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const { startDate, endDate, groupBy, geographicAreaIds, activityTypeIds, venueIds } = req.query;
+
+            const data = await this.analyticsService.getActivityLifecycleEvents(
+                startDate ? new Date(startDate as string) : undefined,
+                endDate ? new Date(endDate as string) : undefined,
+                groupBy as 'category' | 'type',
+                {
+                    geographicAreaIds: geographicAreaIds as string[] | undefined,
+                    activityTypeIds: activityTypeIds as string[] | undefined,
+                    venueIds: venueIds as string[] | undefined,
+                }
+            );
+
+            res.status(HttpStatus.OK).json({ success: true, data });
+        } catch (error) {
+            console.error('Error in getActivityLifecycle:', error);
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                code: ErrorCode.INTERNAL_ERROR,
+                message: 'An error occurred while calculating activity lifecycle events',
+                details: error instanceof Error ? { message: error.message, stack: error.stack } : {},
             });
         }
     }
