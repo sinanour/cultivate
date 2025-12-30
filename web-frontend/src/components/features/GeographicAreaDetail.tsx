@@ -153,7 +153,7 @@ export function GeographicAreaDetail() {
       )}
 
       {children.length > 0 && (
-        <Container header={<Header variant="h3">Child Areas</Header>}>
+        <Container header={<Header variant="h3">Sub-Divisions Within This Area</Header>}>
           <Table
             columnDefinitions={[
               {
@@ -174,7 +174,7 @@ export function GeographicAreaDetail() {
             items={children}
             empty={
               <Box textAlign="center" color="inherit">
-                <b>No child areas</b>
+                <b>No sub-divisions</b>
               </Box>
             }
           />
