@@ -1026,11 +1026,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Test that failed deletion displays error message
     - **Validates: Requirements 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10**
 
-- [ ] 24. Implement global persistent geographic area filter
-  - [ ] 24.1 Create GlobalGeographicFilterContext
+- [x] 24. Implement global persistent geographic area filter
+  - [x] 24.1 Create GlobalGeographicFilterContext
     - Create React context for global geographic area filter state
     - Provide selectedGeographicAreaId (string | null)
     - Provide selectedGeographicArea (GeographicArea | null)
+    - Provide availableAreas (GeographicAreaWithHierarchy[]) - list of areas for dropdown
+    - Provide formatAreaOption(area) method to format display with type and hierarchy
     - Provide setGeographicAreaFilter(id: string | null) method
     - Provide clearFilter() method
     - Provide isLoading boolean
@@ -1039,7 +1041,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Restore filter from localStorage on app initialization
     - URL parameter takes precedence over localStorage
     - Fetch full geographic area details when filter is set
-    - _Requirements: 24.1, 24.2, 24.3, 24.6, 24.7, 24.8, 24.9_
+    - Fetch available areas based on current filter scope:
+      - When filter is "Global": fetch all geographic areas
+      - When filter is active: fetch only descendants of filtered area
+    - For each area, fetch ancestor hierarchy using /geographic-areas/:id/ancestors endpoint
+    - Build hierarchyPath string with format "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
+    - Store areas with hierarchy information in availableAreas state
+    - _Requirements: 24.1, 24.2, 24.3, 24.6, 24.7, 24.8, 24.9, 24.12, 24.13, 24.14, 24.15, 24.16, 24.17_
 
   - [ ] 24.2 Create useGlobalGeographicFilter hook
     - Export custom hook to access GlobalGeographicFilterContext
@@ -1048,13 +1056,18 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [ ] 24.3 Update AppLayout component with filter selector
     - Add geographic area filter selector in header utilities section
-    - Use CloudScape Select component with hierarchical options
+    - Use CloudScape Select component with custom option rendering
     - Display "Global (All Areas)" as default option
+    - For each geographic area option:
+      - Display area name and type on first line
+      - Display hierarchy path on second line below type (smaller, muted text)
+      - Format: "NEIGHBOURHOOD\nCommunity A > City B > Province C"
     - Show current filter selection or "Global" when no filter active
     - Provide clear button (X icon) to remove filter
     - Display visual indicator (badge or highlighted text) of active filter
     - Position prominently in header for accessibility from all views
-    - _Requirements: 24.1, 24.2, 24.3, 24.10, 24.11_
+    - Use availableAreas from context (respects current filter scope)
+    - _Requirements: 24.1, 24.2, 24.3, 24.10, 24.11, 24.12, 24.13, 24.14, 24.15, 24.16, 24.17_
 
   - [ ] 24.4 Update ActivityList to apply global filter
     - Read selectedGeographicAreaId from GlobalGeographicFilterContext
@@ -1098,6 +1111,10 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 83: Global Filter Restoration**
     - **Property 84: Recursive Geographic Filtering**
     - **Property 85: Global Filter Application to All Lists**
+    - **Property 86: Global Filter Clear Functionality**
+    - **Property 105: Global Filter Dropdown Hierarchical Display**
+    - **Property 106: Global Filter Dropdown Scoped Options**
+    - **Validates: Requirements 24.4, 24.5, 24.6, 24.7, 24.8, 24.9, 24.11, 24.12, 24.13, 24.14, 24.15, 24.16, 24.17**
     - **Property 86: Global Filter Clear Functionality**
     - **Validates: Requirements 24.4, 24.5, 24.6, 24.7, 24.8, 24.9, 24.11**
 

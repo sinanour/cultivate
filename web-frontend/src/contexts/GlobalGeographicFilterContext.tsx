@@ -1,14 +1,16 @@
 import React, { createContext, useState, useEffect, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { GeographicArea } from '../types';
+import type { GeographicArea, GeographicAreaWithHierarchy } from '../types';
 import { GeographicAreaService } from '../services/api/geographic-area.service';
 
 interface GlobalGeographicFilterContextType {
   selectedGeographicAreaId: string | null;
   selectedGeographicArea: GeographicArea | null;
+  availableAreas: GeographicAreaWithHierarchy[];
   setGeographicAreaFilter: (id: string | null) => void;
   clearFilter: () => void;
   isLoading: boolean;
+  formatAreaOption: (area: GeographicAreaWithHierarchy) => { label: string; description: string };
 }
 
 export const GlobalGeographicFilterContext = createContext<GlobalGeographicFilterContextType | undefined>(undefined);
@@ -22,6 +24,7 @@ const STORAGE_KEY = 'globalGeographicAreaFilter';
 export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProviderProps> = ({ children }) => {
   const [selectedGeographicAreaId, setSelectedGeographicAreaId] = useState<string | null>(null);
   const [selectedGeographicArea, setSelectedGeographicArea] = useState<GeographicArea | null>(null);
+  const [availableAreas, setAvailableAreas] = useState<GeographicAreaWithHierarchy[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -73,6 +76,62 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     fetchGeographicArea();
   }, [selectedGeographicAreaId]);
 
+  // Fetch available areas based on current filter scope
+  useEffect(() => {
+    const fetchAvailableAreas = async () => {
+      try {
+        // Fetch areas based on current filter
+        // When filter is active, only fetch descendants
+        // When filter is "Global", fetch all areas
+        const areas = await GeographicAreaService.getGeographicAreas(
+          undefined, 
+          undefined, 
+          selectedGeographicAreaId
+        );
+
+        // Fetch ancestors for each area to build hierarchy paths
+        const areasWithHierarchy = await Promise.all(
+          areas.map(async (area) => {
+            try {
+              const ancestors = await GeographicAreaService.getAncestors(area.id);
+              // Build hierarchy path: closest ancestor to most distant
+              const hierarchyPath = ancestors.length > 0
+                ? ancestors.map(a => a.name).join(' > ')
+                : '';
+              
+              return {
+                ...area,
+                ancestors,
+                hierarchyPath,
+              } as GeographicAreaWithHierarchy;
+            } catch (error) {
+              console.error(`Failed to fetch ancestors for area ${area.id}:`, error);
+              return {
+                ...area,
+                ancestors: [],
+                hierarchyPath: '',
+              } as GeographicAreaWithHierarchy;
+            }
+          })
+        );
+
+        setAvailableAreas(areasWithHierarchy);
+      } catch (error) {
+        console.error('Failed to fetch available geographic areas:', error);
+        setAvailableAreas([]);
+      }
+    };
+
+    fetchAvailableAreas();
+  }, [selectedGeographicAreaId]);
+
+  const formatAreaOption = (area: GeographicAreaWithHierarchy) => {
+    return {
+      label: `${area.name} (${area.areaType})`,
+      description: area.hierarchyPath || 'No parent areas',
+    };
+  };
+
   const setGeographicAreaFilter = (id: string | null) => {
     setSelectedGeographicAreaId(id);
 
@@ -105,9 +164,11 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
       value={{
         selectedGeographicAreaId,
         selectedGeographicArea,
+        availableAreas,
         setGeographicAreaFilter,
         clearFilter,
         isLoading,
+        formatAreaOption,
       }}
     >
       {children}

@@ -92,7 +92,14 @@ src/
 - Highlights current active section
 - Displays global geographic area filter selector in header utilities section
 - Shows current filter selection or "Global" when no filter is active
-- Provides dropdown with all geographic areas in hierarchical format (indented by level)
+- Provides dropdown with geographic areas formatted with hierarchical context:
+  - Each option displays the geographic area name and type
+  - Below the type, displays the full ancestor hierarchy path
+  - Hierarchy path ordered from closest ancestor (left) to most distant ancestor (right)
+  - Ancestor names separated by " > " symbol
+  - Example format: "NEIGHBOURHOOD\nCommunity A > City B > Province C"
+- When global filter is active, dropdown shows only descendants of the filtered area
+- When global filter is "Global", dropdown shows all geographic areas
 - Shows visual indicator (badge or highlighted text) of active filter in header
 - Provides clear button (X icon) to remove filter and return to "Global" view
 - Positions filter selector prominently in header for accessibility from all views
@@ -603,11 +610,18 @@ src/
 - Provides `setGeographicAreaFilter(id: string | null)` - Updates filter selection
 - Provides `clearFilter()` - Resets filter to "Global" (null)
 - Provides `isLoading: boolean` - Indicates if geographic area details are being fetched
+- Provides `availableAreas: GeographicAreaWithHierarchy[]` - List of geographic areas available in the filter dropdown
+- Provides `formatAreaOption(area: GeographicAreaWithHierarchy): string` - Formats area with type and hierarchy path for display
 - Synchronizes filter with URL query parameter (`?geographicArea=<id>`)
 - Persists filter to localStorage (key: `globalGeographicAreaFilter`)
 - Restores filter from localStorage on application initialization
 - URL parameter takes precedence over localStorage on initial load
 - Fetches full geographic area details when filter is set for display in header
+- Fetches available areas based on current filter scope:
+  - When filter is "Global": fetches all geographic areas
+  - When filter is active: fetches only descendants of the filtered area
+- Fetches ancestor hierarchy for each area to build hierarchy path display
+- Formats dropdown options with area type and ancestor path (e.g., "NEIGHBOURHOOD\nCommunity A > City B > Province C")
 
 #### API Service
 
@@ -835,6 +849,11 @@ interface GeographicArea {
   version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+interface GeographicAreaWithHierarchy extends GeographicArea {
+  ancestors: GeographicArea[];  // Ordered from closest to most distant
+  hierarchyPath: string;         // Formatted path: "Community A > City B > Province C"
 }
 
 interface GeographicAreaStatistics {
@@ -2030,6 +2049,18 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* high-cardinality dropdown with both text search and geographic area filter active, both filters should be applied using AND logic.
 
 **Validates: Requirements 25.7 (implied from backend requirement 21.7)**
+
+### Property 105: Global Filter Dropdown Hierarchical Display
+
+*For any* geographic area displayed in the global filter dropdown, the option should show the area type and the full ancestor hierarchy path formatted with closest ancestor on the left and most distant ancestor on the right, separated by " > ".
+
+**Validates: Requirements 24.12, 24.13, 24.14, 24.15**
+
+### Property 106: Global Filter Dropdown Scoped Options
+
+*For any* active global geographic area filter, the filter selector dropdown should display only the descendants (recursively) of the currently filtered area, and when the filter is "Global", all geographic areas should be displayed.
+
+**Validates: Requirements 24.16, 24.17**
 
 ## Error Handling
 

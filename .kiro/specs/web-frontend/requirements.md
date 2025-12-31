@@ -595,7 +595,7 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 24: Global Persistent Geographic Area Filter
 
-**User Story:** As a community organizer, I want to set a global geographic area filter that applies to all views, so that I can focus on a specific region without repeatedly filtering each list.
+**User Story:** As a community organizer, I want to set a global geographic area filter that applies to all views with hierarchical context display, so that I can focus on a specific region without repeatedly filtering each list while understanding the geographic hierarchy.
 
 #### Acceptance Criteria
 
@@ -610,6 +610,12 @@ The Web Frontend package provides a responsive React-based web application that 
 9. WHEN a user returns to the application, THE Web_App SHALL restore the last-selected geographic area filter from localStorage
 10. THE Web_App SHALL provide a visual indicator in the header showing the currently active geographic area filter
 11. THE Web_App SHALL provide a way to clear the global filter and return to "Global" (all areas) view
+12. WHEN displaying geographic areas in the filter selector dropdown, THE Web_App SHALL show the geographic area type for each item
+13. WHEN displaying geographic areas in the filter selector dropdown, THE Web_App SHALL show the full ancestor hierarchy path below the geographic area type
+14. THE Web_App SHALL format the ancestor hierarchy path with the closest ancestor on the left and the most distant (top-level) ancestor on the right
+15. THE Web_App SHALL separate ancestor names in the hierarchy path with the right caret symbol " > "
+16. WHEN the global geographic area filter is active, THE Web_App SHALL display only the descendants (recursively) of the currently filtered geographic area in the filter selector dropdown
+17. WHEN the global geographic area filter is set to "Global" (no filter), THE Web_App SHALL display all geographic areas in the filter selector dropdown
 
 ### Requirement 25: High-Cardinality Dropdown Filtering
 

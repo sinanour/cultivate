@@ -80,6 +80,11 @@ export interface GeographicArea {
     updatedAt: string;
 }
 
+export interface GeographicAreaWithHierarchy extends GeographicArea {
+    ancestors: GeographicArea[];  // Ordered from closest to most distant
+    hierarchyPath: string;         // Formatted path: "Community A > City B > Province C"
+}
+
 export interface Activity {
     id: string;
     name: string;

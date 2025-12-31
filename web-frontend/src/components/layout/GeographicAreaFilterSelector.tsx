@@ -1,67 +1,23 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import Select, { type SelectProps } from '@cloudscape-design/components/select';
 import BreadcrumbGroup, { type BreadcrumbGroupProps } from '@cloudscape-design/components/breadcrumb-group';
 import Button from '@cloudscape-design/components/button';
-import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
-import type { GeographicArea } from '../../types';
 
 interface HierarchicalOption extends SelectProps.Option {
-  geographicArea?: GeographicArea;
-  level?: number;
+  hierarchyPath?: string;
 }
-
-const buildHierarchicalOptions = (areas: GeographicArea[]): HierarchicalOption[] => {
-  // Create a map for quick lookup
-  const areaMap = new Map<string, GeographicArea>();
-  areas.forEach(area => areaMap.set(area.id, area));
-
-  // Find root areas (no parent)
-  const rootAreas = areas.filter(area => !area.parentGeographicAreaId);
-
-  // Recursive function to build options with indentation
-  const buildOptions = (area: GeographicArea, level: number = 0): HierarchicalOption[] => {
-    const option: HierarchicalOption = {
-      label: area.name,
-      value: area.id,
-      description: area.areaType,
-      geographicArea: area,
-      level,
-    };
-
-    // Find children
-    const children = areas
-      .filter(a => a.parentGeographicAreaId === area.id)
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    // Recursively add children
-    const childOptions = children.flatMap(child => buildOptions(child, level + 1));
-
-    return [option, ...childOptions];
-  };
-
-  // Build options starting from root areas
-  const options = rootAreas
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .flatMap(area => buildOptions(area));
-
-  return options;
-};
 
 export function GeographicAreaFilterSelector() {
   const {
     selectedGeographicAreaId,
     selectedGeographicArea,
+    availableAreas,
     setGeographicAreaFilter,
     clearFilter,
-    isLoading: isFilterLoading,
+    isLoading,
+    formatAreaOption,
   } = useGlobalGeographicFilter();
-
-  const { data: geographicAreas = [], isLoading: isAreasLoading } = useQuery({
-    queryKey: ['geographicAreas'],
-    queryFn: () => GeographicAreaService.getGeographicAreas(),
-  });
 
   const options = useMemo(() => {
     const globalOption: HierarchicalOption = {
@@ -70,10 +26,18 @@ export function GeographicAreaFilterSelector() {
       description: 'No filter applied',
     };
 
-    const hierarchicalOptions = buildHierarchicalOptions(geographicAreas);
+    const areaOptions: HierarchicalOption[] = availableAreas.map(area => {
+      const formatted = formatAreaOption(area);
+      return {
+        label: formatted.label,
+        value: area.id,
+        description: formatted.description,
+        hierarchyPath: area.hierarchyPath,
+      };
+    });
 
-    return [globalOption, ...hierarchicalOptions];
-  }, [geographicAreas]);
+    return [globalOption, ...areaOptions];
+  }, [availableAreas, formatAreaOption]);
 
   const selectedOption = useMemo(() => {
     if (!selectedGeographicAreaId) {
@@ -87,8 +51,6 @@ export function GeographicAreaFilterSelector() {
     setGeographicAreaFilter(newValue);
   };
 
-  const isLoading = isAreasLoading || isFilterLoading;
-
   // Build breadcrumb items from the selected area's ancestry
   const breadcrumbItems = useMemo((): BreadcrumbGroupProps.Item[] => {
     if (!selectedGeographicAreaId || !selectedGeographicArea) {
@@ -96,30 +58,32 @@ export function GeographicAreaFilterSelector() {
     }
 
     const items: BreadcrumbGroupProps.Item[] = [];
-    const areaMap = new Map<string, GeographicArea>();
-    geographicAreas.forEach(area => areaMap.set(area.id, area));
-
-    // Build ancestry chain
-    let currentArea: GeographicArea | undefined = selectedGeographicArea;
-    const ancestry: GeographicArea[] = [];
-
-    while (currentArea) {
-      ancestry.unshift(currentArea);
-      currentArea = currentArea.parentGeographicAreaId
-        ? areaMap.get(currentArea.parentGeographicAreaId)
-        : undefined;
+    
+    // Find the selected area in availableAreas to get its ancestors
+    const areaWithHierarchy = availableAreas.find(a => a.id === selectedGeographicAreaId);
+    
+    if (areaWithHierarchy && areaWithHierarchy.ancestors.length > 0) {
+      // Reverse ancestors for breadcrumb: most distant to closest
+      // Backend returns: [closest parent, ..., most distant ancestor]
+      // Breadcrumb needs: [most distant ancestor, ..., closest parent]
+      const reversedAncestors = [...areaWithHierarchy.ancestors].reverse();
+      
+      reversedAncestors.forEach((ancestor) => {
+        items.push({
+          text: ancestor.name,
+          href: `#${ancestor.id}`,
+        });
+      });
     }
 
-    // Convert to breadcrumb items
-    ancestry.forEach((area) => {
-      items.push({
-        text: area.name,
-        href: `#${area.id}`,
-      });
+    // Add current area as last item
+    items.push({
+      text: selectedGeographicArea.name,
+      href: `#${selectedGeographicArea.id}`,
     });
 
     return items;
-  }, [selectedGeographicAreaId, selectedGeographicArea, geographicAreas]);
+  }, [selectedGeographicAreaId, selectedGeographicArea, availableAreas]);
 
   const handleBreadcrumbClick: BreadcrumbGroupProps['onFollow'] = (event) => {
     event.preventDefault();
@@ -142,26 +106,25 @@ export function GeographicAreaFilterSelector() {
           expandToViewport
           selectedAriaLabel="Selected"
           inlineLabelText="Region Filter"
+          renderHighlightedAriaLive={(highlighted) => 
+            highlighted ? `${highlighted.label}${highlighted.description ? `, ${highlighted.description}` : ''}` : ''
+          }
         />
       </div>
       {selectedGeographicAreaId && breadcrumbItems.length > 0 && (
-        <>
-          <div style={{ paddingTop: '4px' }}>
-            <BreadcrumbGroup
-              items={breadcrumbItems}
-              onFollow={handleBreadcrumbClick}
-              ariaLabel="Geographic area hierarchy"
-            />
-          </div>
-          <div style={{ paddingTop: '4px' }}>
-            <Button
-              variant="icon"
-              iconName="close"
-              ariaLabel="Clear geographic area filter"
-              onClick={clearFilter}
-            />
-          </div>
-        </>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <BreadcrumbGroup
+            items={breadcrumbItems}
+            onFollow={handleBreadcrumbClick}
+            ariaLabel="Geographic area hierarchy"
+          />
+          <Button
+            variant="icon"
+            iconName="close"
+            ariaLabel="Clear geographic area filter"
+            onClick={clearFilter}
+          />
+        </div>
       )}
     </div>
   );
