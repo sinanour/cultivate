@@ -263,37 +263,46 @@ The Web Frontend package provides a responsive React-based web application that 
 41. THE Web_App SHALL display a separate time-series chart showing unique activity counts for each time period
 42. THE Web_App SHALL provide time period selection (day, week, month, year)
 43. THE Web_App SHALL display each time period as a snapshot of unique participants and activities engaged at that point in time (not cumulative counts)
-44. THE Web_App SHALL provide an optional grouping control to view growth metrics by activity type or activity category
-45. WHEN grouping by activity type is selected, THE Web_App SHALL display separate time-series data for each activity type in both charts
-46. WHEN grouping by activity category is selected, THE Web_App SHALL display separate time-series data for each activity category in both charts
-47. WHEN no grouping is selected, THE Web_App SHALL display aggregate time-series data across all activity types and categories in both charts
+44. THE Web_App SHALL provide a segmented control to view growth metrics with three options: "All", "Activity Type", and "Activity Category"
+45. THE Segmented_Control SHALL default to "All" as the selected option
+46. WHEN "All" is selected in the segmented control, THE Web_App SHALL display a single aggregate time-series line for total unique participants and a single aggregate time-series line for total unique activities across all activity types and categories in both charts
+47. WHEN "Activity Type" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in both charts, one line for each activity type showing unique participants and unique activities for that type
+48. WHEN "Activity Category" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in both charts, one line for each activity category showing unique participants and unique activities for that category
+49. WHEN displaying multiple lines for activity types or categories, THE Web_App SHALL use a consistent color scheme across both the Unique Participants chart and the Unique Activities chart, so that the same activity type or category has the same color on both charts
+50. THE Web_App SHALL display a legend on both charts showing the color mapping for each activity type or category when multiple lines are displayed
+51. WHEN the view mode changes between "All", "Activity Type", and "Activity Category", THE Growth_Dashboard SHALL update both charts without requiring a page refresh
+52. WHEN switching between view modes, THE Growth_Dashboard SHALL preserve the current time period, date range, and geographic area filter selections
+53. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage with key "growthChartViewMode"
+54. WHEN a user returns to the Growth Dashboard, THE Growth_Dashboard SHALL restore the previously selected view mode from local storage
+55. IF no previous selection exists in local storage, THE Growth_Dashboard SHALL default to "All" view
+56. WHEN local storage is unavailable, THE Growth_Dashboard SHALL function normally with "All" as the default
 48. THE Web_App SHALL provide a geographic area filter for all analytics
 49. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
 50. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
-46a. THE Web_App SHALL synchronize growth dashboard filter parameters (period, date range) with URL query parameters
-46b. WHEN a user navigates to a URL with growth dashboard query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
-46c. WHEN a user changes any filter parameter on the growth dashboard, THE Web_App SHALL update the browser URL to reflect the current state
-46d. THE Web_App SHALL enable browser back/forward navigation to move between different growth dashboard configurations
-46e. THE Web_App SHALL allow users to share the current growth dashboard URL with other users to display the same filtered results
-47. THE Web_App SHALL display a chart titled "Activities" (renamed from "Activities by Type") on the Engagement Dashboard
-48. THE Web_App SHALL provide a segmented control above or within the Activities chart to toggle between "Activity Type" and "Activity Category" views
-49. WHEN the Activities chart is first rendered, THE Segmented_Control SHALL default to "Activity Type" as the selected option
-50. THE Segmented_Control SHALL follow the same UX pattern as the map view toggle functionality
-51. WHEN "Activity Type" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity type
-52. WHEN "Activity Category" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity category
-53. WHEN the view mode changes, THE Activities chart SHALL update its data display without requiring a page refresh
-54. WHEN switching between views, THE Activities chart SHALL preserve the current date range and filter selections
-55. WHEN no activities exist for a grouping dimension, THE Activities chart SHALL display an appropriate empty state message
-56. THE Activities chart SHALL display activity counts in descending order by count value
-57. THE Activities chart SHALL handle API errors gracefully and display an error message to the user
-58. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage
-59. WHEN a user returns to the Engagement Dashboard, THE Activities chart SHALL restore the previously selected view mode from local storage
-60. IF no previous selection exists in local storage, THE Activities chart SHALL default to "Activity Type" view
-61. WHEN local storage is unavailable, THE Activities chart SHALL function normally with "Activity Type" as the default
-62. THE Segmented_Control SHALL be keyboard navigable using Tab and Arrow keys
-63. WHEN a segmented control option receives focus, THE System SHALL provide visual focus indicators
-64. THE Segmented_Control SHALL include appropriate ARIA labels for screen readers
-65. WHEN the view mode changes, THE System SHALL announce the change to screen readers
+57a. THE Web_App SHALL synchronize growth dashboard filter parameters (period, date range, grouping mode) with URL query parameters
+57b. WHEN a user navigates to a URL with growth dashboard query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
+57c. WHEN a user changes any filter or grouping parameter on the growth dashboard, THE Web_App SHALL update the browser URL to reflect the current state
+57d. THE Web_App SHALL enable browser back/forward navigation to move between different growth dashboard configurations
+57e. WHEN a user shares a growth dashboard URL, THE Web_App SHALL display the same filtered and grouped results for other users
+58. THE Web_App SHALL display a chart titled "Activities" (renamed from "Activities by Type") on the Engagement Dashboard
+59. THE Web_App SHALL provide a segmented control above or within the Activities chart to toggle between "Activity Type" and "Activity Category" views
+60. WHEN the Activities chart is first rendered, THE Segmented_Control SHALL default to "Activity Type" as the selected option
+61. THE Segmented_Control SHALL follow the same UX pattern as the map view toggle functionality
+62. WHEN "Activity Type" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity type
+63. WHEN "Activity Category" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity category
+64. WHEN the view mode changes, THE Activities chart SHALL update its data display without requiring a page refresh
+65. WHEN switching between views, THE Activities chart SHALL preserve the current date range and filter selections
+66. WHEN no activities exist for a grouping dimension, THE Activities chart SHALL display an appropriate empty state message
+67. THE Activities chart SHALL display activity counts in descending order by count value
+68. THE Activities chart SHALL handle API errors gracefully and display an error message to the user
+69. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage
+70. WHEN a user returns to the Engagement Dashboard, THE Activities chart SHALL restore the previously selected view mode from local storage
+71. IF no previous selection exists in local storage, THE Activities chart SHALL default to "Activity Type" view
+72. WHEN local storage is unavailable, THE Activities chart SHALL function normally with "Activity Type" as the default
+73. THE Segmented_Control SHALL be keyboard navigable using Tab and Arrow keys
+74. WHEN a segmented control option receives focus, THE System SHALL provide visual focus indicators
+75. THE Segmented_Control SHALL include appropriate ARIA labels for screen readers
+76. WHEN the view mode changes, THE System SHALL announce the change to screen readers
 
 ### Requirement 7A: Activity Lifecycle Events Chart
 

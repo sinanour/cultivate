@@ -1076,26 +1076,63 @@ Clients should refresh the access token before it expires using the refresh toke
 **Query Parameters**:
 - `startDate` (optional): Period start (ISO 8601)
 - `endDate` (optional): Period end (ISO 8601)
-- `period` (optional, default: "DAY"): Grouping interval (DAY, WEEK, MONTH, YEAR)
-- `geographicAreaId` (optional): Filter by geographic area
+- `period` (optional, default: "MONTH"): Time period grouping (DAY, WEEK, MONTH, YEAR)
+- `geographicAreaId` (optional): Filter by geographic area (includes descendants)
+- `groupBy` (optional): Group results by dimension
+  - `"type"`: Group by activity type (returns `groupedTimeSeries` with activity type names as keys)
+  - `"category"`: Group by activity category (returns `groupedTimeSeries` with activity category names as keys)
+  - Omit for aggregate data (returns `timeSeries` only)
 
 **Response** (200 OK):
+
+**Without groupBy (aggregate data)**:
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "date": "string (ISO 8601)",
-      "newParticipants": "number",
-      "newActivities": "number",
-      "cumulativeParticipants": "number",
-      "cumulativeActivities": "number"
-    }
-  ]
+  "data": {
+    "timeSeries": [
+      {
+        "date": "string (YYYY-MM format for MONTH period, YYYY-MM-DD for DAY, etc.)",
+        "uniqueParticipants": "number",
+        "uniqueActivities": "number"
+      }
+    ]
+  }
 }
 ```
 
-**Note**: The parameter is `period` not `interval`, and date parameters are optional.
+**With groupBy=type or groupBy=category (grouped data)**:
+```json
+{
+  "success": true,
+  "data": {
+    "timeSeries": [],
+    "groupedTimeSeries": {
+      "Activity Type Name 1": [
+        {
+          "date": "string",
+          "uniqueParticipants": "number",
+          "uniqueActivities": "number"
+        }
+      ],
+      "Activity Type Name 2": [
+        {
+          "date": "string",
+          "uniqueParticipants": "number",
+          "uniqueActivities": "number"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Notes**: 
+- The `groupBy` parameter accepts simplified values (`"type"` or `"category"`) which the backend converts to internal dimension values (`"activityType"` or `"activityCategory"`)
+- When `groupBy` is specified, `timeSeries` is empty and `groupedTimeSeries` contains the breakdown
+- When `groupBy` is omitted, `timeSeries` contains aggregate data and `groupedTimeSeries` is undefined
+- Each time period represents a snapshot of unique participants and activities engaged at that point in time (not cumulative counts)
+- Date format varies by period: YYYY-MM for MONTH, YYYY-Www for WEEK, YYYY-MM-DD for DAY, YYYY for YEAR
 
 ### Get Geographic Analytics
 

@@ -252,10 +252,11 @@ The Backend API package provides the RESTful API service that implements all bus
 7. THE API SHALL calculate percentage change between consecutive periods for both participants and activities
 8. WHEN calculating growth metrics, THE API SHALL accept an optional geographic area ID filter
 9. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
-10. THE API SHALL accept an optional groupBy parameter with values 'type' or 'category' to group growth metrics by activity type or activity category
-11. WHEN groupBy is 'type', THE API SHALL return separate time-series data for each activity type showing unique participants and activities per period
-12. WHEN groupBy is 'category', THE API SHALL return separate time-series data for each activity category showing unique participants and activities per period
-13. WHEN no groupBy parameter is provided, THE API SHALL return aggregate time-series data across all activity types and categories
+10. THE API SHALL accept an optional groupBy query parameter with string values 'type' or 'category' (not 'activityType' or 'activityCategory')
+11. WHEN groupBy is 'type', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_TYPE enum and return separate time-series data for each activity type in the groupedTimeSeries field
+12. WHEN groupBy is 'category', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_CATEGORY enum and return separate time-series data for each activity category in the groupedTimeSeries field
+13. WHEN no groupBy parameter is provided, THE API SHALL return aggregate time-series data in the timeSeries field with groupedTimeSeries undefined
+14. WHEN groupBy is specified, THE API SHALL return an empty timeSeries array and populate the groupedTimeSeries object with activity type or category names as keys
 
 ### Requirement 8: Persist Data
 

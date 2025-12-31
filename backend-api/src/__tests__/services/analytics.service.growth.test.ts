@@ -162,4 +162,127 @@ describe('AnalyticsService - Growth Metrics Edge Cases', () => {
             expect(result.timeSeries[1].uniqueActivities).toBe(0);
         });
     });
+
+    describe('GroupBy functionality', () => {
+        it('should return grouped time series when groupBy is specified', async () => {
+            const mockActivities = [
+                {
+                    id: 'a1',
+                    startDate: new Date(Date.UTC(2024, 0, 15)), // Jan 15, 2024
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Study Circle',
+                        activityCategory: { name: 'Core Activities' }
+                    },
+                    assignments: [
+                        { participantId: 'p1' },
+                        { participantId: 'p2' },
+                    ]
+                },
+                {
+                    id: 'a2',
+                    startDate: new Date(Date.UTC(2024, 0, 20)), // Jan 20, 2024
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Children\'s Class',
+                        activityCategory: { name: 'Core Activities' }
+                    },
+                    assignments: [
+                        { participantId: 'p3' },
+                    ]
+                },
+            ];
+
+            mockPrisma.activity.findMany = jest.fn().mockResolvedValue(mockActivities);
+
+            const result = await service.getGrowthMetrics(TimePeriod.MONTH, {
+                startDate: new Date(Date.UTC(2024, 0, 1)),
+                endDate: new Date(Date.UTC(2024, 1, 28)),
+                groupBy: ['activityType' as any],
+            });
+
+            // Should return empty timeSeries and populated groupedTimeSeries
+            expect(result.timeSeries).toEqual([]);
+            expect(result.groupedTimeSeries).toBeDefined();
+            expect(Object.keys(result.groupedTimeSeries!)).toContain('Study Circle');
+            expect(Object.keys(result.groupedTimeSeries!)).toContain('Children\'s Class');
+
+            // Check Study Circle data
+            const studyCircleData = result.groupedTimeSeries!['Study Circle'];
+            expect(studyCircleData.length).toBe(2); // Jan, Feb
+            expect(studyCircleData[0].date).toBe('2024-01');
+            expect(studyCircleData[0].uniqueActivities).toBe(1);
+            expect(studyCircleData[0].uniqueParticipants).toBe(2);
+
+            // Check Children's Class data
+            const childrenClassData = result.groupedTimeSeries!['Children\'s Class'];
+            expect(childrenClassData.length).toBe(2); // Jan, Feb
+            expect(childrenClassData[0].date).toBe('2024-01');
+            expect(childrenClassData[0].uniqueActivities).toBe(1);
+            expect(childrenClassData[0].uniqueParticipants).toBe(1);
+        });
+
+        it('should return grouped time series by category when groupBy=category', async () => {
+            const mockActivities = [
+                {
+                    id: 'a1',
+                    startDate: new Date(Date.UTC(2024, 0, 15)),
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Study Circle',
+                        activityCategory: { name: 'Core Activities' }
+                    },
+                    assignments: [{ participantId: 'p1' }]
+                },
+                {
+                    id: 'a2',
+                    startDate: new Date(Date.UTC(2024, 0, 20)),
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Children\'s Class',
+                        activityCategory: { name: 'Core Activities' }
+                    },
+                    assignments: [{ participantId: 'p2' }]
+                },
+                {
+                    id: 'a3',
+                    startDate: new Date(Date.UTC(2024, 0, 25)),
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Community Event',
+                        activityCategory: { name: 'Social Activities' }
+                    },
+                    assignments: [{ participantId: 'p3' }]
+                },
+            ];
+
+            mockPrisma.activity.findMany = jest.fn().mockResolvedValue(mockActivities);
+
+            const result = await service.getGrowthMetrics(TimePeriod.MONTH, {
+                startDate: new Date(Date.UTC(2024, 0, 1)),
+                endDate: new Date(Date.UTC(2024, 1, 28)),
+                groupBy: ['activityCategory' as any],
+            });
+
+            expect(result.timeSeries).toEqual([]);
+            expect(result.groupedTimeSeries).toBeDefined();
+            expect(Object.keys(result.groupedTimeSeries!)).toContain('Core Activities');
+            expect(Object.keys(result.groupedTimeSeries!)).toContain('Social Activities');
+
+            // Core Activities should have 2 activities and 2 participants
+            const coreData = result.groupedTimeSeries!['Core Activities'];
+            expect(coreData[0].uniqueActivities).toBe(2);
+            expect(coreData[0].uniqueParticipants).toBe(2);
+
+            // Social Activities should have 1 activity and 1 participant
+            const socialData = result.groupedTimeSeries!['Social Activities'];
+            expect(socialData[0].uniqueActivities).toBe(1);
+            expect(socialData[0].uniqueParticipants).toBe(1);
+        });
+    });
 });

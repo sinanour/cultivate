@@ -87,9 +87,9 @@ export class AnalyticsRoutes {
             // Parse groupBy parameter
             let groupByDimensions: GroupingDimension[] | undefined;
             if (groupBy === 'type') {
-                groupByDimensions = ['activityType' as GroupingDimension];
+                groupByDimensions = [GroupingDimension.ACTIVITY_TYPE];
             } else if (groupBy === 'category') {
-                groupByDimensions = ['activityCategory' as GroupingDimension];
+                groupByDimensions = [GroupingDimension.ACTIVITY_CATEGORY];
             }
 
             const filters = {
@@ -105,6 +105,7 @@ export class AnalyticsRoutes {
             );
             res.status(HttpStatus.OK).json({ success: true, data: metrics });
         } catch (error) {
+            console.error('Error in getGrowth:', error);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 code: ErrorCode.INTERNAL_ERROR,
                 message: 'An error occurred while calculating growth metrics',

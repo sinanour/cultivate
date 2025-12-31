@@ -556,10 +556,21 @@ src/
 - Displays two separate time-series charts: one for unique participant counts and one for unique activity counts
 - Provides time period selector (day, week, month, year)
 - Each time period represents a snapshot of unique participants and activities engaged at that point in time (not cumulative counts)
-- Provides optional grouping control to view growth by activity type or activity category
-- When grouped by type: displays separate time-series for each activity type in both charts
-- When grouped by category: displays separate time-series for each activity category in both charts
-- When not grouped: displays aggregate time-series across all types and categories in both charts
+- Provides CloudScape SegmentedControl to view growth metrics with three options:
+  - "All" (default selection)
+  - "Activity Type"
+  - "Activity Category"
+- When "All" selected: displays single aggregate time-series line for total unique participants and single aggregate time-series line for total unique activities across all activity types and categories in both charts
+- When "Activity Type" selected: displays multiple time-series lines in both charts, one line for each activity type showing unique participants and unique activities for that type
+- When "Activity Category" selected: displays multiple time-series lines in both charts, one line for each activity category showing unique participants and unique activities for that category
+- Uses consistent color scheme across both Unique Participants chart and Unique Activities chart, so the same activity type or category has the same color on both charts
+- Displays legend on both charts showing color mapping for each activity type or category when multiple lines are displayed
+- Updates both charts without page refresh when view mode changes between "All", "Activity Type", and "Activity Category"
+- Preserves current time period, date range, and geographic area filter selections when switching between view modes
+- Stores selected view mode in browser localStorage (key: "growthChartViewMode")
+- Restores previously selected view mode from localStorage when user returns to Growth Dashboard
+- Defaults to "All" view if no previous selection exists in localStorage
+- Functions normally with "All" as default when localStorage is unavailable
 - Uses separate line charts for each metric:
   - Participant Growth Chart: displays unique participant counts over time
   - Activity Growth Chart: displays unique activity counts over time
@@ -572,7 +583,7 @@ src/
   - Relative date range: `?relativePeriod=-90d` (compact format: -[amount][unit])
     - Units: d (day), w (week), m (month), y (year)
     - Examples: `-30d`, `-6m`, `-1y`
-  - Grouping parameter: `?groupBy=type` or `?groupBy=category`
+  - Grouping parameter: `?groupBy=all` or `?groupBy=type` or `?groupBy=category`
   - Reads URL parameters on component mount to initialize dashboard state
   - Updates URL when user changes filters (using React Router's useSearchParams)
   - Enables browser back/forward navigation between different configurations
@@ -1528,41 +1539,89 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 7.40, 7.41, 7.43**
 
-### Property 33: Optional grouping display
+### Property 33: Growth Dashboard Segmented Control Display
 
-*For any* growth dashboard with grouping selected (by type or category), separate time-series data should be displayed for each group showing unique participants and activities per period in both charts.
+*For any* growth dashboard rendering, a segmented control with three options ("All", "Activity Type", "Activity Category") should be displayed, defaulting to "All".
 
-**Validates: Requirements 7.45, 7.46, 7.47**
+**Validates: Requirements 7.44, 7.45**
 
-### Property 33a: Growth Dashboard URL Parameter Synchronization
+### Property 33a: Growth Dashboard All View Mode
 
-*For any* growth dashboard state (period and date range filters), the browser URL query parameters should accurately reflect all current filter values (period, startDate, endDate, relativeAmount, relativeUnit).
+*For any* growth dashboard with "All" view mode selected, both charts should display a single aggregate time-series line for total unique participants and total unique activities across all activity types and categories.
 
-**Validates: Requirements 46a**
+**Validates: Requirements 7.46**
 
-### Property 33b: Growth Dashboard URL Parameter Application
+### Property 33b: Growth Dashboard Activity Type View Mode
+
+*For any* growth dashboard with "Activity Type" view mode selected, both charts should display multiple time-series lines, one for each activity type, showing unique participants and unique activities for that type.
+
+**Validates: Requirements 7.47**
+
+### Property 33c: Growth Dashboard Activity Category View Mode
+
+*For any* growth dashboard with "Activity Category" view mode selected, both charts should display multiple time-series lines, one for each activity category, showing unique participants and unique activities for that category.
+
+**Validates: Requirements 7.48**
+
+### Property 33d: Growth Dashboard Consistent Color Scheme
+
+*For any* growth dashboard displaying multiple lines for activity types or categories, the same activity type or category should have the same color on both the Unique Participants chart and the Unique Activities chart.
+
+**Validates: Requirements 7.49**
+
+### Property 33e: Growth Dashboard Legend Display
+
+*For any* growth dashboard displaying multiple lines, both charts should display a legend showing the color mapping for each activity type or category.
+
+**Validates: Requirements 7.50**
+
+### Property 33f: Growth Dashboard View Mode Switching
+
+*For any* growth dashboard view mode change between "All", "Activity Type", and "Activity Category", both charts should update without requiring a page refresh.
+
+**Validates: Requirements 7.51**
+
+### Property 33g: Growth Dashboard Filter Preservation
+
+*For any* growth dashboard view mode change, the current time period, date range, and geographic area filter selections should be preserved.
+
+**Validates: Requirements 7.52**
+
+### Property 33h: Growth Dashboard View Mode Persistence
+
+*For any* growth dashboard view mode selection, the selection should be stored in browser localStorage with key "growthChartViewMode" and restored when the user returns to the dashboard.
+
+**Validates: Requirements 7.53, 7.54, 7.55, 7.56**
+
+### Property 33i: Growth Dashboard URL Parameter Synchronization
+
+*For any* growth dashboard state (period, date range filters, and grouping mode), the browser URL query parameters should accurately reflect all current filter values (period, startDate, endDate, relativeAmount, relativeUnit, groupBy).
+
+**Validates: Requirements 57a**
+
+### Property 33j: Growth Dashboard URL Parameter Application
 
 *For any* URL with growth dashboard query parameters, when a user navigates to that URL, the growth dashboard should automatically apply all filter parameters from the URL to initialize the dashboard state.
 
-**Validates: Requirements 46b**
+**Validates: Requirements 57b**
 
-### Property 33c: Growth Dashboard URL Update on State Change
+### Property 33k: Growth Dashboard URL Update on State Change
 
-*For any* change to filter parameters in the growth dashboard, the browser URL should be updated to reflect the new state without causing a page reload.
+*For any* change to filter or grouping parameters in the growth dashboard, the browser URL should be updated to reflect the new state without causing a page reload.
 
-**Validates: Requirements 46c**
+**Validates: Requirements 57c**
 
-### Property 33d: Growth Dashboard Browser Navigation Support
+### Property 33l: Growth Dashboard Browser Navigation Support
 
-*For any* sequence of filter changes in the growth dashboard, using browser back/forward buttons should navigate through the history of configurations and restore the corresponding dashboard state.
+*For any* sequence of filter or grouping changes in the growth dashboard, using browser back/forward buttons should navigate through the history of configurations and restore the corresponding dashboard state.
 
-**Validates: Requirements 46d**
+**Validates: Requirements 57d**
 
-### Property 33e: Growth Dashboard URL Shareability
+### Property 33m: Growth Dashboard URL Shareability
 
-*For any* growth dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered results as the original user.
+*For any* growth dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered and grouped results as the original user.
 
-**Validates: Requirements 46e**
+**Validates: Requirements 57e**
 
 ### Property 34: Unauthenticated access protection
 

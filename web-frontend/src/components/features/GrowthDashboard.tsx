@@ -7,6 +7,7 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import Select from '@cloudscape-design/components/select';
+import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -26,6 +27,28 @@ function toISODateTime(dateString: string, isEndOfDay = false): string {
   return date.toISOString();
 }
 
+// Consistent color palette for activity types/categories
+const COLOR_PALETTE = [
+  '#0088FE', // Blue
+  '#00C49F', // Green
+  '#FFBB28', // Yellow
+  '#FF8042', // Orange
+  '#8884D8', // Purple
+  '#82CA9D', // Light Green
+  '#FFC658', // Light Orange
+  '#8DD1E1', // Light Blue
+  '#D084D0', // Pink
+  '#A4DE6C', // Lime
+];
+
+// Get consistent color for a group name
+function getColorForGroup(groupName: string, allGroups: string[]): string {
+  const index = allGroups.indexOf(groupName);
+  return COLOR_PALETTE[index % COLOR_PALETTE.length];
+}
+
+type ViewMode = 'all' | 'type' | 'category';
+
 export function GrowthDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
@@ -34,6 +57,23 @@ export function GrowthDashboard() {
   const [period, setPeriod] = useState<TimePeriod>(() => {
     const urlPeriod = searchParams.get('period');
     return (urlPeriod as TimePeriod) || 'MONTH';
+  });
+
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // First check URL parameter
+    const urlGroupBy = searchParams.get('groupBy');
+    if (urlGroupBy === 'all' || urlGroupBy === 'type' || urlGroupBy === 'category') {
+      return urlGroupBy;
+    }
+    
+    // Then check localStorage
+    const stored = localStorage.getItem('growthChartViewMode');
+    if (stored === 'all' || stored === 'type' || stored === 'category') {
+      return stored;
+    }
+    
+    // Default to 'all'
+    return 'all';
   });
 
   const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(() => {
@@ -93,6 +133,9 @@ export function GrowthDashboard() {
     // Update period
     params.set('period', period);
 
+    // Update groupBy
+    params.set('groupBy', viewMode);
+
     // Update date range
     if (dateRange) {
       if (dateRange.type === 'absolute') {
@@ -113,10 +156,19 @@ export function GrowthDashboard() {
     }
 
     setSearchParams(params, { replace: true });
-  }, [period, dateRange, searchParams, setSearchParams]);
+  }, [period, viewMode, dateRange, searchParams, setSearchParams]);
+
+  // Store view mode in localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('growthChartViewMode', viewMode);
+    } catch (error) {
+      console.error('Failed to save view mode to localStorage:', error);
+    }
+  }, [viewMode]);
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['growthMetrics', dateRange, period, selectedGeographicAreaId],
+    queryKey: ['growthMetrics', dateRange, period, selectedGeographicAreaId, viewMode],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
@@ -157,6 +209,7 @@ export function GrowthDashboard() {
         endDate,
         period,
         geographicAreaId: selectedGeographicAreaId || undefined,
+        groupBy: viewMode === 'all' ? undefined : viewMode,
       };
       
       return AnalyticsService.getGrowthMetrics(params);
@@ -174,7 +227,12 @@ export function GrowthDashboard() {
     return <LoadingSpinner text="Loading growth metrics..." />;
   }
 
-  if (!metrics || !metrics.timeSeries || metrics.timeSeries.length === 0) {
+  // Check if we have data - either in timeSeries (all mode) or groupedTimeSeries (type/category mode)
+  const hasData = viewMode === 'all' 
+    ? (metrics?.timeSeries && metrics.timeSeries.length > 0)
+    : (metrics?.groupedTimeSeries && Object.keys(metrics.groupedTimeSeries).length > 0);
+
+  if (!metrics || !hasData) {
     return (
       <Box textAlign="center" padding="xxl">
         <b>No data available</b>
@@ -185,13 +243,55 @@ export function GrowthDashboard() {
   const timeSeriesData = metrics.timeSeries;
 
   // Calculate absolute deltas from start to end of period
-  const activityGrowth = timeSeriesData.length >= 2
-    ? timeSeriesData[timeSeriesData.length - 1].uniqueActivities - timeSeriesData[0].uniqueActivities
-    : 0;
+  // For grouped mode, calculate total across all groups
+  let activityGrowth = 0;
+  let participantGrowth = 0;
 
-  const participantGrowth = timeSeriesData.length >= 2
-    ? timeSeriesData[timeSeriesData.length - 1].uniqueParticipants - timeSeriesData[0].uniqueParticipants
-    : 0;
+  if (viewMode === 'all' && timeSeriesData.length >= 2) {
+    activityGrowth = timeSeriesData[timeSeriesData.length - 1].uniqueActivities - timeSeriesData[0].uniqueActivities;
+    participantGrowth = timeSeriesData[timeSeriesData.length - 1].uniqueParticipants - timeSeriesData[0].uniqueParticipants;
+  } else if (viewMode !== 'all' && metrics.groupedTimeSeries) {
+    // Sum up growth across all groups
+    Object.values(metrics.groupedTimeSeries).forEach(groupData => {
+      if (groupData.length >= 2) {
+        activityGrowth += groupData[groupData.length - 1].uniqueActivities - groupData[0].uniqueActivities;
+        participantGrowth += groupData[groupData.length - 1].uniqueParticipants - groupData[0].uniqueParticipants;
+      }
+    });
+  }
+
+  // Prepare data for grouped view
+  const groupNames = metrics.groupedTimeSeries ? Object.keys(metrics.groupedTimeSeries).sort() : [];
+  const groupColors = groupNames.reduce((acc, name) => {
+    acc[name] = getColorForGroup(name, groupNames);
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Merge grouped time series data into a single dataset for charts
+  const mergedTimeSeriesData = viewMode === 'all' ? timeSeriesData : (() => {
+    if (!metrics.groupedTimeSeries) return timeSeriesData;
+
+    // Get all unique dates across all groups
+    const allDates = new Set<string>();
+    Object.values(metrics.groupedTimeSeries).forEach(series => {
+      series.forEach(item => allDates.add(item.date));
+    });
+
+    // Create merged data structure
+    return Array.from(allDates).sort().map(date => {
+      const dataPoint: any = { date };
+      
+      // Add data for each group
+      groupNames.forEach(groupName => {
+        const groupData = metrics.groupedTimeSeries![groupName];
+        const item = groupData.find(d => d.date === date);
+        dataPoint[`uniqueParticipants_${groupName}`] = item?.uniqueParticipants || 0;
+        dataPoint[`uniqueActivities_${groupName}`] = item?.uniqueActivities || 0;
+      });
+
+      return dataPoint;
+    });
+  })();
 
   return (
     <SpaceBetween size="l">
@@ -200,58 +300,74 @@ export function GrowthDashboard() {
           <Header variant="h3">Filters</Header>
         }
       >
-        <ColumnLayout columns={2}>
+        <SpaceBetween size="m">
+          <ColumnLayout columns={2}>
+            <div>
+              <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Date Range</Box>
+              <DateRangePicker
+                value={dateRange}
+                onChange={({ detail }) => {
+                  setDateRange(detail.value || null);
+                }}
+                placeholder="All history"
+                dateOnly={true}
+                relativeOptions={[
+                  { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
+                  { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
+                  { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
+                  { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
+                ]}
+                isValidRange={() => ({ valid: true })}
+                i18nStrings={{
+                  todayAriaLabel: 'Today',
+                  nextMonthAriaLabel: 'Next month',
+                  previousMonthAriaLabel: 'Previous month',
+                  customRelativeRangeDurationLabel: 'Duration',
+                  customRelativeRangeDurationPlaceholder: 'Enter duration',
+                  customRelativeRangeOptionLabel: 'Custom range',
+                  customRelativeRangeOptionDescription: 'Set a custom range in the past',
+                  customRelativeRangeUnitLabel: 'Unit of time',
+                  formatRelativeRange: (value) => {
+                    const unit = value.unit === 'day' ? 'days' : value.unit === 'week' ? 'weeks' : value.unit === 'month' ? 'months' : 'years';
+                    return `Last ${value.amount} ${unit}`;
+                  },
+                  formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
+                  dateTimeConstraintText: 'Select a date range for growth analysis.',
+                  relativeModeTitle: 'Relative range',
+                  absoluteModeTitle: 'Absolute range',
+                  relativeRangeSelectionHeading: 'Choose a range',
+                  startDateLabel: 'Start date',
+                  endDateLabel: 'End date',
+                  clearButtonLabel: 'Clear and dismiss',
+                  cancelButtonLabel: 'Cancel',
+                  applyButtonLabel: 'Apply',
+                }}
+              />
+            </div>
+            <div>
+              <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Time Period Grouping</Box>
+              <Select
+                selectedOption={periodOptions.find((o) => o.value === period) || periodOptions[2]}
+                onChange={({ detail }) => setPeriod(detail.selectedOption.value as TimePeriod)}
+                options={periodOptions}
+              />
+            </div>
+          </ColumnLayout>
+
           <div>
-            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Date Range</Box>
-            <DateRangePicker
-              value={dateRange}
-              onChange={({ detail }) => {
-                setDateRange(detail.value || null);
-              }}
-              placeholder="All history"
-              dateOnly={true}
-              relativeOptions={[
-                { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
-                { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
-                { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
-                { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
+            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Group By</Box>
+            <SegmentedControl
+              selectedId={viewMode}
+              onChange={({ detail }) => setViewMode(detail.selectedId as ViewMode)}
+              label="Growth chart view mode"
+              options={[
+                { id: 'all', text: 'All' },
+                { id: 'type', text: 'Activity Type' },
+                { id: 'category', text: 'Activity Category' },
               ]}
-              isValidRange={() => ({ valid: true })}
-              i18nStrings={{
-                todayAriaLabel: 'Today',
-                nextMonthAriaLabel: 'Next month',
-                previousMonthAriaLabel: 'Previous month',
-                customRelativeRangeDurationLabel: 'Duration',
-                customRelativeRangeDurationPlaceholder: 'Enter duration',
-                customRelativeRangeOptionLabel: 'Custom range',
-                customRelativeRangeOptionDescription: 'Set a custom range in the past',
-                customRelativeRangeUnitLabel: 'Unit of time',
-                formatRelativeRange: (value) => {
-                  const unit = value.unit === 'day' ? 'days' : value.unit === 'week' ? 'weeks' : value.unit === 'month' ? 'months' : 'years';
-                  return `Last ${value.amount} ${unit}`;
-                },
-                formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
-                dateTimeConstraintText: 'Select a date range for growth analysis.',
-                relativeModeTitle: 'Relative range',
-                absoluteModeTitle: 'Absolute range',
-                relativeRangeSelectionHeading: 'Choose a range',
-                startDateLabel: 'Start date',
-                endDateLabel: 'End date',
-                clearButtonLabel: 'Clear and dismiss',
-                cancelButtonLabel: 'Cancel',
-                applyButtonLabel: 'Apply',
-              }}
             />
           </div>
-          <div>
-            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Time Period Grouping</Box>
-            <Select
-              selectedOption={periodOptions.find((o) => o.value === period) || periodOptions[2]}
-              onChange={({ detail }) => setPeriod(detail.selectedOption.value as TimePeriod)}
-              options={periodOptions}
-            />
-          </div>
-        </ColumnLayout>
+        </SpaceBetween>
       </Container>
 
       <ColumnLayout columns={2} variant="text-grid">
@@ -271,42 +387,68 @@ export function GrowthDashboard() {
 
       <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={timeSeriesData}>
+          <LineChart data={mergedTimeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis 
               label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="uniqueParticipants"
-              stroke="#0088FE"
-              strokeWidth={2}
-              name="Unique Participants"
-            />
+            {viewMode !== 'all' && <Legend />}
+            {viewMode === 'all' ? (
+              <Line
+                type="monotone"
+                dataKey="uniqueParticipants"
+                stroke="#0088FE"
+                strokeWidth={2}
+                name="Unique Participants"
+              />
+            ) : (
+              groupNames.map((groupName) => (
+                <Line
+                  key={groupName}
+                  type="monotone"
+                  dataKey={`uniqueParticipants_${groupName}`}
+                  stroke={groupColors[groupName]}
+                  strokeWidth={2}
+                  name={groupName}
+                />
+              ))
+            )}
           </LineChart>
         </ResponsiveContainer>
       </Container>
 
       <Container header={<Header variant="h3">Unique Activities Over Time</Header>}>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={timeSeriesData}>
+          <LineChart data={mergedTimeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis 
               label={{ value: 'Unique Activities', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="uniqueActivities"
-              stroke="#00C49F"
-              strokeWidth={2}
-              name="Unique Activities"
-            />
+            {viewMode !== 'all' && <Legend />}
+            {viewMode === 'all' ? (
+              <Line
+                type="monotone"
+                dataKey="uniqueActivities"
+                stroke="#00C49F"
+                strokeWidth={2}
+                name="Unique Activities"
+              />
+            ) : (
+              groupNames.map((groupName) => (
+                <Line
+                  key={groupName}
+                  type="monotone"
+                  dataKey={`uniqueActivities_${groupName}`}
+                  stroke={groupColors[groupName]}
+                  strokeWidth={2}
+                  name={groupName}
+                />
+              ))
+            )}
           </LineChart>
         </ResponsiveContainer>
       </Container>

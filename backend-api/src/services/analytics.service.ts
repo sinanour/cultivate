@@ -939,9 +939,9 @@ export class AnalyticsService {
         });
 
         // If groupBy is specified, calculate grouped time series
-        if (groupBy && (groupBy.includes('activityType' as GroupingDimension) || groupBy.includes('activityCategory' as GroupingDimension))) {
+        if (groupBy && (groupBy.includes(GroupingDimension.ACTIVITY_TYPE) || groupBy.includes(GroupingDimension.ACTIVITY_CATEGORY))) {
             const groupedTimeSeries: Record<string, GrowthPeriodData[]> = {};
-            const groupByType = groupBy.includes('activityType' as GroupingDimension);
+            const groupByType = groupBy.includes(GroupingDimension.ACTIVITY_TYPE);
 
             // Group activities by type or category
             const activityGroups = new Map<string, typeof activities>();

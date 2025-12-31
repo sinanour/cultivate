@@ -647,10 +647,37 @@ This implementation plan covers the React-based web application built with TypeS
     - Display two separate time-series charts: one for unique participant counts and one for unique activity counts
     - Provide time period selector (DAY, WEEK, MONTH, YEAR) using period parameter
     - Display each time period as a snapshot of unique participants and activities (not cumulative)
-    - Provide optional grouping control (dropdown or segmented control) to select 'type', 'category', or 'none'
-    - When grouping by type: display separate time-series for each activity type in both charts
-    - When grouping by category: display separate time-series for each activity category in both charts
-    - When no grouping: display aggregate time-series across all types and categories in both charts
+    - Add CloudScape SegmentedControl component with three options:
+      - "All" (default selection)
+      - "Activity Type"
+      - "Activity Category"
+    - Implement view mode state management using React useState hook
+    - When "All" selected:
+      - Fetch aggregate growth data from API (no groupBy parameter)
+      - Display single time-series line for total unique participants in Participant Growth Chart
+      - Display single time-series line for total unique activities in Activity Growth Chart
+    - When "Activity Type" selected:
+      - Fetch growth data grouped by activity type from API (groupBy='type')
+      - Display multiple time-series lines in both charts, one for each activity type
+      - Show unique participants per type in Participant Growth Chart
+      - Show unique activities per type in Activity Growth Chart
+    - When "Activity Category" selected:
+      - Fetch growth data grouped by activity category from API (groupBy='category')
+      - Display multiple time-series lines in both charts, one for each activity category
+      - Show unique participants per category in Participant Growth Chart
+      - Show unique activities per category in Activity Growth Chart
+    - Implement consistent color scheme across both charts:
+      - Define color palette for activity types/categories
+      - Apply same color to same type/category on both Participant and Activity charts
+      - Use recharts color prop or custom color mapping function
+    - Display legend on both charts showing color mapping when multiple lines are displayed
+    - Update both charts without page refresh when view mode changes
+    - Preserve current time period, date range, and geographic area filter selections when switching views
+    - Implement localStorage persistence:
+      - Store selected view mode in localStorage with key "growthChartViewMode"
+      - Read from localStorage on component mount to restore previous selection
+      - Default to "All" if no localStorage value exists
+      - Handle localStorage unavailability gracefully
     - Provide geographic area filter (optional geographicAreaId)
     - Use /analytics/growth endpoint with optional startDate, endDate, period, geographicAreaId, groupBy parameters
     - Combine date range and period controls into single unified container with side-by-side layout
@@ -658,24 +685,32 @@ This implementation plan covers the React-based web application built with TypeS
       - Participant Growth Chart: displays unique participant counts over time
       - Activity Growth Chart: displays unique activity counts over time
       - Each chart has its own Y-axis scale optimized for its data range
-    - Synchronize filter parameters with URL query parameters:
+    - Synchronize filter and grouping parameters with URL query parameters:
       - Read URL parameters on component mount to initialize dashboard state
-      - Update URL when user changes filters (using React Router's useSearchParams)
-      - Support parameters: period, startDate, endDate, relativePeriod (compact format: -90d, -6m, -1y), groupBy
+      - Update URL when user changes filters or grouping (using React Router's useSearchParams)
+      - Support parameters: period, startDate, endDate, relativePeriod (compact format: -90d, -6m, -1y), groupBy (all|type|category)
       - Use same compact relative date format as Engagement dashboard for consistency
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use replace: true)
-    - _Requirements: 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 46a, 46b, 46c, 46d, 46e_
+    - _Requirements: 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e_
 
   - [ ]* 14.3 Write property tests for growth metrics
     - **Property 32: Time-Series Unique Count Calculation**
-    - **Property 33: Optional Grouping Display**
-    - **Property 33a: Growth Dashboard URL Parameter Synchronization**
-    - **Property 33b: Growth Dashboard URL Parameter Application**
-    - **Property 33c: Growth Dashboard URL Update on State Change**
-    - **Property 33d: Growth Dashboard Browser Navigation Support**
-    - **Property 33e: Growth Dashboard URL Shareability**
-    - **Validates: Requirements 7.40, 7.41, 7.43, 7.45, 7.46, 7.47, 46a, 46b, 46c, 46d, 46e**
+    - **Property 33: Growth Dashboard Segmented Control Display**
+    - **Property 33a: Growth Dashboard All View Mode**
+    - **Property 33b: Growth Dashboard Activity Type View Mode**
+    - **Property 33c: Growth Dashboard Activity Category View Mode**
+    - **Property 33d: Growth Dashboard Consistent Color Scheme**
+    - **Property 33e: Growth Dashboard Legend Display**
+    - **Property 33f: Growth Dashboard View Mode Switching**
+    - **Property 33g: Growth Dashboard Filter Preservation**
+    - **Property 33h: Growth Dashboard View Mode Persistence**
+    - **Property 33i: Growth Dashboard URL Parameter Synchronization**
+    - **Property 33j: Growth Dashboard URL Parameter Application**
+    - **Property 33k: Growth Dashboard URL Update on State Change**
+    - **Property 33l: Growth Dashboard Browser Navigation Support**
+    - **Property 33m: Growth Dashboard URL Shareability**
+    - **Validates: Requirements 7.40, 7.41, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e**
 
   - [x] 14.3 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint

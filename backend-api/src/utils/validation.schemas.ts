@@ -202,6 +202,7 @@ export const GrowthQuerySchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  groupBy: z.enum(['type', 'category']).optional(),
 });
 
 export const ActivityLifecycleQuerySchema = z.object({
