@@ -18,6 +18,7 @@ import { GeographicAreaService } from '../../services/api/geographic-area.servic
 import { GeographicAreaForm } from './GeographicAreaForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/date.utils';
+import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 
 export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
@@ -136,7 +137,7 @@ export function GeographicAreaDetail() {
           <div>
             <Box variant="awsui-key-label">Area Type</Box>
             <div>
-              <Badge>{geographicArea.areaType}</Badge>
+              <Badge color={getAreaTypeBadgeColor(geographicArea.areaType)}>{geographicArea.areaType}</Badge>
             </div>
           </div>
           <div>
@@ -195,7 +196,7 @@ export function GeographicAreaDetail() {
               {
                 id: 'type',
                 header: 'Type',
-                cell: (item) => <Badge>{item.areaType}</Badge>,
+                cell: (item) => <Badge color={getAreaTypeBadgeColor(item.areaType)}>{item.areaType}</Badge>,
               },
             ]}
             items={children}

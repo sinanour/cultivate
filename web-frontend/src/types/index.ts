@@ -66,6 +66,9 @@ export type AreaType =
     | 'PROVINCE'
     | 'STATE'
     | 'COUNTRY'
+    | 'CONTINENT'
+    | 'HEMISPHERE'
+    | 'WORLD'
     | 'CUSTOM';
 
 export interface GeographicArea {

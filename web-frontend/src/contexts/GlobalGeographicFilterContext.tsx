@@ -127,7 +127,7 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
 
   const formatAreaOption = (area: GeographicAreaWithHierarchy) => {
     return {
-      label: `${area.name} (${area.areaType})`,
+      label: area.name,
       description: area.hierarchyPath || 'No parent areas',
     };
   };

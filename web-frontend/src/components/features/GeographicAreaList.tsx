@@ -17,6 +17,7 @@ import { GeographicAreaForm } from './GeographicAreaForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { buildGeographicAreaTree, type TreeNode } from '../../utils/tree.utils';
+import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
@@ -217,7 +218,7 @@ export function GeographicAreaList() {
             >
               {node.text}
             </Link>
-            <Badge>{area.areaType}</Badge>
+            <Badge color={getAreaTypeBadgeColor(area.areaType)}>{area.areaType}</Badge>
           </SpaceBetween>
         </div>
       ),
