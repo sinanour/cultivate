@@ -483,21 +483,27 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 13.1 Create MapView component
     - Render interactive map using Leaflet or Mapbox
     - Provide mode selector control to switch between "Activities", "Participant Homes", and "Venues" modes
-    - In Activities mode: display activity markers at current venue locations, color-coded by activity category
+    - In Activities mode: display activity markers at current venue locations, color-coded by activity type
+    - In Activity Categories mode: display activity markers at current venue locations, color-coded by activity category
     - In Participant Homes mode: display markers for participant home addresses (current venue from address history)
     - In Venues mode: display markers for all venues with coordinates, regardless of activities or participants
     - Implement marker clustering for dense areas
     - Provide mode-specific popup with information on marker click
     - Include map controls for zoom, pan, and center
-    - Display right-aligned legend in Activities mode showing activity category color mapping
+    - Display right-aligned legend in Activities mode showing only visible activity types
+    - Display right-aligned legend in Activity Categories mode showing only visible activity categories
+    - Filter legend items dynamically based on markers actually rendered on the map
+    - Hide legend when no markers are visible
     - Respect global geographic area filter across all modes
-    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22_
+    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.5a, 6C.5b, 6C.5c, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22_
 
   - [ ]* 13.2 Write property tests for map display
     - **Property 60: Map Mode Selector**
     - **Property 61: Activity Marker Display**
     - **Property 62: Activity Marker Color Coding**
     - **Property 63: Activity Legend Display**
+    - **Property 63a: Legend Filtering Based on Visible Markers**
+    - **Property 63b: Legend Visibility with No Markers**
     - **Property 64: Activity Popup Information**
     - **Property 65: Participant Home Marker Display**
     - **Property 66: Participant Home Popup Information**

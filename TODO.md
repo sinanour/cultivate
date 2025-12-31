@@ -46,13 +46,14 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Provides consistent navigation experience
   - Users can view and edit categories/types on the Configuration page
 
-- [ ] 9. Filter map view legend to show only visible items
+- [x] 9. Filter map view legend to show only visible items
   - Issue: Map legend shows all activity categories/types, even those not currently displayed on the map
   - Problem: Legend becomes verbose and colors may not match actual map pins when filters are applied
   - Solution: Dynamically generate legend based on activities/categories actually rendered on the map
   - Filter legend items to match current map data after applying all filters
   - Ensures legend colors accurately correspond to visible map pins
   - Improves map readability and user experience
+  - Implementation: Added filtering logic to extract visible type/category IDs from markers, then filter legend items accordingly
 
 ## Navigation & UI Organization
 

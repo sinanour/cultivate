@@ -52,9 +52,14 @@ export class ActivityService {
     const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
     const areaIds = [geographicAreaId, ...descendantIds];
 
-    // Get all activities with their most recent venue
+    // Get all activities with their most recent venue and activityType
     const allActivities = await this.prisma.activity.findMany({
       include: {
+        activityType: {
+          include: {
+            activityCategory: true,
+          },
+        },
         activityVenueHistory: {
           orderBy: { effectiveFrom: 'desc' },
           take: 1,
@@ -70,8 +75,11 @@ export class ActivityService {
       areaIds.includes(a.activityVenueHistory[0].venue.geographicAreaId)
     );
 
-    // Remove the included relations for the response
-    const activities = filteredActivities.map(({ activityVenueHistory, ...activity }) => activity as Activity);
+    // Remove the activityVenueHistory from the response (keep activityType)
+    const activities = filteredActivities.map((a) => {
+      const { activityVenueHistory, ...activity } = a;
+      return activity;
+    });
     return activities.map((a) => this.addComputedFields(a));
   }
 
@@ -88,9 +96,14 @@ export class ActivityService {
     const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
     const areaIds = [geographicAreaId, ...descendantIds];
 
-    // Get all activities with their most recent venue
+    // Get all activities with their most recent venue and activityType
     const allActivities = await this.prisma.activity.findMany({
       include: {
+        activityType: {
+          include: {
+            activityCategory: true,
+          },
+        },
         activityVenueHistory: {
           orderBy: { effectiveFrom: 'desc' },
           take: 1,
@@ -111,8 +124,11 @@ export class ActivityService {
     const skip = (validPage - 1) * validLimit;
     const paginatedActivities = filteredActivities.slice(skip, skip + validLimit);
 
-    // Remove the included relations for the response
-    const data = paginatedActivities.map(({ activityVenueHistory, ...activity }) => activity as Activity);
+    // Remove the activityVenueHistory from the response (keep activityType)
+    const data = paginatedActivities.map((a) => {
+      const { activityVenueHistory, ...activity } = a;
+      return activity;
+    });
     const activitiesWithComputed = data.map((a) => this.addComputedFields(a));
     return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);
   }

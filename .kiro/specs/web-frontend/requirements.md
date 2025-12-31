@@ -188,6 +188,9 @@ The Web Frontend package provides a responsive React-based web application that 
 3. WHEN in "Activities" mode, THE Web_App SHALL display markers for all activities at their current venue locations
 4. WHEN in "Activities" mode, THE Web_App SHALL color-code activity markers by activity category
 5. WHEN in "Activities" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity categories
+5a. WHEN displaying the map legend in "Activities" mode, THE Web_App SHALL only include activity types that are actually visible on the map based on current filters
+5b. WHEN displaying the map legend in "Activity Categories" mode, THE Web_App SHALL only include activity categories that are actually visible on the map based on current filters
+5c. WHEN filters are applied that result in no visible markers, THE Web_App SHALL hide the legend
 6. WHEN an activity marker is clicked, THE Web_App SHALL display a popup showing the activity name, category, type, start date, and number of participants
 7. WHEN an activity marker popup is displayed, THE Web_App SHALL render the activity name as a hyperlink to the activity detail page (/activities/:id)
 8. WHEN in "Participant Homes" mode, THE Web_App SHALL display markers for all participant home addresses (current venue from address history)

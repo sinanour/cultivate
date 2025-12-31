@@ -372,39 +372,62 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
         }
       `}</style>
 
-      {/* Legend - positioned BEFORE MapContainer */}
-      {mapMode === 'activities' && activityTypes.length > 0 && (
-        <div className="map-legend">
-          <Box variant="strong" fontSize="body-s" padding={{ bottom: 'xs' }}>
-            Activity Types
-          </Box>
-          {activityTypes.map((type) => (
-            <div key={type.id} className="legend-item">
-              <div
-                className="legend-color"
-                style={{ backgroundColor: activityTypeColorMap.get(type.id) || '#3b82f6' }}
-              />
-              <span className="legend-label">{type.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {mapMode === 'activityCategories' && uniqueCategories.size > 0 && (
-        <div className="map-legend">
-          <Box variant="strong" fontSize="body-s" padding={{ bottom: 'xs' }}>
-            Activity Categories
-          </Box>
-          {Array.from(uniqueCategories.values()).map((category) => (
-            <div key={category.id} className="legend-item">
-              <div
-                className="legend-color"
-                style={{ backgroundColor: activityCategoryColorMap.get(category.id) || '#3b82f6' }}
-              />
-              <span className="legend-label">{category.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Filter legend items to only show those visible on the map */}
+      {(() => {
+        // For activities mode: filter to only show activity types that are in the markers
+        const visibleActivityTypeIds = new Set(
+          markers
+            .filter((m: any) => m?.activity?.activityTypeId)
+            .map((m: any) => m.activity.activityTypeId)
+        );
+        const visibleActivityTypes = activityTypes.filter(type => visibleActivityTypeIds.has(type.id));
+
+        // For activity categories mode: filter to only show categories that are in the markers
+        const visibleCategoryIds = new Set(
+          markers
+            .filter((m: any) => m?.activity?.activityType?.activityCategoryId)
+            .map((m: any) => m.activity.activityType.activityCategoryId)
+        );
+        const visibleCategories = Array.from(uniqueCategories.values()).filter(cat => visibleCategoryIds.has(cat.id));
+
+        return (
+          <>
+            {/* Legend - positioned BEFORE MapContainer */}
+            {mapMode === 'activities' && visibleActivityTypes.length > 0 && (
+              <div className="map-legend">
+                <Box variant="strong" fontSize="body-s" padding={{ bottom: 'xs' }}>
+                  Activity Types
+                </Box>
+                {visibleActivityTypes.map((type) => (
+                  <div key={type.id} className="legend-item">
+                    <div
+                      className="legend-color"
+                      style={{ backgroundColor: activityTypeColorMap.get(type.id) || '#3b82f6' }}
+                    />
+                    <span className="legend-label">{type.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {mapMode === 'activityCategories' && visibleCategories.length > 0 && (
+              <div className="map-legend">
+                <Box variant="strong" fontSize="body-s" padding={{ bottom: 'xs' }}>
+                  Activity Categories
+                </Box>
+                {visibleCategories.map((category) => (
+                  <div key={category.id} className="legend-item">
+                    <div
+                      className="legend-color"
+                      style={{ backgroundColor: activityCategoryColorMap.get(category.id) || '#3b82f6' }}
+                    />
+                    <span className="legend-label">{category.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       <MapContainer
         center={defaultCenter}

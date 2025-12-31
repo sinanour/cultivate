@@ -386,13 +386,17 @@ src/
 **MapView**
 - Renders interactive map using Leaflet or Mapbox GL JS
 - Provides mode selector control to switch between "Activities", "Participant Homes", and "Venues" modes
-- In Activities mode: displays activity markers at current venue locations, color-coded by activity category
+- In Activities mode: displays activity markers at current venue locations, color-coded by activity type
+- In Activity Categories mode: displays activity markers at current venue locations, color-coded by activity category
 - In Participant Homes mode: displays markers for participant home addresses (current venue from address history)
 - In Venues mode: displays markers for all venues with coordinates, regardless of activities or participants
 - Implements marker clustering for dense areas
 - Provides popup with mode-specific information on marker click
 - Includes map controls for zoom, pan, and center
-- Displays right-aligned legend in Activities mode showing activity category color mapping
+- Displays right-aligned legend in Activities mode showing only activity types that are visible on the map
+- Displays right-aligned legend in Activity Categories mode showing only activity categories that are visible on the map
+- Filters legend items dynamically based on current markers after applying all filters
+- Hides legend when no markers are visible
 - Respects global geographic area filter across all modes
 
 **MapFilters**
@@ -1668,9 +1672,21 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 63: Activity Legend Display
 
-*For any* map view in "Activities" mode, a right-aligned legend should be displayed showing the mapping between marker colors and activity categories.
+*For any* map view in "Activities" or "Activity Categories" mode, a right-aligned legend should be displayed showing the mapping between marker colors and activity types or categories.
 
 **Validates: Requirements 6C.5**
+
+### Property 63a: Legend Filtering Based on Visible Markers
+
+*For any* map view with filters applied, the legend should only display activity types or categories that are actually visible on the map, excluding those filtered out.
+
+**Validates: Requirements 6C.5a, 6C.5b**
+
+### Property 63b: Legend Visibility with No Markers
+
+*For any* map view where filters result in no visible markers, the legend should be hidden.
+
+**Validates: Requirements 6C.5c**
 
 ### Property 64: Activity Popup Information
 
