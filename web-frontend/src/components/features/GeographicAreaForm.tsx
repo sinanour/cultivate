@@ -140,11 +140,19 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
       return;
     }
 
-    const data = {
+    // Build update data - send null for cleared fields
+    const data: any = {
       name: name.trim(),
       areaType,
-      parentGeographicAreaId: parentGeographicAreaId || undefined,
     };
+
+    // Handle parent: empty string means cleared (send null), non-empty means update
+    if (parentGeographicAreaId) {
+      data.parentGeographicAreaId = parentGeographicAreaId;
+    } else if (geographicArea && geographicArea.parentGeographicAreaId) {
+      // Field was cleared (had value, now empty)
+      data.parentGeographicAreaId = null;
+    }
 
     if (geographicArea) {
       updateMutation.mutate({
@@ -234,6 +242,7 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
                 disabled={isSubmitting}
                 invalid={!!parentError}
                 ariaLabel="Select parent geographic area"
+                clearable={true}
               />
             </FormField>
           </SpaceBetween>

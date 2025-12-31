@@ -19,9 +19,9 @@ export interface UpdateVenueInput {
     name?: string;
     address?: string;
     geographicAreaId?: string;
-    latitude?: number;
-    longitude?: number;
-    venueType?: VenueType;
+    latitude?: number | null;
+    longitude?: number | null;
+    venueType?: VenueType | null;
     version?: number;
 }
 
@@ -143,13 +143,13 @@ export class VenueService {
             }
         }
 
-        // Validate latitude range if provided
-        if (data.latitude !== undefined && (data.latitude < -90 || data.latitude > 90)) {
+        // Validate latitude range if provided (skip validation if explicitly null for clearing)
+        if (data.latitude !== undefined && data.latitude !== null && (data.latitude < -90 || data.latitude > 90)) {
             throw new Error('Latitude must be between -90 and 90');
         }
 
-        // Validate longitude range if provided
-        if (data.longitude !== undefined && (data.longitude < -180 || data.longitude > 180)) {
+        // Validate longitude range if provided (skip validation if explicitly null for clearing)
+        if (data.longitude !== undefined && data.longitude !== null && (data.longitude < -180 || data.longitude > 180)) {
             throw new Error('Longitude must be between -180 and 180');
         }
 

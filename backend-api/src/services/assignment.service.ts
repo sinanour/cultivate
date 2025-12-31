@@ -12,7 +12,7 @@ export interface CreateAssignmentInput {
 
 export interface UpdateAssignmentInput {
     roleId?: string;
-    notes?: string;
+    notes?: string | null;
 }
 
 export class AssignmentService {

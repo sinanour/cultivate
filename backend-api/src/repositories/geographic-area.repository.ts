@@ -9,7 +9,7 @@ export interface CreateGeographicAreaData {
 export interface UpdateGeographicAreaData {
   name?: string;
   areaType?: AreaType;
-  parentGeographicAreaId?: string;
+  parentGeographicAreaId?: string | null;
   version?: number;
 }
 

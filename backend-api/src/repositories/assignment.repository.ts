@@ -9,7 +9,7 @@ export interface CreateAssignmentData {
 
 export interface UpdateAssignmentData {
   roleId?: string;
-  notes?: string;
+  notes?: string | null;
 }
 
 export class AssignmentRepository {

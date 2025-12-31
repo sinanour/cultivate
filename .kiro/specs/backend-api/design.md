@@ -314,6 +314,92 @@ ActivityLifecycleQuerySchema = {
 }
 ```
 
+### Optional Field Clearing
+
+**Design Pattern for Clearing Optional Fields:**
+
+The API supports clearing optional fields by explicitly sending null or empty string values in update requests. This is distinct from omitting fields, which preserves existing values.
+
+**Field Clearing Behavior:**
+- **Field omitted from request**: Existing value is preserved (no change)
+- **Field set to null or empty string**: Field is cleared (set to null in database)
+
+**Update Schema Pattern:**
+```typescript
+// Participant Update Schema
+ParticipantUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  email: z.string().email().nullable().optional(),  // nullable() allows explicit null
+  phone: z.string().max(20).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  dateOfBirth: z.coerce.date().nullable().optional(),
+  dateOfRegistration: z.coerce.date().nullable().optional(),
+  nickname: z.string().max(100).nullable().optional()
+});
+
+// Venue Update Schema
+VenueUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  address: z.string().min(1).max(500).optional(),
+  geographicAreaId: z.string().uuid().optional(),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  venueType: z.enum(['PUBLIC_BUILDING', 'PRIVATE_RESIDENCE']).nullable().optional()
+});
+
+// Activity Update Schema
+ActivityUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  activityTypeId: z.string().uuid().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().nullable().optional(),  // Can be cleared to make ongoing
+  status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional()
+});
+
+// Assignment Update Schema
+AssignmentUpdateSchema = z.object({
+  roleId: z.string().uuid().optional(),
+  notes: z.string().max(1000).nullable().optional()
+});
+```
+
+**Service Layer Implementation:**
+
+Services must handle both undefined (omit) and null (clear) values:
+
+```typescript
+async updateParticipant(id: string, data: ParticipantUpdateData): Promise<Participant> {
+  // Build update object - only include fields present in request
+  const updateData: any = {};
+  
+  // For each field, check if it's in the request
+  if ('name' in data) updateData.name = data.name;
+  if ('email' in data) updateData.email = data.email;  // null clears, undefined omits
+  if ('phone' in data) updateData.phone = data.phone;
+  if ('notes' in data) updateData.notes = data.notes;
+  if ('dateOfBirth' in data) updateData.dateOfBirth = data.dateOfBirth;
+  if ('dateOfRegistration' in data) updateData.dateOfRegistration = data.dateOfRegistration;
+  if ('nickname' in data) updateData.nickname = data.nickname;
+  
+  return this.participantRepository.update(id, updateData);
+}
+```
+
+**Clearable Optional Fields by Entity:**
+
+- **Participant**: email, phone, notes, dateOfBirth, dateOfRegistration, nickname
+- **Venue**: latitude, longitude, venueType
+- **Activity**: endDate (converts finite activity to ongoing)
+- **Assignment**: notes
+- **GeographicArea**: parentGeographicAreaId (removes parent, makes it a root area)
+
+**Key Design Points:**
+- Uses Zod's `.nullable()` modifier to accept null values
+- Services check for field presence using `'field' in data` to distinguish omit vs clear
+- Null values are stored as NULL in PostgreSQL
+- API responses return null for cleared fields (not empty strings)
+- Maintains backward compatibility - clients not aware of clearing continue to work
+
 ### Activity Lifecycle Events Endpoint
 
 **GET /api/v1/analytics/activity-lifecycle**
@@ -2093,4 +2179,30 @@ const GeographicAreaImportSchema = z.object({
 **Property 141: CSV export geographic filtering**
 *For any* export request with a geographicAreaId parameter, only records associated with venues in the specified geographic area or its descendants should be included.
 **Validates: Requirements 22.31, 22.32**
+
+### Optional Field Clearing Properties
+
+**Property 142: Optional field clearing for participants**
+*For any* participant update request with null or empty string values for optional fields (email, phone, notes, dateOfBirth, dateOfRegistration, nickname), the API should clear those fields and subsequent GET requests should return null for them.
+**Validates: Requirements 22.1, 22.5, 22.6**
+
+**Property 143: Optional field clearing for venues**
+*For any* venue update request with null or empty string values for optional fields (latitude, longitude, venueType), the API should clear those fields and subsequent GET requests should return null for them.
+**Validates: Requirements 22.2, 22.5, 22.6**
+
+**Property 144: Optional field clearing for activities**
+*For any* activity update request with null value for endDate, the API should clear the endDate field (converting the activity to ongoing) and subsequent GET requests should return null for endDate.
+**Validates: Requirements 22.3, 22.5, 22.6**
+
+**Property 145: Optional field clearing for assignments**
+*For any* assignment update request with null or empty string value for notes, the API should clear the notes field and subsequent GET requests should return null for notes.
+**Validates: Requirements 22.4, 22.5, 22.6**
+
+**Property 146: Field omission preserves existing values**
+*For any* update request where an optional field is omitted (not present in request body), the API should preserve the existing value of that field.
+**Validates: Requirements 22.7, 22.8**
+
+**Property 147: Explicit null vs omission distinction**
+*For any* update request, the API should distinguish between omitting a field (preserve existing value) and explicitly setting it to null/empty (clear the field).
+**Validates: Requirements 22.7, 22.9**
 

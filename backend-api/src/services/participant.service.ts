@@ -23,12 +23,12 @@ export interface CreateParticipantInput {
 export interface UpdateParticipantInput {
     name?: string;
     email?: string | null;
-    phone?: string;
-    notes?: string;
+    phone?: string | null;
+    notes?: string | null;
     dateOfBirth?: string | null;
     dateOfRegistration?: string | null;
-    nickname?: string;
-    homeVenueId?: string;
+    nickname?: string | null;
+    homeVenueId?: string | null;
     version?: number;
 }
 
@@ -297,28 +297,29 @@ export class ParticipantService {
         }
 
         // Update participant basic fields
+        // Use 'in' operator to distinguish between undefined (omit) and null (clear)
         const updateData: {
             name?: string;
             email?: string | null;
-            phone?: string;
-            notes?: string;
+            phone?: string | null;
+            notes?: string | null;
             dateOfBirth?: Date | null;
             dateOfRegistration?: Date | null;
-            nickname?: string;
+            nickname?: string | null;
             version?: number;
         } = {};
-        if (data.name !== undefined) updateData.name = data.name;
-        if (data.email !== undefined) updateData.email = data.email;
-        if (data.phone !== undefined) updateData.phone = data.phone;
-        if (data.notes !== undefined) updateData.notes = data.notes;
-        if (data.dateOfBirth !== undefined) {
+        if ('name' in data) updateData.name = data.name;
+        if ('email' in data) updateData.email = data.email;
+        if ('phone' in data) updateData.phone = data.phone;
+        if ('notes' in data) updateData.notes = data.notes;
+        if ('dateOfBirth' in data) {
             updateData.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
         }
-        if (data.dateOfRegistration !== undefined) {
+        if ('dateOfRegistration' in data) {
             updateData.dateOfRegistration = data.dateOfRegistration ? new Date(data.dateOfRegistration) : null;
         }
-        if (data.nickname !== undefined) updateData.nickname = data.nickname;
-        if (data.version !== undefined) updateData.version = data.version;
+        if ('nickname' in data) updateData.nickname = data.nickname;
+        if ('version' in data) updateData.version = data.version;
 
         try {
             return await this.participantRepository.update(id, updateData);

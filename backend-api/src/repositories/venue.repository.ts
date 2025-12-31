@@ -13,9 +13,9 @@ export interface UpdateVenueData {
   name?: string;
   address?: string;
   geographicAreaId?: string;
-  latitude?: number;
-  longitude?: number;
-  venueType?: VenueType;
+  latitude?: number | null;
+  longitude?: number | null;
+  venueType?: VenueType | null;
   version?: number;
 }
 

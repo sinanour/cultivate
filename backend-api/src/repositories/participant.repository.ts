@@ -10,11 +10,11 @@ export interface CreateParticipantData {
 export interface UpdateParticipantData {
   name?: string;
   email?: string | null;
-  phone?: string;
-  notes?: string;
+  phone?: string | null;
+  notes?: string | null;
   dateOfBirth?: Date | null;
   dateOfRegistration?: Date | null;
-  nickname?: string;
+  nickname?: string | null;
   version?: number;
 }
 

@@ -220,11 +220,21 @@ export class ActivityRoutes {
     private async update(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const { id } = req.params;
-            const activityData = {
+            const activityData: any = {
                 ...req.body,
                 startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
-                endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
             };
+
+            // Handle endDate: preserve null for clearing, convert string to Date, or omit if undefined
+            if ('endDate' in req.body) {
+                if (req.body.endDate === null) {
+                    activityData.endDate = null; // Explicitly clear endDate
+                } else if (req.body.endDate) {
+                    activityData.endDate = new Date(req.body.endDate); // Convert to Date
+                }
+                // If undefined, omit from activityData (already handled by spread)
+            }
+
             const activity = await this.activityService.updateActivity(id, activityData);
             res.status(200).json({ success: true, data: activity });
         } catch (error) {

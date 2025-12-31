@@ -6,7 +6,7 @@ interface CreateActivityData {
     activityTypeId: string;
     status?: 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
     startDate: string;
-    endDate?: string;
+    endDate?: string | null;
 }
 
 interface UpdateActivityData extends Partial<CreateActivityData> {

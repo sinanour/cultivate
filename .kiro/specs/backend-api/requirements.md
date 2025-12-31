@@ -478,7 +478,23 @@ The Backend API package provides the RESTful API service that implements all bus
 11. THE API SHALL return the first page of results by default when no page parameter is specified
 12. THE API SHALL limit the maximum page size to 100 items to prevent performance issues
 
-### Requirement 22: CSV Import and Export
+### Requirement 22: Clear Optional Fields
+
+**User Story:** As a community organizer, I want to clear optional fields that have been previously populated, so that I can remove information that is no longer relevant or was entered incorrectly.
+
+#### Acceptance Criteria
+
+1. WHEN updating a participant, THE API SHALL accept null or empty string values for optional fields (email, phone, notes, dateOfBirth, dateOfRegistration, nickname) to clear them
+2. WHEN updating a venue, THE API SHALL accept null or empty string values for optional fields (latitude, longitude, venueType) to clear them
+3. WHEN updating an activity, THE API SHALL accept null value for endDate to convert a finite activity to an ongoing activity
+4. WHEN updating an assignment, THE API SHALL accept null or empty string value for notes to clear the notes field
+5. WHEN a null or empty string value is provided for an optional field, THE API SHALL set the field to null in the database
+6. WHEN retrieving an entity with cleared optional fields, THE API SHALL return null for those fields
+7. THE API SHALL distinguish between omitting a field (no change) and explicitly setting it to null/empty (clear the field)
+8. WHEN a field is omitted from an update request, THE API SHALL preserve the existing value
+9. WHEN a field is explicitly set to null or empty string in an update request, THE API SHALL clear the field value
+
+### Requirement 23: CSV Import and Export
 
 **User Story:** As a community organizer, I want to import and export data in CSV format via API, so that I can bulk load data from external sources and share data with other systems.
 

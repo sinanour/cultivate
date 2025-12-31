@@ -178,6 +178,9 @@ src/
 - Validates dateOfBirth is in the past when provided (optional)
 - Validates dateOfRegistration is a valid date when provided (optional)
 - Supports optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields
+- Provides clear buttons (X icons) next to optional fields to remove previously entered values
+- When clear button is clicked, sets field value to null/empty and sends null to API on save
+- Visually indicates when optional fields are empty vs populated
 - Displays inline validation errors
 - Includes embedded address history management section within the form
 - Allows adding new address history records with venue and effective start date
@@ -239,6 +242,8 @@ src/
 - Modal form for creating/editing activities
 - Conditionally requires end date for finite activities
 - Allows null end date for ongoing activities
+- Provides clear button (X icon) next to end date field to convert finite activity to ongoing
+- When end date clear button is clicked, sets endDate to null and sends null to API on save
 - Validates name, type, and start date
 - Provides date pickers using CloudScape DatePicker
 - Includes embedded venue history management section within the form
@@ -289,6 +294,8 @@ src/
 - Requires role selection from dropdown
 - Validates role is selected
 - Prevents duplicate assignments (same participant + role)
+- Supports optional notes field with clear button (X icon) to remove previously entered notes
+- When notes clear button is clicked, sets notes to null and sends null to API on save
 
 **AssignmentList**
 - Displays assigned participants on activity detail
@@ -312,6 +319,10 @@ src/
 - Validates name, address, and geographic area are required
 - Provides dropdown for geographic area selection
 - Supports optional latitude, longitude, and venue type fields
+- Provides clear buttons (X icons) next to optional coordinate and venue type fields to remove previously entered values
+- When clear button is clicked for coordinates, sets both latitude and longitude to null and removes map pin
+- When clear button is clicked for venue type, sets field to null
+- Sends null values to API on save to clear optional fields
 - Provides "Geocode Address" button to automatically populate coordinates
 - Displays loading indicator during geocoding request
 - Shows selection dialog when multiple geocoding results are returned
@@ -2061,6 +2072,32 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* active global geographic area filter, the filter selector dropdown should display only the descendants (recursively) of the currently filtered area, and when the filter is "Global", all geographic areas should be displayed.
 
 **Validates: Requirements 24.16, 24.17**
+
+### Optional Field Clearing Properties
+
+**Property 107: Optional field clearing in participant form**
+*For any* participant form with populated optional fields (email, phone, notes, dateOfBirth, dateOfRegistration, nickname), clicking the clear button should set the field to null and send null to the API on save, resulting in the field being empty in subsequent views.
+**Validates: Requirements 26.1, 26.5, 26.6, 26.7, 26.8**
+
+**Property 108: Optional field clearing in venue form**
+*For any* venue form with populated optional fields (latitude, longitude, venueType), clicking the clear button should set the field to null and send null to the API on save, resulting in the field being empty in subsequent views.
+**Validates: Requirements 26.2, 26.5, 26.6, 26.7, 26.8**
+
+**Property 109: End date clearing in activity form**
+*For any* activity form with a populated endDate, clicking the clear button should set endDate to null and send null to the API on save, converting the activity to ongoing.
+**Validates: Requirements 26.3, 26.5, 26.6, 26.7, 26.8**
+
+**Property 110: Notes clearing in assignment form**
+*For any* assignment form with populated notes, clicking the clear button should set notes to null and send null to the API on save, resulting in the notes being empty in subsequent views.
+**Validates: Requirements 26.4, 26.5, 26.6, 26.7, 26.8**
+
+**Property 111: Clear button visibility**
+*For any* optional field with a value, a clear button (X icon) should be visible next to the field, and when the field is empty, the clear button should be hidden.
+**Validates: Requirements 26.7, 26.8**
+
+**Property 112: Field clearing vs omission distinction**
+*For any* form update, fields that are not modified should be omitted from the API request (preserving existing values), while fields that are explicitly cleared should send null to the API (clearing the values).
+**Validates: Requirements 26.9**
 
 ## Error Handling
 

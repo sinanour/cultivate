@@ -85,16 +85,19 @@ export const ParticipantCreateSchema = z.object({
 
 export const ParticipantUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
-  email: z.string().email('Invalid email format').optional().nullable(),
-  phone: z.string().max(20, 'Phone must be at most 20 characters').optional(),
-  notes: z.string().max(1000, 'Notes must be at most 1000 characters').optional(),
-  dateOfBirth: z.string().datetime('Invalid date of birth format').optional().nullable().refine(
-    (date) => !date || new Date(date) < new Date(),
-    { message: 'Date of birth must be in the past' }
-  ),
-  dateOfRegistration: z.string().datetime('Invalid date of registration format').optional().nullable(),
-  nickname: z.string().max(100, 'Nickname must be at most 100 characters').optional(),
-  homeVenueId: z.string().uuid('Invalid venue ID format').optional().nullable(),
+  email: z.union([z.string().email('Invalid email format'), z.null()]).optional(),
+  phone: z.union([z.string().max(20, 'Phone must be at most 20 characters'), z.null()]).optional(),
+  notes: z.union([z.string().max(1000, 'Notes must be at most 1000 characters'), z.null()]).optional(),
+  dateOfBirth: z.union([
+    z.string().datetime('Invalid date of birth format').refine(
+      (date) => new Date(date) < new Date(),
+      { message: 'Date of birth must be in the past' }
+    ),
+    z.null()
+  ]).optional(),
+  dateOfRegistration: z.union([z.string().datetime('Invalid date of registration format'), z.null()]).optional(),
+  nickname: z.union([z.string().max(100, 'Nickname must be at most 100 characters'), z.null()]).optional(),
+  homeVenueId: z.union([z.string().uuid('Invalid venue ID format'), z.null()]).optional(),
   version: z.number().int().positive().optional(),
 });
 
@@ -112,7 +115,7 @@ export const GeographicAreaCreateSchema = z.object({
 export const GeographicAreaUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
   areaType: z.nativeEnum(GeographicAreaType).optional(),
-  parentGeographicAreaId: z.string().uuid('Invalid parent ID format').optional().nullable(),
+  parentGeographicAreaId: z.union([z.string().uuid('Invalid parent ID format'), z.null()]).optional(),
   version: z.number().int().positive().optional(),
 });
 
@@ -130,9 +133,9 @@ export const VenueUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
   address: z.string().min(1, 'Address is required').max(500, 'Address must be at most 500 characters').optional(),
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
-  latitude: z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90').optional().nullable(),
-  longitude: z.number().min(-180, 'Longitude must be >= -180').max(180, 'Longitude must be <= 180').optional().nullable(),
-  venueType: z.nativeEnum(VenueType).optional().nullable(),
+  latitude: z.union([z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90'), z.null()]).optional(),
+  longitude: z.union([z.number().min(-180, 'Longitude must be >= -180').max(180, 'Longitude must be <= 180'), z.null()]).optional(),
+  venueType: z.union([z.nativeEnum(VenueType), z.null()]).optional(),
   version: z.number().int().positive().optional(),
 });
 
@@ -154,7 +157,7 @@ export const ActivityUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
   activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
   startDate: z.string().datetime('Invalid start date format').optional(),
-  endDate: z.string().datetime('Invalid end date format').optional().nullable(),
+  endDate: z.union([z.string().datetime('Invalid end date format'), z.null()]).optional(),
   status: z.nativeEnum(ActivityStatus).optional(),
   version: z.number().int().positive().optional(),
 });
@@ -172,7 +175,7 @@ export const AssignmentCreateSchema = z.object({
 
 export const AssignmentUpdateSchema = z.object({
   roleId: z.string().uuid('Invalid role ID format').optional(),
-  notes: z.string().max(1000, 'Notes must be at most 1000 characters').optional(),
+  notes: z.union([z.string().max(1000, 'Notes must be at most 1000 characters'), z.null()]).optional(),
 });
 
 // Analytics schemas

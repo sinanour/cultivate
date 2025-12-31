@@ -213,14 +213,32 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
       return;
     }
 
-    const data = {
+    // Build update data - send null for cleared fields, undefined for unchanged
+    const data: any = {
       name: name.trim(),
       address: address.trim(),
       geographicAreaId,
-      latitude: latitude ? parseFloat(latitude) : undefined,
-      longitude: longitude ? parseFloat(longitude) : undefined,
-      venueType: venueType ? (venueType as 'PUBLIC_BUILDING' | 'PRIVATE_RESIDENCE') : undefined,
     };
+
+    // For optional fields: empty string means cleared (send null), non-empty means update
+    if (latitude) {
+      data.latitude = parseFloat(latitude);
+    } else if (venue && venue.latitude !== null && venue.latitude !== undefined) {
+      // Field was cleared (had value, now empty)
+      data.latitude = null;
+    }
+
+    if (longitude) {
+      data.longitude = parseFloat(longitude);
+    } else if (venue && venue.longitude !== null && venue.longitude !== undefined) {
+      data.longitude = null;
+    }
+
+    if (venueType) {
+      data.venueType = venueType as 'PUBLIC_BUILDING' | 'PRIVATE_RESIDENCE';
+    } else if (venue && venue.venueType) {
+      data.venueType = null;
+    }
 
     if (venue) {
       updateMutation.mutate({

@@ -947,3 +947,46 @@ if (geographicAreaId) {
 
 - [ ] 26. Checkpoint - Verify CSV import/export functionality
   - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 27. Implement optional field clearing support
+  - [ ] 27.1 Update Zod validation schemas for nullable optional fields
+    - Update ParticipantUpdateSchema to use .nullable() for email, phone, notes, dateOfBirth, dateOfRegistration, nickname
+    - Update VenueUpdateSchema to use .nullable() for latitude, longitude, venueType
+    - Update ActivityUpdateSchema to use .nullable() for endDate
+    - Update AssignmentUpdateSchema to use .nullable() for notes
+    - Update GeographicAreaUpdateSchema to use .nullable() for parentGeographicAreaId
+    - _Requirements: 22.1, 22.2, 22.3, 22.4_
+
+  - [ ] 27.2 Update service layer to handle field clearing
+    - Update ParticipantService.updateParticipant to distinguish between omitted fields (preserve) and null fields (clear)
+    - Update VenueService.updateVenue to handle nullable optional fields
+    - Update ActivityService.updateActivity to handle nullable endDate
+    - Update AssignmentService.updateAssignment to handle nullable notes
+    - Update GeographicAreaService.updateGeographicArea to handle nullable parentGeographicAreaId
+    - Use 'field' in data checks to detect field presence
+    - Pass null values through to repository layer
+    - _Requirements: 22.5, 22.7, 22.8, 22.9_
+
+  - [ ] 27.3 Update repository layer to handle null values
+    - Ensure Prisma update operations correctly set fields to null
+    - Verify database schema allows null for optional fields
+    - Test that null values are persisted correctly
+    - _Requirements: 22.5, 22.6_
+
+  - [ ] 27.4 Update OpenAPI documentation
+    - Document that optional fields can be cleared by sending null
+    - Provide examples showing field clearing
+    - Explain distinction between omitting fields vs sending null
+    - _Requirements: 22.7, 22.9_
+
+  - [ ]* 27.5 Write property tests for optional field clearing
+    - **Property 142: Optional Field Clearing for Participants**
+    - **Property 143: Optional Field Clearing for Venues**
+    - **Property 144: Optional Field Clearing for Activities**
+    - **Property 145: Optional Field Clearing for Assignments**
+    - **Property 146: Field Omission Preserves Existing Values**
+    - **Property 147: Explicit Null vs Omission Distinction**
+    - **Validates: Requirements 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.9**
+
+- [ ] 28. Checkpoint - Verify optional field clearing functionality
+  - Ensure all tests pass, ask the user if questions arise.

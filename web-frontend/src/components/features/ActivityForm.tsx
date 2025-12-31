@@ -142,7 +142,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       activityTypeId?: string;
       status?: 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
       startDate?: string;
-      endDate?: string;
+      endDate?: string | null; // Allow null to clear endDate
       version?: number;
     }) => ActivityService.updateActivity(data.id, data),
     onSuccess: () => {
@@ -307,13 +307,34 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       return;
     }
 
-    const data = {
+    // Build update data - send null for cleared fields
+    const data: any = {
       name: name.trim(),
       activityTypeId,
       status: status as 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED',
       startDate: new Date(startDate).toISOString(),
-      endDate: !isOngoing && endDate ? new Date(endDate).toISOString() : undefined,
     };
+
+    // Handle endDate based on ongoing checkbox and field value
+    // CRITICAL: When ongoing checkbox is checked, we MUST send null to clear endDate
+    if (isOngoing) {
+      // Ongoing checkbox is checked
+      if (activity) {
+        // Updating existing activity - send null to clear endDate
+        data.endDate = null;
+      }
+      // For creates, omit endDate (don't set it) when ongoing
+    } else {
+      // Ongoing checkbox is NOT checked - activity should have an end date
+      if (endDate) {
+        // End date is provided - send it
+        data.endDate = new Date(endDate).toISOString();
+      } else if (activity && activity.endDate) {
+        // End date is empty but activity had one - clear it
+        data.endDate = null;
+      }
+      // For creates without endDate, omit it (validation will catch this)
+    }
 
     if (activity) {
       updateMutation.mutate({

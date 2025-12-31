@@ -5,9 +5,9 @@ interface CreateVenueData {
     name: string;
     address: string;
     geographicAreaId: string;
-    latitude?: number;
-    longitude?: number;
-    venueType?: 'PUBLIC_BUILDING' | 'PRIVATE_RESIDENCE';
+    latitude?: number | null;
+    longitude?: number | null;
+    venueType?: 'PUBLIC_BUILDING' | 'PRIVATE_RESIDENCE' | null;
 }
 
 interface UpdateVenueData extends Partial<CreateVenueData> {

@@ -23,7 +23,7 @@ export class AssignmentService {
     activityId: string,
     participantId: string,
     roleId?: string,
-    notes?: string
+    notes?: string | null
   ): Promise<Assignment> {
     return ApiClient.put<Assignment>(`/activities/${activityId}/participants/${participantId}`, {
       roleId,

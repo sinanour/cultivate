@@ -636,7 +636,23 @@ The Web Frontend package provides a responsive React-based web application that 
 11. WHEN viewing data at a large geographic scale (country or global), THE Web_App SHALL rely on text-based filtering to manage the large result sets efficiently
 
 
-### Requirement 26: CSV Import and Export
+### Requirement 26: Clear Optional Fields
+
+**User Story:** As a community organizer, I want to clear optional fields that have been previously populated in the web interface, so that I can remove information that is no longer relevant or was entered incorrectly.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide a way to clear optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields in the participant form
+2. THE Web_App SHALL provide a way to clear optional latitude, longitude, and venueType fields in the venue form
+3. THE Web_App SHALL provide a way to clear the endDate field in the activity form to convert a finite activity to an ongoing activity
+4. THE Web_App SHALL provide a way to clear the notes field in the assignment form
+5. WHEN a user clears an optional field, THE Web_App SHALL send null or empty string to the API to clear the field value
+6. WHEN a user clears an optional field and saves, THE Web_App SHALL display the field as empty in subsequent views
+7. THE Web_App SHALL provide a clear button (X icon) or similar UI element next to clearable optional fields
+8. WHEN a field is cleared, THE Web_App SHALL visually indicate that the field is now empty
+9. THE Web_App SHALL distinguish between leaving a field unchanged (omit from request) and explicitly clearing it (send null/empty)
+
+### Requirement 27: CSV Import and Export
 
 **User Story:** As a community organizer, I want to import and export data in CSV format, so that I can bulk load data from external sources and share data with other systems.
 

@@ -1353,21 +1353,93 @@ This implementation plan covers the React-based web application built with TypeS
 - [ ] 31. Checkpoint - Verify CSV import/export functionality
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 32. Fix Growth Dashboard chart data field mismatch
-  - [x] 32.1 Identify the correct field name for time series data
+- [ ] 32. Implement optional field clearing UI
+  - [ ] 32.1 Create ClearableInput component
+    - Create reusable component that wraps CloudScape Input with clear button
+    - Display X icon button when field has a value
+    - Hide clear button when field is empty
+    - Call onClear callback when X button is clicked
+    - Support for text inputs (email, phone, notes, nickname)
+    - _Requirements: 26.1, 26.2, 26.4, 26.7, 26.8_
+
+  - [ ] 32.2 Create ClearableDatePicker component
+    - Create reusable component that wraps CloudScape DatePicker with clear button
+    - Display X icon button when date is selected
+    - Hide clear button when date is empty
+    - Call onClear callback when X button is clicked
+    - Support for date inputs (dateOfBirth, dateOfRegistration, endDate)
+    - _Requirements: 26.1, 26.3, 26.7, 26.8_
+
+  - [ ] 32.3 Create ClearableSelect component
+    - Create reusable component that wraps CloudScape Select with clear button
+    - Display X icon button when option is selected
+    - Hide clear button when no option selected
+    - Call onClear callback when X button is clicked
+    - Support for select inputs (venueType)
+    - _Requirements: 26.2, 26.7, 26.8_
+
+  - [ ] 32.4 Update ParticipantForm to use clearable components
+    - Replace Input with ClearableInput for email, phone, notes, nickname fields
+    - Replace DatePicker with ClearableDatePicker for dateOfBirth, dateOfRegistration fields
+    - Handle onClear callbacks to set field values to null
+    - Track which fields have been explicitly cleared vs unchanged
+    - Send null for cleared fields in API request
+    - Omit unchanged fields from API request
+    - _Requirements: 26.1, 26.5, 26.6, 26.7, 26.8, 26.9_
+
+  - [ ] 32.5 Update VenueForm to use clearable components
+    - Replace Input with ClearableInput for latitude, longitude fields
+    - Replace Select with ClearableSelect for venueType field
+    - Handle onClear callbacks to set field values to null
+    - When coordinates are cleared, remove map pin and reset map view
+    - Track which fields have been explicitly cleared vs unchanged
+    - Send null for cleared fields in API request
+    - Omit unchanged fields from API request
+    - _Requirements: 26.2, 26.5, 26.6, 26.7, 26.8, 26.9_
+
+  - [ ] 32.6 Update ActivityForm to use clearable components
+    - Replace DatePicker with ClearableDatePicker for endDate field
+    - Handle onClear callback to set endDate to null (converts to ongoing)
+    - Track which fields have been explicitly cleared vs unchanged
+    - Send null for cleared endDate in API request
+    - Omit unchanged fields from API request
+    - _Requirements: 26.3, 26.5, 26.6, 26.7, 26.8, 26.9_
+
+  - [ ] 32.7 Update AssignmentForm to use clearable components
+    - Replace Input with ClearableInput for notes field
+    - Handle onClear callback to set notes to null
+    - Track which fields have been explicitly cleared vs unchanged
+    - Send null for cleared notes in API request
+    - Omit unchanged fields from API request
+    - _Requirements: 26.4, 26.5, 26.6, 26.7, 26.8, 26.9_
+
+  - [ ]* 32.8 Write property tests for optional field clearing
+    - **Property 107: Optional Field Clearing in Participant Form**
+    - **Property 108: Optional Field Clearing in Venue Form**
+    - **Property 109: End Date Clearing in Activity Form**
+    - **Property 110: Notes Clearing in Assignment Form**
+    - **Property 111: Clear Button Visibility**
+    - **Property 112: Field Clearing vs Omission Distinction**
+    - **Validates: Requirements 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7, 26.8, 26.9**
+
+- [ ] 33. Checkpoint - Verify optional field clearing functionality
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 34. Fix Growth Dashboard chart data field mismatch
+  - [x] 34.1 Identify the correct field name for time series data
     - Backend returns `period` field in GrowthPeriodData
     - Frontend charts expect `date` field
     - Design document specifies `date` field in GrowthPeriodData interface
     - Backend implementation uses `period` instead of `date`
     - _Requirements: 7.40, 7.41, 7.42_
 
-  - [x] 32.2 Update backend analytics service to use `date` field
+  - [x] 34.2 Update backend analytics service to use `date` field
     - Change `period: period.label` to `date: period.label` in getGrowthMetrics method
     - Update GrowthPeriodData interface in analytics.service.ts to use `date` instead of `period`
     - Ensure consistency with design document specification
     - _Requirements: 7.40, 7.41, 7.42_
 
-  - [x] 32.3 Verify charts render correctly after fix
+  - [x] 34.3 Verify charts render correctly after fix
     - Test New Activities line chart displays data
     - Test Cumulative Growth area chart displays data
     - Test with different time periods (DAY, WEEK, MONTH, YEAR)

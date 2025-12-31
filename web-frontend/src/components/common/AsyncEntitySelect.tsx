@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Autosuggest, type AutosuggestProps } from '@cloudscape-design/components';
+import Button from '@cloudscape-design/components/button';
+import SpaceBetween from '@cloudscape-design/components/space-between';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
@@ -25,6 +27,7 @@ export interface AsyncEntitySelectProps {
   disabled?: boolean;
   invalid?: boolean;
   ariaLabel?: string;
+  clearable?: boolean; // New prop to enable clear button
 }
 
 export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
@@ -37,6 +40,7 @@ export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
   disabled = false,
   invalid = false,
   ariaLabel,
+  clearable = false,
 }) => {
   const [filterText, setFilterText] = useState('');
   
@@ -94,10 +98,60 @@ export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
     [onChange]
   );
 
+  const handleChange = useCallback(
+    (detail: { value: string }) => {
+      setFilterText(detail.value);
+      // If user clears the input completely, clear the selection
+      if (detail.value === '') {
+        onChange('');
+      }
+    },
+    [onChange]
+  );
+
+  const handleClear = useCallback(() => {
+    setFilterText('');
+    onChange('');
+  }, [onChange]);
+
+  if (clearable) {
+    return (
+      <SpaceBetween direction="horizontal" size="xs">
+        <div style={{ flex: 1 }}>
+          <Autosuggest
+            value={filterText || selectedLabel}
+            onChange={({ detail }) => handleChange(detail)}
+            onSelect={({ detail }) => handleSelect(detail)}
+            options={options}
+            placeholder={placeholder}
+            disabled={disabled}
+            invalid={invalid}
+            ariaLabel={ariaLabel || `Select ${entityType}`}
+            statusType={isLoading ? 'loading' : error ? 'error' : 'finished'}
+            loadingText="Loading options..."
+            errorText="Error loading options"
+            empty="No matches found"
+            enteredTextLabel={(text) => `Use: "${text}"`}
+            filteringType="manual"
+          />
+        </div>
+        {value && (
+          <Button
+            iconName="close"
+            variant="icon"
+            onClick={handleClear}
+            ariaLabel="Clear selection"
+            disabled={disabled}
+          />
+        )}
+      </SpaceBetween>
+    );
+  }
+
   return (
     <Autosuggest
       value={filterText || selectedLabel}
-      onChange={({ detail }) => setFilterText(detail.value)}
+      onChange={({ detail }) => handleChange(detail)}
       onSelect={({ detail }) => handleSelect(detail)}
       options={options}
       placeholder={placeholder}

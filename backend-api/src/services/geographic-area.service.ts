@@ -14,7 +14,7 @@ export interface CreateGeographicAreaInput {
 export interface UpdateGeographicAreaInput {
     name?: string;
     areaType?: AreaType;
-    parentGeographicAreaId?: string;
+    parentGeographicAreaId?: string | null;
     version?: number;
 }
 
@@ -170,32 +170,45 @@ export class GeographicAreaService {
             throw new Error('Geographic area not found');
         }
 
-        // Validate parent exists if provided
-        if (data.parentGeographicAreaId) {
-            const parentExists = await this.geographicAreaRepository.exists(
-                data.parentGeographicAreaId
-            );
-            if (!parentExists) {
-                throw new Error('Parent geographic area not found');
+        // Build update object - only include fields present in request
+        const updateData: UpdateGeographicAreaInput = {};
+
+        if ('name' in data) updateData.name = data.name;
+        if ('areaType' in data) updateData.areaType = data.areaType;
+        if ('version' in data) updateData.version = data.version;
+
+        // Handle parentGeographicAreaId with explicit null check
+        if ('parentGeographicAreaId' in data) {
+            const parentId = data.parentGeographicAreaId;
+
+            // Validate parent exists if provided (not null)
+            if (parentId !== null && parentId !== undefined) {
+                const parentExists = await this.geographicAreaRepository.exists(parentId);
+                if (!parentExists) {
+                    throw new Error('Parent geographic area not found');
+                }
+
+                // Prevent setting parent to itself
+                if (parentId === id) {
+                    throw new Error('Geographic area cannot be its own parent');
+                }
+
+                // Prevent circular relationships (setting parent to a descendant)
+                const isDescendant = await this.geographicAreaRepository.isDescendantOf(
+                    parentId,
+                    id
+                );
+                if (isDescendant) {
+                    throw new Error('Cannot create circular parent-child relationship');
+                }
             }
 
-            // Prevent setting parent to itself
-            if (data.parentGeographicAreaId === id) {
-                throw new Error('Geographic area cannot be its own parent');
-            }
-
-            // Prevent circular relationships (setting parent to a descendant)
-            const isDescendant = await this.geographicAreaRepository.isDescendantOf(
-                data.parentGeographicAreaId,
-                id
-            );
-            if (isDescendant) {
-                throw new Error('Cannot create circular parent-child relationship');
-            }
+            // Include in update (can be null to clear parent)
+            updateData.parentGeographicAreaId = parentId;
         }
 
         try {
-            return await this.geographicAreaRepository.update(id, data);
+            return await this.geographicAreaRepository.update(id, updateData);
         } catch (error) {
             if (error instanceof Error && error.message === 'VERSION_CONFLICT') {
                 throw new Error('VERSION_CONFLICT');

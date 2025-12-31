@@ -12,7 +12,7 @@ export interface UpdateActivityData {
   name?: string;
   activityTypeId?: string;
   startDate?: Date;
-  endDate?: Date;
+  endDate?: Date | null;
   status?: ActivityStatus;
   version?: number;
 }

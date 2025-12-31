@@ -362,22 +362,53 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       return;
     }
 
-    const data = {
+    // Build update data - send null for cleared fields, undefined for unchanged
+    const data: any = {
       name: name.trim(),
-      email: email.trim() || undefined,
-      phone: phone.trim() || undefined,
-      notes: notes.trim() || undefined,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString() : undefined,
-      dateOfRegistration: dateOfRegistration ? new Date(dateOfRegistration).toISOString() : undefined,
-      nickname: nickname.trim() || undefined,
     };
+
+    // For optional fields: empty string means cleared (send null), non-empty means update
+    if (email.trim()) {
+      data.email = email.trim();
+    } else if (participant && participant.email) {
+      // Field was cleared (had value, now empty)
+      data.email = null;
+    }
+
+    if (phone.trim()) {
+      data.phone = phone.trim();
+    } else if (participant && participant.phone) {
+      data.phone = null;
+    }
+
+    if (notes.trim()) {
+      data.notes = notes.trim();
+    } else if (participant && participant.notes) {
+      data.notes = null;
+    }
+
+    if (dateOfBirth) {
+      data.dateOfBirth = new Date(dateOfBirth).toISOString();
+    } else if (participant && participant.dateOfBirth) {
+      data.dateOfBirth = null;
+    }
+
+    if (dateOfRegistration) {
+      data.dateOfRegistration = new Date(dateOfRegistration).toISOString();
+    } else if (participant && participant.dateOfRegistration) {
+      data.dateOfRegistration = null;
+    }
+
+    if (nickname.trim()) {
+      data.nickname = nickname.trim();
+    } else if (participant && participant.nickname) {
+      data.nickname = null;
+    }
 
     if (participant) {
       updateMutation.mutate({
         id: participant.id,
         ...data,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString() : null,
-        dateOfRegistration: dateOfRegistration ? new Date(dateOfRegistration).toISOString() : null,
         version: getEntityVersion(participant),
       });
     } else {

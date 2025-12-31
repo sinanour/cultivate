@@ -23,7 +23,7 @@ export interface UpdateActivityInput {
   name?: string;
   activityTypeId?: string;
   startDate?: Date;
-  endDate?: Date;
+  endDate?: Date | null;
   status?: ActivityStatus;
   version?: number;
 }
@@ -229,10 +229,10 @@ export class ActivityService {
       }
     }
 
-    // Validate end date if provided
-    if (data.endDate !== undefined) {
+    // Validate end date if provided (skip validation if explicitly null for clearing)
+    if (data.endDate !== undefined && data.endDate !== null) {
       const startDate = data.startDate || existing.startDate;
-      if (data.endDate && data.endDate <= startDate) {
+      if (data.endDate <= startDate) {
         throw new Error('End date must be after start date');
       }
     }

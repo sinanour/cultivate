@@ -15,12 +15,12 @@ interface CreateParticipantData {
 interface UpdateParticipantData {
     name?: string;
     email?: string | null;
-    phone?: string;
-    notes?: string;
+    phone?: string | null;
+    notes?: string | null;
     dateOfBirth?: string | null;
     dateOfRegistration?: string | null;
-    nickname?: string;
-    homeVenueId?: string;
+    nickname?: string | null;
+    homeVenueId?: string | null;
     version?: number;
 }
 
