@@ -137,16 +137,25 @@ export class VenueRepository {
   }
 
   async findParticipants(venueId: string) {
-    return this.prisma.participant.findMany({
-      where: {
+    // Get all participants with their address history
+    const participants = await this.prisma.participant.findMany({
+      include: {
         addressHistory: {
-          some: {
-            venueId,
-          },
+          orderBy: { effectiveFrom: 'desc' },
         },
       },
       orderBy: { name: 'asc' },
     });
+
+    // Filter to only those whose most recent (current) address is at this venue
+    const currentResidents = participants.filter(p => {
+      if (p.addressHistory.length === 0) return false;
+      const mostRecentAddress = p.addressHistory[0]; // Already sorted desc
+      return mostRecentAddress.venueId === venueId;
+    });
+
+    // Remove the addressHistory from the response
+    return currentResidents.map(({ addressHistory, ...participant }) => participant);
   }
 
   async countActivityReferences(venueId: string): Promise<number> {

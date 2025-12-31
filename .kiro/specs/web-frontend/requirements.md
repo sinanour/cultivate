@@ -155,7 +155,8 @@ The Web Frontend package provides a responsive React-based web application that 
 6. THE Web_App SHALL provide a delete button for venues
 7. THE Web_App SHALL validate that venue name, address, and geographic area are provided
 8. THE Web_App SHALL allow optional fields for latitude, longitude, and venue type
-9. THE Web_App SHALL display a detail view showing venue information, associated activities, and participants using it as home address
+9. THE Web_App SHALL display a detail view showing venue information, associated activities, and participants using it as their current home address
+9a. WHEN displaying participants on a venue detail page, THE Web_App SHALL only show participants whose most recent address history record is at this venue
 10. WHEN deleting a venue, THE Web_App SHALL prevent deletion if activities or participants reference it
 11. WHEN deleting a venue, THE Web_App SHALL display an error message explaining which entities reference it
 

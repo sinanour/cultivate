@@ -171,7 +171,7 @@ Services implement business logic and coordinate operations:
 - **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
-- **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, implements search, supports geographic area filtering and text-based search filtering for list queries
+- **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support)
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
@@ -189,7 +189,7 @@ Repositories encapsulate Prisma database access:
 - **ParticipantRepository**: CRUD operations and text-based search for participants (supports filtering by name/email and geographic area with pagination)
 - **ActivityRepository**: CRUD operations and queries for activities
 - **AssignmentRepository**: CRUD operations for participant assignments
-- **VenueRepository**: CRUD operations and text-based search for venues (supports filtering by name/address and geographic area with pagination), queries for associated activities and participants
+- **VenueRepository**: CRUD operations and text-based search for venues (supports filtering by name/address and geographic area with pagination), queries for associated activities and current residents (filters participants by most recent address history)
 - **GeographicAreaRepository**: CRUD operations for geographic areas with text-based search (supports filtering by name and geographic area with pagination), hierarchical queries for ancestors and descendants, statistics aggregation
 - **ParticipantAddressHistoryRepository**: Temporal tracking operations for participant home address changes
 - **ActivityVenueHistoryRepository**: Temporal tracking operations for activity-venue associations
@@ -986,8 +986,8 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 5A.12**
 
 **Property 95: Venue participants retrieval**
-*For any* venue, retrieving its participants should return all participants who currently or historically had this venue as their home address.
-**Validates: Requirements 5A.13**
+*For any* venue, retrieving its participants should return only participants whose most recent address history record is at this venue (current residents only, not historical).
+**Validates: Requirements 5A.13, 5A.14**
 
 ### Geographic Area Management Properties
 

@@ -97,10 +97,11 @@ This document tracks outstanding features, improvements, and bug fixes for the C
   - Navigate to list page on success, display error on failure
   - Hidden from READ_ONLY users, visible to EDITOR and ADMINISTRATOR
 
-- [ ] 15. Filter venue participants to show only current residents
+- [x] 15. Filter venue participants to show only current residents
   - Issue: Venue detail page shows all participants who have ever lived at the venue (historical)
   - Expected: Should only show participants whose current home address is at this venue
-  - Solution: Update backend endpoint /api/v1/venues/:id/participants to filter by most recent address history record
+  - Solution: Updated backend VenueRepository.findParticipants() to filter by most recent address history record
+  - Implementation: Fetches all participants with address history, filters to those whose most recent record matches the venue
   - Ensures participant list reflects current residents only, not historical residents
   - Improves data accuracy and relevance on venue detail pages
 

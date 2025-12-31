@@ -329,7 +329,7 @@ src/
 - Hides edit and delete buttons when user has READ_ONLY role
 - Shows edit and delete buttons when user has EDITOR or ADMINISTRATOR role
 - Lists all activities associated with the venue (current and historical) with activity names hyperlinked to /activities/:id
-- Lists all participants with this venue as their home address with participant names hyperlinked to /participants/:id
+- Lists all participants with this venue as their current home address (most recent address history) with participant names hyperlinked to /participants/:id
 - Displays geographic area hierarchy path
 
 #### 9. Geographic Area Management
@@ -1618,9 +1618,9 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 54: Venue Detail View Completeness
 
-*For any* venue, the detail view should display the venue information, associated activities, and participants using it as home address.
+*For any* venue, the detail view should display the venue information, associated activities, and participants using it as their current home address (most recent address history only).
 
-**Validates: Requirements 6A.9**
+**Validates: Requirements 6A.9, 6A.9a**
 
 ### Property 55: Geographic Area Hierarchical Display
 

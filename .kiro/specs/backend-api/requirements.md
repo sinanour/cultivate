@@ -145,8 +145,9 @@ The Backend API package provides the RESTful API service that implements all bus
 10. WHEN deleting a venue, THE API SHALL prevent deletion if activities or participants reference it
 11. WHEN deleting a venue, THE API SHALL return an error message explaining which entities reference it
 12. THE API SHALL provide a GET /api/venues/:id/activities endpoint that returns all activities associated with a venue
-13. THE API SHALL provide a GET /api/venues/:id/participants endpoint that returns all participants with this venue as their home address
-14. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only venues in the specified geographic area or its descendants
+13. THE API SHALL provide a GET /api/venues/:id/participants endpoint that returns all participants with this venue as their current home address
+14. WHEN retrieving venue participants, THE API SHALL only include participants whose most recent address history record is at this venue
+15. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only venues in the specified geographic area or its descendants
 
 ### Requirement 5B: Manage Geographic Areas
 

@@ -291,8 +291,9 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
   - [x] 8.1 Create venue repository
     - Implement CRUD operations
     - Implement search by name or address
-    - Implement queries for associated activities and participants
-    - _Requirements: 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.12, 5A.13_
+    - Implement queries for associated activities
+    - Implement query for current residents (participants whose most recent address history is at venue)
+    - _Requirements: 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.12, 5A.13, 5A.14_
 
   - [x] 8.2 Create venue service
     - Validate required fields (name, address, geographic area)
@@ -306,7 +307,8 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 2: Resource Update Persistence**
     - **Property 3: Resource Deletion Removes Resource**
     - **Property 13: Referenced Entity Deletion Prevention**
-    - **Validates: Requirements 5A.3, 5A.4, 5A.5, 5A.10, 5A.11**
+    - **Property 95: Venue Participants Retrieval** (current residents only)
+    - **Validates: Requirements 5A.3, 5A.4, 5A.5, 5A.10, 5A.11, 5A.13, 5A.14**
 
   - [x] 8.4 Create venue routes
     - GET /api/venues
@@ -316,8 +318,8 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - PUT /api/venues/:id
     - DELETE /api/venues/:id
     - GET /api/venues/:id/activities
-    - GET /api/venues/:id/participants
-    - _Requirements: 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.12, 5A.13_
+    - GET /api/venues/:id/participants (returns current residents only)
+    - _Requirements: 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.12, 5A.13, 5A.14_
 
 - [x] 9. Implement geographic area management
   - [x] 9.1 Create geographic area repository
