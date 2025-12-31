@@ -269,32 +269,38 @@ export function GrowthDashboard() {
         </Container>
       </ColumnLayout>
 
-      <Container header={<Header variant="h3">Unique Engagement Over Time</Header>}>
+      <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={timeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis 
-              yAxisId="left"
               label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
-            />
-            <YAxis 
-              yAxisId="right"
-              orientation="right"
-              label={{ value: 'Unique Activities', angle: 90, position: 'insideRight' }}
             />
             <Tooltip />
             <Legend />
             <Line
-              yAxisId="left"
               type="monotone"
               dataKey="uniqueParticipants"
               stroke="#0088FE"
               strokeWidth={2}
               name="Unique Participants"
             />
+          </LineChart>
+        </ResponsiveContainer>
+      </Container>
+
+      <Container header={<Header variant="h3">Unique Activities Over Time</Header>}>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={timeSeriesData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis 
+              label={{ value: 'Unique Activities', angle: -90, position: 'insideLeft' }}
+            />
+            <Tooltip />
+            <Legend />
             <Line
-              yAxisId="right"
               type="monotone"
               dataKey="uniqueActivities"
               stroke="#00C49F"

@@ -553,19 +553,17 @@ src/
 - Uses same color scheme as other dashboard charts for consistency
 
 **GrowthDashboard**
-- Displays time-series charts showing unique participant and activity counts for each time period
+- Displays two separate time-series charts: one for unique participant counts and one for unique activity counts
 - Provides time period selector (day, week, month, year)
-- Shows percentage changes between periods for both participants and activities
 - Each time period represents a snapshot of unique participants and activities engaged at that point in time (not cumulative counts)
 - Provides optional grouping control to view growth by activity type or activity category
-- When grouped by type: displays separate time-series for each activity type
-- When grouped by category: displays separate time-series for each activity category
-- When not grouped: displays aggregate time-series across all types and categories
-- Uses dual-axis line chart for growth visualization:
-  - Left Y-axis: Unique Participants (labeled)
-  - Right Y-axis: Unique Activities (labeled)
-  - Two independent line series without stacked areas
-  - Clear axis labels for each metric
+- When grouped by type: displays separate time-series for each activity type in both charts
+- When grouped by category: displays separate time-series for each activity category in both charts
+- When not grouped: displays aggregate time-series across all types and categories in both charts
+- Uses separate line charts for each metric:
+  - Participant Growth Chart: displays unique participant counts over time
+  - Activity Growth Chart: displays unique activity counts over time
+  - Each chart has its own Y-axis scale optimized for its data range
 - Provides geographic area filter dropdown
 - Uses recharts for line charts
 - Synchronizes filter parameters with URL query parameters:
@@ -997,8 +995,6 @@ interface GrowthMetrics {
   period: string;
   uniqueParticipants: number;
   uniqueActivities: number;
-  participantPercentageChange?: number;
-  activityPercentageChange?: number;
 }
 
 interface GeographicAnalytics {
@@ -1528,185 +1524,179 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 32: Time-series unique count calculation
 
-*For any* time period and dataset, the time-series charts should correctly calculate unique participants and unique activities engaged during each time period as snapshots (not cumulative).
+*For any* time period and dataset, the separate time-series charts should correctly calculate unique participants and unique activities engaged during each time period as snapshots (not cumulative).
 
-**Validates: Requirements 7.40, 7.43**
+**Validates: Requirements 7.40, 7.41, 7.43**
 
-### Property 33: Percentage change calculation
+### Property 33: Optional grouping display
 
-*For any* two consecutive time periods, the percentage change calculation for both participants and activities should correctly compute the relative change between periods.
+*For any* growth dashboard with grouping selected (by type or category), separate time-series data should be displayed for each group showing unique participants and activities per period in both charts.
 
-**Validates: Requirements 7.42**
+**Validates: Requirements 7.45, 7.46, 7.47**
 
-### Property 34: Optional grouping display
-
-*For any* growth dashboard with grouping selected (by type or category), separate time-series data should be displayed for each group showing unique participants and activities per period.
-
-**Validates: Requirements 7.44, 7.45, 7.46, 7.47**
-
-### Property 34a: Growth Dashboard URL Parameter Synchronization
+### Property 33a: Growth Dashboard URL Parameter Synchronization
 
 *For any* growth dashboard state (period and date range filters), the browser URL query parameters should accurately reflect all current filter values (period, startDate, endDate, relativeAmount, relativeUnit).
 
 **Validates: Requirements 46a**
 
-### Property 34b: Growth Dashboard URL Parameter Application
+### Property 33b: Growth Dashboard URL Parameter Application
 
 *For any* URL with growth dashboard query parameters, when a user navigates to that URL, the growth dashboard should automatically apply all filter parameters from the URL to initialize the dashboard state.
 
 **Validates: Requirements 46b**
 
-### Property 34c: Growth Dashboard URL Update on State Change
+### Property 33c: Growth Dashboard URL Update on State Change
 
 *For any* change to filter parameters in the growth dashboard, the browser URL should be updated to reflect the new state without causing a page reload.
 
 **Validates: Requirements 46c**
 
-### Property 34d: Growth Dashboard Browser Navigation Support
+### Property 33d: Growth Dashboard Browser Navigation Support
 
 *For any* sequence of filter changes in the growth dashboard, using browser back/forward buttons should navigate through the history of configurations and restore the corresponding dashboard state.
 
 **Validates: Requirements 46d**
 
-### Property 34e: Growth Dashboard URL Shareability
+### Property 33e: Growth Dashboard URL Shareability
 
 *For any* growth dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered results as the original user.
 
 **Validates: Requirements 46e**
 
-### Property 35: Unauthenticated access protection
+### Property 34: Unauthenticated access protection
 
 *For any* protected route, attempting to access it without authentication should redirect to the login page.
 
 **Validates: Requirements 9.1, 9.2**
 
-### Property 36: Unauthorized action error messages
+### Property 35: Unauthorized action error messages
 
 *For any* unauthorized action attempt, the application should display an appropriate error message.
 
 **Validates: Requirements 9.6**
 
-### Property 37: Offline data caching
+### Property 36: Offline data caching
 
 *For any* user data loaded from the API, the data should be stored in IndexedDB for offline access.
 
 **Validates: Requirements 10.2**
 
-### Property 38: Offline operation queueing
+### Property 37: Offline operation queueing
 
 *For any* create, update, or delete operation performed while offline, the operation should be added to the local sync queue.
 
 **Validates: Requirements 10.3**
 
-### Property 39: Offline feature indication
+### Property 38: Offline feature indication
 
 *For any* feature that requires connectivity, when offline, the feature should be visually indicated as unavailable and disabled.
 
 **Validates: Requirements 10.6, 10.7**
 
-### Property 40: Sync queue processing
+### Property 39: Sync queue processing
 
 *For any* queued operations when connectivity is restored, all operations should be sent to the backend and the queue should be cleared upon success.
 
 **Validates: Requirements 11.2, 11.3**
 
-### Property 41: Sync retry with exponential backoff
+### Property 40: Sync retry with exponential backoff
 
 *For any* failed synchronization attempt, the retry delay should increase exponentially with each subsequent failure.
 
 **Validates: Requirements 11.4**
 
-### Property 42: Pending operation count display
+### Property 41: Pending operation count display
 
 *For any* number of pending operations in the sync queue, the displayed count should match the actual queue length.
 
 **Validates: Requirements 11.6**
 
-### Property 43: Active navigation highlighting
+### Property 42: Active navigation highlighting
 
 *For any* current route, the corresponding navigation item should be visually highlighted.
 
 **Validates: Requirements 13.2**
 
-### Property 44: Navigation state persistence
+### Property 43: Navigation state persistence
 
 *For any* navigation between sections, the navigation state (expanded/collapsed items, scroll position) should be preserved.
 
 **Validates: Requirements 13.3**
 
-### Property 44a: Dashboard quick link visibility
+### Property 43a: Dashboard quick link visibility
 
 *For any* user viewing the main dashboard page, the User Administration quick link should only be visible if the user has ADMINISTRATOR role.
 
 **Validates: Requirements 13.7, 13.8**
 
-### Property 45: Form validation error display
+### Property 44: Form validation error display
 
 *For any* invalid form field, the field should be visually highlighted and display an inline error message.
 
 **Validates: Requirements 14.2, 14.3**
 
-### Property 46: Invalid form submission prevention
+### Property 45: Invalid form submission prevention
 
 *For any* form with validation errors, the submit button should be disabled or submission should be prevented.
 
 **Validates: Requirements 14.4**
 
-### Property 47: Valid field value preservation
+### Property 46: Valid field value preservation
 
 *For any* form with validation errors, all valid field values should remain unchanged after validation fails.
 
 **Validates: Requirements 14.5**
 
-### Property 43: Error Notification Type
+### Property 47: Error Notification Type
 
 *For any* error, transient errors should display toast notifications while critical errors should display modal dialogs.
 
 **Validates: Requirements 15.2, 15.3**
 
-### Property 44: Error State Preservation
+### Property 48: Error State Preservation
 
 *For any* error occurrence, the application state should remain unchanged (no data loss or corruption).
 
 **Validates: Requirements 15.5**
 
-### Property 45: Error Console Logging
+### Property 49: Error Console Logging
 
 *For any* error, detailed error information should be logged to the browser console.
 
 **Validates: Requirements 15.6**
 
-### Property 46: Loading State Indicators
+### Property 50: Loading State Indicators
 
 *For any* asynchronous operation (API request, data loading, long operation), appropriate loading indicators should be displayed (spinners, skeleton screens, or progress bars).
 
 **Validates: Requirements 16.1, 16.3, 16.4**
 
-### Property 47: Form Button Disabling During Submission
+### Property 51: Form Button Disabling During Submission
 
 *For any* form submission in progress, the submit button should be disabled to prevent duplicate submissions.
 
 **Validates: Requirements 16.2**
 
-### Property 48: Success Message Display
+### Property 52: Success Message Display
 
 *For any* successful operation (create, update, delete), a success message should be displayed to the user.
 
 **Validates: Requirements 16.5**
 
-### Property 49: Venue List Display
+### Property 53: Venue List Display
 
 *For any* venue, the list view should include the venue's name, address, and geographic area in the rendered output.
 
 **Validates: Requirements 6A.1**
 
-### Property 50: Venue Search Functionality
+### Property 54: Venue Search Functionality
 
 *For any* search query and venue list, the search results should only include venues whose name or address contains the search term (case-insensitive).
 
 **Validates: Requirements 6A.2**
 
-### Property 51: Venue Required Field Validation
+### Property 55: Venue Required Field Validation
 
 *For any* venue form submission with missing required fields (name, address, or geographic area), the validation should fail and prevent submission.
 

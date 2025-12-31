@@ -644,18 +644,20 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38**
 
   - [x] 14.2 Create GrowthDashboard component
-    - Display time-series charts showing unique participant and activity counts for each time period
+    - Display two separate time-series charts: one for unique participant counts and one for unique activity counts
     - Provide time period selector (DAY, WEEK, MONTH, YEAR) using period parameter
-    - Show percentage changes between periods for both participants and activities
     - Display each time period as a snapshot of unique participants and activities (not cumulative)
     - Provide optional grouping control (dropdown or segmented control) to select 'type', 'category', or 'none'
-    - When grouping by type: display separate time-series for each activity type
-    - When grouping by category: display separate time-series for each activity category
-    - When no grouping: display aggregate time-series across all types and categories
+    - When grouping by type: display separate time-series for each activity type in both charts
+    - When grouping by category: display separate time-series for each activity category in both charts
+    - When no grouping: display aggregate time-series across all types and categories in both charts
     - Provide geographic area filter (optional geographicAreaId)
     - Use /analytics/growth endpoint with optional startDate, endDate, period, geographicAreaId, groupBy parameters
     - Combine date range and period controls into single unified container with side-by-side layout
-    - Use dual-axis LineChart for growth visualization (left: unique participants, right: unique activities)
+    - Use separate LineChart components for each metric:
+      - Participant Growth Chart: displays unique participant counts over time
+      - Activity Growth Chart: displays unique activity counts over time
+      - Each chart has its own Y-axis scale optimized for its data range
     - Synchronize filter parameters with URL query parameters:
       - Read URL parameters on component mount to initialize dashboard state
       - Update URL when user changes filters (using React Router's useSearchParams)
@@ -663,18 +665,17 @@ This implementation plan covers the React-based web application built with TypeS
       - Use same compact relative date format as Engagement dashboard for consistency
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use replace: true)
-    - _Requirements: 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 46a, 46b, 46c, 46d, 46e_
+    - _Requirements: 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 46a, 46b, 46c, 46d, 46e_
 
   - [ ]* 14.3 Write property tests for growth metrics
     - **Property 32: Time-Series Unique Count Calculation**
-    - **Property 33: Percentage Change Calculation**
-    - **Property 34: Optional Grouping Display**
-    - **Property 34a: Growth Dashboard URL Parameter Synchronization**
-    - **Property 34b: Growth Dashboard URL Parameter Application**
-    - **Property 34c: Growth Dashboard URL Update on State Change**
-    - **Property 34d: Growth Dashboard Browser Navigation Support**
-    - **Property 34e: Growth Dashboard URL Shareability**
-    - **Validates: Requirements 7.40, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 46a, 46b, 46c, 46d, 46e**
+    - **Property 33: Optional Grouping Display**
+    - **Property 33a: Growth Dashboard URL Parameter Synchronization**
+    - **Property 33b: Growth Dashboard URL Parameter Application**
+    - **Property 33c: Growth Dashboard URL Update on State Change**
+    - **Property 33d: Growth Dashboard Browser Navigation Support**
+    - **Property 33e: Growth Dashboard URL Shareability**
+    - **Validates: Requirements 7.40, 7.41, 7.43, 7.45, 7.46, 7.47, 46a, 46b, 46c, 46d, 46e**
 
   - [x] 14.3 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint

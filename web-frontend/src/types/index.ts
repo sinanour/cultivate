@@ -229,8 +229,6 @@ export interface GrowthPeriodData {
     date: string;
     uniqueParticipants: number;
     uniqueActivities: number;
-    participantPercentageChange: number | null;
-    activityPercentageChange: number | null;
 }
 
 export interface GeographicAnalytics {

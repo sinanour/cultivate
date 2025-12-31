@@ -60,8 +60,8 @@ describe('AnalyticsRoutes', () => {
         it('should return growth metrics with unique counts per period', async () => {
             const mockMetrics = {
                 timeSeries: [
-                    { date: '2024-01', uniqueParticipants: 10, uniqueActivities: 5, participantPercentageChange: null, activityPercentageChange: null },
-                    { date: '2024-02', uniqueParticipants: 15, uniqueActivities: 8, participantPercentageChange: 50, activityPercentageChange: 60 },
+                    { date: '2024-01', uniqueParticipants: 10, uniqueActivities: 5 },
+                    { date: '2024-02', uniqueParticipants: 15, uniqueActivities: 8 },
                 ],
             };
             mockService.getGrowthMetrics = jest.fn().mockResolvedValue(mockMetrics);

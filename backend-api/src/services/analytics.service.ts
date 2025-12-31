@@ -102,8 +102,6 @@ export interface GrowthPeriodData {
     date: string;
     uniqueParticipants: number;
     uniqueActivities: number;
-    participantPercentageChange: number | null;
-    activityPercentageChange: number | null;
 }
 
 export interface GrowthMetrics {
@@ -984,8 +982,6 @@ export class AnalyticsService {
         }>
     ): GrowthPeriodData[] {
         const timeSeries: GrowthPeriodData[] = [];
-        let previousUniqueParticipants = 0;
-        let previousUniqueActivities = 0;
 
         for (const period of periods) {
             // Unique activities: activities that were ACTIVE during this period
@@ -1013,27 +1009,11 @@ export class AnalyticsService {
 
             const uniqueParticipants = uniqueParticipantIds.size;
 
-            // Calculate percentage changes
-            const participantPercentageChange =
-                previousUniqueParticipants > 0
-                    ? ((uniqueParticipants - previousUniqueParticipants) / previousUniqueParticipants) * 100
-                    : null;
-
-            const activityPercentageChange =
-                previousUniqueActivities > 0
-                    ? ((uniqueActivities - previousUniqueActivities) / previousUniqueActivities) * 100
-                    : null;
-
             timeSeries.push({
                 date: period.label,
                 uniqueParticipants,
                 uniqueActivities,
-                participantPercentageChange,
-                activityPercentageChange,
             });
-
-            previousUniqueParticipants = uniqueParticipants;
-            previousUniqueActivities = uniqueActivities;
         }
 
         return timeSeries;

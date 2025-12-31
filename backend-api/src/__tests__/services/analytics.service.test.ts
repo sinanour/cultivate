@@ -182,11 +182,9 @@ describe('AnalyticsService', () => {
             expect(result.timeSeries[0]).toHaveProperty('date');
             expect(result.timeSeries[0]).toHaveProperty('uniqueParticipants');
             expect(result.timeSeries[0]).toHaveProperty('uniqueActivities');
-            expect(result.timeSeries[0]).toHaveProperty('participantPercentageChange');
-            expect(result.timeSeries[0]).toHaveProperty('activityPercentageChange');
         });
 
-        it('should calculate percentage change correctly for both participants and activities', async () => {
+        it('should calculate unique counts correctly for both participants and activities', async () => {
             const mockActivities = [
                 {
                     id: 'a1',
@@ -237,14 +235,14 @@ describe('AnalyticsService', () => {
                 endDate: new Date('2024-03-01'),
             });
 
-            // First period should have null percentage changes
-            expect(result.timeSeries[0].participantPercentageChange).toBeNull();
-            expect(result.timeSeries[0].activityPercentageChange).toBeNull();
+            // Verify unique counts are calculated correctly
+            expect(result.timeSeries[0].uniqueParticipants).toBe(1);
+            expect(result.timeSeries[0].uniqueActivities).toBe(1);
 
-            // Subsequent periods should have calculated percentage changes
+            // Second period should have more participants and activities
             if (result.timeSeries.length > 1) {
-                expect(result.timeSeries[1].participantPercentageChange).toBeDefined();
-                expect(result.timeSeries[1].activityPercentageChange).toBeDefined();
+                expect(result.timeSeries[1].uniqueParticipants).toBeGreaterThan(result.timeSeries[0].uniqueParticipants);
+                expect(result.timeSeries[1].uniqueActivities).toBeGreaterThan(result.timeSeries[0].uniqueActivities);
             }
         });
     });
