@@ -239,18 +239,23 @@ The Backend API package provides the RESTful API service that implements all bus
 
 ### Requirement 7: Track Growth Over Time
 
-**User Story:** As a community organizer, I want to track how activities and participation grow over time via API, so that I can measure community development.
+**User Story:** As a community organizer, I want to track unique participant and activity counts over time via API with optional grouping by activity type or category, so that I can measure community development and understand engagement patterns at each point in the chronological history.
 
 #### Acceptance Criteria
 
 1. THE API SHALL provide a GET /api/analytics/growth endpoint that returns growth metrics
 2. WHEN calculating growth metrics, THE API SHALL accept a time period parameter (DAY, WEEK, MONTH, YEAR)
 3. WHEN calculating growth metrics, THE API SHALL accept optional start and end date filters
-4. WHEN calculating growth metrics, THE API SHALL count new activities per time period
-5. THE API SHALL return time-series data ordered chronologically
-6. THE API SHALL calculate percentage change between consecutive periods for activities
-7. WHEN calculating growth metrics, THE API SHALL accept an optional geographic area ID filter
-8. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
+4. WHEN calculating growth metrics, THE API SHALL count unique participants engaged in activities during each time period
+5. WHEN calculating growth metrics, THE API SHALL count unique activities that were active during each time period
+6. THE API SHALL return time-series data ordered chronologically where each period represents a snapshot of unique participants and activities at that point in time
+7. THE API SHALL calculate percentage change between consecutive periods for both participants and activities
+8. WHEN calculating growth metrics, THE API SHALL accept an optional geographic area ID filter
+9. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
+10. THE API SHALL accept an optional groupBy parameter with values 'type' or 'category' to group growth metrics by activity type or activity category
+11. WHEN groupBy is 'type', THE API SHALL return separate time-series data for each activity type showing unique participants and activities per period
+12. WHEN groupBy is 'category', THE API SHALL return separate time-series data for each activity category showing unique participants and activities per period
+13. WHEN no groupBy parameter is provided, THE API SHALL return aggregate time-series data across all activity types and categories
 
 ### Requirement 8: Persist Data
 

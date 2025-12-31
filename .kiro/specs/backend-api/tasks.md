@@ -437,11 +437,12 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Support flexible filtering (point filters for activity category, activity type, venue, geographic area; range filter for dates)
     - Apply multiple filters using AND logic
     - Calculate role distribution within filtered and grouped results
-    - Implement growth metrics calculation
+    - Implement growth metrics calculation with unique participant and activity counts per period (snapshots, not cumulative)
+    - Support optional grouping by activity type or category for growth metrics
     - Implement geographic breakdown calculation
     - Support date range filtering
     - Support geographic area filtering
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13_
 
   - [ ]* 13.2 Write property tests for analytics calculations
     - **Property 20: Activities at Start of Date Range Counting**
@@ -468,10 +469,14 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 38: Role Distribution Calculation**
     - **Property 39: Date Grouping Granularity**
     - **Property 40: Time Period Grouping**
-    - **Property 41: New Activity Counting Per Period**
-    - **Property 42: Chronological Ordering**
-    - **Property 43: Percentage Change Calculation for Activities**
-    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.2, 7.4, 7.5, 7.6**
+    - **Property 41: Unique Participant Counting Per Period**
+    - **Property 42: Unique Activity Counting Per Period**
+    - **Property 43: Chronological Ordering**
+    - **Property 44: Percentage Change Calculation**
+    - **Property 45: Optional Grouping by Activity Type**
+    - **Property 46: Optional Grouping by Activity Category**
+    - **Property 47: Aggregate Growth Without Grouping**
+    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.2, 7.4, 7.5, 7.6, 7.7, 7.10, 7.11, 7.12, 7.13**
 
   - [x] 13.3 Create analytics routes
     - GET /api/analytics/engagement

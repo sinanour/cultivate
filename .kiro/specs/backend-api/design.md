@@ -795,17 +795,33 @@ The API uses Prisma to define the following database models:
 *For any* time period parameter (DAY, WEEK, MONTH, YEAR), growth metrics should correctly group data into the specified periods.
 **Validates: Requirements 7.2**
 
-**Property 41: New activity counting per period**
-*For any* time period, growth metrics should count only activities created within that period.
+**Property 41: Unique participant counting per period**
+*For any* time period, growth metrics should count unique participants who were engaged in activities during that period (snapshot, not cumulative).
 **Validates: Requirements 7.4**
 
-**Property 42: Chronological ordering**
-*For any* growth metrics response, time-series data should be ordered from earliest to latest period.
+**Property 42: Unique activity counting per period**
+*For any* time period, growth metrics should count unique activities that were active during that period (snapshot, not cumulative).
 **Validates: Requirements 7.5**
 
-**Property 43: Percentage change calculation for activities**
-*For any* two consecutive time periods, the percentage change for activities should be calculated as ((current - previous) / previous) * 100.
+**Property 43: Chronological ordering**
+*For any* growth metrics response, time-series data should be ordered from earliest to latest period.
 **Validates: Requirements 7.6**
+
+**Property 44: Percentage change calculation**
+*For any* two consecutive time periods, the percentage change for both participants and activities should be calculated as ((current - previous) / previous) * 100.
+**Validates: Requirements 7.7**
+
+**Property 45: Optional grouping by activity type**
+*For any* growth metrics request with groupBy='type', the response should include separate time-series data for each activity type showing unique participants and activities per period.
+**Validates: Requirements 7.10, 7.11**
+
+**Property 46: Optional grouping by activity category**
+*For any* growth metrics request with groupBy='category', the response should include separate time-series data for each activity category showing unique participants and activities per period.
+**Validates: Requirements 7.12**
+
+**Property 47: Aggregate growth without grouping**
+*For any* growth metrics request without a groupBy parameter, the response should include aggregate time-series data across all activity types and categories.
+**Validates: Requirements 7.13**
 
 ### Activity Lifecycle Events Properties
 

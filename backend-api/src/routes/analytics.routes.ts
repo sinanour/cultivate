@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { AnalyticsService, TimePeriod } from '../services/analytics.service';
+import { AnalyticsService, TimePeriod, GroupingDimension } from '../services/analytics.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
@@ -82,12 +82,21 @@ export class AnalyticsRoutes {
 
     private async getGrowth(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { period, startDate, endDate, geographicAreaId } = req.query;
+            const { period, startDate, endDate, geographicAreaId, groupBy } = req.query;
+
+            // Parse groupBy parameter
+            let groupByDimensions: GroupingDimension[] | undefined;
+            if (groupBy === 'type') {
+                groupByDimensions = ['activityType' as GroupingDimension];
+            } else if (groupBy === 'category') {
+                groupByDimensions = ['activityCategory' as GroupingDimension];
+            }
 
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
                 geographicAreaId: geographicAreaId as string | undefined,
+                groupBy: groupByDimensions,
             };
 
             const metrics = await this.analyticsService.getGrowthMetrics(

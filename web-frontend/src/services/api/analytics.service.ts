@@ -18,6 +18,7 @@ export interface GrowthMetricsParams {
     endDate?: string;
     period?: TimePeriod;
     geographicAreaId?: string;
+    groupBy?: 'type' | 'category';
 }
 
 export interface ActivityLifecycleData {
@@ -66,6 +67,7 @@ export class AnalyticsService {
         if (params.endDate) queryParams.append('endDate', params.endDate);
         if (params.period) queryParams.append('period', params.period);
         if (params.geographicAreaId) queryParams.append('geographicAreaId', params.geographicAreaId);
+        if (params.groupBy) queryParams.append('groupBy', params.groupBy);
 
         const query = queryParams.toString();
         return ApiClient.get<GrowthMetrics>(`/analytics/growth${query ? `?${query}` : ''}`);

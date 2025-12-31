@@ -259,13 +259,17 @@ The Web Frontend package provides a responsive React-based web application that 
 37. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
 38. THE Web_App SHALL allow users to share the current analytics view URL with other users to display the same filtered and grouped results
 39. THE Web_App SHALL provide a growth analytics dashboard
-40. THE Web_App SHALL display time-series charts for new activities
+40. THE Web_App SHALL display time-series charts showing unique participant and activity counts for each time period
 41. THE Web_App SHALL provide time period selection (day, week, month, year)
-42. THE Web_App SHALL display percentage changes between periods for activities
-43. THE Web_App SHALL display cumulative participant counts over time
-44. THE Web_App SHALL provide a geographic area filter for all analytics
-45. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
-46. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
+42. THE Web_App SHALL display percentage changes between consecutive periods for both participants and activities
+43. THE Web_App SHALL display each time period as a snapshot of unique participants and activities engaged at that point in time (not cumulative counts)
+44. THE Web_App SHALL provide an optional grouping control to view growth metrics by activity type or activity category
+45. WHEN grouping by activity type is selected, THE Web_App SHALL display separate time-series data for each activity type
+46. WHEN grouping by activity category is selected, THE Web_App SHALL display separate time-series data for each activity category
+47. WHEN no grouping is selected, THE Web_App SHALL display aggregate time-series data across all activity types and categories
+48. THE Web_App SHALL provide a geographic area filter for all analytics
+49. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
+50. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
 46a. THE Web_App SHALL synchronize growth dashboard filter parameters (period, date range) with URL query parameters
 46b. WHEN a user navigates to a URL with growth dashboard query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
 46c. WHEN a user changes any filter parameter on the growth dashboard, THE Web_App SHALL update the browser URL to reflect the current state

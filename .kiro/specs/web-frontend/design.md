@@ -553,13 +553,17 @@ src/
 - Uses same color scheme as other dashboard charts for consistency
 
 **GrowthDashboard**
-- Displays time-series charts for new activities
+- Displays time-series charts showing unique participant and activity counts for each time period
 - Provides time period selector (day, week, month, year)
-- Shows percentage changes between periods for activities
-- Displays cumulative participant and activity counts over time
-- Uses dual-axis line chart for cumulative growth:
-  - Left Y-axis: Cumulative Participants (labeled)
-  - Right Y-axis: Cumulative Activities (labeled)
+- Shows percentage changes between periods for both participants and activities
+- Each time period represents a snapshot of unique participants and activities engaged at that point in time (not cumulative counts)
+- Provides optional grouping control to view growth by activity type or activity category
+- When grouped by type: displays separate time-series for each activity type
+- When grouped by category: displays separate time-series for each activity category
+- When not grouped: displays aggregate time-series across all types and categories
+- Uses dual-axis line chart for growth visualization:
+  - Left Y-axis: Unique Participants (labeled)
+  - Right Y-axis: Unique Activities (labeled)
   - Two independent line series without stacked areas
   - Clear axis labels for each metric
 - Provides geographic area filter dropdown
@@ -570,6 +574,7 @@ src/
   - Relative date range: `?relativePeriod=-90d` (compact format: -[amount][unit])
     - Units: d (day), w (week), m (month), y (year)
     - Examples: `-30d`, `-6m`, `-1y`
+  - Grouping parameter: `?groupBy=type` or `?groupBy=category`
   - Reads URL parameters on component mount to initialize dashboard state
   - Updates URL when user changes filters (using React Router's useSearchParams)
   - Enables browser back/forward navigation between different configurations
@@ -735,7 +740,7 @@ src/
   - Returns aggregate counts and breakdowns by activity category and activity type
   - Returns hierarchically grouped results when multiple dimensions specified
   - Returns role distribution within filtered results
-- `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR)
+- `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?, groupBy?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR; groupBy: 'type' | 'category' for optional grouping)
 - `getGeographicAnalytics(startDate?, endDate?)`: Fetches geographic breakdown from `/analytics/geographic`
 - `getActivityLifecycleEvents(params)`: Fetches activity lifecycle event data from `/analytics/activity-lifecycle`
   - Parameters: `startDate` (required), `endDate` (required), `groupBy` ('category' | 'type'), `geographicAreaIds?`, `activityTypeIds?`, `venueIds?`
@@ -989,11 +994,11 @@ interface EngagementMetrics {
 }
 
 interface GrowthMetrics {
-  date: string;
-  newActivities: number;
-  newActivities: number;
-  cumulativeParticipants: number;
-  cumulativeActivities: number;
+  period: string;
+  uniqueParticipants: number;
+  uniqueActivities: number;
+  participantPercentageChange?: number;
+  activityPercentageChange?: number;
 }
 
 interface GeographicAnalytics {
@@ -1521,23 +1526,23 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 7B.10, 7B.16, 7B.17**
 
-### Property 32: Time-series data calculation
+### Property 32: Time-series unique count calculation
 
-*For any* time period and dataset, the time-series charts should correctly calculate new activities for each time unit.
+*For any* time period and dataset, the time-series charts should correctly calculate unique participants and unique activities engaged during each time period as snapshots (not cumulative).
 
-**Validates: Requirements 7.40**
+**Validates: Requirements 7.40, 7.43**
 
 ### Property 33: Percentage change calculation
 
-*For any* two time periods, the percentage change calculation for activities should correctly compute the relative change between periods.
-
-**Validates: Requirements 7.41**
-
-### Property 34: Cumulative count calculation
-
-*For any* time series data, the cumulative participant counts should correctly sum all participant counts up to each point in time.
+*For any* two consecutive time periods, the percentage change calculation for both participants and activities should correctly compute the relative change between periods.
 
 **Validates: Requirements 7.42**
+
+### Property 34: Optional grouping display
+
+*For any* growth dashboard with grouping selected (by type or category), separate time-series data should be displayed for each group showing unique participants and activities per period.
+
+**Validates: Requirements 7.44, 7.45, 7.46, 7.47**
 
 ### Property 34a: Growth Dashboard URL Parameter Synchronization
 

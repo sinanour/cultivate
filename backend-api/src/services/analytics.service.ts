@@ -100,14 +100,15 @@ export interface EngagementMetrics {
 
 export interface GrowthPeriodData {
     date: string;
-    newActivities: number;
-    cumulativeParticipants: number;
-    cumulativeActivities: number;
-    percentageChange: number | null;
+    uniqueParticipants: number;
+    uniqueActivities: number;
+    participantPercentageChange: number | null;
+    activityPercentageChange: number | null;
 }
 
 export interface GrowthMetrics {
     timeSeries: GrowthPeriodData[];
+    groupedTimeSeries?: Record<string, GrowthPeriodData[]>; // When groupBy is specified
 }
 
 export interface ActivityLifecycleData {
@@ -261,46 +262,34 @@ export class AnalyticsService {
             ).length
             : allActivities.filter(a => a.status === ActivityStatus.CANCELLED).length;
 
-        // Get all participants for temporal analysis
-        // Participants should be filtered based on the venues of activities they're assigned to,
-        // not their home address history
-        const activityIds = allActivities.map(a => a.id);
-
-        const allParticipants = await this.prisma.participant.findMany({
-            where: {
-                assignments: {
-                    some: {
-                        activityId: { in: activityIds },
-                    },
-                },
-            },
-            include: {
-                assignments: {
-                    include: {
-                        activity: true,
-                    },
-                },
-            },
-        });
-
         // Calculate participant temporal metrics
+        // A participant is engaged at a point in time if they're assigned to an activity that was active at that time
+        // The assignment createdAt is irrelevant - what matters is the activity's start/end dates
         const participantsAtStart = startDate
-            ? allParticipants.filter(p =>
-                p.assignments.some(a =>
-                    a.createdAt <= startDate &&
-                    allActivities.some(act => act.id === a.activityId)
-                )
-            ).length
+            ? new Set(
+                allActivities
+                    .filter(act => {
+                        // Activity was active at startDate if:
+                        // - It started on or before startDate AND
+                        // - It hasn't ended OR it ended after startDate
+                        return act.startDate <= startDate && (!act.endDate || act.endDate >= startDate);
+                    })
+                    .flatMap(act => act.assignments.map(a => a.participantId))
+            ).size
             : 0;
 
         const participantsAtEnd = endDate
-            ? allParticipants.filter(p =>
-                p.assignments.some(a =>
-                    a.createdAt <= endDate &&
-                    allActivities.some(act => act.id === a.activityId)
-                )
-            ).length
-            : allParticipants.filter(p => p.assignments.length > 0).length;
+            ? new Set(
+                allActivities
+                    .filter(act => {
+                        // Activity was active at endDate if:
+                        // - It started on or before endDate AND
+                        // - It hasn't ended OR it ended after endDate
+                        return act.startDate <= endDate && (!act.endDate || act.endDate >= endDate);
+                    })
+                    .flatMap(act => act.assignments.map(a => a.participantId))
+            ).size
+            : new Set(allActivities.flatMap(a => a.assignments.map(as => as.participantId))).size;
 
         // Calculate aggregate counts
         const totalActivities = allActivities.length;
@@ -388,14 +377,27 @@ export class AnalyticsService {
             }
 
             // Count participants by type
+            // Participants are engaged if the activity was active at the point in time
             if (startDate) {
-                const participantsAtStartForType = activity.assignments.filter(a => a.createdAt <= startDate);
-                breakdown.participantsAtStart += new Set(participantsAtStartForType.map(a => a.participantId)).size;
+                // Activity was active at startDate if it started on or before startDate
+                // AND it hasn't ended OR it ended after startDate
+                const wasActiveAtStart = activity.startDate <= startDate &&
+                    (!activity.endDate || activity.endDate >= startDate);
+
+                if (wasActiveAtStart) {
+                    breakdown.participantsAtStart += activity.assignments.length;
+                }
             }
 
             if (endDate) {
-                const participantsAtEndForType = activity.assignments.filter(a => a.createdAt <= endDate);
-                breakdown.participantsAtEnd += new Set(participantsAtEndForType.map(a => a.participantId)).size;
+                // Activity was active at endDate if it started on or before endDate
+                // AND it hasn't ended OR it ended after endDate
+                const wasActiveAtEnd = activity.startDate <= endDate &&
+                    (!activity.endDate || activity.endDate >= endDate);
+
+                if (wasActiveAtEnd) {
+                    breakdown.participantsAtEnd += activity.assignments.length;
+                }
             }
         }
 
@@ -481,14 +483,27 @@ export class AnalyticsService {
             }
 
             // Count participants by category
+            // Participants are engaged if the activity was active at the point in time
             if (startDate) {
-                const participantsAtStartForCategory = activity.assignments.filter(a => a.createdAt <= startDate);
-                breakdown.participantsAtStart += new Set(participantsAtStartForCategory.map(a => a.participantId)).size;
+                // Activity was active at startDate if it started on or before startDate
+                // AND it hasn't ended OR it ended after startDate
+                const wasActiveAtStart = activity.startDate <= startDate &&
+                    (!activity.endDate || activity.endDate >= startDate);
+
+                if (wasActiveAtStart) {
+                    breakdown.participantsAtStart += activity.assignments.length;
+                }
             }
 
             if (endDate) {
-                const participantsAtEndForCategory = activity.assignments.filter(a => a.createdAt <= endDate);
-                breakdown.participantsAtEnd += new Set(participantsAtEndForCategory.map(a => a.participantId)).size;
+                // Activity was active at endDate if it started on or before endDate
+                // AND it hasn't ended OR it ended after endDate
+                const wasActiveAtEnd = activity.startDate <= endDate &&
+                    (!activity.endDate || activity.endDate >= endDate);
+
+                if (wasActiveAtEnd) {
+                    breakdown.participantsAtEnd += activity.assignments.length;
+                }
             }
         }
 
@@ -738,7 +753,7 @@ export class AnalyticsService {
 
                 const periods = this.generateTimePeriods(startDate, endDate, timePeriod);
                 const activityPeriod = periods.find(p =>
-                    activity.createdAt >= p.start && activity.createdAt < p.end
+                    activity.startDate >= p.start && activity.startDate < p.end
                 );
 
                 if (activityPeriod) {
@@ -827,7 +842,7 @@ export class AnalyticsService {
         timePeriod: TimePeriod,
         filters: AnalyticsFilters = {}
     ): Promise<GrowthMetrics> {
-        const { startDate, endDate, geographicAreaId } = filters;
+        const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, groupBy } = filters;
 
         // Get venue IDs if geographic filter is provided
         let venueIds: string[] | undefined;
@@ -857,80 +872,171 @@ export class AnalyticsService {
         // Generate time periods
         const periods = this.generateTimePeriods(start, end, timePeriod);
 
-        // Get ALL activities up to the end date
-        // We need all historical data to calculate cumulative counts correctly
+        // Build base activity filter
+        // We need activities that were active at ANY point during our analysis period
+        // This means:
+        // 1. Activity started on or before the analysis end date
+        // 2. Activity has no end date (ongoing) OR ended on or after the analysis start date
         const activityWhere: any = {
-            startDate: {
-                lte: end, // Only include activities that started up to the end date
-            },
+            AND: [
+                {
+                    startDate: {
+                        lte: end, // Started on or before analysis end
+                    },
+                },
+                {
+                    OR: [
+                        {
+                            endDate: null, // Ongoing activities
+                        },
+                        {
+                            endDate: {
+                                gte: start, // Or ended on or after analysis start
+                            },
+                        },
+                    ],
+                },
+            ],
         };
 
-        if (venueIds) {
-            activityWhere.activityVenueHistory = {
-                some: {
-                    venueId: { in: venueIds },
+        // Add additional filters to the AND array
+        if (activityCategoryId) {
+            activityWhere.AND.push({
+                activityType: {
+                    activityCategoryId,
                 },
-            };
+            });
+        }
+
+        if (activityTypeId) {
+            activityWhere.AND.push({
+                activityTypeId,
+            });
+        }
+
+        if (venueIds) {
+            activityWhere.AND.push({
+                activityVenueHistory: {
+                    some: {
+                        venueId: { in: venueIds },
+                    },
+                },
+            });
         }
 
         const activities = await this.prisma.activity.findMany({
             where: activityWhere,
             include: {
+                activityType: {
+                    include: {
+                        activityCategory: true,
+                    },
+                },
                 assignments: {
                     select: {
                         participantId: true,
-                        createdAt: true,
                     },
                 },
             },
         });
 
-        // Calculate metrics for each period
+        // If groupBy is specified, calculate grouped time series
+        if (groupBy && (groupBy.includes('activityType' as GroupingDimension) || groupBy.includes('activityCategory' as GroupingDimension))) {
+            const groupedTimeSeries: Record<string, GrowthPeriodData[]> = {};
+            const groupByType = groupBy.includes('activityType' as GroupingDimension);
+
+            // Group activities by type or category
+            const activityGroups = new Map<string, typeof activities>();
+
+            activities.forEach(activity => {
+                const groupKey = groupByType
+                    ? activity.activityType.name
+                    : activity.activityType.activityCategory.name;
+
+                if (!activityGroups.has(groupKey)) {
+                    activityGroups.set(groupKey, []);
+                }
+                activityGroups.get(groupKey)!.push(activity);
+            });
+
+            // Calculate time series for each group
+            for (const [groupName, groupActivities] of activityGroups) {
+                groupedTimeSeries[groupName] = this.calculateGrowthTimeSeries(periods, groupActivities);
+            }
+
+            return { timeSeries: [], groupedTimeSeries };
+        }
+
+        // Calculate aggregate time series
+        const timeSeries = this.calculateGrowthTimeSeries(periods, activities);
+
+        return { timeSeries };
+    }
+
+    private calculateGrowthTimeSeries(
+        periods: Array<{ start: Date; end: Date; label: string }>,
+        activities: Array<{
+            id: string;
+            startDate: Date;
+            endDate: Date | null;
+            status: any; // Use any to accept Prisma's ActivityStatus enum
+            assignments: Array<{ participantId: string }>;
+        }>
+    ): GrowthPeriodData[] {
         const timeSeries: GrowthPeriodData[] = [];
-        let previousNewActivities = 0;
+        let previousUniqueParticipants = 0;
+        let previousUniqueActivities = 0;
 
         for (const period of periods) {
-            // New activities: activities that STARTED within this specific period
-            const newActivities = activities.filter(
-                (a) => a.startDate >= period.start && a.startDate < period.end
-            ).length;
+            // Unique activities: activities that were ACTIVE during this period
+            // An activity is active during a period [start, end) if:
+            // - It started strictly before the period end: startDate < period.end
+            // - It hasn't ended yet OR it ended on or after the period start: endDate === null OR endDate >= period.start
+            const activeActivities = activities.filter(activity => {
+                const startedBeforePeriodEnd = activity.startDate < period.end;
+                const notEndedOrEndedAfterPeriodStart =
+                    !activity.endDate || activity.endDate >= period.start;
 
-            // Cumulative activities: all activities that STARTED up to the END of this period
-            const cumulativeActivities = activities.filter(
-                (a) => a.startDate < period.end
-            ).length;
+                return startedBeforePeriodEnd && notEndedOrEndedAfterPeriodStart;
+            });
 
-            // Cumulative participants: unique participants assigned to activities that STARTED up to the END of this period
-            const activitiesUpToPeriod = activities.filter(
-                (a) => a.startDate < period.end
-            );
+            const uniqueActivities = activeActivities.length;
 
+            // Unique participants: participants assigned to activities that were active during this period
+            // The assignment createdAt is irrelevant - what matters is whether the activity was active
             const uniqueParticipantIds = new Set<string>();
-            activitiesUpToPeriod.forEach(activity => {
+            activeActivities.forEach(activity => {
                 activity.assignments.forEach(assignment => {
                     uniqueParticipantIds.add(assignment.participantId);
                 });
             });
 
-            const cumulativeParticipants = uniqueParticipantIds.size;
+            const uniqueParticipants = uniqueParticipantIds.size;
 
-            const percentageChange =
-                previousNewActivities > 0
-                    ? ((newActivities - previousNewActivities) / previousNewActivities) * 100
+            // Calculate percentage changes
+            const participantPercentageChange =
+                previousUniqueParticipants > 0
+                    ? ((uniqueParticipants - previousUniqueParticipants) / previousUniqueParticipants) * 100
+                    : null;
+
+            const activityPercentageChange =
+                previousUniqueActivities > 0
+                    ? ((uniqueActivities - previousUniqueActivities) / previousUniqueActivities) * 100
                     : null;
 
             timeSeries.push({
                 date: period.label,
-                newActivities,
-                cumulativeParticipants,
-                cumulativeActivities,
-                percentageChange,
+                uniqueParticipants,
+                uniqueActivities,
+                participantPercentageChange,
+                activityPercentageChange,
             });
 
-            previousNewActivities = newActivities;
+            previousUniqueParticipants = uniqueParticipants;
+            previousUniqueActivities = uniqueActivities;
         }
 
-        return { timeSeries };
+        return timeSeries;
     }
 
     async getGeographicBreakdown(filters: AnalyticsFilters = {}): Promise<Record<string, EngagementMetrics>> {
@@ -1112,26 +1218,26 @@ export class AnalyticsService {
             switch (period) {
                 case TimePeriod.DAY:
                     periodEnd = new Date(current);
-                    periodEnd.setDate(periodEnd.getDate() + 1);
+                    periodEnd.setUTCDate(periodEnd.getUTCDate() + 1);
                     label = periodStart.toISOString().split('T')[0];
                     break;
 
                 case TimePeriod.WEEK:
                     periodEnd = new Date(current);
-                    periodEnd.setDate(periodEnd.getDate() + 7);
+                    periodEnd.setUTCDate(periodEnd.getUTCDate() + 7);
                     label = `Week of ${periodStart.toISOString().split('T')[0]}`;
                     break;
 
                 case TimePeriod.MONTH:
                     periodEnd = new Date(current);
-                    periodEnd.setMonth(periodEnd.getMonth() + 1);
-                    label = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`;
+                    periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1);
+                    label = `${periodStart.getUTCFullYear()}-${String(periodStart.getUTCMonth() + 1).padStart(2, '0')}`;
                     break;
 
                 case TimePeriod.YEAR:
                     periodEnd = new Date(current);
-                    periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-                    label = String(periodStart.getFullYear());
+                    periodEnd.setUTCFullYear(periodEnd.getUTCFullYear() + 1);
+                    label = String(periodStart.getUTCFullYear());
                     break;
 
                 default:

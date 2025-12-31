@@ -9,7 +9,7 @@ import Box from '@cloudscape-design/components/box';
 import Select from '@cloudscape-design/components/select';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
@@ -186,11 +186,11 @@ export function GrowthDashboard() {
 
   // Calculate absolute deltas from start to end of period
   const activityGrowth = timeSeriesData.length >= 2
-    ? timeSeriesData[timeSeriesData.length - 1].cumulativeActivities - timeSeriesData[0].cumulativeActivities
+    ? timeSeriesData[timeSeriesData.length - 1].uniqueActivities - timeSeriesData[0].uniqueActivities
     : 0;
 
   const participantGrowth = timeSeriesData.length >= 2
-    ? timeSeriesData[timeSeriesData.length - 1].cumulativeParticipants - timeSeriesData[0].cumulativeParticipants
+    ? timeSeriesData[timeSeriesData.length - 1].uniqueParticipants - timeSeriesData[0].uniqueParticipants
     : 0;
 
   return (
@@ -269,54 +269,37 @@ export function GrowthDashboard() {
         </Container>
       </ColumnLayout>
 
-      <Container header={<Header variant="h3">New Activities</Header>}>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={timeSeriesData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar
-              dataKey="newActivities"
-              fill="#00C49F"
-              name="New Activities"
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </Container>
-
-      <Container header={<Header variant="h3">Cumulative Growth</Header>}>
+      <Container header={<Header variant="h3">Unique Engagement Over Time</Header>}>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={timeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis 
               yAxisId="left"
-              label={{ value: 'Participants', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
             />
             <YAxis 
               yAxisId="right"
               orientation="right"
-              label={{ value: 'Activities', angle: 90, position: 'insideRight' }}
+              label={{ value: 'Unique Activities', angle: 90, position: 'insideRight' }}
             />
             <Tooltip />
             <Legend />
             <Line
               yAxisId="left"
               type="monotone"
-              dataKey="cumulativeParticipants"
+              dataKey="uniqueParticipants"
               stroke="#0088FE"
               strokeWidth={2}
-              name="Cumulative Participants"
+              name="Unique Participants"
             />
             <Line
               yAxisId="right"
               type="monotone"
-              dataKey="cumulativeActivities"
+              dataKey="uniqueActivities"
               stroke="#00C49F"
               strokeWidth={2}
-              name="Cumulative Activities"
+              name="Unique Activities"
             />
           </LineChart>
         </ResponsiveContainer>

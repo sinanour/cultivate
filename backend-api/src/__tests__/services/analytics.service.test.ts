@@ -1,6 +1,6 @@
 import { AnalyticsService, TimePeriod } from '../../services/analytics.service';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ActivityStatus } from '@prisma/client';
 
 jest.mock('@prisma/client');
 jest.mock('../../repositories/geographic-area.repository');
@@ -138,19 +138,38 @@ describe('AnalyticsService', () => {
     });
 
     describe('getGrowthMetrics', () => {
-        it('should calculate growth metrics for time periods', async () => {
-            const mockParticipants = [
-                { id: 'p1', createdAt: new Date('2024-01-15') },
-                { id: 'p2', createdAt: new Date('2024-02-15') },
-                { id: 'p3', createdAt: new Date('2024-02-20') },
-            ];
-
+        it('should calculate unique participant and activity counts for time periods', async () => {
             const mockActivities = [
-                { id: 'a1', createdAt: new Date('2024-01-10') },
-                { id: 'a2', createdAt: new Date('2024-02-10') },
+                {
+                    id: 'a1',
+                    startDate: new Date('2024-01-10'),
+                    endDate: new Date('2024-01-31'),
+                    status: ActivityStatus.COMPLETED,
+                    activityType: {
+                        name: 'Type 1',
+                        activityCategory: { name: 'Category 1' }
+                    },
+                    assignments: [
+                        { participantId: 'p1', createdAt: new Date('2024-01-10') },
+                        { participantId: 'p2', createdAt: new Date('2024-01-15') },
+                    ]
+                },
+                {
+                    id: 'a2',
+                    startDate: new Date('2024-02-10'),
+                    endDate: null, // Ongoing
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Type 1',
+                        activityCategory: { name: 'Category 1' }
+                    },
+                    assignments: [
+                        { participantId: 'p2', createdAt: new Date('2024-02-10') },
+                        { participantId: 'p3', createdAt: new Date('2024-02-15') },
+                    ]
+                },
             ];
 
-            mockPrisma.participant.findMany = jest.fn().mockResolvedValue(mockParticipants);
             mockPrisma.activity.findMany = jest.fn().mockResolvedValue(mockActivities);
 
             const result = await service.getGrowthMetrics(TimePeriod.MONTH, {
@@ -161,19 +180,56 @@ describe('AnalyticsService', () => {
             expect(result.timeSeries).toBeDefined();
             expect(result.timeSeries.length).toBeGreaterThan(0);
             expect(result.timeSeries[0]).toHaveProperty('date');
-            expect(result.timeSeries[0]).toHaveProperty('newActivities');
-            expect(result.timeSeries[0]).toHaveProperty('cumulativeParticipants');
-            expect(result.timeSeries[0]).toHaveProperty('cumulativeActivities');
+            expect(result.timeSeries[0]).toHaveProperty('uniqueParticipants');
+            expect(result.timeSeries[0]).toHaveProperty('uniqueActivities');
+            expect(result.timeSeries[0]).toHaveProperty('participantPercentageChange');
+            expect(result.timeSeries[0]).toHaveProperty('activityPercentageChange');
         });
 
-        it('should calculate percentage change correctly', async () => {
+        it('should calculate percentage change correctly for both participants and activities', async () => {
             const mockActivities = [
-                { id: 'a1', createdAt: new Date('2024-01-15') },
-                { id: 'a2', createdAt: new Date('2024-02-15') },
-                { id: 'a3', createdAt: new Date('2024-02-20') },
+                {
+                    id: 'a1',
+                    startDate: new Date('2024-01-15'),
+                    endDate: new Date('2024-01-31'),
+                    status: ActivityStatus.COMPLETED,
+                    activityType: {
+                        name: 'Type 1',
+                        activityCategory: { name: 'Category 1' }
+                    },
+                    assignments: [
+                        { participantId: 'p1', createdAt: new Date('2024-01-15') },
+                    ]
+                },
+                {
+                    id: 'a2',
+                    startDate: new Date('2024-02-15'),
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Type 1',
+                        activityCategory: { name: 'Category 1' }
+                    },
+                    assignments: [
+                        { participantId: 'p1', createdAt: new Date('2024-02-15') },
+                        { participantId: 'p2', createdAt: new Date('2024-02-15') },
+                    ]
+                },
+                {
+                    id: 'a3',
+                    startDate: new Date('2024-02-20'),
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Type 1',
+                        activityCategory: { name: 'Category 1' }
+                    },
+                    assignments: [
+                        { participantId: 'p3', createdAt: new Date('2024-02-20') },
+                    ]
+                },
             ];
 
-            mockPrisma.participant.findMany = jest.fn().mockResolvedValue([]);
             mockPrisma.activity.findMany = jest.fn().mockResolvedValue(mockActivities);
 
             const result = await service.getGrowthMetrics(TimePeriod.MONTH, {
@@ -181,12 +237,14 @@ describe('AnalyticsService', () => {
                 endDate: new Date('2024-03-01'),
             });
 
-            // First period should have null percentage change
-            expect(result.timeSeries[0].percentageChange).toBeNull();
+            // First period should have null percentage changes
+            expect(result.timeSeries[0].participantPercentageChange).toBeNull();
+            expect(result.timeSeries[0].activityPercentageChange).toBeNull();
 
-            // Subsequent periods should have calculated percentage change
+            // Subsequent periods should have calculated percentage changes
             if (result.timeSeries.length > 1) {
-                expect(result.timeSeries[1].percentageChange).toBeDefined();
+                expect(result.timeSeries[1].participantPercentageChange).toBeDefined();
+                expect(result.timeSeries[1].activityPercentageChange).toBeDefined();
             }
         });
     });

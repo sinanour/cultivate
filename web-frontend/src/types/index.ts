@@ -222,13 +222,15 @@ export interface EngagementMetrics {
 
 export interface GrowthMetrics {
     timeSeries: GrowthPeriodData[];
+    groupedTimeSeries?: Record<string, GrowthPeriodData[]>; // When groupBy is specified
 }
 
 export interface GrowthPeriodData {
     date: string;
-    newActivities: number;
-    cumulativeParticipants: number;
-    cumulativeActivities: number;
+    uniqueParticipants: number;
+    uniqueActivities: number;
+    participantPercentageChange: number | null;
+    activityPercentageChange: number | null;
 }
 
 export interface GeographicAnalytics {
