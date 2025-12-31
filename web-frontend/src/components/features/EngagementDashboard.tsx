@@ -15,12 +15,13 @@ import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { AnalyticsService, type EngagementMetricsParams } from '../../services/api/analytics.service';
 import { activityCategoryService } from '../../services/api/activity-category.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { VenueService } from '../../services/api/venue.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import { ActivityLifecycleChart } from './ActivityLifecycleChart';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { GroupingDimension } from '../../utils/constants';
@@ -430,6 +431,48 @@ export function EngagementDashboard() {
     },
   });
 
+  // Prepare data BEFORE any conditional returns (for hooks)
+  const hasDateRange = !!dateRange;
+  
+  // Prepare legend items for Activities chart (before hooks)
+  const activitiesLegendItems: LegendItem[] = hasDateRange
+    ? [
+        { name: 'At Start', color: '#0088FE', dataKey: 'At Start' },
+        { name: 'At End', color: '#00C49F', dataKey: 'At End' },
+      ]
+    : [
+        { name: 'Count', color: '#00C49F', dataKey: 'Count' },
+      ];
+
+  // Prepare legend items for Role Distribution chart (before hooks)
+  const roleDistributionChartData = (metrics?.roleDistribution || []).map(role => ({
+    name: role.roleName,
+    value: role.count,
+  }));
+
+  const roleDistributionLegendItems: LegendItem[] = roleDistributionChartData.map((role, index) => ({
+    name: role.name,
+    color: COLORS[index % COLORS.length],
+    dataKey: role.name,
+  }));
+
+  // Create a color map for role distribution to maintain consistent colors when filtering
+  const roleColorMap = roleDistributionChartData.reduce((acc, role, index) => {
+    acc[role.name] = COLORS[index % COLORS.length];
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Prepare legend items for Geographic Breakdown chart (before hooks)
+  const geographicBreakdownLegendItems: LegendItem[] = [
+    { name: 'Activities', color: '#0088FE', dataKey: 'activityCount' },
+    { name: 'Participants', color: '#00C49F', dataKey: 'participantCount' },
+  ];
+
+  // MUST call all hooks before any conditional returns
+  const activitiesLegend = useInteractiveLegend('engagement-activities', activitiesLegendItems);
+  const roleDistributionLegend = useInteractiveLegend('role-distribution', roleDistributionLegendItems);
+  const geographicBreakdownLegend = useInteractiveLegend('geographic-breakdown', geographicBreakdownLegendItems);
+
   if (isLoading) {
     return <LoadingSpinner text="Loading engagement metrics..." />;
   }
@@ -443,8 +486,6 @@ export function EngagementDashboard() {
   }
 
   // Prepare chart data for activities by type
-  // Use different field names based on whether a date range is selected
-  const hasDateRange = !!dateRange;
   const endLabel = hasDateRange ? 'At End' : 'Count';
   
   const activitiesByTypeChartData = (metrics.activitiesByType || [])
@@ -495,12 +536,6 @@ export function EngagementDashboard() {
     ? activitiesByTypeChartData 
     : activitiesByCategoryChartData;
 
-  // Prepare chart data for role distribution
-  const roleDistributionChartData = (metrics.roleDistribution || []).map(role => ({
-    name: role.roleName,
-    value: role.count,
-  }));
-
   return (
     <SpaceBetween size="l">
       {/* Filters Section */}
@@ -531,7 +566,12 @@ export function EngagementDashboard() {
                 customRelativeRangeOptionDescription: 'Set a custom range in the past',
                 customRelativeRangeUnitLabel: 'Unit of time',
                 formatRelativeRange: (value) => {
-                  const unit = value.unit === 'day' ? 'days' : value.unit === 'week' ? 'weeks' : value.unit === 'month' ? 'months' : 'years';
+                  const unit = value.amount === 1 
+                    ? value.unit 
+                    : value.unit === 'day' ? 'days' 
+                    : value.unit === 'week' ? 'weeks' 
+                    : value.unit === 'month' ? 'months' 
+                    : 'years';
                   return `Last ${value.amount} ${unit}`;
                 },
                 formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
@@ -885,31 +925,33 @@ export function EngagementDashboard() {
             >
               {activitiesViewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
             </div>
+            {activitiesLegendItems.length > 1 && (
+              <InteractiveLegend
+                chartId="engagement-activities"
+                series={activitiesLegendItems}
+                onVisibilityChange={activitiesLegend.handleVisibilityChange}
+              />
+            )}
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={activitiesChartData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Legend 
-                  itemSorter={(item: any) => {
-                    // Custom sort order: "At Start" first, then "At End", then "Count"
-                    const order: { [key: string]: number } = {
-                      'At Start': 0,
-                      'At End': 1,
-                      'Count': 2
-                    };
-                    return order[item.value] ?? 999;
-                  }}
-                />
                 {/* Render bars in chronological order when date range is selected */}
                 {dateRange ? (
                   <>
-                    <Bar dataKey="At Start" fill="#0088FE" />
-                    <Bar dataKey="At End" fill="#00C49F" />
+                    {activitiesLegend.isSeriesVisible('At Start') && (
+                      <Bar dataKey="At Start" fill="#0088FE" />
+                    )}
+                    {activitiesLegend.isSeriesVisible('At End') && (
+                      <Bar dataKey="At End" fill="#00C49F" />
+                    )}
                   </>
                 ) : (
-                  <Bar dataKey="Count" fill="#00C49F" />
+                  activitiesLegend.isSeriesVisible('Count') && (
+                    <Bar dataKey="Count" fill="#00C49F" />
+                  )
                 )}
               </BarChart>
             </ResponsiveContainer>
@@ -976,10 +1018,19 @@ export function EngagementDashboard() {
       {/* Role Distribution */}
       {metrics.roleDistribution && metrics.roleDistribution.length > 0 && (
         <Container header={<Header variant="h3">Role Distribution</Header>}>
+          {roleDistributionLegendItems.length > 0 && (
+            <InteractiveLegend
+              chartId="role-distribution"
+              series={roleDistributionLegendItems}
+              onVisibilityChange={roleDistributionLegend.handleVisibilityChange}
+            />
+          )}
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={roleDistributionChartData}
+                data={roleDistributionChartData.filter(role => 
+                  roleDistributionLegend.isSeriesVisible(role.name)
+                )}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -988,9 +1039,11 @@ export function EngagementDashboard() {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {roleDistributionChartData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
+                {roleDistributionChartData
+                  .filter(role => roleDistributionLegend.isSeriesVisible(role.name))
+                  .map((role) => (
+                    <Cell key={`cell-${role.name}`} fill={roleColorMap[role.name]} />
+                  ))}
               </Pie>
               <Tooltip />
             </PieChart>
@@ -1001,6 +1054,11 @@ export function EngagementDashboard() {
       {/* Geographic Breakdown */}
       {metrics.geographicBreakdown && metrics.geographicBreakdown.length > 0 && (
         <Container header={<Header variant="h3">Geographic Breakdown</Header>}>
+          <InteractiveLegend
+            chartId="geographic-breakdown"
+            series={geographicBreakdownLegendItems}
+            onVisibilityChange={geographicBreakdownLegend.handleVisibilityChange}
+          />
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={metrics.geographicBreakdown.filter(area => 
               !area.hasChildren && (area.activityCount > 0 || area.participantCount > 0)
@@ -1009,9 +1067,12 @@ export function EngagementDashboard() {
               <XAxis dataKey="geographicAreaName" />
               <YAxis />
               <Tooltip />
-              <Legend />
-              <Bar dataKey="activityCount" fill="#0088FE" name="Activities" />
-              <Bar dataKey="participantCount" fill="#00C49F" name="Participants" />
+              {geographicBreakdownLegend.isSeriesVisible('Activities') && (
+                <Bar dataKey="activityCount" fill="#0088FE" name="Activities" />
+              )}
+              {geographicBreakdownLegend.isSeriesVisible('Participants') && (
+                <Bar dataKey="participantCount" fill="#00C49F" name="Participants" />
+              )}
             </BarChart>
           </ResponsiveContainer>
         </Container>

@@ -665,7 +665,37 @@ The Web Frontend package provides a responsive React-based web application that 
 8. WHEN a field is cleared, THE Web_App SHALL visually indicate that the field is now empty
 9. THE Web_App SHALL distinguish between leaving a field unchanged (omit from request) and explicitly clearing it (send null/empty)
 
-### Requirement 27: CSV Import and Export
+### Requirement 27: Interactive Chart Legends
+
+**User Story:** As a data analyst, I want to interact with chart legends to toggle individual data series on and off, so that I can focus on specific subsets of data and make comparisons easier.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide interactive legends on all charts that display multiple data series
+2. WHEN a user clicks on a legend item, THE Web_App SHALL toggle the visibility of the corresponding data series in the chart
+3. WHEN a data series is hidden, THE Web_App SHALL visually indicate the hidden state in the legend (e.g., dimmed text, strikethrough, or opacity change)
+4. WHEN a data series is shown, THE Web_App SHALL display the legend item in its normal active state
+5. THE Web_App SHALL allow toggling multiple data series independently within the same chart
+6. WHEN all data series are hidden, THE Web_App SHALL display an appropriate message or allow at least one series to remain visible
+7. THE Web_App SHALL apply interactive legend functionality to the following charts:
+   - Activities chart on Engagement Dashboard (when displaying multiple activity types or categories)
+   - Activity Lifecycle Events chart (when displaying multiple activity types or categories)
+   - Growth Dashboard Unique Participants chart (when displaying multiple activity types or categories)
+   - Growth Dashboard Unique Activities chart (when displaying multiple activity types or categories)
+   - Geographic breakdown chart on Engagement Dashboard
+   - Role distribution chart on Engagement Dashboard
+   - Any other charts that display multiple data series
+8. THE Web_App SHALL preserve the chart's interactivity and responsiveness when series are toggled
+9. THE Web_App SHALL update the chart's axis scales and ranges appropriately when series are hidden or shown
+10. THE Web_App SHALL provide visual feedback (e.g., hover state) when the user hovers over legend items to indicate they are clickable
+11. THE Web_App SHALL maintain accessibility by ensuring legend items are keyboard navigable and screen reader compatible
+12. WHEN a user toggles series visibility, THE Web_App SHALL persist the selection in browser session storage (optional: localStorage for persistence across sessions)
+
+### Requirement 28: CSV Import and Export
+
+**User Story:** As a community organizer, I want to import and export data in CSV format, so that I can bulk load data from external sources and share data with other systems.
+
+### Requirement 28: CSV Import and Export
 
 **User Story:** As a community organizer, I want to import and export data in CSV format, so that I can bulk load data from external sources and share data with other systems.
 

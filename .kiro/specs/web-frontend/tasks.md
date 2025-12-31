@@ -1299,7 +1299,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Create downloadBlob(blob, filename) utility function for triggering browser downloads
     - Create validateCSVFile(file) utility function for file validation (.csv extension, max 10MB)
     - Add to utils directory
-    - _Requirements: 26.19, 26.20_
+    - _Requirements: 28.19, 28.20_
 
   - [x] 30.2 Add CSV export methods to API services
     - Add exportParticipants(geographicAreaId?) to ParticipantService
@@ -1309,7 +1309,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Use axios with responseType: 'blob' for binary response
     - Call downloadBlob() to trigger browser download
     - Generate filename with current date
-    - _Requirements: 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.24_
+    - _Requirements: 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.24_
 
   - [x] 30.3 Add CSV import methods to API services
     - Add importParticipants(file) to ParticipantService
@@ -1319,7 +1319,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Create FormData and append file
     - Set Content-Type header to multipart/form-data
     - Return ImportResult from response
-    - _Requirements: 26.8, 26.9, 26.10, 26.11, 26.12, 26.13_
+    - _Requirements: 28.8, 28.9, 28.10, 28.11, 28.12, 28.13_
 
   - [x] 30.4 Add Export CSV button to ParticipantList
     - Add CloudScape Button with iconName="download" to table header actions
@@ -1330,7 +1330,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error notification on failure
     - Hide button from READ_ONLY users
     - Show button to EDITOR and ADMINISTRATOR users
-    - _Requirements: 26.1, 26.5, 26.16, 26.17, 26.22, 26.23, 26.24, 26.25_
+    - _Requirements: 28.1, 28.5, 28.16, 28.17, 28.22, 28.23, 28.24, 28.25_
 
   - [x] 30.5 Add Import CSV button to ParticipantList
     - Add hidden file input with accept=".csv"
@@ -1343,25 +1343,25 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error notification on failure
     - Hide button from READ_ONLY users
     - Show button to EDITOR and ADMINISTRATOR users
-    - _Requirements: 26.8, 26.12, 26.13, 26.14, 26.15, 26.16, 26.17, 26.18, 26.19, 26.20, 26.22, 26.23_
+    - _Requirements: 28.8, 28.12, 28.13, 28.14, 28.15, 28.16, 28.17, 28.18, 28.19, 28.20, 28.22, 28.23_
 
   - [x] 30.6 Add Export and Import CSV buttons to VenueList
     - Implement same pattern as ParticipantList
     - Use VenueService export/import methods
     - Apply global geographic filter to exports
-    - _Requirements: 26.2, 26.9, 26.22, 26.23, 26.24_
+    - _Requirements: 28.2, 28.9, 28.22, 28.23, 28.24_
 
   - [x] 30.7 Add Export and Import CSV buttons to ActivityList
     - Implement same pattern as ParticipantList
     - Use ActivityService export/import methods
     - Apply global geographic filter to exports
-    - _Requirements: 26.3, 26.10, 26.22, 26.23, 26.24_
+    - _Requirements: 28.3, 28.10, 28.22, 28.23, 28.24_
 
   - [x] 30.8 Add Export and Import CSV buttons to GeographicAreaList
     - Implement same pattern as ParticipantList
     - Use GeographicAreaService export/import methods
     - No geographic filter for geographic areas export
-    - _Requirements: 26.4, 26.11, 26.22, 26.23_
+    - _Requirements: 28.4, 28.11, 28.22, 28.23_
 
   - [x] 30.9 Create ImportResultsModal component
     - Create reusable CloudScape Modal component for displaying import results
@@ -1369,13 +1369,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error table with row numbers and error messages using CloudScape Table
     - Provide close button
     - Accept ImportResult as prop
-    - _Requirements: 26.14, 26.15_
+    - _Requirements: 28.14, 28.15_
 
   - [x] 30.10 Create TypeScript types for CSV operations
     - Create ImportResult interface with totalRows, successCount, failureCount, errors
     - Create ImportError interface with row, data, errors
     - Add to types directory
-    - _Requirements: 26.14, 26.15_
+    - _Requirements: 28.14, 28.15_
 
   - [ ]* 30.11 Write property tests for CSV operations
     - **Property 142: CSV Export Button Visibility**
@@ -1388,7 +1388,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 149: CSV File Validation**
     - **Property 150: CSV Operation Loading States**
     - **Property 151: CSV Export Geographic Filtering**
-    - **Validates: Requirements 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7, 26.8, 26.9, 26.10, 26.11, 26.12, 26.14, 26.15, 26.16, 26.17, 26.18, 26.19, 26.20, 26.22, 26.23, 26.24, 26.25**
+    - **Validates: Requirements 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.7, 28.8, 28.9, 28.10, 28.11, 28.12, 28.14, 28.15, 28.16, 28.17, 28.18, 28.19, 28.20, 28.22, 28.23, 28.24, 28.25**
 
 - [ ] 31. Checkpoint - Verify CSV import/export functionality
   - Ensure all tests pass, ask the user if questions arise.
@@ -1486,6 +1486,96 @@ This implementation plan covers the React-based web application built with TypeS
     - Test with and without date range filters
     - Test with geographic area filters
     - _Requirements: 7.40, 7.41, 7.42_
+
+- [x] 35. Implement interactive chart legends
+  - [x] 35.1 Create InteractiveLegend component
+    - Create reusable component for making chart legends interactive
+    - Accept props: chartId (unique identifier), series (array of series names/keys), onVisibilityChange callback
+    - Maintain visibility state for each data series using React useState
+    - Provide onClick handler for legend items to toggle series visibility
+    - Apply visual styling to hidden series (opacity: 0.5, text-decoration: line-through, or dimmed color)
+    - Provide hover states (cursor: pointer, slight highlight) on legend items
+    - Implement keyboard navigation (Tab to focus, Enter/Space to toggle)
+    - Include ARIA attributes (role="button", aria-pressed, aria-label) for accessibility
+    - Announce visibility changes to screen readers using aria-live region
+    - Persist series visibility state in sessionStorage (key: `chart-${chartId}-series-visibility`)
+    - Restore visibility state on component mount from sessionStorage
+    - Ensure at least one series remains visible (prevent hiding all series)
+    - Return visibility state object for parent component to use
+    - _Requirements: 27.1, 27.2, 27.3, 27.4, 27.5, 27.6, 27.10, 27.11, 27.12_
+
+  - [ ]* 35.2 Write property tests for InteractiveLegend component
+    - **Property 113: Legend Item Click Toggles Series Visibility**
+    - **Property 114: Hidden Series Visual Indication**
+    - **Property 115: Independent Series Toggling**
+    - **Property 116: Minimum Visible Series**
+    - **Property 119: Legend Item Hover Feedback**
+    - **Property 120: Legend Accessibility**
+    - **Property 121: Series Visibility Persistence**
+    - **Validates: Requirements 27.2, 27.3, 27.4, 27.5, 27.6, 27.10, 27.11, 27.12**
+
+  - [x] 35.3 Update GrowthDashboard to use interactive legends
+    - Import InteractiveLegend component
+    - Add InteractiveLegend to both Unique Participants and Unique Activities charts
+    - Pass unique chartId for each chart ("growth-participants", "growth-activities")
+    - Extract series names from chart data based on view mode (All/Type/Category)
+    - Use visibility state from InteractiveLegend to filter data passed to recharts LineChart
+    - Only render Line components for visible series
+    - Update chart axis scales to reflect visible data range
+    - Ensure consistent color scheme is maintained when series are toggled
+    - _Requirements: 27.1, 27.7, 27.8, 27.9_
+
+  - [x] 35.4 Update ActivityLifecycleChart to use interactive legend
+    - Import InteractiveLegend component
+    - Add InteractiveLegend to the bar chart
+    - Pass chartId "activity-lifecycle"
+    - Extract series names from chart data based on view mode (Type/Category)
+    - Use visibility state to filter data passed to recharts BarChart
+    - Only render Bar components for visible series
+    - Update chart axis scales to reflect visible data range
+    - _Requirements: 27.1, 27.7, 27.8, 27.9_
+
+  - [x] 35.5 Update EngagementDashboard Activities chart to use interactive legend
+    - Import InteractiveLegend component
+    - Add InteractiveLegend to the Activities chart
+    - Pass chartId "engagement-activities"
+    - Extract series names from chart data based on view mode (Type/Category)
+    - Use visibility state to filter displayed data
+    - Update chart rendering to reflect visible series only
+    - _Requirements: 27.1, 27.7, 27.8, 27.9_
+
+  - [x] 35.6 Update Role Distribution chart to use interactive legend
+    - Import InteractiveLegend component
+    - Add InteractiveLegend to the role distribution chart
+    - Pass chartId "role-distribution"
+    - Extract role names as series from chart data
+    - Use visibility state to filter displayed roles
+    - Update chart rendering to reflect visible series only
+    - _Requirements: 27.1, 27.7, 27.8, 27.9_
+
+  - [x] 35.7 Update Geographic Breakdown chart to use interactive legend
+    - Import InteractiveLegend component
+    - Add InteractiveLegend to the geographic breakdown chart
+    - Pass chartId "geographic-breakdown"
+    - Extract geographic area names as series from chart data
+    - Use visibility state to filter displayed areas
+    - Update chart rendering to reflect visible series only
+    - _Requirements: 27.1, 27.7, 27.8, 27.9_
+
+  - [ ]* 35.8 Write integration tests for interactive legends across all charts
+    - **Property 117: Interactive Legend Application to All Multi-Series Charts**
+    - **Property 118: Chart Responsiveness with Series Toggling**
+    - Test that all multi-series charts have interactive legends
+    - Test that toggling series updates chart display correctly
+    - Test that axis scales adjust appropriately
+    - Test that chart remains responsive after toggling
+    - **Validates: Requirements 27.1, 27.7, 27.8, 27.9**
+
+- [x] 36. Checkpoint - Verify interactive chart legends functionality
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test legend interactivity on all charts
+  - Verify accessibility with keyboard navigation and screen readers
+  - Verify series visibility persistence across page reloads
 
 ## Notes
 

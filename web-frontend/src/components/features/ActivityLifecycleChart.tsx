@@ -3,9 +3,10 @@ import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import Box from '@cloudscape-design/components/box';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type ActivityLifecycleData } from '../../services/api/analytics.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 
 // Bar chart styling constants
 const BAR_CHART_MAX_BAR_SIZE = 60;
@@ -57,6 +58,15 @@ export function ActivityLifecycleChart({
       // Ignore localStorage errors
     }
   }, [viewMode]);
+
+  // Prepare legend items for interactive legend
+  const legendItems: LegendItem[] = [
+    { name: 'Started', color: '#0088FE', dataKey: 'Started' },
+    { name: 'Completed', color: '#00C49F', dataKey: 'Completed' },
+  ];
+
+  // Use interactive legend hook
+  const legend = useInteractiveLegend('activity-lifecycle', legendItems);
 
   // Fetch data when parameters change
   useEffect(() => {
@@ -137,24 +147,23 @@ export function ActivityLifecycleChart({
           >
             {viewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
           </div>
+          <InteractiveLegend
+            chartId="activity-lifecycle"
+            series={legendItems}
+            onVisibilityChange={legend.handleVisibilityChange}
+          />
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={chartData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
-              <Legend 
-                itemSorter={(item: any) => {
-                  // Custom sort order: "Started" first, then "Completed"
-                  const order: { [key: string]: number } = {
-                    'Started': 0,
-                    'Completed': 1
-                  };
-                  return order[item.value] ?? 999;
-                }}
-              />
-              <Bar dataKey="Started" fill="#0088FE" name="Started" />
-              <Bar dataKey="Completed" fill="#00C49F" name="Completed" />
+              {legend.isSeriesVisible('Started') && (
+                <Bar dataKey="Started" fill="#0088FE" name="Started" />
+              )}
+              {legend.isSeriesVisible('Completed') && (
+                <Bar dataKey="Completed" fill="#00C49F" name="Completed" />
+              )}
             </BarChart>
           </ResponsiveContainer>
         </>

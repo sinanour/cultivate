@@ -462,6 +462,13 @@ src/
   - Provides visual focus indicators when segmented control options receive focus
   - Includes appropriate ARIA labels for screen readers (aria-label="Activities chart view mode")
   - Announces view mode changes to screen readers using aria-live region
+  - Displays interactive legend when multiple activity types or categories are shown
+  - Allows users to click legend items to toggle individual series visibility
+  - Visually indicates hidden series with dimmed text or reduced opacity in legend
+  - Adjusts chart axis scales dynamically when series are toggled
+  - Provides hover states on legend items to indicate clickability
+  - Ensures legend items are keyboard navigable (Tab key) and screen reader accessible
+  - Optionally persists series visibility state in session storage for current session
 - Provides multi-dimensional grouping controls:
   - Activity category grouping
   - Activity type grouping
@@ -500,8 +507,16 @@ src/
     - Venue names rendered as hyperlinks to /venues/:id
     - Geographic area names rendered as hyperlinks to /geographic-areas/:id
   - Each metric displayed in its own column for easy comparison
-- Shows role distribution within filtered and grouped results
-- Displays geographic breakdown chart showing engagement by geographic area
+- Shows role distribution chart within filtered and grouped results with interactive legend:
+  - Allows users to click legend items to toggle individual role series on/off
+  - Visually indicates hidden series with dimmed text or reduced opacity
+  - Adjusts chart scales dynamically when series are toggled
+  - Provides hover states and keyboard navigation for legend items
+- Displays geographic breakdown chart showing engagement by geographic area with interactive legend:
+  - Allows users to click legend items to toggle individual geographic area series on/off
+  - Visually indicates hidden series with dimmed text or reduced opacity
+  - Adjusts chart scales dynamically when series are toggled
+  - Provides hover states and keyboard navigation for legend items
 - Allows drilling down into child geographic areas
 - Uses recharts library for data visualization
 - Displays all-time metrics when no date range specified
@@ -525,6 +540,11 @@ src/
 - Displays two data series using recharts BarChart:
   - "Started" series (activities with startDate within time period or all time) - blue color (#0088FE)
   - "Completed" series (activities with endDate within time period and status COMPLETED, or all completed) - green color (#00C49F)
+- Displays interactive legend allowing users to toggle individual data series (Started/Completed) on/off
+- Visually indicates hidden series in legend with dimmed text or reduced opacity
+- Adjusts chart axis scales dynamically when series are toggled
+- Provides hover states on legend items to indicate clickability
+- Ensures legend is keyboard navigable and screen reader accessible
 - Excludes cancelled activities from both series
 - Updates chart data when view mode toggle changes
 - Animates transitions smoothly when switching between views
@@ -564,7 +584,14 @@ src/
 - When "Activity Type" selected: displays multiple time-series lines in both charts, one line for each activity type showing unique participants and unique activities for that type
 - When "Activity Category" selected: displays multiple time-series lines in both charts, one line for each activity category showing unique participants and unique activities for that category
 - Uses consistent color scheme across both Unique Participants chart and Unique Activities chart, so the same activity type or category has the same color on both charts
-- Displays legend on both charts showing color mapping for each activity type or category when multiple lines are displayed
+- Displays interactive legend on both charts showing color mapping for each activity type or category when multiple lines are displayed
+- Allows users to click legend items to toggle individual data series on/off
+- Visually indicates hidden series in legend (dimmed text or reduced opacity)
+- Maintains at least one visible series or displays appropriate message when all are hidden
+- Adjusts chart axis scales dynamically when series are toggled
+- Provides hover states on legend items to indicate clickability
+- Ensures legend items are keyboard navigable and screen reader accessible
+- Optionally persists series visibility state in session storage
 - Updates both charts without page refresh when view mode changes between "All", "Activity Type", and "Activity Category"
 - Preserves current time period, date range, and geographic area filter selections when switching between view modes
 - Stores selected view mode in browser localStorage (key: "growthChartViewMode")
@@ -623,6 +650,27 @@ src/
 - Uses React Query for caching and request deduplication
 - Implements virtual scrolling for large result sets
 - Provides accessible keyboard navigation and screen reader support
+
+**InteractiveLegend**
+- Reusable component for making chart legends interactive across all multi-series charts
+- Wraps recharts Legend component with click handlers and state management
+- Maintains visibility state for each data series (visible/hidden)
+- Provides onClick handler for legend items to toggle series visibility
+- Applies visual styling to indicate hidden series (opacity: 0.5, text-decoration: line-through, or dimmed color)
+- Provides hover states (cursor: pointer, slight highlight) to indicate legend items are clickable
+- Integrates with recharts charts by controlling which series are rendered
+- Optionally persists series visibility state in sessionStorage (key: `chart-{chartId}-series-visibility`)
+- Restores series visibility state on component mount
+- Ensures at least one series remains visible (prevents hiding all series)
+- Provides keyboard navigation support (Tab to focus, Enter/Space to toggle)
+- Includes ARIA attributes for accessibility (role="button", aria-pressed, aria-label)
+- Announces series visibility changes to screen readers using aria-live region
+
+**Implementation Details:**
+- Accepts props: chartId (unique identifier), series (array of series names), onVisibilityChange callback
+- Returns visibility state object mapping series names to boolean values
+- Can be used with recharts LineChart, BarChart, AreaChart, and other chart types
+- Integrates seamlessly with existing chart configurations
 
 ### Service Layer
 
@@ -2152,6 +2200,44 @@ All entities support optimistic locking via the `version` field. When updating a
 **Property 112: Field clearing vs omission distinction**
 *For any* form update, fields that are not modified should be omitted from the API request (preserving existing values), while fields that are explicitly cleared should send null to the API (clearing the values).
 **Validates: Requirements 26.9**
+
+### Interactive Chart Legend Properties
+
+**Property 113: Legend Item Click Toggles Series Visibility**
+*For any* chart with multiple data series and an interactive legend, clicking a legend item should toggle the visibility of the corresponding data series in the chart.
+**Validates: Requirements 27.2**
+
+**Property 114: Hidden Series Visual Indication**
+*For any* chart legend with hidden data series, the legend should visually indicate which series are hidden through dimmed text, reduced opacity, or other clear visual treatment.
+**Validates: Requirements 27.3, 27.4**
+
+**Property 115: Independent Series Toggling**
+*For any* chart with multiple data series, each series should be independently toggleable without affecting the visibility state of other series.
+**Validates: Requirements 27.5**
+
+**Property 116: Minimum Visible Series**
+*For any* chart with interactive legend, at least one data series should remain visible at all times, or an appropriate message should be displayed when attempting to hide all series.
+**Validates: Requirements 27.6**
+
+**Property 117: Interactive Legend Application to All Multi-Series Charts**
+*For any* chart that displays multiple data series (Activities chart, Activity Lifecycle chart, Growth Dashboard charts, Geographic breakdown chart, Role distribution chart), an interactive legend should be provided.
+**Validates: Requirements 27.1, 27.7**
+
+**Property 118: Chart Responsiveness with Series Toggling**
+*For any* chart with series toggled on or off, the chart should remain interactive and responsive, with axis scales and ranges updating appropriately to reflect the visible data.
+**Validates: Requirements 27.8, 27.9**
+
+**Property 119: Legend Item Hover Feedback**
+*For any* interactive legend item, hovering over it should provide visual feedback (e.g., cursor change, highlight) to indicate it is clickable.
+**Validates: Requirements 27.10**
+
+**Property 120: Legend Accessibility**
+*For any* interactive legend, legend items should be keyboard navigable (Tab key) and screen reader compatible with appropriate ARIA attributes.
+**Validates: Requirements 27.11**
+
+**Property 121: Series Visibility Persistence**
+*For any* chart with toggled series visibility, the visibility state should be persisted in browser session storage and restored when the user returns to the chart.
+**Validates: Requirements 27.12**
 
 ## Error Handling
 

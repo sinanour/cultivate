@@ -10,10 +10,11 @@ import Select from '@cloudscape-design/components/select';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import type { TimePeriod } from '../../utils/constants';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
@@ -216,6 +217,34 @@ export function GrowthDashboard() {
     },
   });
 
+  // Prepare data for grouped view (before hooks)
+  const groupNames = metrics?.groupedTimeSeries ? Object.keys(metrics.groupedTimeSeries).sort() : [];
+  const groupColors = groupNames.reduce((acc, name) => {
+    acc[name] = getColorForGroup(name, groupNames);
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Prepare legend items for interactive legends (before hooks)
+  const participantLegendItems: LegendItem[] = viewMode === 'all' 
+    ? []
+    : groupNames.map((name) => ({
+        name,
+        color: groupColors[name],
+        dataKey: `uniqueParticipants_${name}`,
+      }));
+
+  const activityLegendItems: LegendItem[] = viewMode === 'all'
+    ? []
+    : groupNames.map((name) => ({
+        name,
+        color: groupColors[name],
+        dataKey: `uniqueActivities_${name}`,
+      }));
+
+  // Use interactive legend hooks (MUST be called before any conditional returns)
+  const participantLegend = useInteractiveLegend('growth-participants', participantLegendItems);
+  const activityLegend = useInteractiveLegend('growth-activities', activityLegendItems);
+
   const periodOptions = [
     { label: 'Daily', value: 'DAY' as TimePeriod },
     { label: 'Weekly', value: 'WEEK' as TimePeriod },
@@ -259,13 +288,6 @@ export function GrowthDashboard() {
       }
     });
   }
-
-  // Prepare data for grouped view
-  const groupNames = metrics.groupedTimeSeries ? Object.keys(metrics.groupedTimeSeries).sort() : [];
-  const groupColors = groupNames.reduce((acc, name) => {
-    acc[name] = getColorForGroup(name, groupNames);
-    return acc;
-  }, {} as Record<string, string>);
 
   // Merge grouped time series data into a single dataset for charts
   const mergedTimeSeriesData = viewMode === 'all' ? timeSeriesData : (() => {
@@ -328,7 +350,12 @@ export function GrowthDashboard() {
                   customRelativeRangeOptionDescription: 'Set a custom range in the past',
                   customRelativeRangeUnitLabel: 'Unit of time',
                   formatRelativeRange: (value) => {
-                    const unit = value.unit === 'day' ? 'days' : value.unit === 'week' ? 'weeks' : value.unit === 'month' ? 'months' : 'years';
+                    const unit = value.amount === 1 
+                      ? value.unit 
+                      : value.unit === 'day' ? 'days' 
+                      : value.unit === 'week' ? 'weeks' 
+                      : value.unit === 'month' ? 'months' 
+                      : 'years';
                     return `Last ${value.amount} ${unit}`;
                   },
                   formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
@@ -386,6 +413,13 @@ export function GrowthDashboard() {
       </ColumnLayout>
 
       <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
+        {viewMode !== 'all' && participantLegendItems.length > 0 && (
+          <InteractiveLegend
+            chartId="growth-participants"
+            series={participantLegendItems}
+            onVisibilityChange={participantLegend.handleVisibilityChange}
+          />
+        )}
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={mergedTimeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -394,7 +428,6 @@ export function GrowthDashboard() {
               label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip />
-            {viewMode !== 'all' && <Legend />}
             {viewMode === 'all' ? (
               <Line
                 type="monotone"
@@ -404,22 +437,31 @@ export function GrowthDashboard() {
                 name="Unique Participants"
               />
             ) : (
-              groupNames.map((groupName) => (
-                <Line
-                  key={groupName}
-                  type="monotone"
-                  dataKey={`uniqueParticipants_${groupName}`}
-                  stroke={groupColors[groupName]}
-                  strokeWidth={2}
-                  name={groupName}
-                />
-              ))
+              groupNames
+                .filter((groupName) => participantLegend.isSeriesVisible(groupName))
+                .map((groupName) => (
+                  <Line
+                    key={groupName}
+                    type="monotone"
+                    dataKey={`uniqueParticipants_${groupName}`}
+                    stroke={groupColors[groupName]}
+                    strokeWidth={2}
+                    name={groupName}
+                  />
+                ))
             )}
           </LineChart>
         </ResponsiveContainer>
       </Container>
 
       <Container header={<Header variant="h3">Unique Activities Over Time</Header>}>
+        {viewMode !== 'all' && activityLegendItems.length > 0 && (
+          <InteractiveLegend
+            chartId="growth-activities"
+            series={activityLegendItems}
+            onVisibilityChange={activityLegend.handleVisibilityChange}
+          />
+        )}
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={mergedTimeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -428,7 +470,6 @@ export function GrowthDashboard() {
               label={{ value: 'Unique Activities', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip />
-            {viewMode !== 'all' && <Legend />}
             {viewMode === 'all' ? (
               <Line
                 type="monotone"
@@ -438,16 +479,18 @@ export function GrowthDashboard() {
                 name="Unique Activities"
               />
             ) : (
-              groupNames.map((groupName) => (
-                <Line
-                  key={groupName}
-                  type="monotone"
-                  dataKey={`uniqueActivities_${groupName}`}
-                  stroke={groupColors[groupName]}
-                  strokeWidth={2}
-                  name={groupName}
-                />
-              ))
+              groupNames
+                .filter((groupName) => activityLegend.isSeriesVisible(groupName))
+                .map((groupName) => (
+                  <Line
+                    key={groupName}
+                    type="monotone"
+                    dataKey={`uniqueActivities_${groupName}`}
+                    stroke={groupColors[groupName]}
+                    strokeWidth={2}
+                    name={groupName}
+                  />
+                ))
             )}
           </LineChart>
         </ResponsiveContainer>
