@@ -467,7 +467,7 @@ The system implements a comprehensive geographic tracking system that enables lo
 
 **Geographic Area Hierarchy**:
 - Recursive parent-child relationships enable multi-level geographic organization
-- Supports standard types (neighbourhood, city, county, state, country) and custom types
+- Supports standard types (neighbourhood, community, city, cluster, county, province, state, country, continent, hemisphere, world)
 - Enables reporting at any level of geographic granularity
 - Statistics aggregate from leaf nodes up through the hierarchy
 
@@ -674,7 +674,9 @@ enum GeographicAreaType {
   Province = "PROVINCE",
   State = "STATE",
   Country = "COUNTRY",
-  Custom = "CUSTOM"
+  Continent = "CONTINENT",
+  Hemisphere = "HEMISPHERE",
+  World = "WORLD"
 }
 
 interface GeographicAreaStatistics {

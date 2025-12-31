@@ -842,7 +842,7 @@ interface Venue {
 interface GeographicArea {
   id: string;
   name: string;
-  areaType: 'NEIGHBOURHOOD' | 'COMMUNITY' | 'CITY' | 'CLUSTER' | 'COUNTY' | 'PROVINCE' | 'STATE' | 'COUNTRY' | 'CUSTOM';
+  areaType: 'NEIGHBOURHOOD' | 'COMMUNITY' | 'CITY' | 'CLUSTER' | 'COUNTY' | 'PROVINCE' | 'STATE' | 'COUNTRY' | 'CONTINENT' | 'HEMISPHERE' | 'WORLD';
   parentGeographicAreaId?: string;
   parent?: GeographicArea;
   children?: GeographicArea[];

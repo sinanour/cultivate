@@ -68,8 +68,7 @@ export type AreaType =
     | 'COUNTRY'
     | 'CONTINENT'
     | 'HEMISPHERE'
-    | 'WORLD'
-    | 'CUSTOM';
+    | 'WORLD';
 
 export interface GeographicArea {
     id: string;

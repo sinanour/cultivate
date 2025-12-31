@@ -171,6 +171,7 @@ This implementation plan covers the native Android application built with Java/K
 
   - [ ] 12.3 Create GeographicAreaFormScreen
     - Validate required fields (name, area type)
+    - Provide dropdown for area type selection (NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD)
     - Support parent selection
     - Prevent circular relationships
     - _Requirements: 6B.2, 6B.3, 6B.5, 6B.6, 6B.7_

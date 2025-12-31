@@ -283,7 +283,7 @@ VenueCreateSchema = {
 // Geographic Area Schema
 GeographicAreaCreateSchema = {
   name: string (required, min 1 char, max 200 chars),
-  areaType: enum (required, NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CUSTOM),
+  areaType: enum (required, NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD),
   parentGeographicAreaId: string (optional, valid UUID)
 }
 
@@ -429,7 +429,7 @@ The API uses Prisma to define the following database models:
 **GeographicArea**
 - id: UUID (primary key)
 - name: String
-- areaType: Enum (NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CUSTOM)
+- areaType: Enum (NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD)
 - parentGeographicAreaId: UUID (foreign key, optional)
 - createdAt: DateTime
 - updatedAt: DateTime
@@ -1018,7 +1018,7 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 5B.9**
 
 **Property 99: Geographic area type validation**
-*For any* geographic area, the area type should be one of: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, or CUSTOM.
+*For any* geographic area, the area type should be one of: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, or WORLD.
 **Validates: Requirements 5B.10**
 
 **Property 100: Geographic area deletion prevention**
@@ -1184,7 +1184,7 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 5B.9**
 
 **Property 83: Geographic area type validation**
-*For any* geographic area, the area type should be one of: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, or CUSTOM.
+*For any* geographic area, the area type should be one of: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, or WORLD.
 **Validates: Requirements 5B.10**
 
 **Property 84: Geographic area deletion prevention**
@@ -2000,7 +2000,7 @@ const ActivityImportSchema = z.object({
 const GeographicAreaImportSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1).max(200),
-  areaType: z.enum(['NEIGHBOURHOOD', 'COMMUNITY', 'CITY', 'CLUSTER', 'COUNTY', 'PROVINCE', 'STATE', 'COUNTRY', 'CUSTOM']),
+  areaType: z.enum(['NEIGHBOURHOOD', 'COMMUNITY', 'CITY', 'CLUSTER', 'COUNTY', 'PROVINCE', 'STATE', 'COUNTRY', 'CONTINENT', 'HEMISPHERE', 'WORLD']),
   parentGeographicAreaId: z.string().uuid().optional().or(z.literal(''))
 });
 ```

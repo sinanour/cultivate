@@ -33,7 +33,9 @@ export enum GeographicAreaType {
     PROVINCE = 'PROVINCE',
     STATE = 'STATE',
     COUNTRY = 'COUNTRY',
-    CUSTOM = 'CUSTOM',
+    CONTINENT = 'CONTINENT',
+    HEMISPHERE = 'HEMISPHERE',
+    WORLD = 'WORLD',
 }
 
 // Sync Operation Types

@@ -23,7 +23,7 @@ This document defines the overall system requirements and references detailed sp
 - **Backend_API**: The RESTful API service that provides business logic and data access
 - **Infrastructure**: The AWS cloud resources that host the system
 - **Venue**: A physical location where activities occur, representing either a public building or private residence with an address
-- **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, county, province, state, country, etc.) used to organize venues and report statistics
+- **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, cluster, county, province, state, country, continent, hemisphere, world) used to organize venues and report statistics
 
 ## System Architecture
 
@@ -175,7 +175,7 @@ The Community Activity Tracker system is organized into five independent package
 
 1. THE System SHALL support creating, reading, updating, and deleting geographic areas
 2. THE System SHALL require each geographic area to have a name and type
-3. THE System SHALL support area types including neighbourhood, community, city, cluster, county, province, state, country, and custom types
+3. THE System SHALL support area types including neighbourhood, community, city, cluster, county, province, state, country, continent, hemisphere, and world
 4. THE System SHALL allow each geographic area to have a parent geographic area
 5. THE System SHALL prevent circular parent-child relationships in the geographic hierarchy
 6. THE System SHALL provide navigation through the geographic hierarchy (ancestors, descendants)

@@ -170,7 +170,7 @@ class Venue: NSManagedObject {
 class GeographicArea: NSManagedObject {
     @NSManaged var id: UUID
     @NSManaged var name: String
-    @NSManaged var areaType: String // NEIGHBOURHOOD, COMMUNITY, CITY, etc.
+    @NSManaged var areaType: String // NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD
     @NSManaged var parentGeographicAreaId: UUID?
     @NSManaged var createdAt: Date
     @NSManaged var updatedAt: Date

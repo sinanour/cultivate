@@ -361,6 +361,7 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [x] 9.2 Create GeographicAreaForm component
     - Validate required fields (name, area type)
+    - Provide dropdown for area type selection (NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD)
     - Support parent selection
     - Prevent circular relationships (CIRCULAR_REFERENCE error)
     - Include version field in update requests for optimistic locking

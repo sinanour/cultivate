@@ -15,7 +15,7 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Sync_Operation**: A batched offline change from a client
 - **Audit_Log**: A record of user actions for security and compliance
 - **Venue**: A physical location where activities occur, representing either a public building or private residence with an address
-- **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, county, province, state, country, etc.)
+- **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, cluster, county, province, state, country, continent, hemisphere, world)
 - **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
 
@@ -167,7 +167,7 @@ The Backend API package provides the RESTful API service that implements all bus
 7. WHEN creating a geographic area, THE API SHALL accept an optional parent geographic area ID
 8. WHEN creating a geographic area, THE API SHALL validate that the parent geographic area exists if provided
 9. WHEN creating a geographic area, THE API SHALL prevent circular parent-child relationships
-10. THE API SHALL support area types: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CUSTOM
+10. THE API SHALL support area types: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD
 11. WHEN deleting a geographic area, THE API SHALL prevent deletion if venues or child geographic areas reference it
 12. THE API SHALL provide a GET /api/geographic-areas/:id/children endpoint that returns all child geographic areas
 13. THE API SHALL provide a GET /api/geographic-areas/:id/ancestors endpoint that returns the full hierarchy path to the root

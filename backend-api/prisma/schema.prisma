@@ -96,7 +96,9 @@ enum AreaType {
   PROVINCE
   STATE
   COUNTRY
-  CUSTOM
+  CONTINENT
+  HEMISPHERE
+  WORLD
 }
 
 // Venue model for physical locations

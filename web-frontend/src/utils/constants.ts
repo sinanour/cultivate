@@ -39,7 +39,9 @@ export const GeographicAreaType = {
     PROVINCE: 'PROVINCE',
     STATE: 'STATE',
     COUNTRY: 'COUNTRY',
-    CUSTOM: 'CUSTOM',
+    CONTINENT: 'CONTINENT',
+    HEMISPHERE: 'HEMISPHERE',
+    WORLD: 'WORLD',
 } as const;
 
 export type GeographicAreaType = typeof GeographicAreaType[keyof typeof GeographicAreaType];

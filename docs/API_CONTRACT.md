@@ -705,7 +705,7 @@ Clients should refresh the access token before it expires using the refresh toke
     {
       "id": "string (UUID)",
       "name": "string",
-      "areaType": "NEIGHBOURHOOD | COMMUNITY | CITY | CLUSTER | COUNTY | PROVINCE | STATE | COUNTRY | CUSTOM",
+      "areaType": "NEIGHBOURHOOD | COMMUNITY | CITY | CLUSTER | COUNTY | PROVINCE | STATE | COUNTRY | CONTINENT | HEMISPHERE | WORLD",
       "parentGeographicAreaId": "string | null (UUID)",
       "parent": {
         "id": "string (UUID)",
@@ -748,7 +748,7 @@ Clients should refresh the access token before it expires using the refresh toke
 ```json
 {
   "name": "string",
-  "areaType": "NEIGHBOURHOOD | COMMUNITY | CITY | CLUSTER | COUNTY | PROVINCE | STATE | COUNTRY | CUSTOM",
+  "areaType": "NEIGHBOURHOOD | COMMUNITY | CITY | CLUSTER | COUNTY | PROVINCE | STATE | COUNTRY | CONTINENT | HEMISPHERE | WORLD",
   "parentGeographicAreaId": "string | null (UUID)"
 }
 ```
@@ -766,7 +766,7 @@ Clients should refresh the access token before it expires using the refresh toke
 ```json
 {
   "name": "string (optional)",
-  "areaType": "NEIGHBOURHOOD | COMMUNITY | CITY | CLUSTER | COUNTY | PROVINCE | STATE | COUNTRY | CUSTOM (optional)",
+  "areaType": "NEIGHBOURHOOD | COMMUNITY | CITY | CLUSTER | COUNTY | PROVINCE | STATE | COUNTRY | CONTINENT | HEMISPHERE | WORLD (optional)",
   "parentGeographicAreaId": "string | null (UUID, optional)",
   "version": "number (optional, for optimistic locking)"
 }

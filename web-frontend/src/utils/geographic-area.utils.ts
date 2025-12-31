@@ -25,14 +25,11 @@ export const getAreaTypeBadgeColor = (
         PROVINCE: 'red',
         STATE: 'severity-critical',
 
-        // Large/global areas
+        // National and global areas
         COUNTRY: 'grey',
         CONTINENT: 'severity-neutral',
         HEMISPHERE: 'severity-neutral',
         WORLD: 'severity-neutral',
-
-        // Custom
-        CUSTOM: 'blue',
     };
     return colorMap[areaType];
 };

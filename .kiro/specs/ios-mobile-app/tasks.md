@@ -173,6 +173,7 @@ This implementation plan covers the native iOS application built with Swift, Swi
 
   - [ ] 10.2 Create GeographicAreaFormView
     - Validate required fields (name, area type)
+    - Provide picker for area type selection (NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD)
     - Support parent selection
     - Prevent circular relationships
     - _Requirements: 6B.2, 6B.3, 6B.5, 6B.6, 6B.7_

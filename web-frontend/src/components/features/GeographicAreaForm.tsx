@@ -64,7 +64,9 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
     { label: 'Province', value: 'PROVINCE' },
     { label: 'State', value: 'STATE' },
     { label: 'Country', value: 'COUNTRY' },
-    { label: 'Custom', value: 'CUSTOM' },
+    { label: 'Continent', value: 'CONTINENT' },
+    { label: 'Hemisphere', value: 'HEMISPHERE' },
+    { label: 'World', value: 'WORLD' },
   ];
 
   const createMutation = useMutation({

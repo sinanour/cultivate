@@ -330,6 +330,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 
   - [x] 9.2 Create geographic area service
     - Validate required fields (name, area type)
+    - Validate area type is one of: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD
     - Validate parent geographic area exists
     - Prevent circular parent-child relationships
     - Prevent deletion if venues or child areas reference area
