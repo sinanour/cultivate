@@ -128,16 +128,19 @@ enum VenueType {
 
 // Participant model
 model Participant {
-  id             String                      @id @default(uuid())
-  name           String
-  email          String                      @unique
-  phone          String?
-  notes          String?
-  version        Int                         @default(1)
-  createdAt      DateTime                    @default(now())
-  updatedAt      DateTime                    @updatedAt
-  assignments    Assignment[]
-  addressHistory ParticipantAddressHistory[]
+  id                 String                      @id @default(uuid())
+  name               String
+  email              String?                     @unique
+  phone              String?
+  notes              String?
+  dateOfBirth        DateTime?
+  dateOfRegistration DateTime?
+  nickname           String?
+  version            Int                         @default(1)
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  assignments        Assignment[]
+  addressHistory     ParticipantAddressHistory[]
 
   @@index([email])
   @@index([name])

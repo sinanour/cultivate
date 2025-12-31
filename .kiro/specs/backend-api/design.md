@@ -168,7 +168,7 @@ Services implement business logic and coordinate operations:
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, validates activity category references, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
 - **UserService**: Manages user CRUD operations (admin only), validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates
-- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
+- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
@@ -247,9 +247,12 @@ RoleCreateSchema = {
 // Participant Schema
 ParticipantCreateSchema = {
   name: string (required, min 1 char, max 200 chars),
-  email: string (required, valid email format),
+  email: string (optional, valid email format if provided),
   phone: string (optional, max 20 chars),
-  notes: string (optional, max 1000 chars)
+  notes: string (optional, max 1000 chars),
+  dateOfBirth: date (optional, must be in the past if provided),
+  dateOfRegistration: date (optional),
+  nickname: string (optional, max 100 chars)
 }
 
 // Activity Schema
@@ -389,9 +392,12 @@ The API uses Prisma to define the following database models:
 **Participant**
 - id: UUID (primary key)
 - name: String
-- email: String (unique)
+- email: String (optional, unique if provided)
 - phone: String (optional)
 - notes: String (optional)
+- dateOfBirth: DateTime (optional)
+- dateOfRegistration: DateTime (optional)
+- nickname: String (optional)
 - createdAt: DateTime
 - updatedAt: DateTime
 - assignments: Assignment[] (relation)
@@ -530,20 +536,28 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 1.5, 1.12, 2.5**
 
 **Property 5: Required field validation**
-*For any* resource creation request missing required fields, the API should reject it with a 400 error and detailed validation message.
+*For any* resource creation request missing required fields (name for participants, name/activityTypeId/startDate for activities, etc.), the API should reject it with a 400 error and detailed validation message.
 **Validates: Requirements 3.7, 4.6, 5.4**
 
 **Property 6: Email format validation**
-*For any* participant creation or update with an invalid email format, the API should reject it with a 400 error.
-**Validates: Requirements 3.8**
+*For any* participant creation or update with an email provided that has an invalid format, the API should reject it with a 400 error.
+**Validates: Requirements 3.9**
 
 **Property 7: Email uniqueness enforcement**
-*For any* participant, attempting to create or update with a duplicate email should be rejected with a 400 error.
-**Validates: Requirements 3.8**
+*For any* participant, attempting to create or update with a duplicate email (when email is provided) should be rejected with a 400 error.
+**Validates: Requirements 3.10**
 
 **Property 8: Optional field acceptance**
-*For any* participant creation with or without optional phone and notes fields, the API should accept it and persist the provided values.
-**Validates: Requirements 3.9**
+*For any* participant creation with or without optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields, the API should accept it and persist the provided values.
+**Validates: Requirements 3.8**
+
+**Property 8A: Date of birth validation**
+*For any* participant creation or update with a dateOfBirth provided that is not in the past, the API should reject it with a 400 error.
+**Validates: Requirements 3.11**
+
+**Property 8B: Date of registration validation**
+*For any* participant creation or update with a dateOfRegistration provided that is not a valid date, the API should reject it with a 400 error.
+**Validates: Requirements 3.12**
 
 **Property 9: Activity date validation**
 *For any* finite activity, attempting to create it without an end date should be rejected with a 400 error.

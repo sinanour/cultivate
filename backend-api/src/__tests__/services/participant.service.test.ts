@@ -138,8 +138,7 @@ describe('ParticipantService', () => {
         });
 
         it('should throw error for missing required fields', async () => {
-            await expect(service.createParticipant({ name: '', email: 'test@example.com' })).rejects.toThrow('required');
-            await expect(service.createParticipant({ name: 'John', email: '' })).rejects.toThrow('required');
+            await expect(service.createParticipant({ name: '' })).rejects.toThrow('required');
         });
 
         it('should throw error for invalid email format', async () => {

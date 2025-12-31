@@ -165,8 +165,11 @@ src/
 
 **ParticipantForm**
 - Modal form for creating/editing participants
-- Validates name, email format, and required fields
-- Supports optional phone and notes fields
+- Validates name as required field
+- Validates email format when email is provided (email is optional)
+- Validates dateOfBirth is in the past when provided (optional)
+- Validates dateOfRegistration is a valid date when provided (optional)
+- Supports optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields
 - Displays inline validation errors
 - Includes embedded address history management section within the form
 - Allows adding new address history records with venue and effective start date
@@ -1096,7 +1099,7 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 5: Participant List Display
 
-*For any* participant, the list view should include both the participant's name and email in the rendered output.
+*For any* participant, the list view should include the participant's name and email (if provided) in the rendered output.
 
 **Validates: Requirements 4.1**
 
@@ -1108,9 +1111,27 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 7: Required Field Validation
 
-*For any* form submission with missing required fields (participant name/email, activity name/type/start date, login email/password), the validation should fail and prevent submission.
+*For any* form submission with missing required fields (participant name, activity name/type/start date, login email/password), the validation should fail and prevent submission.
 
 **Validates: Requirements 4.7, 5.10, 8.2**
+
+### Property 7A: Optional Email Validation
+
+*For any* participant form submission with an email provided, the email format should be validated, and invalid formats should prevent submission.
+
+**Validates: Requirements 4.8**
+
+### Property 7B: Date of Birth Validation
+
+*For any* participant form submission with a dateOfBirth provided that is not in the past, the validation should fail and prevent submission.
+
+**Validates: Requirements 4.10**
+
+### Property 7C: Date of Registration Validation
+
+*For any* participant form submission with a dateOfRegistration provided that is not a valid date, the validation should fail and prevent submission.
+
+**Validates: Requirements 4.11**
 
 ### Property 8: Email Format Validation
 

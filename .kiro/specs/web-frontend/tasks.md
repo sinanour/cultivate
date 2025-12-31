@@ -1153,6 +1153,59 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 98: Dropdown Combined Filtering**
     - **Validates: Requirements 25.4, 25.5, 25.6, 25.7**
 
+- [ ] 26. Enhance Participant entity with additional optional fields
+  - [ ] 26.1 Update ParticipantForm component
+    - Make email field optional (remove required validation)
+    - Add dateOfBirth field (DatePicker, optional)
+    - Add dateOfRegistration field (DatePicker, optional)
+    - Add nickname field (Input, optional, max 100 chars)
+    - Validate email format only when email is provided
+    - Validate dateOfBirth is in the past when provided
+    - Validate dateOfRegistration is a valid date when provided
+    - Update form state to include new fields
+    - _Requirements: 4.7, 4.8, 4.9, 4.10, 4.11_
+
+  - [ ] 26.2 Update ParticipantList component
+    - Update table columns to handle optional email (display empty cell or placeholder)
+    - Consider adding nickname column if space permits
+    - Ensure search still works with optional email
+    - _Requirements: 4.1, 4.2_
+
+  - [ ] 26.3 Update ParticipantDetail component
+    - Display new fields (dateOfBirth, dateOfRegistration, nickname) in detail view
+    - Format dates appropriately for display
+    - Handle null/undefined values gracefully
+    - Display email as optional field
+    - _Requirements: 4.12_
+
+  - [ ] 26.4 Update TypeScript types
+    - Update Participant interface to include new optional fields
+    - Update ParticipantFormData interface
+    - Ensure type safety across all components
+    - _Requirements: 4.9, 4.10, 4.11_
+
+  - [ ] 26.5 Update validation utilities
+    - Update participant validation to make email optional
+    - Add dateOfBirth validation (must be in past)
+    - Add dateOfRegistration validation (valid date)
+    - Add nickname validation (max 100 chars)
+    - _Requirements: 4.8, 4.10, 4.11_
+
+  - [ ]* 26.6 Write property tests for new participant fields
+    - **Property 7A: Optional Email Validation**
+    - **Property 7B: Date of Birth Validation**
+    - **Property 7C: Date of Registration Validation**
+    - **Property 99: Nickname Length Validation**
+    - **Validates: Requirements 4.8, 4.9, 4.10, 4.11**
+
+  - [ ] 26.7 Update API service
+    - Ensure ParticipantService handles new fields in requests/responses
+    - Update createParticipant and updateParticipant methods
+    - _Requirements: 4.9, 4.10, 4.11_
+
+- [ ] 27. Checkpoint - Verify participant enhancements
+  - Ensure all tests pass, ask the user if questions arise.
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

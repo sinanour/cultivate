@@ -202,12 +202,30 @@ export function ParticipantDetail() {
         <ColumnLayout columns={2} variant="text-grid">
           <div>
             <Box variant="awsui-key-label">Email</Box>
-            <div>{participant.email}</div>
+            <div>{participant.email || '-'}</div>
           </div>
           <div>
             <Box variant="awsui-key-label">Phone</Box>
             <div>{participant.phone || '-'}</div>
           </div>
+          {participant.nickname && (
+            <div>
+              <Box variant="awsui-key-label">Nickname</Box>
+              <div>{participant.nickname}</div>
+            </div>
+          )}
+          {participant.dateOfBirth && (
+            <div>
+              <Box variant="awsui-key-label">Date of Birth</Box>
+              <div>{formatDate(participant.dateOfBirth)}</div>
+            </div>
+          )}
+          {participant.dateOfRegistration && (
+            <div>
+              <Box variant="awsui-key-label">Date of Registration</Box>
+              <div>{formatDate(participant.dateOfRegistration)}</div>
+            </div>
+          )}
           <div>
             <Box variant="awsui-key-label">Created</Box>
             <div>{formatDate(participant.createdAt)}</div>

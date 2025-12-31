@@ -52,7 +52,7 @@ export function ParticipantList() {
     return participants.filter(
       (p) =>
         p.name.toLowerCase().includes(searchTerm) ||
-        p.email.toLowerCase().includes(searchTerm)
+        (p.email && p.email.toLowerCase().includes(searchTerm))
     );
   }, [participants, filteringText]);
 
@@ -109,7 +109,7 @@ export function ParticipantList() {
           {
             id: 'email',
             header: 'Email',
-            cell: (item) => item.email,
+            cell: (item) => item.email || '-',
             sortingField: 'email',
           },
           {

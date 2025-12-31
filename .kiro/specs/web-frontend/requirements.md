@@ -81,16 +81,18 @@ The Web Frontend package provides a responsive React-based web application that 
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL display a list of all participants with name and email
+1. THE Web_App SHALL display a list of all participants with name, email (if provided), and other relevant information
 2. THE Web_App SHALL provide search functionality to find participants by name or email
 3. THE Web_App SHALL provide sorting and filtering for the participant list
 4. THE Web_App SHALL provide a form to create new participants
 5. THE Web_App SHALL provide a form to edit existing participants
 6. THE Web_App SHALL provide a delete button for participants
-7. THE Web_App SHALL validate that participant name and email are provided
-8. THE Web_App SHALL validate email format
-9. THE Web_App SHALL allow optional phone and notes fields
-10. THE Web_App SHALL display a detail view showing participant information and their activities
+7. THE Web_App SHALL validate that participant name is provided
+8. WHEN a participant email is provided, THE Web_App SHALL validate email format
+9. THE Web_App SHALL allow optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields
+10. WHEN dateOfBirth is provided, THE Web_App SHALL validate that it is a valid date in the past
+11. WHEN dateOfRegistration is provided, THE Web_App SHALL validate that it is a valid date
+12. THE Web_App SHALL display a detail view showing participant information and their activities
 11. THE Web_App SHALL display a table of the participant's home address history in reverse chronological order
 12. THE Web_App SHALL provide an interface to add new address history records with venue and effective start date
 13. THE Web_App SHALL provide an interface to edit existing address history records

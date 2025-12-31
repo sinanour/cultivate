@@ -32,9 +32,12 @@ export interface ParticipantRole {
 export interface Participant {
     id: string;
     name: string;
-    email: string;
+    email?: string;
     phone?: string;
     notes?: string;
+    dateOfBirth?: string;
+    dateOfRegistration?: string;
+    nickname?: string;
     version: number;
     createdAt: string;
     updatedAt: string;

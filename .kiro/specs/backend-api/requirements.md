@@ -75,11 +75,14 @@ The Backend API package provides the RESTful API service that implements all bus
 4. THE API SHALL provide a PUT /api/participants/:id endpoint that updates a participant
 5. THE API SHALL provide a DELETE /api/participants/:id endpoint that deletes a participant
 6. THE API SHALL provide a GET /api/participants/search endpoint that searches by name or email
-7. WHEN creating a participant, THE API SHALL require name and email
-8. WHEN creating a participant, THE API SHALL validate email format and uniqueness
-9. WHEN creating a participant, THE API SHALL accept optional phone and notes fields
+7. WHEN creating a participant, THE API SHALL require name
+8. WHEN creating a participant, THE API SHALL accept optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields
+9. WHEN creating a participant with an email, THE API SHALL validate email format and uniqueness
+10. WHEN updating a participant with an email, THE API SHALL validate email format and uniqueness
 10. WHEN creating a participant, THE API SHALL accept an optional home venue ID
-11. WHEN updating a participant's home venue, THE API SHALL create a new address history record with the venue and effective start date
+11. WHEN creating a participant with dateOfBirth, THE API SHALL validate that it is a valid date in the past
+12. WHEN creating a participant with dateOfRegistration, THE API SHALL validate that it is a valid date
+13. WHEN updating a participant's home venue, THE API SHALL create a new address history record with the venue and effective start date
 12. THE API SHALL provide a GET /api/participants/:id/address-history endpoint that returns the participant's home address history ordered by effective start date descending
 13. THE API SHALL provide a POST /api/participants/:id/address-history endpoint that creates a new address history record
 14. THE API SHALL provide a PUT /api/participants/:id/address-history/:historyId endpoint that updates an existing address history record

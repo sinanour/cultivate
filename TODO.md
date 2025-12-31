@@ -116,7 +116,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Data Model Enhancements
 
-- [ ] 17. Enhance Participant entity with additional optional fields
+- [x] 17. Enhance Participant entity with additional optional fields
   - Make email address optional/nullable (currently required)
   - Add dateOfBirth attribute (nullable/optional)
   - Add dateOfRegistration attribute (nullable/optional)

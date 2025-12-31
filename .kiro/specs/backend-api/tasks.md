@@ -705,6 +705,54 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 123: Search Query Optimization**
     - **Validates: Requirements 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10**
 
+- [ ] 23. Enhance Participant entity with additional optional fields
+  - [ ] 23.1 Create Prisma migration for new participant fields
+    - Make email field optional/nullable in Participant model
+    - Add dateOfBirth field (DateTime, optional)
+    - Add dateOfRegistration field (DateTime, optional)
+    - Add nickname field (String, optional, max 100 chars)
+    - Update unique constraint on email to handle nulls properly
+    - _Requirements: 3.8, 3.11, 3.12_
+
+  - [ ] 23.2 Update validation schemas
+    - Update ParticipantCreateSchema to make email optional
+    - Add dateOfBirth validation (optional, must be in past)
+    - Add dateOfRegistration validation (optional, valid date)
+    - Add nickname validation (optional, max 100 chars)
+    - Update ParticipantUpdateSchema with same validations
+    - _Requirements: 3.8, 3.9, 3.10, 3.11, 3.12_
+
+  - [ ] 23.3 Update ParticipantService
+    - Update email validation to only validate format when email is provided
+    - Update email uniqueness check to only validate when email is provided
+    - Add dateOfBirth validation (must be in past if provided)
+    - Add dateOfRegistration validation (must be valid date if provided)
+    - Update service methods to handle new optional fields
+    - _Requirements: 3.9, 3.10, 3.11, 3.12_
+
+  - [ ] 23.4 Update API responses
+    - Include new fields in participant response objects
+    - Update OpenAPI specification with new fields
+    - Ensure backward compatibility with existing clients
+    - _Requirements: 3.8, 3.11, 3.12_
+
+  - [ ]* 23.5 Write property tests for new participant fields
+    - **Property 8A: Date of Birth Validation**
+    - **Property 8B: Date of Registration Validation**
+    - **Property 124: Optional Email Acceptance**
+    - **Property 125: Email Validation When Provided**
+    - **Property 126: Email Uniqueness When Provided**
+    - **Validates: Requirements 3.8, 3.9, 3.10, 3.11, 3.12**
+
+  - [ ] 23.6 Update seed data and test fixtures
+    - Update any seed data to work with optional email
+    - Update test fixtures to include new fields
+    - Ensure existing tests still pass
+    - _Requirements: 3.8, 3.11, 3.12_
+
+- [ ] 24. Checkpoint - Verify participant enhancements
+  - Ensure all tests pass, ask the user if questions arise.
+
 ## Global Geographic Area Filter Implementation Notes
 
 **Query Parameter Support:**

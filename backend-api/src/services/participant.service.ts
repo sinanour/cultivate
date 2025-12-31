@@ -8,17 +8,23 @@ import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 
 export interface CreateParticipantInput {
     name: string;
-    email: string;
+    email?: string;
     phone?: string;
     notes?: string;
+    dateOfBirth?: string;
+    dateOfRegistration?: string;
+    nickname?: string;
     homeVenueId?: string;
 }
 
 export interface UpdateParticipantInput {
     name?: string;
-    email?: string;
+    email?: string | null;
     phone?: string;
     notes?: string;
+    dateOfBirth?: string | null;
+    dateOfRegistration?: string | null;
+    nickname?: string;
     homeVenueId?: string;
     version?: number;
 }
@@ -157,20 +163,27 @@ export class ParticipantService {
         if (!data.name || data.name.trim().length === 0) {
             throw new Error('Participant name is required');
         }
-        if (!data.email || data.email.trim().length === 0) {
-            throw new Error('Participant email is required');
+
+        // Validate email format if provided
+        if (data.email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(data.email)) {
+                throw new Error('Invalid email format');
+            }
+
+            // Validate email uniqueness
+            const existing = await this.participantRepository.findByEmail(data.email);
+            if (existing) {
+                throw new Error('Participant with this email already exists');
+            }
         }
 
-        // Validate email format (basic check)
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(data.email)) {
-            throw new Error('Invalid email format');
-        }
-
-        // Validate email uniqueness
-        const existing = await this.participantRepository.findByEmail(data.email);
-        if (existing) {
-            throw new Error('Participant with this email already exists');
+        // Validate dateOfBirth is in the past if provided
+        if (data.dateOfBirth) {
+            const dob = new Date(data.dateOfBirth);
+            if (dob >= new Date()) {
+                throw new Error('Date of birth must be in the past');
+            }
         }
 
         // Validate home venue if provided
@@ -188,9 +201,12 @@ export class ParticipantService {
             const participant = await tx.participant.create({
                 data: {
                     name: data.name,
-                    email: data.email,
+                    email: data.email || null,
                     phone: data.phone,
                     notes: data.notes,
+                    dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+                    dateOfRegistration: data.dateOfRegistration ? new Date(data.dateOfRegistration) : null,
+                    nickname: data.nickname,
                 },
             });
 
@@ -226,6 +242,14 @@ export class ParticipantService {
             const duplicate = await this.participantRepository.findByEmail(data.email);
             if (duplicate && duplicate.id !== id) {
                 throw new Error('Participant with this email already exists');
+            }
+        }
+
+        // Validate dateOfBirth is in the past if provided
+        if (data.dateOfBirth) {
+            const dob = new Date(data.dateOfBirth);
+            if (dob >= new Date()) {
+                throw new Error('Date of birth must be in the past');
             }
         }
 
@@ -270,11 +294,27 @@ export class ParticipantService {
         }
 
         // Update participant basic fields
-        const updateData: { name?: string; email?: string; phone?: string; notes?: string; version?: number } = {};
+        const updateData: {
+            name?: string;
+            email?: string | null;
+            phone?: string;
+            notes?: string;
+            dateOfBirth?: Date | null;
+            dateOfRegistration?: Date | null;
+            nickname?: string;
+            version?: number;
+        } = {};
         if (data.name !== undefined) updateData.name = data.name;
         if (data.email !== undefined) updateData.email = data.email;
         if (data.phone !== undefined) updateData.phone = data.phone;
         if (data.notes !== undefined) updateData.notes = data.notes;
+        if (data.dateOfBirth !== undefined) {
+            updateData.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+        }
+        if (data.dateOfRegistration !== undefined) {
+            updateData.dateOfRegistration = data.dateOfRegistration ? new Date(data.dateOfRegistration) : null;
+        }
+        if (data.nickname !== undefined) updateData.nickname = data.nickname;
         if (data.version !== undefined) updateData.version = data.version;
 
         try {

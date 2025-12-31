@@ -34,9 +34,15 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dateOfRegistration, setDateOfRegistration] = useState('');
+  const [nickname, setNickname] = useState('');
   
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [dateOfBirthError, setDateOfBirthError] = useState('');
+  const [dateOfRegistrationError, setDateOfRegistrationError] = useState('');
+  const [nicknameError, setNicknameError] = useState('');
   const [error, setError] = useState('');
 
   // Address history state
@@ -64,17 +70,26 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       setEmail(participant.email || '');
       setPhone(participant.phone || '');
       setNotes(participant.notes || '');
+      setDateOfBirth(participant.dateOfBirth ? participant.dateOfBirth.split('T')[0] : '');
+      setDateOfRegistration(participant.dateOfRegistration ? participant.dateOfRegistration.split('T')[0] : '');
+      setNickname(participant.nickname || '');
     } else {
       // Reset to defaults for create mode
       setName('');
       setEmail('');
       setPhone('');
       setNotes('');
+      setDateOfBirth('');
+      setDateOfRegistration('');
+      setNickname('');
       setAddressHistory([]);
     }
     // Clear errors when switching modes
     setNameError('');
     setEmailError('');
+    setDateOfBirthError('');
+    setDateOfRegistrationError('');
+    setNicknameError('');
     setError('');
     setShowAddressForm(false);
     setEditingAddress(null);
@@ -95,9 +110,12 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const createMutation = useMutation({
     mutationFn: (data: {
       name: string;
-      email: string;
+      email?: string;
       phone?: string;
       notes?: string;
+      dateOfBirth?: string;
+      dateOfRegistration?: string;
+      nickname?: string;
     }) => ParticipantService.createParticipant(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['participants'] });
@@ -112,9 +130,12 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     mutationFn: (data: {
       id: string;
       name: string;
-      email: string;
+      email?: string;
       phone?: string;
       notes?: string;
+      dateOfBirth?: string | null;
+      dateOfRegistration?: string | null;
+      nickname?: string;
       version?: number;
     }) =>
       ParticipantService.updateParticipant(data.id, {
@@ -122,6 +143,9 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
         email: data.email,
         phone: data.phone,
         notes: data.notes,
+        dateOfBirth: data.dateOfBirth,
+        dateOfRegistration: data.dateOfRegistration,
+        nickname: data.nickname,
         version: data.version,
       }),
     onSuccess: () => {
@@ -147,16 +171,55 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
 
   const validateEmail = (value: string): boolean => {
     const trimmed = value.trim();
+    // Email is optional, so empty is valid
     if (!trimmed) {
-      setEmailError('Email is required');
-      return false;
+      setEmailError('');
+      return true;
     }
+    // If provided, validate format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmed)) {
       setEmailError('Please enter a valid email address');
       return false;
     }
     setEmailError('');
+    return true;
+  };
+
+  const validateDateOfBirth = (value: string): boolean => {
+    if (!value) {
+      setDateOfBirthError('');
+      return true;
+    }
+    const date = new Date(value);
+    if (date >= new Date()) {
+      setDateOfBirthError('Date of birth must be in the past');
+      return false;
+    }
+    setDateOfBirthError('');
+    return true;
+  };
+
+  const validateDateOfRegistration = (value: string): boolean => {
+    if (!value) {
+      setDateOfRegistrationError('');
+      return true;
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      setDateOfRegistrationError('Please enter a valid date');
+      return false;
+    }
+    setDateOfRegistrationError('');
+    return true;
+  };
+
+  const validateNickname = (value: string): boolean => {
+    if (value.length > 100) {
+      setNicknameError('Nickname must be at most 100 characters');
+      return false;
+    }
+    setNicknameError('');
     return true;
   };
 
@@ -291,22 +354,30 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
 
     const isNameValid = validateName(name);
     const isEmailValid = validateEmail(email);
+    const isDateOfBirthValid = validateDateOfBirth(dateOfBirth);
+    const isDateOfRegistrationValid = validateDateOfRegistration(dateOfRegistration);
+    const isNicknameValid = validateNickname(nickname);
 
-    if (!isNameValid || !isEmailValid) {
+    if (!isNameValid || !isEmailValid || !isDateOfBirthValid || !isDateOfRegistrationValid || !isNicknameValid) {
       return;
     }
 
     const data = {
       name: name.trim(),
-      email: email.trim(),
+      email: email.trim() || undefined,
       phone: phone.trim() || undefined,
       notes: notes.trim() || undefined,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString() : undefined,
+      dateOfRegistration: dateOfRegistration ? new Date(dateOfRegistration).toISOString() : undefined,
+      nickname: nickname.trim() || undefined,
     };
 
     if (participant) {
       updateMutation.mutate({
         id: participant.id,
         ...data,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString() : null,
+        dateOfRegistration: dateOfRegistration ? new Date(dateOfRegistration).toISOString() : null,
         version: getEntityVersion(participant),
       });
     } else {
@@ -372,7 +443,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                 disabled={isSubmitting}
               />
             </FormField>
-            <FormField label="Email" errorText={emailError} constraintText="Required">
+            <FormField label="Email" errorText={emailError} constraintText="Optional">
               <Input
                 value={email}
                 onChange={({ detail }) => {
@@ -390,6 +461,42 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                 value={phone}
                 onChange={({ detail }) => setPhone(detail.value)}
                 placeholder="Enter phone number"
+                disabled={isSubmitting}
+              />
+            </FormField>
+            <FormField label="Nickname" errorText={nicknameError} constraintText="Optional (max 100 characters)">
+              <Input
+                value={nickname}
+                onChange={({ detail }) => {
+                  setNickname(detail.value);
+                  if (nicknameError) validateNickname(detail.value);
+                }}
+                onBlur={() => validateNickname(nickname)}
+                placeholder="Enter nickname"
+                disabled={isSubmitting}
+              />
+            </FormField>
+            <FormField label="Date of Birth" errorText={dateOfBirthError} constraintText="Optional">
+              <DatePicker
+                value={dateOfBirth}
+                onChange={({ detail }) => {
+                  setDateOfBirth(detail.value);
+                  if (dateOfBirthError) validateDateOfBirth(detail.value);
+                }}
+                onBlur={() => validateDateOfBirth(dateOfBirth)}
+                placeholder="YYYY-MM-DD"
+                disabled={isSubmitting}
+              />
+            </FormField>
+            <FormField label="Date of Registration" errorText={dateOfRegistrationError} constraintText="Optional">
+              <DatePicker
+                value={dateOfRegistration}
+                onChange={({ detail }) => {
+                  setDateOfRegistration(detail.value);
+                  if (dateOfRegistrationError) validateDateOfRegistration(detail.value);
+                }}
+                onBlur={() => validateDateOfRegistration(dateOfRegistration)}
+                placeholder="YYYY-MM-DD"
                 disabled={isSubmitting}
               />
             </FormField>

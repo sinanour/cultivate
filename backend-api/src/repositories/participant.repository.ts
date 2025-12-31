@@ -9,9 +9,12 @@ export interface CreateParticipantData {
 
 export interface UpdateParticipantData {
   name?: string;
-  email?: string;
+  email?: string | null;
   phone?: string;
   notes?: string;
+  dateOfBirth?: Date | null;
+  dateOfRegistration?: Date | null;
+  nickname?: string;
   version?: number;
 }
 

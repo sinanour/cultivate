@@ -3,13 +3,24 @@ import { ApiClient } from './api.client';
 
 interface CreateParticipantData {
     name: string;
-    email: string;
+    email?: string;
     phone?: string;
     notes?: string;
+    dateOfBirth?: string;
+    dateOfRegistration?: string;
+    nickname?: string;
     homeVenueId?: string;
 }
 
-interface UpdateParticipantData extends CreateParticipantData {
+interface UpdateParticipantData {
+    name?: string;
+    email?: string | null;
+    phone?: string;
+    notes?: string;
+    dateOfBirth?: string | null;
+    dateOfRegistration?: string | null;
+    nickname?: string;
+    homeVenueId?: string;
     version?: number;
 }
 

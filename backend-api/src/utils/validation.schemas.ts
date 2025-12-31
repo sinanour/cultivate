@@ -71,17 +71,29 @@ export const UserUpdateSchema = z.object({
 // Participant schemas
 export const ParticipantCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),
-  email: z.string().email('Invalid email format'),
+  email: z.string().email('Invalid email format').optional(),
   phone: z.string().max(20, 'Phone must be at most 20 characters').optional(),
   notes: z.string().max(1000, 'Notes must be at most 1000 characters').optional(),
+  dateOfBirth: z.string().datetime('Invalid date of birth format').optional().refine(
+    (date) => !date || new Date(date) < new Date(),
+    { message: 'Date of birth must be in the past' }
+  ),
+  dateOfRegistration: z.string().datetime('Invalid date of registration format').optional(),
+  nickname: z.string().max(100, 'Nickname must be at most 100 characters').optional(),
   homeVenueId: z.string().uuid('Invalid venue ID format').optional(),
 });
 
 export const ParticipantUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
-  email: z.string().email('Invalid email format').optional(),
+  email: z.string().email('Invalid email format').optional().nullable(),
   phone: z.string().max(20, 'Phone must be at most 20 characters').optional(),
   notes: z.string().max(1000, 'Notes must be at most 1000 characters').optional(),
+  dateOfBirth: z.string().datetime('Invalid date of birth format').optional().nullable().refine(
+    (date) => !date || new Date(date) < new Date(),
+    { message: 'Date of birth must be in the past' }
+  ),
+  dateOfRegistration: z.string().datetime('Invalid date of registration format').optional().nullable(),
+  nickname: z.string().max(100, 'Nickname must be at most 100 characters').optional(),
   homeVenueId: z.string().uuid('Invalid venue ID format').optional().nullable(),
   version: z.number().int().positive().optional(),
 });
