@@ -58,4 +58,45 @@ export class ParticipantService {
     static async getParticipantActivities(id: string): Promise<Assignment[]> {
         return ApiClient.get<Assignment[]>(`/participants/${id}/activities`);
     }
+
+    static async exportParticipants(geographicAreaId?: string | null): Promise<void> {
+        const params = new URLSearchParams();
+        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
+        const query = params.toString();
+
+        const response = await fetch(`${ApiClient.getBaseURL()}/participants/export${query ? `?${query}` : ''}`, {
+            method: 'GET',
+            headers: ApiClient.getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export participants');
+        }
+
+        const blob = await response.blob();
+        const { downloadBlob } = await import('../../utils/csv.utils');
+        const filename = `participants-${new Date().toISOString().split('T')[0]}.csv`;
+        downloadBlob(blob, filename);
+    }
+
+    static async importParticipants(file: File): Promise<import('../../types/csv.types').ImportResult> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${ApiClient.getBaseURL()}/participants/import`, {
+            method: 'POST',
+            headers: {
+                ...ApiClient.getAuthHeaders(),
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to import participants');
+        }
+
+        const result = await response.json();
+        return result.data;
+    }
 }

@@ -1222,6 +1222,105 @@ This implementation plan covers the React-based web application built with TypeS
 - [ ] 29. Checkpoint - Verify configuration page enhancements
   - Ensure all tests pass, ask the user if questions arise.
 
+- [x] 30. Implement CSV Import and Export
+  - [x] 30.1 Create CSV utility functions
+    - Create downloadBlob(blob, filename) utility function for triggering browser downloads
+    - Create validateCSVFile(file) utility function for file validation (.csv extension, max 10MB)
+    - Add to utils directory
+    - _Requirements: 26.19, 26.20_
+
+  - [x] 30.2 Add CSV export methods to API services
+    - Add exportParticipants(geographicAreaId?) to ParticipantService
+    - Add exportVenues(geographicAreaId?) to VenueService
+    - Add exportActivities(geographicAreaId?) to ActivityService
+    - Add exportGeographicAreas() to GeographicAreaService
+    - Use axios with responseType: 'blob' for binary response
+    - Call downloadBlob() to trigger browser download
+    - Generate filename with current date
+    - _Requirements: 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.24_
+
+  - [x] 30.3 Add CSV import methods to API services
+    - Add importParticipants(file) to ParticipantService
+    - Add importVenues(file) to VenueService
+    - Add importActivities(file) to ActivityService
+    - Add importGeographicAreas(file) to GeographicAreaService
+    - Create FormData and append file
+    - Set Content-Type header to multipart/form-data
+    - Return ImportResult from response
+    - _Requirements: 26.8, 26.9, 26.10, 26.11, 26.12, 26.13_
+
+  - [x] 30.4 Add Export CSV button to ParticipantList
+    - Add CloudScape Button with iconName="download" to table header actions
+    - Implement handleExport handler that calls exportParticipants with global geographic filter
+    - Show loading indicator during export
+    - Disable button during export
+    - Display success notification after export
+    - Display error notification on failure
+    - Hide button from READ_ONLY users
+    - Show button to EDITOR and ADMINISTRATOR users
+    - _Requirements: 26.1, 26.5, 26.16, 26.17, 26.22, 26.23, 26.24, 26.25_
+
+  - [x] 30.5 Add Import CSV button to ParticipantList
+    - Add hidden file input with accept=".csv"
+    - Add CloudScape Button with iconName="upload" to table header actions
+    - Implement handleFileSelect handler that validates file and calls importParticipants
+    - Show loading indicator during import
+    - Disable button during import
+    - Display import results modal with success/failure counts and error details
+    - Refresh participant list after successful import
+    - Display error notification on failure
+    - Hide button from READ_ONLY users
+    - Show button to EDITOR and ADMINISTRATOR users
+    - _Requirements: 26.8, 26.12, 26.13, 26.14, 26.15, 26.16, 26.17, 26.18, 26.19, 26.20, 26.22, 26.23_
+
+  - [x] 30.6 Add Export and Import CSV buttons to VenueList
+    - Implement same pattern as ParticipantList
+    - Use VenueService export/import methods
+    - Apply global geographic filter to exports
+    - _Requirements: 26.2, 26.9, 26.22, 26.23, 26.24_
+
+  - [x] 30.7 Add Export and Import CSV buttons to ActivityList
+    - Implement same pattern as ParticipantList
+    - Use ActivityService export/import methods
+    - Apply global geographic filter to exports
+    - _Requirements: 26.3, 26.10, 26.22, 26.23, 26.24_
+
+  - [x] 30.8 Add Export and Import CSV buttons to GeographicAreaList
+    - Implement same pattern as ParticipantList
+    - Use GeographicAreaService export/import methods
+    - No geographic filter for geographic areas export
+    - _Requirements: 26.4, 26.11, 26.22, 26.23_
+
+  - [x] 30.9 Create ImportResultsModal component
+    - Create reusable CloudScape Modal component for displaying import results
+    - Show success/failure counts with CloudScape Alert
+    - Display error table with row numbers and error messages using CloudScape Table
+    - Provide close button
+    - Accept ImportResult as prop
+    - _Requirements: 26.14, 26.15_
+
+  - [x] 30.10 Create TypeScript types for CSV operations
+    - Create ImportResult interface with totalRows, successCount, failureCount, errors
+    - Create ImportError interface with row, data, errors
+    - Add to types directory
+    - _Requirements: 26.14, 26.15_
+
+  - [ ]* 30.11 Write property tests for CSV operations
+    - **Property 142: CSV Export Button Visibility**
+    - **Property 143: CSV Import Button Visibility**
+    - **Property 144: CSV Export Trigger**
+    - **Property 145: Empty CSV Download**
+    - **Property 146: CSV Import File Selection**
+    - **Property 147: CSV Import Success Handling**
+    - **Property 148: CSV Import Error Handling**
+    - **Property 149: CSV File Validation**
+    - **Property 150: CSV Operation Loading States**
+    - **Property 151: CSV Export Geographic Filtering**
+    - **Validates: Requirements 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7, 26.8, 26.9, 26.10, 26.11, 26.12, 26.14, 26.15, 26.16, 26.17, 26.18, 26.19, 26.20, 26.22, 26.23, 26.24, 26.25**
+
+- [ ] 31. Checkpoint - Verify CSV import/export functionality
+  - Ensure all tests pass, ask the user if questions arise.
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

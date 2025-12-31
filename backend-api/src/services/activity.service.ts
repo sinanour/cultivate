@@ -5,6 +5,9 @@ import { ActivityVenueHistoryRepository } from '../repositories/activity-venue-h
 import { VenueRepository } from '../repositories/venue.repository';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
+import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
+import { ImportResult } from '../types/csv.types';
+import { ActivityImportSchema } from '../utils/validation.schemas';
 
 export interface CreateActivityInput {
   name: string;
@@ -303,5 +306,119 @@ export class ActivityService {
     }
 
     await this.venueHistoryRepository.delete(venueHistoryId);
+  }
+
+  async exportActivitiesToCSV(geographicAreaId?: string): Promise<string> {
+    // Get all activities (with geographic filter if provided)
+    const activities = await this.getAllActivities(geographicAreaId);
+
+    // Fetch activities with full details
+    const activitiesWithDetails = await Promise.all(
+      activities.map(a => this.activityRepository.findById(a.id))
+    );
+
+    // Define CSV columns
+    const columns = [
+      'id',
+      'name',
+      'activityTypeId',
+      'activityTypeName',
+      'activityCategoryId',
+      'activityCategoryName',
+      'startDate',
+      'endDate',
+      'status',
+      'createdAt',
+      'updatedAt'
+    ];
+
+    // Transform activities to CSV format
+    const data = activitiesWithDetails.map(a => ({
+      id: a!.id,
+      name: a!.name,
+      activityTypeId: a!.activityTypeId,
+      activityTypeName: (a as any).activityType?.name || '',
+      activityCategoryId: (a as any).activityType?.activityCategoryId || '',
+      activityCategoryName: (a as any).activityType?.activityCategory?.name || '',
+      startDate: formatDateForCSV(a!.startDate),
+      endDate: formatDateForCSV(a!.endDate),
+      status: a!.status,
+      createdAt: formatDateForCSV(a!.createdAt),
+      updatedAt: formatDateForCSV(a!.updatedAt)
+    }));
+
+    return generateCSV({ columns, data });
+  }
+
+  async importActivitiesFromCSV(fileBuffer: Buffer): Promise<ImportResult> {
+    // Parse CSV
+    let records: any[];
+    try {
+      records = parseCSV(fileBuffer);
+    } catch (error) {
+      throw new Error(`Invalid CSV format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    const result: ImportResult = {
+      totalRows: records.length,
+      successCount: 0,
+      failureCount: 0,
+      errors: []
+    };
+
+    // Process each record
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
+      const rowNumber = i + 2; // +2 for header row and 0-based index
+
+      try {
+        // Validate record
+        const validated = ActivityImportSchema.parse(record);
+
+        // Create or update
+        if (validated.id) {
+          // Update existing activity
+          await this.updateActivity(validated.id, {
+            name: validated.name,
+            activityTypeId: validated.activityTypeId,
+            startDate: new Date(validated.startDate),
+            endDate: validated.endDate ? new Date(validated.endDate) : undefined,
+            status: validated.status
+          });
+        } else {
+          // Create new activity
+          await this.createActivity({
+            name: validated.name,
+            activityTypeId: validated.activityTypeId,
+            startDate: new Date(validated.startDate),
+            endDate: validated.endDate ? new Date(validated.endDate) : undefined,
+            status: validated.status
+          });
+        }
+
+        result.successCount++;
+      } catch (error) {
+        result.failureCount++;
+        const errorMessages: string[] = [];
+
+        if (error instanceof Error) {
+          errorMessages.push(error.message);
+        } else if (typeof error === 'object' && error !== null && 'errors' in error) {
+          // Zod validation error
+          const zodError = error as any;
+          errorMessages.push(...zodError.errors.map((e: any) => e.message));
+        } else {
+          errorMessages.push('Unknown error');
+        }
+
+        result.errors.push({
+          row: rowNumber,
+          data: record,
+          errors: errorMessages
+        });
+      }
+    }
+
+    return result;
   }
 }

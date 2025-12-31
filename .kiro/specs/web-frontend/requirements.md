@@ -623,3 +623,36 @@ The Web Frontend package provides a responsive React-based web application that 
 9. THE Web_App SHALL use CloudScape Select or Autosuggest components with async loading capabilities
 10. WHEN the global geographic area filter is active and sufficiently scoped, THE Web_App SHALL display all matching items in dropdowns for convenience
 11. WHEN viewing data at a large geographic scale (country or global), THE Web_App SHALL rely on text-based filtering to manage the large result sets efficiently
+
+
+### Requirement 26: CSV Import and Export
+
+**User Story:** As a community organizer, I want to import and export data in CSV format, so that I can bulk load data from external sources and share data with other systems.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide an "Export CSV" button on the Participants list page
+2. THE Web_App SHALL provide an "Export CSV" button on the Venues list page
+3. THE Web_App SHALL provide an "Export CSV" button on the Activities list page
+4. THE Web_App SHALL provide an "Export CSV" button on the Geographic Areas list page
+5. WHEN the Export CSV button is clicked, THE Web_App SHALL call the appropriate backend export endpoint
+6. WHEN the export succeeds, THE Web_App SHALL trigger a browser download of the CSV file
+7. WHEN no records exist for export, THE Web_App SHALL download an empty CSV file with only the header row
+8. THE Web_App SHALL provide an "Import CSV" button on the Participants list page
+9. THE Web_App SHALL provide an "Import CSV" button on the Venues list page
+10. THE Web_App SHALL provide an "Import CSV" button on the Activities list page
+11. THE Web_App SHALL provide an "Import CSV" button on the Geographic Areas list page
+12. WHEN the Import CSV button is clicked, THE Web_App SHALL open a file selection dialog
+13. WHEN a CSV file is selected, THE Web_App SHALL upload the file to the appropriate backend import endpoint
+14. WHEN the import succeeds, THE Web_App SHALL display a success message with counts of successful and failed imports
+15. WHEN the import fails, THE Web_App SHALL display detailed error messages for failed rows
+16. THE Web_App SHALL display a loading indicator during import and export operations
+17. THE Web_App SHALL disable the import and export buttons during operations to prevent duplicate requests
+18. THE Web_App SHALL refresh the entity list after a successful import to show newly imported records
+19. THE Web_App SHALL validate that selected files have a .csv extension before uploading
+20. WHEN a non-CSV file is selected, THE Web_App SHALL display an error message and prevent upload
+21. THE Web_App SHALL position the Import and Export buttons in the table header actions area using CloudScape Button components
+22. THE Web_App SHALL hide Import and Export buttons from users with READ_ONLY role
+23. THE Web_App SHALL show Import and Export buttons to users with EDITOR or ADMINISTRATOR role
+24. WHEN exporting data with the global geographic area filter active, THE Web_App SHALL include the filter in the export request to export only filtered records
+25. WHEN exporting filtered data, THE Web_App SHALL indicate in the success message that only filtered records were exported

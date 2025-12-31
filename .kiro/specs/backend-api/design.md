@@ -1626,3 +1626,471 @@ postgresql://srp_user:srp_dev_password@localhost:5432/srp_dev
 - NOT part of the API service deployment
 - Located in development utilities directory
 - Documented as development-only tooling
+
+
+## CSV Import and Export
+
+### Overview
+
+The API provides CSV import and export functionality for bulk data operations on Participants, Venues, Activities, and Geographic Areas. This enables community organizers to:
+- Bulk load data from external sources (spreadsheets, other systems)
+- Share data with stakeholders who prefer spreadsheet formats
+- Backup and restore data in a human-readable format
+- Understand the required data structure through empty CSV templates
+
+### Export Endpoints
+
+**Endpoint Pattern:**
+```
+GET /api/v1/participants/export
+GET /api/v1/venues/export
+GET /api/v1/activities/export
+GET /api/v1/geographic-areas/export
+```
+
+**Query Parameters:**
+- `geographicAreaId` (optional): Filter exports to specific geographic area and descendants
+
+**Response Headers:**
+```
+Content-Type: text/csv; charset=utf-8
+Content-Disposition: attachment; filename="participants-2025-01-15.csv"
+```
+
+**CSV Column Definitions:**
+
+**Participants Export:**
+```csv
+id,name,email,phone,notes,dateOfBirth,dateOfRegistration,nickname,createdAt,updatedAt
+```
+
+**Venues Export:**
+```csv
+id,name,address,geographicAreaId,geographicAreaName,latitude,longitude,venueType,createdAt,updatedAt
+```
+
+**Activities Export:**
+```csv
+id,name,activityTypeId,activityTypeName,activityCategoryId,activityCategoryName,startDate,endDate,status,createdAt,updatedAt
+```
+
+**Geographic Areas Export:**
+```csv
+id,name,areaType,parentGeographicAreaId,parentGeographicAreaName,createdAt,updatedAt
+```
+
+**Empty CSV Behavior:**
+When no records exist, the API returns a CSV file with only the header row. This helps users understand the required column structure for imports.
+
+### Import Endpoints
+
+**Endpoint Pattern:**
+```
+POST /api/v1/participants/import
+POST /api/v1/venues/import
+POST /api/v1/activities/import
+POST /api/v1/geographic-areas/import
+```
+
+**Request Format:**
+- Content-Type: `multipart/form-data`
+- Field name: `file`
+- File type: `.csv`
+- Maximum size: 10MB
+
+**CSV Column Requirements:**
+
+**Participants Import:**
+```csv
+name,email,phone,notes,dateOfBirth,dateOfRegistration,nickname
+```
+Optional: Include `id` column to update existing records
+
+**Venues Import:**
+```csv
+name,address,geographicAreaId,latitude,longitude,venueType
+```
+Optional: Include `id` column to update existing records
+
+**Activities Import:**
+```csv
+name,activityTypeId,startDate,endDate,status
+```
+Optional: Include `id` column to update existing records
+
+**Geographic Areas Import:**
+```csv
+name,areaType,parentGeographicAreaId
+```
+Optional: Include `id` column to update existing records
+
+**Import Behavior:**
+- **With ID column**: Rows with existing IDs are treated as updates; rows without IDs are creates
+- **Without ID column**: All rows are treated as creates
+- **Validation**: Each row is validated using the same rules as POST/PUT endpoints
+- **Error Handling**: Invalid rows are skipped; processing continues for remaining rows
+- **Transaction**: All successful operations are committed together; failed rows don't affect successful ones
+
+**Response Format:**
+```typescript
+{
+  success: true,
+  data: {
+    totalRows: number,
+    successCount: number,
+    failureCount: number,
+    errors: Array<{
+      row: number,
+      data: object,
+      errors: string[]
+    }>
+  }
+}
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalRows": 100,
+    "successCount": 95,
+    "failureCount": 5,
+    "errors": [
+      {
+        "row": 12,
+        "data": { "name": "", "email": "invalid" },
+        "errors": ["Name is required", "Invalid email format"]
+      },
+      {
+        "row": 45,
+        "data": { "name": "John Doe", "geographicAreaId": "invalid-uuid" },
+        "errors": ["Geographic area not found"]
+      }
+    ]
+  }
+}
+```
+
+### CSV Parsing
+
+**Library**: Use `csv-parse` (Node.js CSV parsing library) for robust CSV handling
+
+**Features:**
+- Handles quoted fields with embedded commas
+- Handles escaped characters
+- Supports different line endings (CRLF, LF)
+- Supports both comma and semicolon delimiters
+- Automatic header detection
+- Stream-based parsing for large files
+
+**Configuration:**
+```typescript
+import { parse } from 'csv-parse';
+
+const parser = parse({
+  columns: true,              // Use first row as column names
+  skip_empty_lines: true,     // Ignore empty lines
+  trim: true,                 // Trim whitespace from fields
+  delimiter: [',', ';'],      // Support both delimiters
+  relax_column_count: true,   // Allow variable column counts
+  cast: true,                 // Auto-cast types
+  cast_date: true             // Parse dates
+});
+```
+
+### CSV Generation
+
+**Library**: Use `csv-stringify` (Node.js CSV generation library) for consistent formatting
+
+**Features:**
+- Proper quoting of fields containing special characters
+- Consistent delimiter usage
+- UTF-8 encoding
+- Stream-based generation for large datasets
+
+**Configuration:**
+```typescript
+import { stringify } from 'csv-stringify';
+
+const stringifier = stringify({
+  header: true,               // Include header row
+  quoted: true,               // Quote all fields
+  delimiter: ',',             // Use comma delimiter
+  record_delimiter: '\n'      // Use LF line endings
+});
+```
+
+### Service Layer Implementation
+
+**Export Service Pattern:**
+```typescript
+async exportParticipants(geographicAreaId?: string): Promise<string> {
+  // Apply geographic filter if provided
+  const participants = await this.participantRepository.findAll({
+    geographicAreaId
+  });
+  
+  // Transform to CSV format
+  const records = participants.map(p => ({
+    id: p.id,
+    name: p.name,
+    email: p.email || '',
+    phone: p.phone || '',
+    notes: p.notes || '',
+    dateOfBirth: p.dateOfBirth ? formatDate(p.dateOfBirth) : '',
+    dateOfRegistration: p.dateOfRegistration ? formatDate(p.dateOfRegistration) : '',
+    nickname: p.nickname || '',
+    createdAt: formatDate(p.createdAt),
+    updatedAt: formatDate(p.updatedAt)
+  }));
+  
+  // Generate CSV
+  return stringify(records, { header: true });
+}
+```
+
+**Import Service Pattern:**
+```typescript
+async importParticipants(fileBuffer: Buffer): Promise<ImportResult> {
+  const records = await this.parseCSV(fileBuffer);
+  const results = {
+    totalRows: records.length,
+    successCount: 0,
+    failureCount: 0,
+    errors: []
+  };
+  
+  for (const [index, record] of records.entries()) {
+    try {
+      // Validate record
+      const validated = ParticipantImportSchema.parse(record);
+      
+      // Create or update
+      if (record.id) {
+        await this.participantRepository.update(record.id, validated);
+      } else {
+        await this.participantRepository.create(validated);
+      }
+      
+      results.successCount++;
+    } catch (error) {
+      results.failureCount++;
+      results.errors.push({
+        row: index + 2, // +2 for header row and 0-based index
+        data: record,
+        errors: this.extractValidationErrors(error)
+      });
+    }
+  }
+  
+  return results;
+}
+```
+
+### Route Handler Implementation
+
+**Export Route:**
+```typescript
+router.get('/participants/export', 
+  authenticate,
+  authorize(['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']),
+  async (req, res) => {
+    const { geographicAreaId } = req.query;
+    
+    const csv = await participantService.exportParticipants(geographicAreaId);
+    const filename = `participants-${formatDate(new Date())}.csv`;
+    
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  }
+);
+```
+
+**Import Route:**
+```typescript
+router.post('/participants/import',
+  authenticate,
+  authorize(['ADMINISTRATOR', 'EDITOR']),
+  upload.single('file'),
+  async (req, res) => {
+    // Validate file
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    if (!req.file.originalname.endsWith('.csv')) {
+      return res.status(400).json({ error: 'File must be a CSV' });
+    }
+    
+    if (req.file.size > 10 * 1024 * 1024) {
+      return res.status(413).json({ error: 'File too large (max 10MB)' });
+    }
+    
+    // Process import
+    const result = await participantService.importParticipants(req.file.buffer);
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  }
+);
+```
+
+### File Upload Middleware
+
+**Library**: Use `multer` for handling multipart/form-data uploads
+
+**Configuration:**
+```typescript
+import multer from 'multer';
+
+const upload = multer({
+  storage: multer.memoryStorage(), // Store in memory for processing
+  limits: {
+    fileSize: 10 * 1024 * 1024,    // 10MB limit
+    files: 1                        // Single file only
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  }
+});
+```
+
+### Validation Schemas
+
+**Import Validation Schemas:**
+```typescript
+const ParticipantImportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(200),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().max(20).optional().or(z.literal('')),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+  dateOfBirth: z.coerce.date().optional().or(z.literal('')),
+  dateOfRegistration: z.coerce.date().optional().or(z.literal('')),
+  nickname: z.string().max(100).optional().or(z.literal(''))
+});
+
+const VenueImportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(200),
+  address: z.string().min(1).max(500),
+  geographicAreaId: z.string().uuid(),
+  latitude: z.coerce.number().min(-90).max(90).optional().or(z.literal('')),
+  longitude: z.coerce.number().min(-180).max(180).optional().or(z.literal('')),
+  venueType: z.enum(['PUBLIC_BUILDING', 'PRIVATE_RESIDENCE']).optional().or(z.literal(''))
+});
+
+const ActivityImportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(200),
+  activityTypeId: z.string().uuid(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().optional().or(z.literal('')),
+  status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional()
+});
+
+const GeographicAreaImportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(200),
+  areaType: z.enum(['NEIGHBOURHOOD', 'COMMUNITY', 'CITY', 'CLUSTER', 'COUNTY', 'PROVINCE', 'STATE', 'COUNTRY', 'CUSTOM']),
+  parentGeographicAreaId: z.string().uuid().optional().or(z.literal(''))
+});
+```
+
+### Error Handling
+
+**File Upload Errors:**
+- **No file**: 400 Bad Request - "No file uploaded"
+- **Wrong file type**: 400 Bad Request - "File must be a CSV"
+- **File too large**: 413 Payload Too Large - "File exceeds 10MB limit"
+- **Invalid CSV format**: 400 Bad Request - "Invalid CSV format"
+
+**Import Validation Errors:**
+- Collected per row and returned in response
+- Processing continues for valid rows
+- Detailed error messages for each failed row
+
+**Export Errors:**
+- **Database errors**: 500 Internal Server Error
+- **Empty result**: Returns CSV with header row only (not an error)
+
+### Performance Considerations
+
+**Large File Handling:**
+- Stream-based parsing prevents memory issues
+- Process rows incrementally rather than loading entire file
+- Use database transactions for batch inserts
+- Consider chunking for very large imports (>10,000 rows)
+
+**Export Optimization:**
+- Use database cursors for large result sets
+- Stream CSV generation directly to response
+- Apply pagination internally if needed
+- Consider background job for very large exports
+
+**Database Optimization:**
+- Use bulk insert operations where possible
+- Batch validation before database operations
+- Use prepared statements for repeated operations
+- Index foreign key columns for validation queries
+
+### Security Considerations
+
+**Authorization:**
+- Export: Available to all authenticated users (ADMINISTRATOR, EDITOR, READ_ONLY)
+- Import: Restricted to ADMINISTRATOR and EDITOR roles only
+
+**Input Validation:**
+- Validate file type and size before processing
+- Sanitize all CSV data to prevent injection attacks
+- Validate all foreign key references
+- Apply same validation rules as API endpoints
+
+**Data Privacy:**
+- Respect geographic area filters on exports
+- Audit log all import/export operations
+- Include user ID in audit logs
+- Consider data sensitivity in error messages
+
+### Correctness Properties
+
+**Property 134: CSV export completeness**
+*For any* entity type with existing records, exporting to CSV should include all records (or filtered records if geographic area filter is applied) with all specified columns.
+**Validates: Requirements 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8**
+
+**Property 135: Empty CSV header generation**
+*For any* entity type with no records, exporting to CSV should return a file with only the header row containing all column names.
+**Validates: Requirements 22.9**
+
+**Property 136: CSV export headers**
+*For any* CSV export response, the Content-Type header should be text/csv and Content-Disposition should be attachment with an appropriate filename.
+**Validates: Requirements 22.10, 22.11**
+
+**Property 137: CSV import validation**
+*For any* CSV import row, the data should be validated using the same rules as the corresponding create endpoint, and invalid rows should be skipped with detailed error messages.
+**Validates: Requirements 22.20, 22.21, 22.22**
+
+**Property 138: CSV import create/update behavior**
+*For any* CSV import with an id column, rows with existing IDs should be treated as updates and rows without IDs should be treated as creates.
+**Validates: Requirements 22.23, 22.24**
+
+**Property 139: CSV file format validation**
+*For any* file upload to an import endpoint, non-CSV files should be rejected with a 400 error, and files exceeding 10MB should be rejected with a 413 error.
+**Validates: Requirements 22.26, 22.27, 22.28**
+
+**Property 140: CSV delimiter support**
+*For any* valid CSV file using either comma or semicolon as field delimiter, the import should parse it correctly.
+**Validates: Requirements 22.30**
+
+**Property 141: CSV export geographic filtering**
+*For any* export request with a geographicAreaId parameter, only records associated with venues in the specified geographic area or its descendants should be included.
+**Validates: Requirements 22.31, 22.32**
+

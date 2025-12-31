@@ -107,7 +107,7 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## Import/Export
 
-- [ ] 16. Implement CSV import/export functionality
+- [x] 16. Implement CSV import/export functionality
   - Applies to: Participants, Venues, Activities, Geographic Areas
   - Import CTA should be available on each entity list page
   - Export CTA should be available on each entity list page

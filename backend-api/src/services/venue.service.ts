@@ -2,6 +2,9 @@ import { Venue, VenueType } from '@prisma/client';
 import { VenueRepository } from '../repositories/venue.repository';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
+import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
+import { ImportResult } from '../types/csv.types';
+import { VenueImportSchema } from '../utils/validation.schemas';
 
 export interface CreateVenueInput {
     name: string;
@@ -197,5 +200,119 @@ export class VenueService {
         }
 
         return this.venueRepository.findParticipants(venueId);
+    }
+
+    async exportVenuesToCSV(geographicAreaId?: string): Promise<string> {
+        // Get all venues (with geographic filter if provided)
+        const venues = await this.getAllVenues(geographicAreaId);
+
+        // Fetch venues with geographic area included
+        const venuesWithArea = await Promise.all(
+            venues.map(v => this.venueRepository.findById(v.id))
+        );
+
+        // Define CSV columns
+        const columns = [
+            'id',
+            'name',
+            'address',
+            'geographicAreaId',
+            'geographicAreaName',
+            'latitude',
+            'longitude',
+            'venueType',
+            'createdAt',
+            'updatedAt'
+        ];
+
+        // Transform venues to CSV format
+        const data = venuesWithArea.map(v => ({
+            id: v!.id,
+            name: v!.name,
+            address: v!.address,
+            geographicAreaId: v!.geographicAreaId,
+            geographicAreaName: (v as any).geographicArea?.name || '',
+            latitude: v!.latitude?.toString() || '',
+            longitude: v!.longitude?.toString() || '',
+            venueType: v!.venueType || '',
+            createdAt: formatDateForCSV(v!.createdAt),
+            updatedAt: formatDateForCSV(v!.updatedAt)
+        }));
+
+        return generateCSV({ columns, data });
+    }
+
+    async importVenuesFromCSV(fileBuffer: Buffer): Promise<ImportResult> {
+        // Parse CSV
+        let records: any[];
+        try {
+            records = parseCSV(fileBuffer);
+        } catch (error) {
+            throw new Error(`Invalid CSV format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        const result: ImportResult = {
+            totalRows: records.length,
+            successCount: 0,
+            failureCount: 0,
+            errors: []
+        };
+
+        // Process each record
+        for (let i = 0; i < records.length; i++) {
+            const record = records[i];
+            const rowNumber = i + 2; // +2 for header row and 0-based index
+
+            try {
+                // Validate record
+                const validated = VenueImportSchema.parse(record);
+
+                // Create or update
+                if (validated.id) {
+                    // Update existing venue
+                    await this.updateVenue(validated.id, {
+                        name: validated.name,
+                        address: validated.address,
+                        geographicAreaId: validated.geographicAreaId,
+                        latitude: validated.latitude,
+                        longitude: validated.longitude,
+                        venueType: validated.venueType
+                    });
+                } else {
+                    // Create new venue
+                    await this.createVenue({
+                        name: validated.name,
+                        address: validated.address,
+                        geographicAreaId: validated.geographicAreaId,
+                        latitude: validated.latitude,
+                        longitude: validated.longitude,
+                        venueType: validated.venueType
+                    });
+                }
+
+                result.successCount++;
+            } catch (error) {
+                result.failureCount++;
+                const errorMessages: string[] = [];
+
+                if (error instanceof Error) {
+                    errorMessages.push(error.message);
+                } else if (typeof error === 'object' && error !== null && 'errors' in error) {
+                    // Zod validation error
+                    const zodError = error as any;
+                    errorMessages.push(...zodError.errors.map((e: any) => e.message));
+                } else {
+                    errorMessages.push('Unknown error');
+                }
+
+                result.errors.push({
+                    row: rowNumber,
+                    data: record,
+                    errors: errorMessages
+                });
+            }
+        }
+
+        return result;
     }
 }

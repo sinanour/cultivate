@@ -1,6 +1,9 @@
 import { GeographicArea, AreaType, PrismaClient } from '@prisma/client';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
+import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
+import { ImportResult } from '../types/csv.types';
+import { GeographicAreaImportSchema } from '../utils/validation.schemas';
 
 export interface CreateGeographicAreaInput {
     name: string;
@@ -326,5 +329,102 @@ export class GeographicAreaService {
             totalVenues: venues.length,
             activeActivities,
         };
+    }
+
+    async exportGeographicAreasToCSV(): Promise<string> {
+        // Get all geographic areas
+        const areas = await this.geographicAreaRepository.findAll();
+
+        // Define CSV columns
+        const columns = [
+            'id',
+            'name',
+            'areaType',
+            'parentGeographicAreaId',
+            'parentGeographicAreaName',
+            'createdAt',
+            'updatedAt'
+        ];
+
+        // Transform geographic areas to CSV format
+        const data = areas.map(a => ({
+            id: a.id,
+            name: a.name,
+            areaType: a.areaType,
+            parentGeographicAreaId: a.parentGeographicAreaId || '',
+            parentGeographicAreaName: (a as any).parent?.name || '',
+            createdAt: formatDateForCSV(a.createdAt),
+            updatedAt: formatDateForCSV(a.updatedAt)
+        }));
+
+        return generateCSV({ columns, data });
+    }
+
+    async importGeographicAreasFromCSV(fileBuffer: Buffer): Promise<ImportResult> {
+        // Parse CSV
+        let records: any[];
+        try {
+            records = parseCSV(fileBuffer);
+        } catch (error) {
+            throw new Error(`Invalid CSV format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        const result: ImportResult = {
+            totalRows: records.length,
+            successCount: 0,
+            failureCount: 0,
+            errors: []
+        };
+
+        // Process each record
+        for (let i = 0; i < records.length; i++) {
+            const record = records[i];
+            const rowNumber = i + 2; // +2 for header row and 0-based index
+
+            try {
+                // Validate record
+                const validated = GeographicAreaImportSchema.parse(record);
+
+                // Create or update
+                if (validated.id) {
+                    // Update existing geographic area
+                    await this.updateGeographicArea(validated.id, {
+                        name: validated.name,
+                        areaType: validated.areaType,
+                        parentGeographicAreaId: validated.parentGeographicAreaId
+                    });
+                } else {
+                    // Create new geographic area
+                    await this.createGeographicArea({
+                        name: validated.name,
+                        areaType: validated.areaType,
+                        parentGeographicAreaId: validated.parentGeographicAreaId
+                    });
+                }
+
+                result.successCount++;
+            } catch (error) {
+                result.failureCount++;
+                const errorMessages: string[] = [];
+
+                if (error instanceof Error) {
+                    errorMessages.push(error.message);
+                } else if (typeof error === 'object' && error !== null && 'errors' in error) {
+                    // Zod validation error
+                    const zodError = error as any;
+                    errorMessages.push(...zodError.errors.map((e: any) => e.message));
+                } else {
+                    errorMessages.push('Unknown error');
+                }
+
+                result.errors.push({
+                    row: rowNumber,
+                    data: record,
+                    errors: errorMessages
+                });
+            }
+        }
+
+        return result;
     }
 }

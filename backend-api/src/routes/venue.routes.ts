@@ -10,6 +10,8 @@ import {
     UuidParamSchema,
 } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
+import { generateCSVFilename } from '../utils/csv.utils';
+import { csvUpload } from '../middleware/upload.middleware';
 
 export class VenueRoutes {
     private router: Router;
@@ -29,6 +31,21 @@ export class VenueRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireAuthenticated(),
             this.getAll.bind(this)
+        );
+
+        this.router.get(
+            '/export',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
+            this.exportCSV.bind(this)
+        );
+
+        this.router.post(
+            '/import',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            csvUpload.single('file'),
+            this.importCSV.bind(this)
         );
 
         this.router.get(
@@ -295,6 +312,76 @@ export class VenueRoutes {
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while deleting venue',
+                details: {},
+            });
+        }
+    }
+
+    private async exportCSV(req: AuthenticatedRequest, res: Response) {
+        try {
+            const geographicAreaId = req.query.geographicAreaId as string | undefined;
+            const csv = await this.venueService.exportVenuesToCSV(geographicAreaId);
+            const filename = generateCSVFilename('venues');
+
+            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.send(csv);
+        } catch (error) {
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while exporting venues',
+                details: {},
+            });
+        }
+    }
+
+    private async importCSV(req: AuthenticatedRequest, res: Response) {
+        try {
+            // Validate file exists
+            if (!req.file) {
+                return res.status(400).json({
+                    code: 'VALIDATION_ERROR',
+                    message: 'No file uploaded',
+                    details: {},
+                });
+            }
+
+            // Validate file extension
+            if (!req.file.originalname.endsWith('.csv')) {
+                return res.status(400).json({
+                    code: 'VALIDATION_ERROR',
+                    message: 'File must be a CSV',
+                    details: {},
+                });
+            }
+
+            // Validate file size
+            if (req.file.size > 10 * 1024 * 1024) {
+                return res.status(413).json({
+                    code: 'FILE_TOO_LARGE',
+                    message: 'File exceeds 10MB limit',
+                    details: {},
+                });
+            }
+
+            // Process import
+            const result = await this.venueService.importVenuesFromCSV(req.file.buffer);
+
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            if (error instanceof Error && error.message.includes('Invalid CSV format')) {
+                return res.status(400).json({
+                    code: 'INVALID_CSV',
+                    message: error.message,
+                    details: {},
+                });
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while importing venues',
                 details: {},
             });
         }

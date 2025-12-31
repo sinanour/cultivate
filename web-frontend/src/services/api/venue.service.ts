@@ -52,4 +52,45 @@ export class VenueService {
     static async getVenueParticipants(id: string): Promise<any[]> {
         return ApiClient.get<any[]>(`/venues/${id}/participants`);
     }
+
+    static async exportVenues(geographicAreaId?: string | null): Promise<void> {
+        const params = new URLSearchParams();
+        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
+        const query = params.toString();
+
+        const response = await fetch(`${ApiClient.getBaseURL()}/venues/export${query ? `?${query}` : ''}`, {
+            method: 'GET',
+            headers: ApiClient.getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export venues');
+        }
+
+        const blob = await response.blob();
+        const { downloadBlob } = await import('../../utils/csv.utils');
+        const filename = `venues-${new Date().toISOString().split('T')[0]}.csv`;
+        downloadBlob(blob, filename);
+    }
+
+    static async importVenues(file: File): Promise<import('../../types/csv.types').ImportResult> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${ApiClient.getBaseURL()}/venues/import`, {
+            method: 'POST',
+            headers: {
+                ...ApiClient.getAuthHeaders(),
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to import venues');
+        }
+
+        const result = await response.json();
+        return result.data;
+    }
 }

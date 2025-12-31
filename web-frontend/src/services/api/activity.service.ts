@@ -54,4 +54,45 @@ export class ActivityService {
     static async deleteActivityVenue(activityId: string, venueId: string): Promise<void> {
         return ApiClient.delete<void>(`/activities/${activityId}/venues/${venueId}`);
     }
+
+    static async exportActivities(geographicAreaId?: string | null): Promise<void> {
+        const params = new URLSearchParams();
+        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
+        const query = params.toString();
+
+        const response = await fetch(`${ApiClient.getBaseURL()}/activities/export${query ? `?${query}` : ''}`, {
+            method: 'GET',
+            headers: ApiClient.getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export activities');
+        }
+
+        const blob = await response.blob();
+        const { downloadBlob } = await import('../../utils/csv.utils');
+        const filename = `activities-${new Date().toISOString().split('T')[0]}.csv`;
+        downloadBlob(blob, filename);
+    }
+
+    static async importActivities(file: File): Promise<import('../../types/csv.types').ImportResult> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${ApiClient.getBaseURL()}/activities/import`, {
+            method: 'POST',
+            headers: {
+                ...ApiClient.getAuthHeaders(),
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to import activities');
+        }
+
+        const result = await response.json();
+        return result.data;
+    }
 }

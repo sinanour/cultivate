@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
@@ -17,6 +17,9 @@ import { GeographicAreaForm } from './GeographicAreaForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { buildGeographicAreaTree, type TreeNode } from '../../utils/tree.utils';
+import { ImportResultsModal } from '../common/ImportResultsModal';
+import { validateCSVFile } from '../../utils/csv.utils';
+import type { ImportResult } from '../../types/csv.types';
 
 export function GeographicAreaList() {
   const queryClient = useQueryClient();
@@ -27,6 +30,12 @@ export function GeographicAreaList() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [showImportResults, setShowImportResults] = useState(false);
+  const [csvError, setCsvError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: geographicAreas = [], isLoading } = useQuery({
     queryKey: ['geographicAreas', selectedGeographicAreaId],
@@ -84,6 +93,50 @@ export function GeographicAreaList() {
   const handleFormClose = () => {
     setIsFormOpen(false);
     setSelectedArea(null);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setCsvError('');
+    
+    try {
+      await GeographicAreaService.exportGeographicAreas();
+    } catch (error) {
+      setCsvError(error instanceof Error ? error.message : 'Failed to export geographic areas');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateCSVFile(file);
+    if (!validation.valid) {
+      setCsvError(validation.error || 'Invalid file');
+      return;
+    }
+
+    setIsImporting(true);
+    setCsvError('');
+
+    try {
+      const result = await GeographicAreaService.importGeographicAreas(file);
+      setImportResult(result);
+      setShowImportResults(true);
+
+      if (result.successCount > 0) {
+        queryClient.invalidateQueries({ queryKey: ['geographicAreas'] });
+      }
+    } catch (error) {
+      setCsvError(error instanceof Error ? error.message : 'Failed to import geographic areas');
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   // TreeView callback functions
@@ -189,6 +242,15 @@ export function GeographicAreaList() {
             {deleteError}
           </Alert>
         ) : null}
+        {csvError && (
+          <Alert
+            type="error"
+            dismissible
+            onDismiss={() => setCsvError('')}
+          >
+            {csvError}
+          </Alert>
+        )}
         <Container
           key="container"
           header={
@@ -196,11 +258,40 @@ export function GeographicAreaList() {
               variant="h2"
               counter={`(${geographicAreas.length})`}
               actions={
-                canCreate() && (
-                  <Button variant="primary" onClick={handleCreate}>
-                    Create geographic area
-                  </Button>
-                )
+                <SpaceBetween direction="horizontal" size="xs">
+                  {canEdit() && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv"
+                        style={{ display: 'none' }}
+                        onChange={handleFileSelect}
+                      />
+                      <Button
+                        iconName="upload"
+                        onClick={() => fileInputRef.current?.click()}
+                        loading={isImporting}
+                        disabled={isImporting}
+                      >
+                        Import CSV
+                      </Button>
+                      <Button
+                        iconName="download"
+                        onClick={handleExport}
+                        loading={isExporting}
+                        disabled={isExporting}
+                      >
+                        Export CSV
+                      </Button>
+                    </>
+                  )}
+                  {canCreate() && (
+                    <Button variant="primary" onClick={handleCreate}>
+                      Create geographic area
+                    </Button>
+                  )}
+                </SpaceBetween>
               }
             >
               Geographic Areas
@@ -256,6 +347,11 @@ export function GeographicAreaList() {
           />
         )}
       </Modal>
+      <ImportResultsModal
+        visible={showImportResults}
+        result={importResult}
+        onDismiss={() => setShowImportResults(false)}
+      />
     </>
   );
 }

@@ -31,12 +31,16 @@
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
+    "@types/multer": "^2.0.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
+    "csv-parse": "^6.1.0",
+    "csv-stringify": "^6.6.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
     "prisma": "^5.7.1",
     "swagger-ui-express": "^5.0.1",
     "zod": "^3.22.4"

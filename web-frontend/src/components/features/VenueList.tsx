@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
@@ -15,6 +15,9 @@ import { VenueService } from '../../services/api/venue.service';
 import { VenueForm } from './VenueForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { ImportResultsModal } from '../common/ImportResultsModal';
+import { validateCSVFile } from '../../utils/csv.utils';
+import type { ImportResult } from '../../types/csv.types';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -27,6 +30,12 @@ export function VenueList() {
   const [deleteError, setDeleteError] = useState('');
   const [filteringText, setFilteringText] = useState('');
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [showImportResults, setShowImportResults] = useState(false);
+  const [csvError, setCsvError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: venues = [], isLoading } = useQuery({
     queryKey: ['venues', selectedGeographicAreaId],
@@ -83,6 +92,50 @@ export function VenueList() {
     setSelectedVenue(null);
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    setCsvError('');
+    
+    try {
+      await VenueService.exportVenues(selectedGeographicAreaId);
+    } catch (error) {
+      setCsvError(error instanceof Error ? error.message : 'Failed to export venues');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateCSVFile(file);
+    if (!validation.valid) {
+      setCsvError(validation.error || 'Invalid file');
+      return;
+    }
+
+    setIsImporting(true);
+    setCsvError('');
+
+    try {
+      const result = await VenueService.importVenues(file);
+      setImportResult(result);
+      setShowImportResults(true);
+
+      if (result.successCount > 0) {
+        queryClient.invalidateQueries({ queryKey: ['venues'] });
+      }
+    } catch (error) {
+      setCsvError(error instanceof Error ? error.message : 'Failed to import venues');
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <SpaceBetween size="l">
       {deleteError && (
@@ -92,6 +145,15 @@ export function VenueList() {
           onDismiss={() => setDeleteError('')}
         >
           {deleteError}
+        </Alert>
+      )}
+      {csvError && (
+        <Alert
+          type="error"
+          dismissible
+          onDismiss={() => setCsvError('')}
+        >
+          {csvError}
         </Alert>
       )}
       <Table
@@ -172,11 +234,40 @@ export function VenueList() {
           <Header
             counter={`(${filteredVenues.length})`}
             actions={
-              canCreate() && (
-                <Button variant="primary" onClick={handleCreate}>
-                  Create venue
-                </Button>
-              )
+              <SpaceBetween direction="horizontal" size="xs">
+                {canEdit() && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv"
+                      style={{ display: 'none' }}
+                      onChange={handleFileSelect}
+                    />
+                    <Button
+                      iconName="upload"
+                      onClick={() => fileInputRef.current?.click()}
+                      loading={isImporting}
+                      disabled={isImporting}
+                    >
+                      Import CSV
+                    </Button>
+                    <Button
+                      iconName="download"
+                      onClick={handleExport}
+                      loading={isExporting}
+                      disabled={isExporting}
+                    >
+                      Export CSV
+                    </Button>
+                  </>
+                )}
+                {canCreate() && (
+                  <Button variant="primary" onClick={handleCreate}>
+                    Create venue
+                  </Button>
+                )}
+              </SpaceBetween>
             }
           >
             Venues
@@ -204,6 +295,11 @@ export function VenueList() {
           />
         )}
       </Modal>
+      <ImportResultsModal
+        visible={showImportResults}
+        result={importResult}
+        onDismiss={() => setShowImportResults(false)}
+      />
     </SpaceBetween>
   );
 }

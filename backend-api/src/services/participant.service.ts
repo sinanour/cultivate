@@ -5,6 +5,9 @@ import { AssignmentRepository } from '../repositories/assignment.repository';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
 import { PrismaClient } from '@prisma/client';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
+import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
+import { ImportResult } from '../types/csv.types';
+import { ParticipantImportSchema } from '../utils/validation.schemas';
 
 export interface CreateParticipantInput {
     name: string;
@@ -449,5 +452,116 @@ export class ParticipantService {
 
         // Get assignments with activity and role details
         return this.assignmentRepository.findByParticipantId(participantId);
+    }
+
+    async exportParticipantsToCSV(geographicAreaId?: string): Promise<string> {
+        // Get all participants (with geographic filter if provided)
+        const participants = await this.getAllParticipants(geographicAreaId);
+
+        // Define CSV columns
+        const columns = [
+            'id',
+            'name',
+            'email',
+            'phone',
+            'notes',
+            'dateOfBirth',
+            'dateOfRegistration',
+            'nickname',
+            'createdAt',
+            'updatedAt'
+        ];
+
+        // Transform participants to CSV format
+        const data = participants.map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email || '',
+            phone: p.phone || '',
+            notes: p.notes || '',
+            dateOfBirth: formatDateForCSV(p.dateOfBirth),
+            dateOfRegistration: formatDateForCSV(p.dateOfRegistration),
+            nickname: p.nickname || '',
+            createdAt: formatDateForCSV(p.createdAt),
+            updatedAt: formatDateForCSV(p.updatedAt)
+        }));
+
+        return generateCSV({ columns, data });
+    }
+
+    async importParticipantsFromCSV(fileBuffer: Buffer): Promise<ImportResult> {
+        // Parse CSV
+        let records: any[];
+        try {
+            records = parseCSV(fileBuffer);
+        } catch (error) {
+            throw new Error(`Invalid CSV format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        const result: ImportResult = {
+            totalRows: records.length,
+            successCount: 0,
+            failureCount: 0,
+            errors: []
+        };
+
+        // Process each record
+        for (let i = 0; i < records.length; i++) {
+            const record = records[i];
+            const rowNumber = i + 2; // +2 for header row and 0-based index
+
+            try {
+                // Validate record
+                const validated = ParticipantImportSchema.parse(record);
+
+                // Create or update
+                if (validated.id) {
+                    // Update existing participant
+                    await this.updateParticipant(validated.id, {
+                        name: validated.name,
+                        email: validated.email,
+                        phone: validated.phone,
+                        notes: validated.notes,
+                        dateOfBirth: validated.dateOfBirth,
+                        dateOfRegistration: validated.dateOfRegistration,
+                        nickname: validated.nickname
+                    });
+                } else {
+                    // Create new participant
+                    await this.createParticipant({
+                        name: validated.name,
+                        email: validated.email,
+                        phone: validated.phone,
+                        notes: validated.notes,
+                        dateOfBirth: validated.dateOfBirth,
+                        dateOfRegistration: validated.dateOfRegistration,
+                        nickname: validated.nickname
+                    });
+                }
+
+                result.successCount++;
+            } catch (error) {
+                result.failureCount++;
+                const errorMessages: string[] = [];
+
+                if (error instanceof Error) {
+                    errorMessages.push(error.message);
+                } else if (typeof error === 'object' && error !== null && 'errors' in error) {
+                    // Zod validation error
+                    const zodError = error as any;
+                    errorMessages.push(...zodError.errors.map((e: any) => e.message));
+                } else {
+                    errorMessages.push('Unknown error');
+                }
+
+                result.errors.push({
+                    row: rowNumber,
+                    data: record,
+                    errors: errorMessages
+                });
+            }
+        }
+
+        return result;
     }
 }

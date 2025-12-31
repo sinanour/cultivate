@@ -859,3 +859,90 @@ if (geographicAreaId) {
 - Checkpoints ensure incremental validation
 - Property tests validate universal correctness properties
 - Unit tests validate specific examples and edge cases
+
+
+- [x] 25. Implement CSV Import and Export
+  - [x] 25.1 Install CSV parsing and generation libraries
+    - Install csv-parse for CSV parsing
+    - Install csv-stringify for CSV generation
+    - Install multer for file upload handling
+    - Configure multer for memory storage with 10MB limit
+    - _Requirements: 22.25, 22.27_
+
+  - [x] 25.2 Create CSV export service methods
+    - Implement exportParticipants(geographicAreaId?) in ParticipantService
+    - Implement exportVenues(geographicAreaId?) in VenueService
+    - Implement exportActivities(geographicAreaId?) in ActivityService
+    - Implement exportGeographicAreas() in GeographicAreaService
+    - Apply geographic area filter when provided
+    - Transform entity data to CSV format with proper column mapping
+    - Use csv-stringify to generate CSV with headers
+    - Return empty CSV with header row when no records exist
+    - _Requirements: 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.9, 22.31, 22.32_
+
+  - [x] 25.3 Create CSV import service methods
+    - Implement importParticipants(fileBuffer) in ParticipantService
+    - Implement importVenues(fileBuffer) in VenueService
+    - Implement importActivities(fileBuffer) in ActivityService
+    - Implement importGeographicAreas(fileBuffer) in GeographicAreaService
+    - Use csv-parse to parse CSV with proper configuration (handle quotes, delimiters, line endings)
+    - Validate each row using existing Zod schemas
+    - Skip invalid rows and collect error details
+    - Treat rows with id column as updates, rows without as creates
+    - Return ImportResult with success/failure counts and detailed errors
+    - _Requirements: 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18, 22.19, 22.20, 22.21, 22.22, 22.23, 22.24, 22.29, 22.30_
+
+  - [x] 25.4 Create CSV export routes
+    - Add GET /api/v1/participants/export route
+    - Add GET /api/v1/venues/export route
+    - Add GET /api/v1/activities/export route
+    - Add GET /api/v1/geographic-areas/export route
+    - Set Content-Type header to text/csv
+    - Set Content-Disposition header with filename
+    - Support geographicAreaId query parameter for filtering
+    - Restrict to authenticated users (all roles)
+    - _Requirements: 22.1, 22.2, 22.3, 22.4, 22.10, 22.11, 22.31_
+
+  - [x] 25.5 Create CSV import routes
+    - Add POST /api/v1/participants/import route
+    - Add POST /api/v1/venues/import route
+    - Add POST /api/v1/activities/import route
+    - Add POST /api/v1/geographic-areas/import route
+    - Use multer middleware for file upload handling
+    - Validate file type (.csv extension)
+    - Validate file size (max 10MB)
+    - Return 400 for invalid file type
+    - Return 413 for file too large
+    - Restrict to EDITOR and ADMINISTRATOR roles
+    - _Requirements: 22.12, 22.13, 22.14, 22.15, 22.25, 22.26, 22.27, 22.28_
+
+  - [x] 25.6 Create validation schemas for CSV import
+    - Create ParticipantImportSchema with optional id field
+    - Create VenueImportSchema with optional id field
+    - Create ActivityImportSchema with optional id field
+    - Create GeographicAreaImportSchema with optional id field
+    - Handle empty string values for optional fields
+    - Use coerce for date and number fields
+    - _Requirements: 22.16, 22.17, 22.18, 22.19, 22.20_
+
+  - [x] 25.7 Update OpenAPI documentation
+    - Document export endpoints with response headers
+    - Document import endpoints with multipart/form-data
+    - Include CSV column definitions in documentation
+    - Add examples for import/export operations
+    - Document error responses for file validation
+    - _Requirements: 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.12, 22.13, 22.14, 22.15_
+
+  - [ ]* 25.8 Write property tests for CSV operations
+    - **Property 134: CSV Export Completeness**
+    - **Property 135: Empty CSV Header Generation**
+    - **Property 136: CSV Export Headers**
+    - **Property 137: CSV Import Validation**
+    - **Property 138: CSV Import Create/Update Behavior**
+    - **Property 139: CSV File Format Validation**
+    - **Property 140: CSV Delimiter Support**
+    - **Property 141: CSV Export Geographic Filtering**
+    - **Validates: Requirements 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10, 22.11, 22.20, 22.21, 22.22, 22.23, 22.24, 22.26, 22.27, 22.28, 22.30, 22.31, 22.32**
+
+- [ ] 26. Checkpoint - Verify CSV import/export functionality
+  - Ensure all tests pass, ask the user if questions arise.

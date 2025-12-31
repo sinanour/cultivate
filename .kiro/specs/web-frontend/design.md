@@ -2095,6 +2095,474 @@ export function formatDate(dateString: string): string {
 }
 ```
 
+## CSV Import and Export
+
+### Overview
+
+The web frontend provides CSV import and export functionality for bulk data operations on Participants, Venues, Activities, and Geographic Areas. This enables community organizers to:
+- Bulk load data from external sources (spreadsheets, other systems)
+- Share data with stakeholders who prefer spreadsheet formats
+- Backup and restore data in a human-readable format
+- Understand the required data structure through empty CSV templates
+
+### UI Components
+
+#### Export Button
+
+**Location:** Table header actions area on list pages (Participants, Venues, Activities, Geographic Areas)
+
+**Component:** CloudScape Button with icon
+
+**Behavior:**
+- Positioned in table header alongside other action buttons
+- Hidden from READ_ONLY users
+- Visible to EDITOR and ADMINISTRATOR users
+- Disabled during export operation
+- Shows loading indicator during export
+
+**Implementation:**
+```typescript
+<Button
+  iconName="download"
+  onClick={handleExport}
+  loading={isExporting}
+  disabled={isExporting}
+>
+  Export CSV
+</Button>
+```
+
+#### Import Button
+
+**Location:** Table header actions area on list pages (Participants, Venues, Activities, Geographic Areas)
+
+**Component:** CloudScape Button with icon and hidden file input
+
+**Behavior:**
+- Positioned in table header alongside Export button
+- Hidden from READ_ONLY users
+- Visible to EDITOR and ADMINISTRATOR users
+- Opens file selection dialog on click
+- Validates file extension (.csv) before upload
+- Shows loading indicator during import
+- Displays import results in modal dialog
+
+**Implementation:**
+```typescript
+<>
+  <input
+    ref={fileInputRef}
+    type="file"
+    accept=".csv"
+    style={{ display: 'none' }}
+    onChange={handleFileSelect}
+  />
+  <Button
+    iconName="upload"
+    onClick={() => fileInputRef.current?.click()}
+    loading={isImporting}
+    disabled={isImporting}
+  >
+    Import CSV
+  </Button>
+</>
+```
+
+#### Import Results Modal
+
+**Component:** CloudScape Modal with results summary
+
+**Content:**
+- Success/failure counts
+- List of errors with row numbers and error messages
+- Option to download error report
+- Close button
+
+**Implementation:**
+```typescript
+<Modal
+  visible={showResults}
+  onDismiss={() => setShowResults(false)}
+  header="Import Results"
+>
+  <SpaceBetween size="m">
+    <Alert type={result.failureCount > 0 ? 'warning' : 'success'}>
+      {result.successCount} records imported successfully
+      {result.failureCount > 0 && `, ${result.failureCount} failed`}
+    </Alert>
+    
+    {result.errors.length > 0 && (
+      <Table
+        columnDefinitions={[
+          { header: 'Row', cell: e => e.row },
+          { header: 'Errors', cell: e => e.errors.join(', ') }
+        ]}
+        items={result.errors}
+      />
+    )}
+  </SpaceBetween>
+</Modal>
+```
+
+### Service Layer
+
+#### Export Service Methods
+
+**ParticipantService:**
+```typescript
+async exportParticipants(geographicAreaId?: string): Promise<void> {
+  const response = await apiClient.get('/participants/export', {
+    params: { geographicAreaId },
+    responseType: 'blob'
+  });
+  
+  const filename = `participants-${formatDate(new Date())}.csv`;
+  downloadBlob(response.data, filename);
+}
+```
+
+**VenueService:**
+```typescript
+async exportVenues(geographicAreaId?: string): Promise<void> {
+  const response = await apiClient.get('/venues/export', {
+    params: { geographicAreaId },
+    responseType: 'blob'
+  });
+  
+  const filename = `venues-${formatDate(new Date())}.csv`;
+  downloadBlob(response.data, filename);
+}
+```
+
+**ActivityService:**
+```typescript
+async exportActivities(geographicAreaId?: string): Promise<void> {
+  const response = await apiClient.get('/activities/export', {
+    params: { geographicAreaId },
+    responseType: 'blob'
+  });
+  
+  const filename = `activities-${formatDate(new Date())}.csv`;
+  downloadBlob(response.data, filename);
+}
+```
+
+**GeographicAreaService:**
+```typescript
+async exportGeographicAreas(): Promise<void> {
+  const response = await apiClient.get('/geographic-areas/export', {
+    responseType: 'blob'
+  });
+  
+  const filename = `geographic-areas-${formatDate(new Date())}.csv`;
+  downloadBlob(response.data, filename);
+}
+```
+
+#### Import Service Methods
+
+**ParticipantService:**
+```typescript
+async importParticipants(file: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await apiClient.post('/participants/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  
+  return response.data.data;
+}
+```
+
+**VenueService:**
+```typescript
+async importVenues(file: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await apiClient.post('/venues/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  
+  return response.data.data;
+}
+```
+
+**ActivityService:**
+```typescript
+async importActivities(file: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await apiClient.post('/activities/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  
+  return response.data.data;
+}
+```
+
+**GeographicAreaService:**
+```typescript
+async importGeographicAreas(file: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await apiClient.post('/geographic-areas/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  
+  return response.data.data;
+}
+```
+
+### Utility Functions
+
+**Download Blob:**
+```typescript
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+```
+
+**File Validation:**
+```typescript
+function validateCSVFile(file: File): { valid: boolean; error?: string } {
+  if (!file.name.endsWith('.csv')) {
+    return { valid: false, error: 'File must be a CSV (.csv extension)' };
+  }
+  
+  if (file.size > 10 * 1024 * 1024) {
+    return { valid: false, error: 'File size must be less than 10MB' };
+  }
+  
+  return { valid: true };
+}
+```
+
+### Component Implementation
+
+#### Export Handler
+
+```typescript
+const handleExport = async () => {
+  setIsExporting(true);
+  
+  try {
+    // Get global geographic area filter from context
+    const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+    
+    // Call export service with filter
+    await participantService.exportParticipants(selectedGeographicAreaId);
+    
+    // Show success notification
+    addNotification({
+      type: 'success',
+      content: selectedGeographicAreaId 
+        ? 'Filtered participants exported successfully'
+        : 'All participants exported successfully'
+    });
+  } catch (error) {
+    // Show error notification
+    addNotification({
+      type: 'error',
+      content: 'Failed to export participants: ' + error.message
+    });
+  } finally {
+    setIsExporting(false);
+  }
+};
+```
+
+#### Import Handler
+
+```typescript
+const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  
+  // Validate file
+  const validation = validateCSVFile(file);
+  if (!validation.valid) {
+    addNotification({
+      type: 'error',
+      content: validation.error
+    });
+    return;
+  }
+  
+  setIsImporting(true);
+  
+  try {
+    // Upload and import
+    const result = await participantService.importParticipants(file);
+    
+    // Show results modal
+    setImportResult(result);
+    setShowResults(true);
+    
+    // Refresh list if any records were imported
+    if (result.successCount > 0) {
+      queryClient.invalidateQueries(['participants']);
+    }
+  } catch (error) {
+    addNotification({
+      type: 'error',
+      content: 'Failed to import participants: ' + error.message
+    });
+  } finally {
+    setIsImporting(false);
+    // Reset file input
+    event.target.value = '';
+  }
+};
+```
+
+### Data Types
+
+```typescript
+interface ImportResult {
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  errors: ImportError[];
+}
+
+interface ImportError {
+  row: number;
+  data: Record<string, any>;
+  errors: string[];
+}
+```
+
+### Error Handling
+
+**File Validation Errors:**
+- Non-CSV file: Display error notification "File must be a CSV (.csv extension)"
+- File too large: Display error notification "File size must be less than 10MB"
+
+**Import Errors:**
+- Network errors: Display error notification with retry option
+- Validation errors: Display in results modal with row numbers and error messages
+- Partial success: Display warning notification with success/failure counts
+
+**Export Errors:**
+- Network errors: Display error notification with retry option
+- Empty result: Download CSV with header row only (not an error)
+
+### User Experience
+
+**Export Flow:**
+1. User clicks "Export CSV" button
+2. Button shows loading state
+3. Browser downloads CSV file
+4. Success notification appears
+5. Button returns to normal state
+
+**Import Flow:**
+1. User clicks "Import CSV" button
+2. File selection dialog opens
+3. User selects CSV file
+4. File is validated
+5. If valid, upload begins with loading indicator
+6. Import results modal appears
+7. User reviews results
+8. If successful, list refreshes automatically
+9. User closes modal
+
+**Geographic Filter Integration:**
+- When global geographic area filter is active, export includes only filtered records
+- Success notification indicates whether export was filtered or global
+- Import is not affected by geographic filter (imports all records in file)
+
+### Performance Considerations
+
+**Large File Handling:**
+- Show progress indicator during upload
+- Use streaming for large file uploads
+- Implement chunking for very large files (>5MB)
+- Provide cancel option for long-running imports
+
+**Export Optimization:**
+- Use blob response type for efficient binary handling
+- Stream download directly to browser
+- Don't load entire CSV into memory
+- Use browser's native download mechanism
+
+**UI Responsiveness:**
+- Disable buttons during operations to prevent duplicate requests
+- Show loading indicators for user feedback
+- Use optimistic updates where appropriate
+- Refresh list data after successful import
+
+### Security Considerations
+
+**Authorization:**
+- Export: Available to all authenticated users (respects geographic filter)
+- Import: Restricted to EDITOR and ADMINISTRATOR roles only
+- Buttons hidden based on user role
+
+**Input Validation:**
+- Validate file type before upload
+- Validate file size before upload
+- Backend validates all CSV data
+- Sanitize error messages to prevent XSS
+
+**Data Privacy:**
+- Respect geographic area filters on exports
+- Audit log all import/export operations
+- Include user ID in audit logs
+
+### Correctness Properties
+
+**Property 142: CSV export button visibility**
+*For any* user with READ_ONLY role, the Export CSV button should be hidden; for users with EDITOR or ADMINISTRATOR role, it should be visible.
+**Validates: Requirements 26.22, 26.23**
+
+**Property 143: CSV import button visibility**
+*For any* user with READ_ONLY role, the Import CSV button should be hidden; for users with EDITOR or ADMINISTRATOR role, it should be visible.
+**Validates: Requirements 26.22, 26.23**
+
+**Property 144: CSV export trigger**
+*For any* Export CSV button click, the application should call the appropriate backend export endpoint and trigger a browser download.
+**Validates: Requirements 26.1, 26.2, 26.3, 26.4, 26.5, 26.6**
+
+**Property 145: Empty CSV download**
+*For any* export operation with no records, the application should download a CSV file with only the header row.
+**Validates: Requirements 26.7**
+
+**Property 146: CSV import file selection**
+*For any* Import CSV button click, the application should open a file selection dialog.
+**Validates: Requirements 26.8, 26.9, 26.10, 26.11, 26.12**
+
+**Property 147: CSV import success handling**
+*For any* successful CSV import, the application should display a success message with counts and refresh the entity list.
+**Validates: Requirements 26.14, 26.18**
+
+**Property 148: CSV import error handling**
+*For any* failed CSV import, the application should display detailed error messages for failed rows.
+**Validates: Requirements 26.15**
+
+**Property 149: CSV file validation**
+*For any* non-CSV file selected for import, the application should display an error message and prevent upload.
+**Validates: Requirements 26.19, 26.20**
+
+**Property 150: CSV operation loading states**
+*For any* import or export operation in progress, the application should display a loading indicator and disable the corresponding button.
+**Validates: Requirements 26.16, 26.17**
+
+**Property 151: CSV export geographic filtering**
+*For any* export operation with the global geographic area filter active, the application should include the filter in the export request and indicate in the success message that only filtered records were exported.
+**Validates: Requirements 26.24, 26.25**
+
 ## Testing Strategy
 
 ### Unit Testing

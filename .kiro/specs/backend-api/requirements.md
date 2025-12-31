@@ -477,3 +477,42 @@ The Backend API package provides the RESTful API service that implements all bus
 10. THE API SHALL optimize database queries for text-based filtering using appropriate indexes on name, address, and email fields
 11. THE API SHALL return the first page of results by default when no page parameter is specified
 12. THE API SHALL limit the maximum page size to 100 items to prevent performance issues
+
+### Requirement 22: CSV Import and Export
+
+**User Story:** As a community organizer, I want to import and export data in CSV format via API, so that I can bulk load data from external sources and share data with other systems.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a GET /api/v1/participants/export endpoint that exports all participants to CSV format
+2. THE API SHALL provide a GET /api/v1/venues/export endpoint that exports all venues to CSV format
+3. THE API SHALL provide a GET /api/v1/activities/export endpoint that exports all activities to CSV format
+4. THE API SHALL provide a GET /api/v1/geographic-areas/export endpoint that exports all geographic areas to CSV format
+5. WHEN exporting participants, THE API SHALL include columns for: id, name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname, createdAt, updatedAt
+6. WHEN exporting venues, THE API SHALL include columns for: id, name, address, geographicAreaId, geographicAreaName, latitude, longitude, venueType, createdAt, updatedAt
+7. WHEN exporting activities, THE API SHALL include columns for: id, name, activityTypeId, activityTypeName, activityCategoryId, activityCategoryName, startDate, endDate, status, createdAt, updatedAt
+8. WHEN exporting geographic areas, THE API SHALL include columns for: id, name, areaType, parentGeographicAreaId, parentGeographicAreaName, createdAt, updatedAt
+9. WHEN no records exist for export, THE API SHALL return an empty CSV with only the header row containing column names
+10. THE API SHALL set the Content-Type header to text/csv for all export responses
+11. THE API SHALL set the Content-Disposition header to attachment with an appropriate filename for all export responses
+12. THE API SHALL provide a POST /api/v1/participants/import endpoint that accepts CSV file uploads
+13. THE API SHALL provide a POST /api/v1/venues/import endpoint that accepts CSV file uploads
+14. THE API SHALL provide a POST /api/v1/activities/import endpoint that accepts CSV file uploads
+15. THE API SHALL provide a POST /api/v1/geographic-areas/import endpoint that accepts CSV file uploads
+16. WHEN importing participants, THE API SHALL accept CSV files with columns: name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname
+17. WHEN importing venues, THE API SHALL accept CSV files with columns: name, address, geographicAreaId, latitude, longitude, venueType
+18. WHEN importing activities, THE API SHALL accept CSV files with columns: name, activityTypeId, startDate, endDate, status
+19. WHEN importing geographic areas, THE API SHALL accept CSV files with columns: name, areaType, parentGeographicAreaId
+20. WHEN importing CSV data, THE API SHALL validate each row according to the same validation rules as the create endpoints
+21. WHEN importing CSV data, THE API SHALL skip rows with validation errors and continue processing remaining rows
+22. WHEN importing CSV data, THE API SHALL return a summary response with counts of successful imports, failed imports, and detailed error messages for failed rows
+23. WHEN importing CSV data with an id column present, THE API SHALL treat rows with existing IDs as updates and rows without IDs as creates
+24. WHEN importing CSV data without an id column, THE API SHALL treat all rows as creates
+25. THE API SHALL support multipart/form-data file uploads for all import endpoints
+26. THE API SHALL validate that uploaded files are valid CSV format
+27. THE API SHALL limit CSV file uploads to a maximum size of 10MB
+28. WHEN a CSV file exceeds the size limit, THE API SHALL return 413 Payload Too Large
+29. THE API SHALL parse CSV files with proper handling of quoted fields, escaped characters, and different line endings
+30. THE API SHALL support both comma and semicolon as field delimiters in CSV files
+31. WHEN exporting data, THE API SHALL respect the global geographic area filter if provided via geographicAreaId query parameter
+32. WHEN exporting with a geographic area filter, THE API SHALL include only records associated with venues in the specified geographic area or its descendants

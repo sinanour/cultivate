@@ -296,3 +296,46 @@ export type BatchSyncInput = z.infer<typeof BatchSyncSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;
 export type ParticipantAddressHistoryCreateInput = z.infer<typeof ParticipantAddressHistoryCreateSchema>;
 export type ParticipantAddressHistoryUpdateInput = z.infer<typeof ParticipantAddressHistoryUpdateSchema>;
+
+// CSV Import schemas
+export const ParticipantImportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1, 'Name is required').max(200),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  phone: z.string().max(20).optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  notes: z.string().max(1000).optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  dateOfBirth: z.string().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  dateOfRegistration: z.string().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  nickname: z.string().max(100).optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+});
+
+export const VenueImportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1, 'Name is required').max(200),
+  address: z.string().min(1, 'Address is required').max(500),
+  geographicAreaId: z.string().uuid('Invalid geographic area ID'),
+  latitude: z.coerce.number().min(-90).max(90).optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  longitude: z.coerce.number().min(-180).max(180).optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  venueType: z.enum(['PUBLIC_BUILDING', 'PRIVATE_RESIDENCE']).optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+});
+
+export const ActivityImportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1, 'Name is required').max(200),
+  activityTypeId: z.string().uuid('Invalid activity type ID'),
+  startDate: z.string().min(1, 'Start date is required'),
+  endDate: z.string().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+  status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional(),
+});
+
+export const GeographicAreaImportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1, 'Name is required').max(200),
+  areaType: z.nativeEnum(GeographicAreaType),
+  parentGeographicAreaId: z.string().uuid().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+});
+
+export type ParticipantImportInput = z.infer<typeof ParticipantImportSchema>;
+export type VenueImportInput = z.infer<typeof VenueImportSchema>;
+export type ActivityImportInput = z.infer<typeof ActivityImportSchema>;
+export type GeographicAreaImportInput = z.infer<typeof GeographicAreaImportSchema>;
