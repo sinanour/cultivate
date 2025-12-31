@@ -266,6 +266,11 @@ The Web Frontend package provides a responsive React-based web application that 
 44. THE Web_App SHALL provide a geographic area filter for all analytics
 45. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
 46. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
+46a. THE Web_App SHALL synchronize growth dashboard filter parameters (period, date range) with URL query parameters
+46b. WHEN a user navigates to a URL with growth dashboard query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
+46c. WHEN a user changes any filter parameter on the growth dashboard, THE Web_App SHALL update the browser URL to reflect the current state
+46d. THE Web_App SHALL enable browser back/forward navigation to move between different growth dashboard configurations
+46e. THE Web_App SHALL allow users to share the current growth dashboard URL with other users to display the same filtered results
 47. THE Web_App SHALL display a chart titled "Activities" (renamed from "Activities by Type") on the Engagement Dashboard
 48. THE Web_App SHALL provide a segmented control above or within the Activities chart to toggle between "Activity Type" and "Activity Category" views
 49. WHEN the Activities chart is first rendered, THE Segmented_Control SHALL default to "Activity Type" as the selected option

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
@@ -8,7 +9,7 @@ import Box from '@cloudscape-design/components/box';
 import Select from '@cloudscape-design/components/select';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
@@ -25,15 +26,94 @@ function toISODateTime(dateString: string, isEndOfDay = false): string {
   return date.toISOString();
 }
 
-// Initialize with null to query all history
-const getDefaultDateRange = (): DateRangePickerProps.Value | null => {
-  return null;
-};
-
 export function GrowthDashboard() {
-  const [period, setPeriod] = useState<TimePeriod>('MONTH');
-  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(getDefaultDateRange());
+  const [searchParams, setSearchParams] = useSearchParams();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+
+  // Initialize state from URL parameters
+  const [period, setPeriod] = useState<TimePeriod>(() => {
+    const urlPeriod = searchParams.get('period');
+    return (urlPeriod as TimePeriod) || 'MONTH';
+  });
+
+  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(() => {
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const relativePeriod = searchParams.get('relativePeriod');
+
+    // Handle relative date range (e.g., "-90d", "-6m")
+    if (relativePeriod) {
+      const match = relativePeriod.match(/^-(\d+)([dwmy])$/);
+      if (match) {
+        const amount = parseInt(match[1], 10);
+        const unitChar = match[2];
+
+        let unit: 'day' | 'week' | 'month' | 'year';
+        switch (unitChar) {
+          case 'd':
+            unit = 'day';
+            break;
+          case 'w':
+            unit = 'week';
+            break;
+          case 'm':
+            unit = 'month';
+            break;
+          case 'y':
+            unit = 'year';
+            break;
+          default:
+            return null;
+        }
+
+        return {
+          type: 'relative',
+          amount,
+          unit,
+        };
+      }
+    }
+
+    // Handle absolute date range
+    if (startDate && endDate) {
+      return {
+        type: 'absolute',
+        startDate,
+        endDate,
+      };
+    }
+
+    return null;
+  });
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+
+    // Update period
+    params.set('period', period);
+
+    // Update date range
+    if (dateRange) {
+      if (dateRange.type === 'absolute') {
+        params.set('startDate', dateRange.startDate);
+        params.set('endDate', dateRange.endDate);
+        params.delete('relativePeriod');
+      } else if (dateRange.type === 'relative') {
+        // Convert relative date range to compact format (e.g., "-90d", "-6m")
+        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
+        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
+        params.delete('startDate');
+        params.delete('endDate');
+      }
+    } else {
+      params.delete('startDate');
+      params.delete('endDate');
+      params.delete('relativePeriod');
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [period, dateRange, searchParams, setSearchParams]);
 
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['growthMetrics', dateRange, period, selectedGeographicAreaId],
@@ -104,13 +184,11 @@ export function GrowthDashboard() {
 
   const timeSeriesData = metrics.timeSeries;
 
-  // Calculate percentage changes for activities
-  const activityChange = timeSeriesData.length >= 2
-    ? ((timeSeriesData[timeSeriesData.length - 1].newActivities - timeSeriesData[timeSeriesData.length - 2].newActivities) / 
-       (timeSeriesData[timeSeriesData.length - 2].newActivities || 1)) * 100
+  // Calculate absolute deltas from start to end of period
+  const activityGrowth = timeSeriesData.length >= 2
+    ? timeSeriesData[timeSeriesData.length - 1].cumulativeActivities - timeSeriesData[0].cumulativeActivities
     : 0;
 
-  // Calculate participant growth from cumulative counts
   const participantGrowth = timeSeriesData.length >= 2
     ? timeSeriesData[timeSeriesData.length - 1].cumulativeParticipants - timeSeriesData[0].cumulativeParticipants
     : 0;
@@ -119,60 +197,61 @@ export function GrowthDashboard() {
     <SpaceBetween size="l">
       <Container
         header={
-          <Header variant="h3">Date Range Filter</Header>
+          <Header variant="h3">Filters</Header>
         }
       >
-        <DateRangePicker
-          value={dateRange}
-          onChange={({ detail }) => {
-            setDateRange(detail.value || null);
-          }}
-          placeholder="All history"
-          dateOnly={true}
-          relativeOptions={[
-            { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
-            { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
-            { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
-            { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
-          ]}
-          isValidRange={() => ({ valid: true })}
-          i18nStrings={{
-            todayAriaLabel: 'Today',
-            nextMonthAriaLabel: 'Next month',
-            previousMonthAriaLabel: 'Previous month',
-            customRelativeRangeDurationLabel: 'Duration',
-            customRelativeRangeDurationPlaceholder: 'Enter duration',
-            customRelativeRangeOptionLabel: 'Custom range',
-            customRelativeRangeOptionDescription: 'Set a custom range in the past',
-            customRelativeRangeUnitLabel: 'Unit of time',
-            formatRelativeRange: (value) => {
-              const unit = value.unit === 'day' ? 'days' : value.unit === 'week' ? 'weeks' : value.unit === 'month' ? 'months' : 'years';
-              return `Last ${value.amount} ${unit}`;
-            },
-            formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
-            dateTimeConstraintText: 'Select a date range for growth analysis.',
-            relativeModeTitle: 'Relative range',
-            absoluteModeTitle: 'Absolute range',
-            relativeRangeSelectionHeading: 'Choose a range',
-            startDateLabel: 'Start date',
-            endDateLabel: 'End date',
-            clearButtonLabel: 'Clear and dismiss',
-            cancelButtonLabel: 'Cancel',
-            applyButtonLabel: 'Apply',
-          }}
-        />
-      </Container>
-
-      <Container
-        header={
-          <Header variant="h3">Time Period Grouping</Header>
-        }
-      >
-        <Select
-          selectedOption={periodOptions.find((o) => o.value === period) || periodOptions[2]}
-          onChange={({ detail }) => setPeriod(detail.selectedOption.value as TimePeriod)}
-          options={periodOptions}
-        />
+        <ColumnLayout columns={2}>
+          <div>
+            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Date Range</Box>
+            <DateRangePicker
+              value={dateRange}
+              onChange={({ detail }) => {
+                setDateRange(detail.value || null);
+              }}
+              placeholder="All history"
+              dateOnly={true}
+              relativeOptions={[
+                { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
+                { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
+                { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
+                { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
+              ]}
+              isValidRange={() => ({ valid: true })}
+              i18nStrings={{
+                todayAriaLabel: 'Today',
+                nextMonthAriaLabel: 'Next month',
+                previousMonthAriaLabel: 'Previous month',
+                customRelativeRangeDurationLabel: 'Duration',
+                customRelativeRangeDurationPlaceholder: 'Enter duration',
+                customRelativeRangeOptionLabel: 'Custom range',
+                customRelativeRangeOptionDescription: 'Set a custom range in the past',
+                customRelativeRangeUnitLabel: 'Unit of time',
+                formatRelativeRange: (value) => {
+                  const unit = value.unit === 'day' ? 'days' : value.unit === 'week' ? 'weeks' : value.unit === 'month' ? 'months' : 'years';
+                  return `Last ${value.amount} ${unit}`;
+                },
+                formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
+                dateTimeConstraintText: 'Select a date range for growth analysis.',
+                relativeModeTitle: 'Relative range',
+                absoluteModeTitle: 'Absolute range',
+                relativeRangeSelectionHeading: 'Choose a range',
+                startDateLabel: 'Start date',
+                endDateLabel: 'End date',
+                clearButtonLabel: 'Clear and dismiss',
+                cancelButtonLabel: 'Cancel',
+                applyButtonLabel: 'Apply',
+              }}
+            />
+          </div>
+          <div>
+            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Time Period Grouping</Box>
+            <Select
+              selectedOption={periodOptions.find((o) => o.value === period) || periodOptions[2]}
+              onChange={({ detail }) => setPeriod(detail.selectedOption.value as TimePeriod)}
+              options={periodOptions}
+            />
+          </div>
+        </ColumnLayout>
       </Container>
 
       <ColumnLayout columns={2} variant="text-grid">
@@ -183,56 +262,63 @@ export function GrowthDashboard() {
           </Box>
         </Container>
         <Container>
-          <Box variant="awsui-key-label">Activity Change</Box>
-          <Box fontSize="display-l" fontWeight="bold" color={activityChange >= 0 ? 'text-status-success' : 'text-status-error'}>
-            {activityChange >= 0 ? '+' : ''}{activityChange.toFixed(1)}%
+          <Box variant="awsui-key-label">Activity Growth</Box>
+          <Box fontSize="display-l" fontWeight="bold" color={activityGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
+            {activityGrowth >= 0 ? '+' : ''}{activityGrowth}
           </Box>
         </Container>
       </ColumnLayout>
 
       <Container header={<Header variant="h3">New Activities</Header>}>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={timeSeriesData}>
+          <BarChart data={timeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line
-              type="monotone"
+            <Bar
               dataKey="newActivities"
-              stroke="#00C49F"
+              fill="#00C49F"
               name="New Activities"
             />
-          </LineChart>
+          </BarChart>
         </ResponsiveContainer>
       </Container>
 
       <Container header={<Header variant="h3">Cumulative Growth</Header>}>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={timeSeriesData}>
+          <LineChart data={timeSeriesData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
-            <YAxis />
+            <YAxis 
+              yAxisId="left"
+              label={{ value: 'Participants', angle: -90, position: 'insideLeft' }}
+            />
+            <YAxis 
+              yAxisId="right"
+              orientation="right"
+              label={{ value: 'Activities', angle: 90, position: 'insideRight' }}
+            />
             <Tooltip />
             <Legend />
-            <Area
+            <Line
+              yAxisId="left"
               type="monotone"
               dataKey="cumulativeParticipants"
               stroke="#0088FE"
-              fill="#0088FE"
-              fillOpacity={0.6}
+              strokeWidth={2}
               name="Cumulative Participants"
             />
-            <Area
+            <Line
+              yAxisId="right"
               type="monotone"
               dataKey="cumulativeActivities"
               stroke="#00C49F"
-              fill="#00C49F"
-              fillOpacity={0.6}
+              strokeWidth={2}
               name="Cumulative Activities"
             />
-          </AreaChart>
+          </LineChart>
         </ResponsiveContainer>
       </Container>
     </SpaceBetween>

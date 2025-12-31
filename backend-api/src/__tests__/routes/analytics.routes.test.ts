@@ -60,8 +60,8 @@ describe('AnalyticsRoutes', () => {
         it('should return growth metrics', async () => {
             const mockMetrics = {
                 timeSeries: [
-                    { period: '2024-01', newActivities: 5, cumulativeParticipants: 10, cumulativeActivities: 5, percentageChange: null },
-                    { period: '2024-02', newActivities: 8, cumulativeParticipants: 25, cumulativeActivities: 13, percentageChange: 60 },
+                    { date: '2024-01', newActivities: 5, cumulativeParticipants: 10, cumulativeActivities: 5, percentageChange: null },
+                    { date: '2024-02', newActivities: 8, cumulativeParticipants: 25, cumulativeActivities: 13, percentageChange: 60 },
                 ],
             };
             mockService.getGrowthMetrics = jest.fn().mockResolvedValue(mockMetrics);

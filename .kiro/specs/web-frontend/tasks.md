@@ -649,13 +649,27 @@ This implementation plan covers the React-based web application built with TypeS
     - Display cumulative participant counts over time
     - Provide geographic area filter (optional geographicAreaId)
     - Use /analytics/growth endpoint with optional startDate, endDate, period, geographicAreaId
-    - _Requirements: 7.32, 7.33, 7.34, 7.35, 7.36, 7.37_
+    - Combine date range and period controls into single unified container with side-by-side layout
+    - Use dual-axis LineChart for cumulative growth (left: participants, right: activities)
+    - Synchronize filter parameters with URL query parameters:
+      - Read URL parameters on component mount to initialize dashboard state
+      - Update URL when user changes filters (using React Router's useSearchParams)
+      - Support parameters: period, startDate, endDate, relativePeriod (compact format: -90d, -6m, -1y)
+      - Use same compact relative date format as Engagement dashboard for consistency
+      - Enable browser back/forward navigation between different configurations
+      - Ensure URL updates don't cause page reloads (use replace: true)
+    - _Requirements: 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 46a, 46b, 46c, 46d, 46e_
 
   - [ ]* 14.3 Write property tests for growth metrics
     - **Property 32: Time-Series Data Calculation**
     - **Property 33: Percentage Change Calculation**
     - **Property 34: Cumulative Count Calculation**
-    - **Validates: Requirements 7.33, 7.34, 7.35**
+    - **Property 34a: Growth Dashboard URL Parameter Synchronization**
+    - **Property 34b: Growth Dashboard URL Parameter Application**
+    - **Property 34c: Growth Dashboard URL Update on State Change**
+    - **Property 34d: Growth Dashboard Browser Navigation Support**
+    - **Property 34e: Growth Dashboard URL Shareability**
+    - **Validates: Requirements 7.40, 7.41, 7.42, 46a, 46b, 46c, 46d, 46e**
 
   - [x] 14.3 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint
@@ -1320,6 +1334,28 @@ This implementation plan covers the React-based web application built with TypeS
 
 - [ ] 31. Checkpoint - Verify CSV import/export functionality
   - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 32. Fix Growth Dashboard chart data field mismatch
+  - [x] 32.1 Identify the correct field name for time series data
+    - Backend returns `period` field in GrowthPeriodData
+    - Frontend charts expect `date` field
+    - Design document specifies `date` field in GrowthPeriodData interface
+    - Backend implementation uses `period` instead of `date`
+    - _Requirements: 7.40, 7.41, 7.42_
+
+  - [x] 32.2 Update backend analytics service to use `date` field
+    - Change `period: period.label` to `date: period.label` in getGrowthMetrics method
+    - Update GrowthPeriodData interface in analytics.service.ts to use `date` instead of `period`
+    - Ensure consistency with design document specification
+    - _Requirements: 7.40, 7.41, 7.42_
+
+  - [x] 32.3 Verify charts render correctly after fix
+    - Test New Activities line chart displays data
+    - Test Cumulative Growth area chart displays data
+    - Test with different time periods (DAY, WEEK, MONTH, YEAR)
+    - Test with and without date range filters
+    - Test with geographic area filters
+    - _Requirements: 7.40, 7.41, 7.42_
 
 ## Notes
 

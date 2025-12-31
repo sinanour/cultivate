@@ -538,9 +538,24 @@ src/
 - Displays time-series charts for new activities
 - Provides time period selector (day, week, month, year)
 - Shows percentage changes between periods for activities
-- Displays cumulative participant counts over time
+- Displays cumulative participant and activity counts over time
+- Uses dual-axis line chart for cumulative growth:
+  - Left Y-axis: Cumulative Participants (labeled)
+  - Right Y-axis: Cumulative Activities (labeled)
+  - Two independent line series without stacked areas
+  - Clear axis labels for each metric
 - Provides geographic area filter dropdown
-- Uses recharts for line and area charts
+- Uses recharts for line charts
+- Synchronizes filter parameters with URL query parameters:
+  - Period parameter: `?period=MONTH`
+  - Absolute date range: `?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+  - Relative date range: `?relativePeriod=-90d` (compact format: -[amount][unit])
+    - Units: d (day), w (week), m (month), y (year)
+    - Examples: `-30d`, `-6m`, `-1y`
+  - Reads URL parameters on component mount to initialize dashboard state
+  - Updates URL when user changes filters (using React Router's useSearchParams)
+  - Enables browser back/forward navigation between different configurations
+  - Allows URL sharing for collaborative analysis
 
 #### 9. User Management (Admin Only)
 
@@ -1493,6 +1508,36 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* time series data, the cumulative participant counts should correctly sum all participant counts up to each point in time.
 
 **Validates: Requirements 7.42**
+
+### Property 34a: Growth Dashboard URL Parameter Synchronization
+
+*For any* growth dashboard state (period and date range filters), the browser URL query parameters should accurately reflect all current filter values (period, startDate, endDate, relativeAmount, relativeUnit).
+
+**Validates: Requirements 46a**
+
+### Property 34b: Growth Dashboard URL Parameter Application
+
+*For any* URL with growth dashboard query parameters, when a user navigates to that URL, the growth dashboard should automatically apply all filter parameters from the URL to initialize the dashboard state.
+
+**Validates: Requirements 46b**
+
+### Property 34c: Growth Dashboard URL Update on State Change
+
+*For any* change to filter parameters in the growth dashboard, the browser URL should be updated to reflect the new state without causing a page reload.
+
+**Validates: Requirements 46c**
+
+### Property 34d: Growth Dashboard Browser Navigation Support
+
+*For any* sequence of filter changes in the growth dashboard, using browser back/forward buttons should navigate through the history of configurations and restore the corresponding dashboard state.
+
+**Validates: Requirements 46d**
+
+### Property 34e: Growth Dashboard URL Shareability
+
+*For any* growth dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered results as the original user.
+
+**Validates: Requirements 46e**
 
 ### Property 35: Unauthenticated access protection
 

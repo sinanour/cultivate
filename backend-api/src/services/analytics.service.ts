@@ -99,7 +99,7 @@ export interface EngagementMetrics {
 }
 
 export interface GrowthPeriodData {
-    period: string;
+    date: string;
     newActivities: number;
     cumulativeParticipants: number;
     cumulativeActivities: number;
@@ -840,21 +840,13 @@ export class AnalyticsService {
         let end: Date;
 
         if (!startDate && !endDate) {
-            // Query all history - get earliest record
-            const earliestParticipant = await this.prisma.participant.findFirst({
-                orderBy: { createdAt: 'asc' },
-                select: { createdAt: true },
-            });
+            // Query all history - get earliest activity start date
             const earliestActivity = await this.prisma.activity.findFirst({
-                orderBy: { createdAt: 'asc' },
-                select: { createdAt: true },
+                orderBy: { startDate: 'asc' },
+                select: { startDate: true },
             });
 
-            const earliestDate = earliestParticipant && earliestActivity
-                ? new Date(Math.min(earliestParticipant.createdAt.getTime(), earliestActivity.createdAt.getTime()))
-                : earliestParticipant?.createdAt || earliestActivity?.createdAt || new Date();
-
-            start = earliestDate;
+            start = earliestActivity?.startDate || new Date();
             end = new Date();
         } else {
             const now = new Date();
@@ -865,26 +857,11 @@ export class AnalyticsService {
         // Generate time periods
         const periods = this.generateTimePeriods(start, end, timePeriod);
 
-        // Get all participants and activities
-        const participantWhere: any = {
-            createdAt: {
-                gte: start,
-                lte: end,
-            },
-        };
-
-        if (venueIds) {
-            participantWhere.addressHistory = {
-                some: {
-                    venueId: { in: venueIds },
-                },
-            };
-        }
-
+        // Get ALL activities up to the end date
+        // We need all historical data to calculate cumulative counts correctly
         const activityWhere: any = {
-            createdAt: {
-                gte: start,
-                lte: end,
+            startDate: {
+                lte: end, // Only include activities that started up to the end date
             },
         };
 
@@ -896,33 +873,46 @@ export class AnalyticsService {
             };
         }
 
-        const participants = await this.prisma.participant.findMany({
-            where: participantWhere,
-            select: { id: true, createdAt: true },
-        });
-
         const activities = await this.prisma.activity.findMany({
             where: activityWhere,
-            select: { id: true, createdAt: true },
+            include: {
+                assignments: {
+                    select: {
+                        participantId: true,
+                        createdAt: true,
+                    },
+                },
+            },
         });
 
         // Calculate metrics for each period
         const timeSeries: GrowthPeriodData[] = [];
-        let cumulativeParticipants = 0;
-        let cumulativeActivities = 0;
         let previousNewActivities = 0;
 
         for (const period of periods) {
+            // New activities: activities that STARTED within this specific period
             const newActivities = activities.filter(
-                (a) => a.createdAt >= period.start && a.createdAt < period.end
+                (a) => a.startDate >= period.start && a.startDate < period.end
             ).length;
 
-            const participantsInPeriod = participants.filter(
-                (p) => p.createdAt >= period.start && p.createdAt < period.end
+            // Cumulative activities: all activities that STARTED up to the END of this period
+            const cumulativeActivities = activities.filter(
+                (a) => a.startDate < period.end
             ).length;
 
-            cumulativeParticipants += participantsInPeriod;
-            cumulativeActivities += newActivities;
+            // Cumulative participants: unique participants assigned to activities that STARTED up to the END of this period
+            const activitiesUpToPeriod = activities.filter(
+                (a) => a.startDate < period.end
+            );
+
+            const uniqueParticipantIds = new Set<string>();
+            activitiesUpToPeriod.forEach(activity => {
+                activity.assignments.forEach(assignment => {
+                    uniqueParticipantIds.add(assignment.participantId);
+                });
+            });
+
+            const cumulativeParticipants = uniqueParticipantIds.size;
 
             const percentageChange =
                 previousNewActivities > 0
@@ -930,7 +920,7 @@ export class AnalyticsService {
                     : null;
 
             timeSeries.push({
-                period: period.label,
+                date: period.label,
                 newActivities,
                 cumulativeParticipants,
                 cumulativeActivities,

@@ -160,7 +160,7 @@ describe('AnalyticsService', () => {
 
             expect(result.timeSeries).toBeDefined();
             expect(result.timeSeries.length).toBeGreaterThan(0);
-            expect(result.timeSeries[0]).toHaveProperty('period');
+            expect(result.timeSeries[0]).toHaveProperty('date');
             expect(result.timeSeries[0]).toHaveProperty('newActivities');
             expect(result.timeSeries[0]).toHaveProperty('cumulativeParticipants');
             expect(result.timeSeries[0]).toHaveProperty('cumulativeActivities');
