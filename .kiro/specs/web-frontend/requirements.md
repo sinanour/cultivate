@@ -60,6 +60,8 @@ The Web Frontend package provides a responsive React-based web application that 
 14. WHEN deleting an activity type, THE Web_App SHALL prevent deletion if activities reference it
 15. WHEN deleting an activity type, THE Web_App SHALL display an error message explaining why deletion failed
 16. THE Web_App SHALL validate that activity type names are not empty
+17. WHEN displaying activity categories in the list, THE Web_App SHALL render the activity category name as a clickable link
+18. WHEN an activity category name is clicked in the activity category list, THE Web_App SHALL open the edit form for that activity category
 
 ### Requirement 3: Participant Role Management UI
 

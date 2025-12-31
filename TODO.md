@@ -129,10 +129,10 @@ This document tracks outstanding features, improvements, and bug fixes for the C
 
 ## UI/UX Improvements
 
-- [ ] 18. Make Activity Categories clickable in Activity Type list
-  - On the Activity Configuration page, the Activity Category column in the Activity Type list should be clickable
+- [x] 18. Make Activity Category names clickable in Activity Categories list
+  - On the Activity Configuration page, the Activity Category names in the Activity Categories list should be clickable
   - Clicking an activity category name should open the edit form for that category
-  - Provides quick access to edit categories without scrolling to the categories section
+  - Provides quick access to edit categories directly from the name column
   - Use CloudScape Link component for consistent styling
   - Similar to how primary columns are hyperlinked in other tables
 

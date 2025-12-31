@@ -5,6 +5,7 @@ import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Badge from '@cloudscape-design/components/badge';
+import Link from '@cloudscape-design/components/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { activityCategoryService } from '../../services/api/activity-category.service';
 import type { ActivityCategory } from '../../types';
@@ -64,7 +65,16 @@ export function ActivityCategoryList() {
                     {
                         id: 'name',
                         header: 'Name',
-                        cell: (item) => item.name,
+                        cell: (item) => (
+                            <Link
+                                onFollow={(e) => {
+                                    e.preventDefault();
+                                    handleEdit(item);
+                                }}
+                            >
+                                {item.name}
+                            </Link>
+                        ),
                         sortingField: 'name',
                     },
                     {

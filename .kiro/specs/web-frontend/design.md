@@ -107,7 +107,8 @@ src/
 **ActivityCategoryList**
 - Displays table of activity categories using CloudScape Table
 - Distinguishes predefined vs custom categories with badges
-- Renders activity category name as hyperlink in primary column (links to edit form or detail view)
+- Renders activity category name as clickable CloudScape Link component in the name column
+- When category name link is clicked, opens the edit form for that category
 - Provides edit and delete actions per row (no separate View button)
 - Handles delete validation (prevents deletion if activity types reference it)
 
@@ -1096,6 +1097,12 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* string composed entirely of whitespace or empty string, attempting to use it as a name for activity categories, activity types, or participant roles should be rejected.
 
 **Validates: Requirements 2.9, 2.16, 3.7**
+
+### Property 4A: Activity Category Link in Category List
+
+*For any* activity category displayed in the activity category list, clicking the category name should open the edit form for that category.
+
+**Validates: Requirements 2.17, 2.18**
 
 ### Property 5: Participant List Display
 

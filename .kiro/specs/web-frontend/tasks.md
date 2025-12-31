@@ -1206,6 +1206,22 @@ This implementation plan covers the React-based web application built with TypeS
 - [ ] 27. Checkpoint - Verify participant enhancements
   - Ensure all tests pass, ask the user if questions arise.
 
+- [ ] 28. Make Activity Categories clickable in Activity Category list
+  - [ ] 28.1 Update ActivityCategoryList component
+    - Render activity category name as CloudScape Link component in the name column
+    - Add onClick handler to category link that opens the edit form for that category
+    - Use Link's onFollow event to trigger the edit action
+    - Prevent default link navigation behavior
+    - Use consistent styling with other hyperlinked columns in the application
+    - _Requirements: 2.17, 2.18_
+
+  - [ ]* 28.2 Write property test for category link functionality
+    - **Property 4A: Activity Category Link in Category List**
+    - **Validates: Requirements 2.17, 2.18**
+
+- [ ] 29. Checkpoint - Verify configuration page enhancements
+  - Ensure all tests pass, ask the user if questions arise.
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP
