@@ -1412,6 +1412,49 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 151: CSV Export Geographic Filtering**
     - **Validates: Requirements 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.7, 28.8, 28.9, 28.10, 28.11, 28.12, 28.14, 28.15, 28.16, 28.17, 28.18, 28.19, 28.20, 28.22, 28.23, 28.24, 28.25**
 
+- [x] 30A. Implement Engagement Summary Table CSV Export
+  - [x] 30A.1 Create generateEngagementSummaryCSV utility function
+    - Create utility function that accepts EngagementMetrics and groupingDimensions
+    - Build header row with grouping dimension names and metric column names
+    - Add Total row with aggregate metrics (blank cells for dimension columns except first)
+    - Add dimensional breakdown rows when grouping is active
+    - Use human-friendly labels from dimensions object (not UUIDs)
+    - Escape CSV special characters (quotes, commas, newlines)
+    - Return Blob with CSV content
+    - Add to utils directory
+    - _Requirements: 29.2, 29.3, 29.4, 29.5, 29.6, 29.7_
+
+  - [x] 30A.2 Add Export CSV button to EngagementDashboard
+    - Add CloudScape Button with iconName="download" near Engagement Summary table header
+    - Implement handleExportEngagementSummary handler
+    - Call generateEngagementSummaryCSV with current metrics and grouping dimensions
+    - Generate filename: "engagement-summary-YYYY-MM-DD.csv" using formatDate utility
+    - Call downloadBlob to trigger browser download
+    - Show loading indicator during export
+    - Disable button during export
+    - Display success notification after export
+    - Display error notification on failure
+    - Hide button from READ_ONLY users
+    - Show button to EDITOR and ADMINISTRATOR users
+    - _Requirements: 29.1, 29.8, 29.9, 29.10, 29.11, 29.12, 29.13, 29.14, 29.17_
+
+  - [x] 30A.3 Handle filtered and grouped data in CSV export
+    - Ensure CSV export uses the same filtered metrics displayed in the table
+    - Preserve grouping structure in CSV output
+    - Export only data matching current filter state (PropertyFilter tokens, date range, geographic area)
+    - Handle empty table case (export header row only)
+    - _Requirements: 29.15, 29.16, 29.18_
+
+  - [ ]* 30A.4 Write property tests for Engagement Summary CSV export
+    - **Property 152: Engagement Summary CSV Export Button Presence**
+    - **Property 153: Engagement Summary CSV Content Completeness**
+    - **Property 154: Engagement Summary CSV Human-Friendly Labels**
+    - **Property 155: Engagement Summary CSV Filename Format**
+    - **Property 156: Engagement Summary CSV Export Loading State**
+    - **Property 157: Engagement Summary CSV Export Filtered Data**
+    - **Property 158: Engagement Summary CSV Empty Table Handling**
+    - **Validates: Requirements 29.1, 29.2, 29.3, 29.4, 29.5, 29.6, 29.8, 29.9, 29.10, 29.11, 29.13, 29.14, 29.15, 29.16, 29.17, 29.18**
+
 - [ ] 31. Checkpoint - Verify CSV import/export functionality
   - Ensure all tests pass, ask the user if questions arise.
 
@@ -1487,21 +1530,21 @@ This implementation plan covers the React-based web application built with TypeS
 - [ ] 33. Checkpoint - Verify optional field clearing functionality
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 34. Fix Growth Dashboard chart data field mismatch
-  - [x] 34.1 Identify the correct field name for time series data
+- [x] 35. Fix Growth Dashboard chart data field mismatch
+  - [x] 35.1 Identify the correct field name for time series data
     - Backend returns `period` field in GrowthPeriodData
     - Frontend charts expect `date` field
     - Design document specifies `date` field in GrowthPeriodData interface
     - Backend implementation uses `period` instead of `date`
     - _Requirements: 7.40, 7.41, 7.42_
 
-  - [x] 34.2 Update backend analytics service to use `date` field
+  - [x] 35.2 Update backend analytics service to use `date` field
     - Change `period: period.label` to `date: period.label` in getGrowthMetrics method
     - Update GrowthPeriodData interface in analytics.service.ts to use `date` instead of `period`
     - Ensure consistency with design document specification
     - _Requirements: 7.40, 7.41, 7.42_
 
-  - [x] 34.3 Verify charts render correctly after fix
+  - [x] 35.3 Verify charts render correctly after fix
     - Test New Activities line chart displays data
     - Test Cumulative Growth area chart displays data
     - Test with different time periods (DAY, WEEK, MONTH, YEAR)
@@ -1509,8 +1552,8 @@ This implementation plan covers the React-based web application built with TypeS
     - Test with geographic area filters
     - _Requirements: 7.40, 7.41, 7.42_
 
-- [x] 35. Implement interactive chart legends
-  - [x] 35.1 Create InteractiveLegend component
+- [x] 36. Implement interactive chart legends
+  - [x] 36.1 Create InteractiveLegend component
     - Create reusable component for making chart legends interactive
     - Accept props: chartId (unique identifier), series (array of series names/keys), onVisibilityChange callback
     - Maintain visibility state for each data series using React useState

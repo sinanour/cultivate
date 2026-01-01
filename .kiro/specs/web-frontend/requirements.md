@@ -22,6 +22,7 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
 - **Configuration_View**: A unified interface for managing both activity categories and activity types
+- **Engagement_Summary_Table**: A table on the Engagement Dashboard displaying aggregate and dimensional breakdown metrics for activities and participants
 
 ## Requirements
 
@@ -741,3 +742,28 @@ The Web Frontend package provides a responsive React-based web application that 
 23. THE Web_App SHALL show Import and Export buttons to users with EDITOR or ADMINISTRATOR role
 24. WHEN exporting data with the global geographic area filter active, THE Web_App SHALL include the filter in the export request to export only filtered records
 25. WHEN exporting filtered data, THE Web_App SHALL indicate in the success message that only filtered records were exported
+
+### Requirement 29: Engagement Summary Table CSV Export
+
+**User Story:** As a community organizer, I want to export the Engagement Summary table to CSV format, so that I can analyze engagement metrics in spreadsheet applications and share reports with stakeholders.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide an "Export CSV" button on the Engagement Dashboard near the Engagement Summary table
+2. WHEN the Export CSV button is clicked, THE Web_App SHALL generate a CSV file containing all rows from the Engagement Summary table
+3. THE Web_App SHALL include the Total row as the first data row in the CSV export
+4. WHEN grouping dimensions are selected, THE Web_App SHALL include all dimensional breakdown rows in the CSV export
+5. THE Web_App SHALL export human-friendly labels for all dimension columns (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
+6. THE Web_App SHALL include all metric columns in the CSV export: activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end
+7. THE Web_App SHALL use descriptive column headers in the CSV file that match the table column headers
+8. WHEN the Export CSV button is clicked, THE Web_App SHALL trigger a browser download of the CSV file with a filename that includes "engagement-summary" and the current date
+9. THE Web_App SHALL display a loading indicator while generating the CSV export
+10. THE Web_App SHALL disable the Export CSV button during the export operation to prevent duplicate requests
+11. THE Web_App SHALL display a success notification after the CSV file is downloaded
+12. WHEN the CSV export fails, THE Web_App SHALL display an error message explaining the failure
+13. THE Web_App SHALL hide the Export CSV button from users with READ_ONLY role
+14. THE Web_App SHALL show the Export CSV button to users with EDITOR or ADMINISTRATOR role
+15. WHEN exporting the Engagement Summary table with filters applied, THE Web_App SHALL include only the filtered data in the CSV export
+16. WHEN exporting the Engagement Summary table with grouping dimensions selected, THE Web_App SHALL preserve the grouping structure in the CSV export
+17. THE Web_App SHALL format dates in the CSV filename using ISO-8601 format (YYYY-MM-DD)
+18. THE Web_App SHALL handle empty Engagement Summary tables by exporting a CSV file with only the header row

@@ -531,6 +531,23 @@ src/
   - Updates URL when user changes filters or grouping
   - Enables browser back/forward navigation between different configurations
   - Allows URL sharing for collaborative analysis
+- **CSV Export for Engagement Summary Table:**
+  - Provides "Export CSV" button positioned near the Engagement Summary table header
+  - Button uses CloudScape Button component with iconName="download"
+  - Generates CSV file containing all rows from the Engagement Summary table
+  - Exports human-friendly labels (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
+  - Includes Total row as first data row in CSV
+  - Includes all dimensional breakdown rows when grouping dimensions are selected
+  - Includes all metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
+  - Uses descriptive column headers matching table headers
+  - Generates filename with format: "engagement-summary-YYYY-MM-DD.csv"
+  - Displays loading indicator during export operation
+  - Disables button during export to prevent duplicate requests
+  - Shows success notification after download completes
+  - Displays error message if export fails
+  - Respects role-based access control (hidden from READ_ONLY users)
+  - Exports only filtered and grouped data matching current dashboard state
+  - Handles empty tables by exporting CSV with only header row
 
 **ActivityLifecycleChart**
 - Displays activity lifecycle events (started and completed activities) within a selected time period or all time
@@ -2698,6 +2715,76 @@ function validateCSVFile(file: File): { valid: boolean; error?: string } {
 }
 ```
 
+**Generate Engagement Summary CSV:**
+```typescript
+function generateEngagementSummaryCSV(
+  metrics: EngagementMetrics,
+  groupingDimensions: string[]
+): Blob {
+  const rows: string[][] = [];
+  
+  // Build header row
+  const headers = [...groupingDimensions];
+  headers.push(
+    'Activities at Start',
+    'Activities at End',
+    'Activities Started',
+    'Activities Completed',
+    'Activities Cancelled',
+    'Participants at Start',
+    'Participants at End'
+  );
+  rows.push(headers);
+  
+  // Add Total row
+  const totalRow = groupingDimensions.map(() => '');
+  totalRow[0] = 'Total';
+  totalRow.push(
+    metrics.activitiesAtStart.toString(),
+    metrics.activitiesAtEnd.toString(),
+    metrics.activitiesStarted.toString(),
+    metrics.activitiesCompleted.toString(),
+    metrics.activitiesCancelled.toString(),
+    metrics.participantsAtStart.toString(),
+    metrics.participantsAtEnd.toString()
+  );
+  rows.push(totalRow);
+  
+  // Add dimensional breakdown rows if grouping is active
+  if (metrics.groupedResults && metrics.groupedResults.length > 0) {
+    for (const group of metrics.groupedResults) {
+      const row: string[] = [];
+      
+      // Add dimension values (human-friendly labels, not UUIDs)
+      for (const dimension of groupingDimensions) {
+        row.push(group.dimensions[dimension] || '');
+      }
+      
+      // Add metric values
+      row.push(
+        group.metrics.activitiesAtStart.toString(),
+        group.metrics.activitiesAtEnd.toString(),
+        group.metrics.activitiesStarted.toString(),
+        group.metrics.activitiesCompleted.toString(),
+        group.metrics.activitiesCancelled.toString(),
+        group.metrics.participantsAtStart.toString(),
+        group.metrics.participantsAtEnd.toString()
+      );
+      
+      rows.push(row);
+    }
+  }
+  
+  // Convert to CSV string
+  const csvContent = rows
+    .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  
+  // Create blob
+  return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+}
+```
+
 ### Component Implementation
 
 #### Export Handler
@@ -2911,7 +2998,35 @@ interface ImportError {
 
 **Property 151: CSV export geographic filtering**
 *For any* export operation with the global geographic area filter active, the application should include the filter in the export request and indicate in the success message that only filtered records were exported.
-**Validates: Requirements 26.24, 26.25**
+**Validates: Requirements 28.24, 28.25**
+
+**Property 152: Engagement Summary CSV export button presence**
+*For any* Engagement Dashboard rendering, an "Export CSV" button should be displayed near the Engagement Summary table for users with EDITOR or ADMINISTRATOR roles.
+**Validates: Requirements 29.1, 29.13, 29.14**
+
+**Property 153: Engagement Summary CSV content completeness**
+*For any* Engagement Summary table with data, the exported CSV should include the Total row, all dimensional breakdown rows (when grouping is active), and all metric columns.
+**Validates: Requirements 29.2, 29.3, 29.4, 29.6**
+
+**Property 154: Engagement Summary CSV human-friendly labels**
+*For any* Engagement Summary CSV export with dimensional breakdowns, all dimension columns should contain human-friendly labels (activity category names, activity type names, venue names, geographic area names) instead of UUIDs.
+**Validates: Requirements 29.5**
+
+**Property 155: Engagement Summary CSV filename format**
+*For any* Engagement Summary CSV export, the downloaded filename should include "engagement-summary" and the current date in ISO-8601 format (YYYY-MM-DD).
+**Validates: Requirements 29.8, 29.17**
+
+**Property 156: Engagement Summary CSV export loading state**
+*For any* Engagement Summary CSV export operation in progress, a loading indicator should be displayed and the Export CSV button should be disabled.
+**Validates: Requirements 29.9, 29.10**
+
+**Property 157: Engagement Summary CSV export filtered data**
+*For any* Engagement Summary CSV export with filters or grouping dimensions applied, the exported CSV should contain only the filtered and grouped data matching the current dashboard state.
+**Validates: Requirements 29.15, 29.16**
+
+**Property 158: Engagement Summary CSV empty table handling**
+*For any* Engagement Summary table with no data rows, the exported CSV should contain only the header row.
+**Validates: Requirements 29.18**
 
 ## Testing Strategy
 

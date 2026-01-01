@@ -6,6 +6,7 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
+import Button from '@cloudscape-design/components/button';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import Multiselect from '@cloudscape-design/components/multiselect';
 import PropertyFilter from '@cloudscape-design/components/property-filter';
@@ -24,7 +25,10 @@ import { LoadingSpinner } from '../common/LoadingSpinner';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import { ActivityLifecycleChart } from './ActivityLifecycleChart';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { useAuth } from '../../hooks/useAuth';
+import { useNotification } from '../../hooks/useNotification';
 import { GroupingDimension } from '../../utils/constants';
+import { generateEngagementSummaryCSV, downloadBlob } from '../../utils/csv.utils';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -131,6 +135,8 @@ export function EngagementDashboard() {
   });
   
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+  const { user } = useAuth();
+  const notification = useNotification();
 
   // PropertyFilter configuration with bidirectional label-UUID cache
   const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
@@ -139,6 +145,7 @@ export function EngagementDashboard() {
   });
   const [propertyFilterOptions, setPropertyFilterOptions] = useState<PropertyFilterProps.FilteringOption[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [isExportingEngagementSummary, setIsExportingEngagementSummary] = useState(false);
   
   // Bidirectional cache: label ↔ UUID
   const [labelToUuid, setLabelToUuid] = useState<Map<string, string>>(new Map());
@@ -473,6 +480,38 @@ export function EngagementDashboard() {
   const roleDistributionLegend = useInteractiveLegend('role-distribution', roleDistributionLegendItems);
   const geographicBreakdownLegend = useInteractiveLegend('geographic-breakdown', geographicBreakdownLegendItems);
 
+  // Export handler for Engagement Summary table
+  const handleExportEngagementSummary = () => {
+    if (!metrics) return;
+    
+    setIsExportingEngagementSummary(true);
+    
+    try {
+      // Generate CSV from current metrics and grouping dimensions
+      const csvBlob = generateEngagementSummaryCSV(
+        metrics,
+        metrics.groupingDimensions || []
+      );
+      
+      // Generate filename with current date
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const filename = `engagement-summary-${today}.csv`;
+      
+      // Trigger download
+      downloadBlob(csvBlob, filename);
+      
+      // Show success notification
+      notification.showSuccess('Engagement Summary exported successfully');
+    } catch (error) {
+      console.error('Error exporting Engagement Summary:', error);
+      notification.showError(
+        `Failed to export Engagement Summary: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsExportingEngagementSummary(false);
+    }
+  };
+
   if (isLoading) {
     return <LoadingSpinner text="Loading engagement metrics..." />;
   }
@@ -648,7 +687,27 @@ export function EngagementDashboard() {
       </Container>
 
       {/* Engagement Summary Table - Always visible */}
-      <Container header={<Header variant="h3">Engagement Summary</Header>}>
+      <Container 
+        header={
+          <Header 
+            variant="h3"
+            actions={
+              user?.role !== 'READ_ONLY' && (
+                <Button
+                  iconName="download"
+                  onClick={handleExportEngagementSummary}
+                  loading={isExportingEngagementSummary}
+                  disabled={isExportingEngagementSummary}
+                >
+                  Export CSV
+                </Button>
+              )
+            }
+          >
+            Engagement Summary
+          </Header>
+        }
+      >
         <Table
           columnDefinitions={[
             // First column for dimension label or "Total"
