@@ -51,8 +51,8 @@ export class ActivityService {
         return ApiClient.post<any>(`/activities/${activityId}/venues`, { venueId, effectiveFrom });
     }
 
-    static async deleteActivityVenue(activityId: string, venueId: string): Promise<void> {
-        return ApiClient.delete<void>(`/activities/${activityId}/venues/${venueId}`);
+    static async deleteActivityVenue(activityId: string, venueHistoryId: string): Promise<void> {
+        return ApiClient.delete<void>(`/activities/${activityId}/venue-history/${venueHistoryId}`);
     }
 
     static async exportActivities(geographicAreaId?: string | null): Promise<void> {

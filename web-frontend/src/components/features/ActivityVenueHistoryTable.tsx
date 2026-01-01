@@ -26,7 +26,7 @@ interface ActivityVenueHistoryRecord {
 interface ActivityVenueHistoryTableProps {
   venueHistory: ActivityVenueHistoryRecord[];
   activityStartDate?: string; // For displaying null dates
-  onDelete: (venueId: string) => void;
+  onDelete: (venueHistoryId: string) => void;
   loading?: boolean;
 }
 
@@ -95,7 +95,7 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
           cell: (item: ActivityVenueHistoryRecord) => (
             <Button
               variant="inline-link"
-              onClick={() => onDelete(item.venueId)}
+              onClick={() => onDelete(item.id)}
             >
               Delete
             </Button>

@@ -91,8 +91,8 @@ export function ActivityDetail() {
   });
 
   const deleteVenueMutation = useMutation({
-    mutationFn: (venueId: string) =>
-      ActivityService.deleteActivityVenue(id!, venueId),
+    mutationFn: (venueHistoryId: string) =>
+      ActivityService.deleteActivityVenue(id!, venueHistoryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity-venues', id] });
       setError('');
@@ -122,9 +122,9 @@ export function ActivityDetail() {
     setIsVenueFormOpen(true);
   };
 
-  const handleDeleteVenue = (venueId: string) => {
+  const handleDeleteVenue = (venueHistoryId: string) => {
     if (window.confirm('Are you sure you want to remove this venue association?')) {
-      deleteVenueMutation.mutate(venueId);
+      deleteVenueMutation.mutate(venueHistoryId);
     }
   };
 

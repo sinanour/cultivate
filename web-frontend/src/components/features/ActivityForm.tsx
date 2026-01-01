@@ -204,19 +204,19 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     setShowVenueForm(true);
   };
 
-  const handleDeleteVenue = async (venueId: string, e?: any) => {
+  const handleDeleteVenue = async (venueHistoryId: string, e?: any) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
     
     if (!activity) {
       // Remove from pending list for new activity
-      setVenueHistory(prev => prev.filter(v => v.venueId !== venueId));
+      setVenueHistory(prev => prev.filter(v => v.id !== venueHistoryId));
       return;
     }
     
     try {
-      await ActivityService.deleteActivityVenue(activity.id, venueId);
-      setVenueHistory(prev => prev.filter(v => v.venueId !== venueId));
+      await ActivityService.deleteActivityVenue(activity.id, venueHistoryId);
+      setVenueHistory(prev => prev.filter(v => v.id !== venueHistoryId));
     } catch (err) {
       setError('Failed to remove venue association');
     }
@@ -594,7 +594,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                           <Button
                             variant="inline-icon"
                             iconName="remove"
-                            onClick={(e) => handleDeleteVenue(item.venueId, e)}
+                            onClick={(e) => handleDeleteVenue(item.id, e)}
                             disabled={isSubmitting}
                           />
                         ),
