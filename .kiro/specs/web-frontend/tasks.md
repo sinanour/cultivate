@@ -260,14 +260,17 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 8. Implement venue management UI
   - [x] 8.1 Create VenueList component
     - Display table with name, address, and geographic area
+    - Render venue name as hyperlink to /venues/:id
+    - Render geographic area name as hyperlink to /geographic-areas/:id
     - Implement search via /venues/search?q= endpoint, sort, and filter
     - Support optional pagination
-    - _Requirements: 6A.1, 6A.2, 6A.3_
+    - _Requirements: 6A.1, 6A.1a, 6A.2, 6A.3_
 
   - [ ]* 8.2 Write property tests for venue list and search
     - **Property 44: Venue List Display**
     - **Property 45: Venue Search Functionality**
-    - **Validates: Requirements 6A.1, 6A.2**
+    - **Property 54a: Venue List Geographic Area Hyperlink**
+    - **Validates: Requirements 6A.1, 6A.1a, 6A.2**
 
   - [x] 8.2 Create VenueForm component
     - Validate required fields (name, address, geographic area)

@@ -159,6 +159,7 @@ The Web Frontend package provides a responsive React-based web application that 
 #### Acceptance Criteria
 
 1. THE Web_App SHALL display a list of all venues with name, address, and geographic area
+1a. WHEN displaying venues in the list, THE Web_App SHALL render the geographic area name as a hyperlink to the geographic area detail page (/geographic-areas/:id)
 2. THE Web_App SHALL provide search functionality to find venues by name or address
 3. THE Web_App SHALL provide sorting and filtering for the venue list
 4. THE Web_App SHALL provide a form to create new venues

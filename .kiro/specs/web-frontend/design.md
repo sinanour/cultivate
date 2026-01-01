@@ -314,6 +314,7 @@ src/
 - Displays table of venues with name, address, and geographic area
 - Uses CloudScape Table with search, sort, and filter capabilities
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
+- Renders geographic area name as hyperlink in geographic area column (links to /geographic-areas/:id)
 - Provides actions for edit and delete (no separate View button)
 - Implements client-side search across name and address
 - Applies global geographic area filter from context when active
@@ -1886,6 +1887,12 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* search query and venue list, the search results should only include venues whose name or address contains the search term (case-insensitive).
 
 **Validates: Requirements 6A.2**
+
+### Property 54a: Venue List Geographic Area Hyperlink
+
+*For any* venue displayed in the venue list, the geographic area name should be rendered as a hyperlink that navigates to the geographic area detail page.
+
+**Validates: Requirements 6A.1a**
 
 ### Property 55: Venue Required Field Validation
 

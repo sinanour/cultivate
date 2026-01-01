@@ -177,7 +177,12 @@ export function VenueList() {
           {
             id: 'geographicArea',
             header: 'Geographic Area',
-            cell: (item) => item.geographicArea?.name || '-',
+            cell: (item) => 
+              item.geographicArea ? (
+                <Link href={`/geographic-areas/${item.geographicArea.id}`}>
+                  {item.geographicArea.name}
+                </Link>
+              ) : '-',
           },
           {
             id: 'actions',
