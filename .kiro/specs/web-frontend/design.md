@@ -601,9 +601,15 @@ src/
   - "All" (default selection)
   - "Activity Type"
   - "Activity Category"
-- When "All" selected: displays single aggregate time-series line for total unique participants and single aggregate time-series line for total unique activities across all activity types and categories in both charts
-- When "Activity Type" selected: displays multiple time-series lines in both charts, one line for each activity type showing unique participants and unique activities for that type
-- When "Activity Category" selected: displays multiple time-series lines in both charts, one line for each activity category showing unique participants and unique activities for that category
+- When "All" selected: 
+  - Displays single aggregate time-series line for total unique participants and single aggregate time-series line for total unique activities across all activity types and categories in both charts
+  - Displays overall participation and activity growth numbers representing totals across all activity types and categories
+- When "Activity Type" selected: 
+  - Displays multiple time-series lines in both charts, one line for each activity type showing unique participants and unique activities for that type
+  - Does NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
+- When "Activity Category" selected: 
+  - Displays multiple time-series lines in both charts, one line for each activity category showing unique participants and unique activities for that category
+  - Does NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
 - Uses consistent color scheme across both Unique Participants chart and Unique Activities chart, so the same activity type or category has the same color on both charts
 - Displays interactive legend on both charts showing color mapping for each activity type or category when multiple lines are displayed
 - Allows users to click legend items to toggle individual data series on/off
@@ -1661,21 +1667,21 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 33a: Growth Dashboard All View Mode
 
-*For any* growth dashboard with "All" view mode selected, both charts should display a single aggregate time-series line for total unique participants and total unique activities across all activity types and categories.
+*For any* growth dashboard with "All" view mode selected, both charts should display a single aggregate time-series line for total unique participants and total unique activities across all activity types and categories, and overall participation and activity growth numbers should be displayed.
 
-**Validates: Requirements 7.46**
+**Validates: Requirements 7.46, 7.46a**
 
 ### Property 33b: Growth Dashboard Activity Type View Mode
 
-*For any* growth dashboard with "Activity Type" view mode selected, both charts should display multiple time-series lines, one for each activity type, showing unique participants and unique activities for that type.
+*For any* growth dashboard with "Activity Type" view mode selected, both charts should display multiple time-series lines, one for each activity type, showing unique participants and unique activities for that type, and overall participation and activity growth numbers should NOT be displayed.
 
-**Validates: Requirements 7.47**
+**Validates: Requirements 7.46b, 7.47**
 
 ### Property 33c: Growth Dashboard Activity Category View Mode
 
-*For any* growth dashboard with "Activity Category" view mode selected, both charts should display multiple time-series lines, one for each activity category, showing unique participants and unique activities for that category.
+*For any* growth dashboard with "Activity Category" view mode selected, both charts should display multiple time-series lines, one for each activity category, showing unique participants and unique activities for that category, and overall participation and activity growth numbers should NOT be displayed.
 
-**Validates: Requirements 7.48**
+**Validates: Requirements 7.46b, 7.48**
 
 ### Property 33d: Growth Dashboard Consistent Color Scheme
 

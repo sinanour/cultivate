@@ -678,16 +678,19 @@ This implementation plan covers the React-based web application built with TypeS
       - Fetch aggregate growth data from API (no groupBy parameter)
       - Display single time-series line for total unique participants in Participant Growth Chart
       - Display single time-series line for total unique activities in Activity Growth Chart
+      - Display overall participation and activity growth numbers representing totals across all activity types and categories
     - When "Activity Type" selected:
       - Fetch growth data grouped by activity type from API (groupBy='type')
       - Display multiple time-series lines in both charts, one for each activity type
       - Show unique participants per type in Participant Growth Chart
       - Show unique activities per type in Activity Growth Chart
+      - Do NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
     - When "Activity Category" selected:
       - Fetch growth data grouped by activity category from API (groupBy='category')
       - Display multiple time-series lines in both charts, one for each activity category
       - Show unique participants per category in Participant Growth Chart
       - Show unique activities per category in Activity Growth Chart
+      - Do NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
     - Implement consistent color scheme across both charts:
       - Define color palette for activity types/categories
       - Apply same color to same type/category on both Participant and Activity charts
@@ -714,7 +717,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Use same compact relative date format as Engagement dashboard for consistency
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use replace: true)
-    - _Requirements: 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e_
+    - _Requirements: 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.46a, 7.46b, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e_
 
   - [ ]* 14.3 Write property tests for growth metrics
     - **Property 32: Time-Series Unique Count Calculation**
@@ -732,7 +735,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 33k: Growth Dashboard URL Update on State Change**
     - **Property 33l: Growth Dashboard Browser Navigation Support**
     - **Property 33m: Growth Dashboard URL Shareability**
-    - **Validates: Requirements 7.40, 7.41, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e**
+    - **Validates: Requirements 7.40, 7.41, 7.43, 7.44, 7.45, 7.46, 7.46a, 7.46b, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e**
 
   - [x] 14.3 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint

@@ -397,20 +397,23 @@ export function GrowthDashboard() {
         </SpaceBetween>
       </Container>
 
-      <ColumnLayout columns={2} variant="text-grid">
-        <Container>
-          <Box variant="awsui-key-label">Participant Growth</Box>
-          <Box fontSize="display-l" fontWeight="bold" color={participantGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
-            {participantGrowth >= 0 ? '+' : ''}{participantGrowth}
-          </Box>
-        </Container>
-        <Container>
-          <Box variant="awsui-key-label">Activity Growth</Box>
-          <Box fontSize="display-l" fontWeight="bold" color={activityGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
-            {activityGrowth >= 0 ? '+' : ''}{activityGrowth}
-          </Box>
-        </Container>
-      </ColumnLayout>
+      {/* Only display growth numbers in "All" view mode */}
+      {viewMode === 'all' && (
+        <ColumnLayout columns={2} variant="text-grid">
+          <Container>
+            <Box variant="awsui-key-label">Participant Growth</Box>
+            <Box fontSize="display-l" fontWeight="bold" color={participantGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
+              {participantGrowth >= 0 ? '+' : ''}{participantGrowth}
+            </Box>
+          </Container>
+          <Container>
+            <Box variant="awsui-key-label">Activity Growth</Box>
+            <Box fontSize="display-l" fontWeight="bold" color={activityGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
+              {activityGrowth >= 0 ? '+' : ''}{activityGrowth}
+            </Box>
+          </Container>
+        </ColumnLayout>
+      )}
 
       <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
         {viewMode !== 'all' && participantLegendItems.length > 0 && (

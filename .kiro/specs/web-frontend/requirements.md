@@ -280,6 +280,8 @@ The Web Frontend package provides a responsive React-based web application that 
 44. THE Web_App SHALL provide a segmented control to view growth metrics with three options: "All", "Activity Type", and "Activity Category"
 45. THE Segmented_Control SHALL default to "All" as the selected option
 46. WHEN "All" is selected in the segmented control, THE Web_App SHALL display a single aggregate time-series line for total unique participants and a single aggregate time-series line for total unique activities across all activity types and categories in both charts
+46a. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participation and activity growth numbers representing totals across all activity types and categories
+46b. WHEN "Activity Type" or "Activity Category" is selected in the segmented control, THE Web_App SHALL NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
 47. WHEN "Activity Type" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in both charts, one line for each activity type showing unique participants and unique activities for that type
 48. WHEN "Activity Category" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in both charts, one line for each activity category showing unique participants and unique activities for that category
 49. WHEN displaying multiple lines for activity types or categories, THE Web_App SHALL use a consistent color scheme across both the Unique Participants chart and the Unique Activities chart, so that the same activity type or category has the same color on both charts
