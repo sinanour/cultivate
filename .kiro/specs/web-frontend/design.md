@@ -74,11 +74,16 @@ src/
 - Renders email and password input fields using CloudScape FormField and Input
 - Validates inputs before submission
 - Displays error messages using CloudScape Alert component
-- Redirects to dashboard on successful authentication
+- Checks for redirect URL parameter in query string (e.g., ?redirect=/activities/123)
+- On successful authentication, redirects to the URL specified in redirect parameter if present
+- If no redirect parameter exists, redirects to dashboard as default
+- Stores redirect URL in component state during login process
 
 **ProtectedRoute**
 - Wrapper component that checks authentication status
 - Redirects to login if user is not authenticated
+- When redirecting to login, captures the current URL path and query parameters
+- Appends the original URL as a query parameter to the login route (e.g., /login?redirect=/activities/123)
 - Checks user role for authorization
 - Conditionally renders children based on permissions
 
@@ -1749,6 +1754,12 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* protected route, attempting to access it without authentication should redirect to the login page.
 
 **Validates: Requirements 9.1, 9.2**
+
+### Property 34a: Post-authentication redirect to original URL
+
+*For any* protected route that redirects an unauthenticated user to login, after successful authentication, the user should be redirected back to the original URL they were attempting to access.
+
+**Validates: Requirements 8.8, 8.9**
 
 ### Property 35: Unauthorized action error messages
 

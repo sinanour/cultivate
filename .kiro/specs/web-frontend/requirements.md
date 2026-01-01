@@ -397,6 +397,8 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL store authentication tokens securely
 6. THE Web_App SHALL provide a logout button
 7. THE Web_App SHALL redirect to login when tokens expire
+8. WHEN a user is redirected to the login page due to being unauthenticated, THE Web_App SHALL capture the original URL
+9. WHEN a user successfully authenticates after being redirected from a protected route, THE Web_App SHALL redirect the user back to the original URL they were attempting to access
 
 ### Requirement 9: Authorization UI
 

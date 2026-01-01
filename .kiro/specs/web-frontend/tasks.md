@@ -71,18 +71,25 @@ This implementation plan covers the React-based web application built with TypeS
     - Render email and password fields using CloudScape
     - Validate inputs before submission
     - Display error messages using CloudScape Alert
-    - Redirect to dashboard on success
-    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+    - Read redirect URL from query parameter (?redirect=/original/path)
+    - Store redirect URL in component state
+    - On successful authentication, redirect to stored URL if present, otherwise redirect to dashboard
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.8, 8.9_
 
   - [ ]* 3.3 Write property test for unauthenticated access protection
     - **Property 25: Unauthenticated Access Protection**
     - **Validates: Requirements 9.1, 9.2**
 
+  - [ ]* 3.3a Write property test for post-authentication redirect
+    - **Property 34a: Post-Authentication Redirect to Original URL**
+    - **Validates: Requirements 8.8, 8.9**
+
   - [x] 3.3 Create ProtectedRoute component
     - Check authentication status
-    - Redirect to login if not authenticated
+    - When user is not authenticated, capture current URL path and query parameters
+    - Redirect to login with original URL as query parameter (/login?redirect=/original/path)
     - Check user role for authorization
-    - _Requirements: 9.1, 9.2_
+    - _Requirements: 9.1, 9.2, 8.8_
 
   - [x] 3.4 Implement role-based UI rendering
     - Show all features for ADMINISTRATOR
