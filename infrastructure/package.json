@@ -1,7 +1,7 @@
 {
-  "name": "community-activity-tracker-infrastructure",
+  "name": "cultivate-infrastructure",
   "version": "1.0.0",
-  "description": "AWS CDK infrastructure for Community Activity Tracker",
+  "description": "AWS CDK infrastructure for Cultivate",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",

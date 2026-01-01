@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Infrastructure package implements a complete AWS cloud infrastructure using Infrastructure as Code (IaC) principles with AWS CDK and TypeScript. The design provides a scalable, secure, and cost-effective hosting environment for the Community Activity Tracker system across multiple deployment environments (dev, staging, production).
+The Infrastructure package implements a complete AWS cloud infrastructure using Infrastructure as Code (IaC) principles with AWS CDK and TypeScript. The design provides a scalable, secure, and cost-effective hosting environment for the Cultivate system across multiple deployment environments (dev, staging, production).
 
 The infrastructure follows AWS best practices for security, reliability, and operational excellence. It uses managed services to minimize operational overhead while maintaining flexibility for scaling and customization.
 

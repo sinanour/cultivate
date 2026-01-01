@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Community Activity Tracker - Local Database Setup Script
+# Cultivate - Local Database Setup Script
 # This script sets up a local PostgreSQL database using Finch container runtime
 # 
 # Why Finch instead of Docker Desktop?
@@ -325,7 +325,7 @@ initialize_finch_vm() {
 
 # Main execution starts here
 print_info "=========================================="
-print_info "Community Activity Tracker"
+print_info "Cultivate"
 print_info "Local Database Setup Script"
 print_info "=========================================="
 echo ""

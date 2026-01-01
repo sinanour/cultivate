@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides coordination guidelines for developing the five independent packages that comprise the Community Activity Tracker system. It defines communication protocols, development workflows, and integration points.
+This document provides coordination guidelines for developing the five independent packages that comprise the Cultivate system. It defines communication protocols, development workflows, and integration points.
 
 **Version**: 1.0.0
 

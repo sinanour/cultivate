@@ -1,4 +1,4 @@
-# API Contract: Community Activity Tracker
+# API Contract: Cultivate
 
 ## Overview
 

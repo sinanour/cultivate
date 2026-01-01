@@ -1,8 +1,8 @@
-# Getting Started - Community Activity Tracker
+# Getting Started - Cultivate
 
 ## Welcome!
 
-This guide will help you get started with developing the Community Activity Tracker system. Follow the steps for your specific role/team.
+This guide will help you get started with developing the Cultivate system. Follow the steps for your specific role/team.
 
 ## Prerequisites
 
@@ -472,7 +472,7 @@ After completing setup:
 
 ## Welcome to the Team!
 
-You're now ready to start contributing to the Community Activity Tracker project. Remember:
+You're now ready to start contributing to the Cultivate project. Remember:
 
 - **Communicate early and often**
 - **Ask questions when stuck**

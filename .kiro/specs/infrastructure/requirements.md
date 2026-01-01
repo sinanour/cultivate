@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Infrastructure package provides all AWS cloud resources required to host the Community Activity Tracker system. It uses Infrastructure as Code (IaC) with AWS CDK to provision, configure, and manage cloud resources across multiple environments.
+The Infrastructure package provides all AWS cloud resources required to host the Cultivate system. It uses Infrastructure as Code (IaC) with AWS CDK to provision, configure, and manage cloud resources across multiple environments.
 
 ## Glossary
 

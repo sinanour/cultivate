@@ -83,4 +83,4 @@ src/
 
 ## License
 
-Private - Community Activity Tracker Project
+Private - Cultivate Project

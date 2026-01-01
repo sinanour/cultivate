@@ -1,7 +1,7 @@
 export const openApiSpec = {
     openapi: '3.0.0',
     info: {
-        title: 'Community Activity Tracker API',
+        title: 'Cultivate API',
         version: '1.0.0',
         description: 'RESTful API for managing community activities, participants, and analytics',
         contact: {

@@ -27,7 +27,7 @@ new CommunityActivityTrackerStack(app, `CommunityActivityTracker-${environmentNa
     account: config.account,
     region: config.region,
   },
-  description: `Community Activity Tracker infrastructure for ${environmentName} environment`,
+  description: `Cultivate infrastructure for ${environmentName} environment`,
   tags: {
     Environment: environmentName,
     Application: 'CommunityActivityTracker',

@@ -1,8 +1,8 @@
-# Community Activity Tracker - System Documentation
+# Cultivate - System Documentation
 
 ## Overview
 
-This directory contains comprehensive documentation for coordinating the development of the Community Activity Tracker system across all five packages.
+This directory contains comprehensive documentation for coordinating the development of the Cultivate system across all five packages.
 
 ## Documentation Files
 
@@ -302,4 +302,4 @@ If you find issues or have suggestions for improving this documentation:
 
 ## License
 
-Internal documentation for Community Activity Tracker project.
+Internal documentation for Cultivate project.

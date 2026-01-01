@@ -1,6 +1,6 @@
 # Backend API Development Scripts
 
-This directory contains utility scripts for local development of the Community Activity Tracker Backend API.
+This directory contains utility scripts for local development of the Cultivate Backend API.
 
 ## Local Database Setup Script
 

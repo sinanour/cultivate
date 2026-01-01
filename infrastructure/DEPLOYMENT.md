@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide provides step-by-step instructions for deploying the Community Activity Tracker infrastructure to AWS.
+This guide provides step-by-step instructions for deploying the Cultivate infrastructure to AWS.
 
 ## Prerequisites
 

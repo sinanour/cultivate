@@ -1,7 +1,7 @@
 {
-  "name": "community-activity-tracker-api",
+  "name": "cultivate-api",
   "version": "1.0.0",
-  "description": "RESTful API service for Community Activity Tracker",
+  "description": "RESTful API service for Cultivate",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

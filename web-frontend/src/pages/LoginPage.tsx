@@ -90,7 +90,7 @@ export default function LoginPage() {
       <Container
         header={
           <Header variant="h1">
-            Community Activity Tracker
+            Cultivate
           </Header>
         }
       >

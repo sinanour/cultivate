@@ -1,6 +1,6 @@
 # TODO List
 
-This document tracks outstanding features, improvements, and bug fixes for the Community Activity Tracker application.
+This document tracks outstanding features, improvements, and bug fixes for the Cultivate application.
 
 ## Dashboard & Analytics
 

@@ -1,6 +1,6 @@
 {
-  "name": "Community Activity Tracker",
-  "short_name": "Activity Tracker",
+  "name": "Cultivate",
+  "short_name": "Cultivate",
   "description": "Track community activities, participants, and engagement",
   "start_url": "/",
   "display": "standalone",

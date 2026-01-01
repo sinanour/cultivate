@@ -1,8 +1,8 @@
-# Shared Data Models: Community Activity Tracker
+# Shared Data Models: Cultivate
 
 ## Overview
 
-This document defines the canonical data models used across all packages in the Community Activity Tracker system. All packages (Backend API, Web Frontend, iOS Mobile App, Android Mobile App) must implement equivalent representations of these models to ensure data consistency.
+This document defines the canonical data models used across all packages in the Cultivate system. All packages (Backend API, Web Frontend, iOS Mobile App, Android Mobile App) must implement equivalent representations of these models to ensure data consistency.
 
 **Version**: 1.0.0
 

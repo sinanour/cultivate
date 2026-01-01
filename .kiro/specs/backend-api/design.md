@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Backend API package is a RESTful API service built with Node.js, Express.js, TypeScript, and Prisma ORM. It serves as the central data management and business logic layer for the Community Activity Tracker system, providing endpoints for managing activities, participants, roles, activity types, analytics, authentication, authorization, and offline synchronization.
+The Backend API package is a RESTful API service built with Node.js, Express.js, TypeScript, and Prisma ORM. It serves as the central data management and business logic layer for the Cultivate system, providing endpoints for managing activities, participants, roles, activity types, analytics, authentication, authorization, and offline synchronization.
 
 The API follows a layered architecture with clear separation between routing, business logic, data access, and cross-cutting concerns like authentication and validation. It uses PostgreSQL as the primary data store and implements JWT-based authentication with role-based authorization.
 

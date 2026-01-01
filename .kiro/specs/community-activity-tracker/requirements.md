@@ -1,14 +1,14 @@
-# Requirements Document: Community Activity Tracker System
+# Requirements Document: Cultivate System
 
 ## Introduction
 
-The Community Activity Tracker is a distributed system that enables communities to track, manage, and analyze their community-building activities across multiple platforms. The system is composed of five independent packages that work together to provide a complete solution: infrastructure, backend API, web frontend, iOS mobile app, and Android mobile app.
+The Cultivate is a distributed system that enables communities to track, manage, and analyze their community-building activities across multiple platforms. The system is composed of five independent packages that work together to provide a complete solution: infrastructure, backend API, web frontend, iOS mobile app, and Android mobile app.
 
 This document defines the overall system requirements and references detailed specifications for each component package.
 
 ## Glossary
 
-- **System**: The complete Community Activity Tracker application including all five packages
+- **System**: The complete Cultivate application including all five packages
 - **Package**: An independent, deployable component of the system
 - **Activity**: A community-building event or program that involves participants
 - **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
@@ -27,7 +27,7 @@ This document defines the overall system requirements and references detailed sp
 
 ## System Architecture
 
-The Community Activity Tracker system is organized into five independent packages:
+The Cultivate system is organized into five independent packages:
 
 1. **Package 1: Infrastructure** (`.kiro/specs/infrastructure`)
    - AWS cloud resources and deployment configuration

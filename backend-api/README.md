@@ -1,6 +1,6 @@
-# Community Activity Tracker - Backend API
+# Cultivate - Backend API
 
-RESTful API service for the Community Activity Tracker system.
+RESTful API service for the Cultivate system.
 
 ## Tech Stack
 

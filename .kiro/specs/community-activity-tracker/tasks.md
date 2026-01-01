@@ -1,8 +1,8 @@
-# Implementation Plan: Community Activity Tracker System
+# Implementation Plan: Cultivate System
 
 ## Overview
 
-This implementation plan covers the complete Community Activity Tracker system, which consists of five independent packages that work together. This plan coordinates the development and integration of all packages to deliver a complete, working system.
+This implementation plan covers the complete Cultivate system, which consists of five independent packages that work together. This plan coordinates the development and integration of all packages to deliver a complete, working system.
 
 ## Tasks
 

@@ -1,8 +1,8 @@
-# Community Activity Tracker - Modular Specification Architecture
+# Cultivate - Modular Specification Architecture
 
 ## Overview
 
-The Community Activity Tracker specification has been structured into a modular architecture with six independent specifications:
+The Cultivate specification has been structured into a modular architecture with six independent specifications:
 
 1. **System-Level Specification** (this directory)
 2. **Infrastructure Package Specification**

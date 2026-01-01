@@ -1,8 +1,8 @@
-# Design Document: Community Activity Tracker System
+# Design Document: Cultivate System
 
 ## Overview
 
-The Community Activity Tracker is a distributed, multi-platform system designed to help communities track, manage, and analyze their community-building activities. The system follows a microservices architecture with five independent packages that communicate through well-defined APIs.
+The Cultivate is a distributed, multi-platform system designed to help communities track, manage, and analyze their community-building activities. The system follows a microservices architecture with five independent packages that communicate through well-defined APIs.
 
 ### Design Philosophy
 
@@ -1530,7 +1530,7 @@ For existing data:
 
 ## Conclusion
 
-This design provides a solid foundation for the Community Activity Tracker system. The distributed architecture with independent packages enables parallel development, flexible deployment, and technology optimization per platform. The offline-first approach ensures usability in all connectivity scenarios, while the synchronization model maintains data consistency across devices.
+This design provides a solid foundation for the Cultivate system. The distributed architecture with independent packages enables parallel development, flexible deployment, and technology optimization per platform. The offline-first approach ensures usability in all connectivity scenarios, while the synchronization model maintains data consistency across devices.
 
 Key design decisions prioritize:
 - **Developer Experience**: Clear separation of concerns, type safety, modern frameworks

@@ -84,7 +84,11 @@ export function AppLayout() {
         <TopNavigation
           identity={{
             href: '/',
-            title: 'Community Activity Tracker',
+            title: 'Cultivate',
+            logo: {
+              src: '/icon-no-bg.svg',
+              alt: 'Cultivate Logo',
+            },
           }}
           utilities={[
             {

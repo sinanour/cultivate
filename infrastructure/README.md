@@ -1,6 +1,6 @@
-# Community Activity Tracker Infrastructure
+# Cultivate Infrastructure
 
-AWS CDK infrastructure for the Community Activity Tracker system.
+AWS CDK infrastructure for the Cultivate system.
 
 ## Prerequisites
 

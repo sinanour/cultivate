@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Backend API package provides the RESTful API service that implements all business logic, data persistence, authentication, and authorization for the Community Activity Tracker system. It serves as the single source of truth for all data and coordinates operations across multiple client applications.
+The Backend API package provides the RESTful API service that implements all business logic, data persistence, authentication, and authorization for the Cultivate system. It serves as the single source of truth for all data and coordinates operations across multiple client applications.
 
 ## Glossary
 
