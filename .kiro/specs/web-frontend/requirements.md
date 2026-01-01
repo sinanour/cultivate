@@ -702,7 +702,6 @@ The Web Frontend package provides a responsive React-based web application that 
 9. THE Web_App SHALL update the chart's axis scales and ranges appropriately when series are hidden or shown
 10. THE Web_App SHALL provide visual feedback (e.g., hover state) when the user hovers over legend items to indicate they are clickable
 11. THE Web_App SHALL maintain accessibility by ensuring legend items are keyboard navigable and screen reader compatible
-12. WHEN a user toggles series visibility, THE Web_App SHALL persist the selection in browser session storage (optional: localStorage for persistence across sessions)
 
 ### Requirement 28: CSV Import and Export
 

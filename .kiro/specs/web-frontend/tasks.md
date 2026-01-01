@@ -1511,8 +1511,6 @@ This implementation plan covers the React-based web application built with TypeS
     - Implement keyboard navigation (Tab to focus, Enter/Space to toggle)
     - Include ARIA attributes (role="button", aria-pressed, aria-label) for accessibility
     - Announce visibility changes to screen readers using aria-live region
-    - Persist series visibility state in sessionStorage (key: `chart-${chartId}-series-visibility`)
-    - Restore visibility state on component mount from sessionStorage
     - Ensure at least one series remains visible (prevent hiding all series)
     - Return visibility state object for parent component to use
     - _Requirements: 27.1, 27.2, 27.3, 27.4, 27.5, 27.6, 27.10, 27.11, 27.12_
@@ -1524,8 +1522,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 116: Minimum Visible Series**
     - **Property 119: Legend Item Hover Feedback**
     - **Property 120: Legend Accessibility**
-    - **Property 121: Series Visibility Persistence**
-    - **Validates: Requirements 27.2, 27.3, 27.4, 27.5, 27.6, 27.10, 27.11, 27.12**
+    - **Validates: Requirements 27.2, 27.3, 27.4, 27.5, 27.6, 27.10, 27.11**
 
   - [x] 35.3 Update GrowthDashboard to use interactive legends
     - Import InteractiveLegend component

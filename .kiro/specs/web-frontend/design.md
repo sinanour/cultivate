@@ -470,7 +470,6 @@ src/
   - Adjusts chart axis scales dynamically when series are toggled
   - Provides hover states on legend items to indicate clickability
   - Ensures legend items are keyboard navigable (Tab key) and screen reader accessible
-  - Optionally persists series visibility state in session storage for current session
 - Provides multi-dimensional grouping controls:
   - Activity category grouping
   - Activity type grouping
@@ -593,7 +592,6 @@ src/
 - Adjusts chart axis scales dynamically when series are toggled
 - Provides hover states on legend items to indicate clickability
 - Ensures legend items are keyboard navigable and screen reader accessible
-- Optionally persists series visibility state in session storage
 - Updates both charts without page refresh when view mode changes between "All", "Activity Type", and "Activity Category"
 - Preserves current time period, date range, and geographic area filter selections when switching between view modes
 - Stores selected view mode in browser localStorage (key: "growthChartViewMode")
@@ -661,8 +659,6 @@ src/
 - Applies visual styling to indicate hidden series (opacity: 0.5, text-decoration: line-through, or dimmed color)
 - Provides hover states (cursor: pointer, slight highlight) to indicate legend items are clickable
 - Integrates with recharts charts by controlling which series are rendered
-- Optionally persists series visibility state in sessionStorage (key: `chart-{chartId}-series-visibility`)
-- Restores series visibility state on component mount
 - Ensures at least one series remains visible (prevents hiding all series)
 - Provides keyboard navigation support (Tab to focus, Enter/Space to toggle)
 - Includes ARIA attributes for accessibility (role="button", aria-pressed, aria-label)

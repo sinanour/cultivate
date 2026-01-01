@@ -72,45 +72,17 @@ const LegendItemComponent: React.FC<LegendItemProps> = ({ item, isVisible, onCli
 };
 
 export const InteractiveLegend: React.FC<InteractiveLegendProps> = ({
-  chartId,
   series,
   onVisibilityChange,
 }) => {
-  // Initialize visibility state from sessionStorage or default to all visible
+  // Initialize visibility state - default to all visible
   const [visibilityState, setVisibilityState] = useState<Record<string, boolean>>(() => {
-    try {
-      const stored = sessionStorage.getItem(`chart-${chartId}-series-visibility`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Ensure at least one series is visible
-        const hasVisibleSeries = Object.values(parsed).some((v) => v === true);
-        if (!hasVisibleSeries && series.length > 0) {
-          return { [series[0].name]: true };
-        }
-        return parsed;
-      }
-    } catch (error) {
-      console.error('Failed to load series visibility from sessionStorage:', error);
-    }
-    
     // Default: all series visible
     return series.reduce((acc, item) => {
       acc[item.name] = true;
       return acc;
     }, {} as Record<string, boolean>);
   });
-
-  // Persist visibility state to sessionStorage whenever it changes
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(
-        `chart-${chartId}-series-visibility`,
-        JSON.stringify(visibilityState)
-      );
-    } catch (error) {
-      console.error('Failed to save series visibility to sessionStorage:', error);
-    }
-  }, [chartId, visibilityState]);
 
   // Notify parent component of visibility changes
   useEffect(() => {
