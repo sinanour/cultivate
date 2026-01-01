@@ -136,6 +136,7 @@ export class AnalyticsRoutes {
 
     private async getActivityLifecycle(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
+            // Query parameters have been validated and transformed by ValidationMiddleware
             const { startDate, endDate, groupBy, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds } = req.query;
 
             const data = await this.analyticsService.getActivityLifecycleEvents(

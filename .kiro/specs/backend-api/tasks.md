@@ -1025,3 +1025,47 @@ if (geographicAreaId) {
 
 - [ ] 28. Checkpoint - Verify optional field clearing functionality
   - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 29. Fix activity lifecycle geographic filter parameter parsing
+  - [x] 29.1 Update ActivityLifecycleQuerySchema in validation.schemas.ts
+    - Replace `.transform()` with `.preprocess()` for array parameter normalization
+    - Handle single string values by converting to array
+    - Handle multiple values by preserving array
+    - Handle comma-separated values by splitting and flattening
+    - Trim whitespace from all values
+    - Filter out empty strings
+    - Apply same pattern to geographicAreaIds, activityCategoryIds, activityTypeIds, and venueIds
+    - _Requirements: 6A.24, 6A.25, 6A.26, 6A.27, 6A.28, 6A.32_
+
+  - [x] 29.2 Fix empty venue list handling in getActivityLifecycleEvents
+    - Add early return when geographic filter yields no venues
+    - Return empty array immediately if effectiveVenueIds.length === 0 after geographic filter
+    - Prevent returning all activities when filter should return none
+    - _Requirements: 6A.13, 6A.29, 6A.21_
+
+  - [x] 29.3 Create integration tests for activity lifecycle filtering
+    - Test single geographicAreaId parameter → filters correctly
+    - Test multiple geographicAreaIds parameters → filters correctly
+    - Test comma-separated geographicAreaIds → filters correctly
+    - Test invalid UUID → returns 400 with validation error
+    - Test invalid groupBy → returns 400 with validation error
+    - Test missing groupBy → returns 400 with validation error
+    - Test geographic filter with no matching activities → returns empty array
+    - _Requirements: 6A.24, 6A.25, 6A.26, 6A.13, 6A.29, 6A.21, 6A.30, 6A.31, 6A.3, 6A.22_
+
+  - [ ]* 29.4 Write property tests for query parameter normalization
+    - **Property 148: Single Geographic Area ID Normalization**
+    - **Property 149: Multiple Geographic Area IDs Preservation**
+    - **Property 150: Comma-Separated Geographic Area IDs Splitting**
+    - **Property 151: Empty Geographic Area Result Handling**
+    - **Property 152: Geographic Area UUID Validation**
+    - **Property 153: Activity Lifecycle GroupBy Validation**
+    - **Property 154: Activity Lifecycle Date Validation**
+    - **Validates: Requirements 6A.24, 6A.25, 6A.26, 6A.13, 6A.29, 6A.21, 6A.30, 6A.31, 6A.3, 6A.2, 6A.22**
+
+- [x] 30. Checkpoint - Verify activity lifecycle geographic filter fix
+  - Verified with original failing request: `/api/v1/analytics/activity-lifecycle?groupBy=type&geographicAreaIds=2d55ba16-472a-4da8-9b9d-37cce780c100`
+  - Confirmed response is now filtered correctly
+  - Confirmed empty results are returned when no activities match
+  - Confirmed validation errors are returned for invalid inputs
+  - All tests pass

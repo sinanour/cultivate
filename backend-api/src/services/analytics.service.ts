@@ -1054,6 +1054,12 @@ export class AnalyticsService {
                 geographicAreaIds.map(areaId => this.getVenueIdsForArea(areaId))
             );
             effectiveVenueIds = venueIdsForAreas.flat();
+
+            // If geographic filter is specified but no venues exist in those areas,
+            // return empty result immediately
+            if (effectiveVenueIds.length === 0) {
+                return [];
+            }
         }
 
         // Build base activity filter

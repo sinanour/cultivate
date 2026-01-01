@@ -246,6 +246,15 @@ The Backend API package provides the RESTful API service that implements all bus
 21. WHEN no activities match the filters, THE API SHALL return an empty array
 22. THE API SHALL validate all query parameters and return 400 Bad Request for invalid inputs
 23. THE API SHALL return 200 OK with the lifecycle event data on success
+24. WHEN a single geographicAreaIds value is provided as a query parameter, THE API SHALL parse it as an array with one element
+25. WHEN multiple geographicAreaIds values are provided (e.g., `?geographicAreaIds=id1&geographicAreaIds=id2`), THE API SHALL parse them as an array with multiple elements
+26. WHEN a comma-separated geographicAreaIds value is provided (e.g., `?geographicAreaIds=id1,id2`), THE API SHALL parse them as an array with multiple elements
+27. WHEN no geographicAreaIds parameter is provided, THE API SHALL treat it as undefined and return unfiltered results
+28. THE API SHALL apply the same array parsing logic to activityCategoryIds, activityTypeIds, and venueIds query parameters
+29. WHEN a geographic area filter is applied and no venues exist in those areas, THE API SHALL return an empty array
+30. THE API SHALL validate that all provided geographic area IDs are valid UUIDs
+31. WHEN an invalid UUID is provided in any array parameter, THE API SHALL return a 400 Bad Request error with a descriptive message
+32. THE API SHALL use Zod preprocess to normalize array query parameters before validation
 
 ### Requirement 7: Track Growth Over Time
 

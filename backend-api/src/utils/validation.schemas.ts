@@ -210,34 +210,52 @@ export const ActivityLifecycleQuerySchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
   groupBy: z.enum(['category', 'type']),
-  geographicAreaIds: z.union([
-    z.string().uuid('Invalid geographic area ID format'),
-    z.array(z.string().uuid('Invalid geographic area ID format'))
-  ]).optional().transform(val => {
-    if (!val) return undefined;
-    return Array.isArray(val) ? val : [val];
-  }),
-  activityCategoryIds: z.union([
-    z.string().uuid('Invalid activity category ID format'),
-    z.array(z.string().uuid('Invalid activity category ID format'))
-  ]).optional().transform(val => {
-    if (!val) return undefined;
-    return Array.isArray(val) ? val : [val];
-  }),
-  activityTypeIds: z.union([
-    z.string().uuid('Invalid activity type ID format'),
-    z.array(z.string().uuid('Invalid activity type ID format'))
-  ]).optional().transform(val => {
-    if (!val) return undefined;
-    return Array.isArray(val) ? val : [val];
-  }),
-  venueIds: z.union([
-    z.string().uuid('Invalid venue ID format'),
-    z.array(z.string().uuid('Invalid venue ID format'))
-  ]).optional().transform(val => {
-    if (!val) return undefined;
-    return Array.isArray(val) ? val : [val];
-  }),
+  geographicAreaIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        // Flatten any comma-separated values
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      // Single string - split by comma
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid geographic area ID format')).optional()
+  ),
+  activityCategoryIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity category ID format')).optional()
+  ),
+  activityTypeIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity type ID format')).optional()
+  ),
+  venueIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid venue ID format')).optional()
+  ),
 });
 
 // Sync schemas

@@ -1545,6 +1545,36 @@ The API uses Prisma to define the following database models:
 *For any* text-based search query on indexed fields (name, address, email), the database query should use appropriate indexes for efficient execution.
 **Validates: Requirements 21.10**
 
+### Activity Lifecycle Query Parameter Normalization Properties
+
+**Property 148: Single geographic area ID normalization**
+*For any* single geographic area ID provided as a query parameter, the API should parse it as an array with one element and correctly filter activities.
+**Validates: Requirements 6A.24, 6A.13**
+
+**Property 149: Multiple geographic area IDs preservation**
+*For any* multiple geographic area IDs provided as query parameters, the API should parse them as an array and correctly filter activities.
+**Validates: Requirements 6A.25, 6A.13**
+
+**Property 150: Comma-separated geographic area IDs splitting**
+*For any* comma-separated geographic area IDs provided as a query parameter, the API should parse them as separate array elements and correctly filter activities.
+**Validates: Requirements 6A.26, 6A.13**
+
+**Property 151: Empty geographic area result handling**
+*For any* geographic area filter where no venues exist in those areas, the API should return an empty array.
+**Validates: Requirements 6A.29, 6A.21**
+
+**Property 152: Geographic area UUID validation**
+*For any* invalid UUID provided in geographicAreaIds parameter, the API should return 400 Bad Request with a descriptive error message.
+**Validates: Requirements 6A.30, 6A.31**
+
+**Property 153: Activity lifecycle groupBy validation**
+*For any* groupBy parameter value other than 'category' or 'type', the API should return 400 Bad Request.
+**Validates: Requirements 6A.3, 6A.22**
+
+**Property 154: Activity lifecycle date validation**
+*For any* invalid ISO 8601 datetime string provided for startDate or endDate, the API should return 400 Bad Request.
+**Validates: Requirements 6A.2, 6A.22**
+
 ## Error Handling
 
 ### Error Response Format
@@ -1679,6 +1709,84 @@ These GIN (Generalized Inverted Index) indexes with trigram operators enable fas
 - Uses Prisma's `contains` with `mode: 'insensitive'` for case-insensitive matching
 - Database indexes ensure sub-second query performance at scale
 - No breaking changes to existing API contract
+
+## Query Parameter Array Normalization
+
+### Problem Statement
+
+Express.js parses query parameters inconsistently for array values:
+- Single value: `?geographicAreaIds=abc123` → parsed as `string`
+- Multiple values: `?geographicAreaIds=abc123&geographicAreaIds=def456` → parsed as `string[]`
+
+This inconsistency caused a defect in the activity lifecycle endpoint where single geographic area IDs were treated as strings, causing the `.map()` operation to iterate over characters instead of treating it as a single ID.
+
+### Solution: Zod Preprocess
+
+The solution uses Zod's `preprocess` function to normalize query parameters before validation:
+
+```typescript
+export const ActivityLifecycleQuerySchema = z.object({
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  groupBy: z.enum(['category', 'type']),
+  geographicAreaIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        // Flatten any comma-separated values
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      // Single string - split by comma
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid()).optional()
+  ),
+  // ... same pattern for activityCategoryIds, activityTypeIds, venueIds
+});
+```
+
+### Normalization Behavior
+
+The preprocess function handles all common query parameter formats:
+
+| Input Format | Example | Normalized Output |
+|--------------|---------|-------------------|
+| Single value | `?ids=abc123` | `['abc123']` |
+| Multiple values | `?ids=abc123&ids=def456` | `['abc123', 'def456']` |
+| Comma-separated | `?ids=abc123,def456` | `['abc123', 'def456']` |
+| Mixed | `?ids=abc123&ids=def456,ghi789` | `['abc123', 'def456', 'ghi789']` |
+| Empty string | `?ids=` | `undefined` |
+| Whitespace only | `?ids=  ` | `undefined` |
+| Undefined | (no parameter) | `undefined` |
+
+### Empty Result Handling
+
+A second issue was discovered: when a geographic area filter is specified but the area has no venues, the original code would skip the filter entirely and return all activities. The fix adds an early return:
+
+```typescript
+// In getActivityLifecycleEvents method
+if (geographicAreaIds && geographicAreaIds.length > 0) {
+    const venueIdsForAreas = await Promise.all(
+        geographicAreaIds.map(areaId => this.getVenueIdsForArea(areaId))
+    );
+    effectiveVenueIds = venueIdsForAreas.flat();
+    
+    // If geographic filter is specified but no venues exist in those areas,
+    // return empty result immediately
+    if (effectiveVenueIds.length === 0) {
+        return [];
+    }
+}
+```
+
+### Benefits
+
+- **Backward Compatible**: Existing clients continue to work without changes
+- **Flexible**: Supports multiple input formats (single, multiple, comma-separated)
+- **Type Safe**: Zod validates UUIDs after normalization
+- **Consistent**: Same pattern can be applied to other array query parameters
+- **Secure**: Trims whitespace and validates UUIDs to prevent injection attacks
 
 ## Testing Strategy
 
