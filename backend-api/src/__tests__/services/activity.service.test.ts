@@ -247,8 +247,9 @@ describe('ActivityService', () => {
             mockActivityRepo.findById = jest.fn().mockResolvedValue(mockActivity);
             mockVenueRepo.exists = jest.fn().mockResolvedValue(true);
             mockVenueHistoryRepo.hasDuplicateEffectiveFrom = jest.fn().mockResolvedValue(true);
+            mockVenueHistoryRepo.hasNullEffectiveFrom = jest.fn().mockResolvedValue(false);
 
-            await expect(service.associateVenue(activityId, venueId)).rejects.toThrow('already exists with this effective date');
+            await expect(service.associateVenue(activityId, venueId, null)).rejects.toThrow('A venue association with null effective date (activity start) already exists');
         });
     });
 

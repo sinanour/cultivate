@@ -266,7 +266,7 @@ export class ActivityService {
     return this.venueHistoryRepository.findByActivityId(activityId);
   }
 
-  async associateVenue(activityId: string, venueId: string) {
+  async associateVenue(activityId: string, venueId: string, effectiveFrom?: Date | null) {
     const activity = await this.activityRepository.findById(activityId);
     if (!activity) {
       throw new Error('Activity not found');
@@ -277,20 +277,34 @@ export class ActivityService {
       throw new Error('Venue not found');
     }
 
-    // Check if a duplicate effectiveFrom exists (same date)
-    const now = new Date();
+    // Use provided effectiveFrom, or null if not provided
+    const effectiveDate = effectiveFrom !== undefined ? effectiveFrom : null;
+
+    // Check if a duplicate effectiveFrom exists (including null)
     const hasDuplicate = await this.venueHistoryRepository.hasDuplicateEffectiveFrom(
       activityId,
-      now
+      effectiveDate
     );
     if (hasDuplicate) {
-      throw new Error('A venue association already exists with this effective date');
+      throw new Error(
+        effectiveDate === null
+          ? 'A venue association with null effective date (activity start) already exists'
+          : 'A venue association already exists with this effective date'
+      );
+    }
+
+    // Validate at most one null effectiveFrom per activity
+    if (effectiveDate === null) {
+      const hasNullDate = await this.venueHistoryRepository.hasNullEffectiveFrom(activityId);
+      if (hasNullDate) {
+        throw new Error('Only one venue association can have a null effective date per activity');
+      }
     }
 
     return this.venueHistoryRepository.create({
       activityId,
       venueId,
-      effectiveFrom: now,
+      effectiveFrom: effectiveDate,
     });
   }
 

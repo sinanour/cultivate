@@ -13,6 +13,7 @@ import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
+import Badge from '@cloudscape-design/components/badge';
 import type { Activity, ActivityVenueHistory } from '../../types';
 import { ActivityService } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
@@ -228,17 +229,24 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       newErrors.venue = 'Venue is required';
     }
 
-    if (!newVenueEffectiveFrom) {
-      newErrors.effectiveFrom = 'Effective start date is required';
-    } else {
+    // effectiveFrom is now optional - only validate for duplicates if provided
+    if (newVenueEffectiveFrom) {
       // Check for duplicate dates
       const isDuplicate = venueHistory.some(vh => {
+        if (vh.effectiveFrom === null) return false; // Skip null dates
         const existingDate = vh.effectiveFrom.split('T')[0];
         return existingDate === newVenueEffectiveFrom;
       });
 
       if (isDuplicate) {
         newErrors.duplicate = 'A venue association with this effective date already exists';
+      }
+    } else {
+      // Check if a null effectiveFrom already exists
+      const hasNullDate = venueHistory.some(vh => vh.effectiveFrom === null);
+
+      if (hasNullDate) {
+        newErrors.duplicate = 'Only one venue association can have no effective date (since activity start) per activity';
       }
     }
 
@@ -254,7 +262,8 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       return;
     }
 
-    const isoDate = new Date(newVenueEffectiveFrom).toISOString();
+    // Convert to ISO date or null if empty
+    const isoDate = newVenueEffectiveFrom ? new Date(newVenueEffectiveFrom).toISOString() : null;
 
     if (activity) {
       // Add venue to existing activity
@@ -365,9 +374,15 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   // Sort venue history by effectiveFrom descending (most recent first)
-  const sortedVenueHistory = [...venueHistory].sort((a, b) => 
-    new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime()
-  );
+  // Null dates (activity start) are treated as the activity startDate for sorting
+  const sortedVenueHistory = [...venueHistory].sort((a, b) => {
+    const dateA = a.effectiveFrom || startDate;
+    const dateB = b.effectiveFrom || startDate;
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
 
   return (
     <>
@@ -525,7 +540,11 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                       <FormField
                         label="Effective Start Date"
                         errorText={venueFormErrors.effectiveFrom}
-                        description="The date when this venue association became effective"
+                        description={
+                          startDate
+                            ? `The date when this venue association became effective (leave empty to use activity start date: ${startDate})`
+                            : "The date when this venue association became effective (leave empty for activity start date)"
+                        }
                       >
                         <DatePicker
                           value={newVenueEffectiveFrom}
@@ -533,7 +552,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                             setNewVenueEffectiveFrom(detail.value);
                             setVenueFormErrors({ ...venueFormErrors, effectiveFrom: undefined, duplicate: undefined });
                           }}
-                          placeholder="YYYY-MM-DD"
+                          placeholder="YYYY-MM-DD (optional)"
                         />
                       </FormField>
                       <SpaceBetween direction="horizontal" size="xs">
@@ -557,7 +576,16 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                       {
                         id: 'effectiveFrom',
                         header: 'Effective From',
-                        cell: (item) => formatDate(item.effectiveFrom),
+                        cell: (item) => item.effectiveFrom ? formatDate(item.effectiveFrom) : (
+                          <Box>
+                            <Badge color="blue">Since Activity Start</Badge>
+                            {startDate && (
+                              <Box variant="small" color="text-body-secondary" margin={{ top: 'xxxs' }}>
+                                ({startDate})
+                              </Box>
+                            )}
+                          </Box>
+                        ),
                       },
                       {
                         id: 'actions',

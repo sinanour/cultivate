@@ -47,7 +47,7 @@ export class ActivityService {
         return ApiClient.get<any[]>(`/activities/${id}/venues`);
     }
 
-    static async addActivityVenue(activityId: string, venueId: string, effectiveFrom: string): Promise<any> {
+    static async addActivityVenue(activityId: string, venueId: string, effectiveFrom: string | null): Promise<any> {
         return ApiClient.post<any>(`/activities/${activityId}/venues`, { venueId, effectiveFrom });
     }
 

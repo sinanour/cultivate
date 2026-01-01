@@ -305,8 +305,9 @@ export class ActivityRoutes {
     private async associateVenue(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const { id } = req.params;
-            const { venueId } = req.body;
-            const association = await this.activityService.associateVenue(id, venueId);
+            const { venueId, effectiveFrom } = req.body;
+            const effectiveDate = effectiveFrom ? new Date(effectiveFrom) : null;
+            const association = await this.activityService.associateVenue(id, venueId, effectiveDate);
             res.status(201).json({ success: true, data: association });
         } catch (error) {
             if (error instanceof Error) {
@@ -318,7 +319,7 @@ export class ActivityRoutes {
             });
             return;
           }
-          if (error.message.includes('already associated')) {
+                if (error.message.includes('already associated') || error.message.includes('already exists')) {
             res.status(400).json({
                 code: 'DUPLICATE_ASSOCIATION',
                 message: error.message,

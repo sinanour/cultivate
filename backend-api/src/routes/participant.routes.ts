@@ -361,9 +361,10 @@ export class ParticipantRoutes {
         try {
             const { id } = req.params;
             const { venueId, effectiveFrom } = req.body;
+            const effectiveDate = effectiveFrom ? new Date(effectiveFrom) : null;
             const history = await this.participantService.createAddressHistory(id, {
                 venueId,
-                effectiveFrom: new Date(effectiveFrom),
+                effectiveFrom: effectiveDate,
             });
             res.status(201).json({ success: true, data: history });
         } catch (error) {
@@ -375,7 +376,7 @@ export class ParticipantRoutes {
                         details: {},
                     });
                 }
-                if (error.message.includes('already exists')) {
+                if (error.message.includes('already exists') || error.message.includes('Only one')) {
                     return res.status(400).json({
                         code: 'DUPLICATE_EFFECTIVE_FROM',
                         message: error.message,

@@ -154,7 +154,7 @@ model ParticipantAddressHistory {
   id            String      @id @default(uuid())
   participantId String
   venueId       String
-  effectiveFrom DateTime    @default(now())
+  effectiveFrom DateTime?
   createdAt     DateTime    @default(now())
   participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   venue         Venue       @relation(fields: [venueId], references: [id])
@@ -201,7 +201,7 @@ model ActivityVenueHistory {
   id            String   @id @default(uuid())
   activityId    String
   venueId       String
-  effectiveFrom DateTime @default(now())
+  effectiveFrom DateTime?
   createdAt     DateTime @default(now())
   activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   venue         Venue    @relation(fields: [venueId], references: [id])

@@ -15,9 +15,9 @@ import { VenueService } from '../../services/api/venue.service';
 interface AddressHistoryFormProps {
   visible: boolean;
   onDismiss: () => void;
-  onSubmit: (data: { venueId: string; effectiveFrom: string }) => Promise<void>;
+  onSubmit: (data: { venueId: string; effectiveFrom: string | null }) => Promise<void>;
   existingRecord?: ParticipantAddressHistory;
-  existingDates?: string[]; // Array of existing effective dates to check for duplicates
+  existingDates?: (string | null)[]; // Array of existing effective dates to check for duplicates (including null)
   loading?: boolean;
 }
 
@@ -38,7 +38,7 @@ export const AddressHistoryForm: React.FC<AddressHistoryFormProps> = ({
     if (visible) {
       if (existingRecord) {
         setVenueId(existingRecord.venueId);
-        setEffectiveFrom(existingRecord.effectiveFrom.split('T')[0]); // Extract date part
+        setEffectiveFrom(existingRecord.effectiveFrom ? existingRecord.effectiveFrom.split('T')[0] : ''); // Extract date part or empty for null
       } else {
         setVenueId('');
         setEffectiveFrom('');
@@ -54,11 +54,11 @@ export const AddressHistoryForm: React.FC<AddressHistoryFormProps> = ({
       newErrors.venue = 'Venue is required';
     }
 
-    if (!effectiveFrom) {
-      newErrors.effectiveFrom = 'Effective start date is required';
-    } else {
+    // effectiveFrom is now optional - only validate for duplicates if provided
+    if (effectiveFrom) {
       // Check for duplicate dates (excluding current record if editing)
       const isDuplicate = existingDates.some(date => {
+        if (date === null) return false; // Skip null dates in this check
         const existingDate = date.split('T')[0];
         const isCurrentRecord = existingRecord && date === existingRecord.effectiveFrom;
         return existingDate === effectiveFrom && !isCurrentRecord;
@@ -66,6 +66,16 @@ export const AddressHistoryForm: React.FC<AddressHistoryFormProps> = ({
 
       if (isDuplicate) {
         newErrors.duplicate = 'An address history record with this effective date already exists';
+      }
+    } else {
+      // Check if a null effectiveFrom already exists (excluding current record if editing)
+      const hasNullDate = existingDates.some(date => {
+        const isCurrentRecord = existingRecord && date === existingRecord.effectiveFrom;
+        return date === null && !isCurrentRecord;
+      });
+
+      if (hasNullDate) {
+        newErrors.duplicate = 'Only one address history record can have no effective date (initial address) per participant';
       }
     }
 
@@ -80,8 +90,8 @@ export const AddressHistoryForm: React.FC<AddressHistoryFormProps> = ({
 
     setSubmitting(true);
     try {
-      // Convert date to ISO format with time
-      const isoDate = new Date(effectiveFrom).toISOString();
+      // Convert date to ISO format with time, or null if empty
+      const isoDate = effectiveFrom ? new Date(effectiveFrom).toISOString() : null;
       await onSubmit({ venueId, effectiveFrom: isoDate });
       onDismiss();
     } catch (error) {
@@ -157,7 +167,7 @@ export const AddressHistoryForm: React.FC<AddressHistoryFormProps> = ({
         <FormField
           label="Effective Start Date"
           errorText={errors.effectiveFrom}
-          description="The date when this address became effective"
+          description="The date when this address became effective (leave empty for initial address)"
         >
           <DatePicker
             value={effectiveFrom}
@@ -165,7 +175,7 @@ export const AddressHistoryForm: React.FC<AddressHistoryFormProps> = ({
               setEffectiveFrom(detail.value);
               setErrors({ ...errors, effectiveFrom: undefined, duplicate: undefined });
             }}
-            placeholder="YYYY-MM-DD"
+            placeholder="YYYY-MM-DD (optional)"
             disabled={loading}
           />
         </FormField>

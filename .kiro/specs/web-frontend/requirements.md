@@ -99,8 +99,11 @@ The Web Frontend package provides a responsive React-based web application that 
 12. THE Web_App SHALL provide an interface to add new address history records with venue and effective start date
 13. THE Web_App SHALL provide an interface to edit existing address history records
 14. THE Web_App SHALL provide an interface to delete address history records
-15. THE Web_App SHALL validate that address history records have a venue and effective start date
-16. THE Web_App SHALL prevent duplicate address history records with the same effective start date for the same participant
+15. THE Web_App SHALL validate that address history records have a venue
+16. THE Web_App SHALL allow address history records to have an optional effective start date
+17. WHEN an address history record has a null effective start date, THE Web_App SHALL treat it as the oldest home address for that participant
+18. THE Web_App SHALL enforce that at most one address history record can have a null effective start date for any given participant
+19. THE Web_App SHALL prevent duplicate address history records with the same effective start date (including null) for the same participant
 17. WHEN creating a new participant, THE Web_App SHALL allow adding home address history records within the participant creation modal form
 18. WHEN editing an existing participant, THE Web_App SHALL allow adding, editing, and deleting home address history records within the participant edit modal form
 19. WHEN adding an address history record to a new participant before the participant is created, THE Web_App SHALL fetch and display the venue name in the address history table
@@ -127,10 +130,13 @@ The Web Frontend package provides a responsive React-based web application that 
 13. THE Web_App SHALL display a detail view showing activity information and assigned participants
 14. THE Web_App SHALL allow selection of one or more venues for each activity
 15. THE Web_App SHALL display the activity's venue history in reverse chronological order when venues have changed over time
-16. WHEN creating a new activity, THE Web_App SHALL allow adding venue associations with effective start dates within the activity creation modal form
+16. WHEN creating a new activity, THE Web_App SHALL allow adding venue associations with optional effective start dates within the activity creation modal form
 17. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and deleting venue associations within the activity edit modal form
 18. WHEN adding a venue association to a new activity before the activity is created, THE Web_App SHALL fetch and display the venue name in the venue history table
 19. WHEN a venue is selected for a new venue association, THE Web_App SHALL retrieve the venue details from the backend and store them for display purposes
+20. WHEN a venue association has a null effective start date, THE Web_App SHALL treat the venue association start date as the same as the activity start date
+21. THE Web_App SHALL enforce that at most one venue association can have a null effective start date for any given activity
+22. THE Web_App SHALL prevent duplicate venue associations with the same effective start date (including null) for the same activity
 
 ### Requirement 6: Activity-Participant Assignment UI
 
@@ -213,6 +219,10 @@ The Web Frontend package provides a responsive React-based web application that 
 20. WHEN the global geographic area filter is active in "Activities" mode, THE Web_App SHALL display only activities whose current venue is in the filtered geographic area or its descendants
 21. WHEN the global geographic area filter is active in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses where the venue is in the filtered geographic area or its descendants
 22. WHEN the global geographic area filter is active in "Venues" mode, THE Web_App SHALL display only venues that are in the filtered geographic area or its descendants
+23. WHEN determining current venue for activity markers, THE Web_App SHALL treat null effectiveFrom dates as equivalent to the activity start date
+24. WHEN determining current home address for participant markers, THE Web_App SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
+25. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
+26. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
 
 ### Requirement 7: Analytics Dashboard
 
@@ -258,6 +268,9 @@ The Web Frontend package provides a responsive React-based web application that 
 36. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
 37. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
 38. THE Web_App SHALL allow users to share the current analytics view URL with other users to display the same filtered and grouped results
+38a. WHEN calculating engagement metrics for activities, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates (treating null as activity start date)
+38b. WHEN calculating engagement metrics for participants, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates (treating null as oldest address)
+38c. WHEN filtering analytics by geographic area, THE Web_App SHALL correctly determine which activities and participants are in the filtered area considering null effectiveFrom dates
 39. THE Web_App SHALL provide a growth analytics dashboard
 40. THE Web_App SHALL display a separate time-series chart showing unique participant counts for each time period
 41. THE Web_App SHALL display a separate time-series chart showing unique activity counts for each time period

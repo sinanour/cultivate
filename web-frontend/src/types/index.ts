@@ -107,7 +107,7 @@ export interface ActivityVenueHistory {
     activityId: string;
     venueId: string;
     venue?: Venue;
-    effectiveFrom: string;
+    effectiveFrom: string | null;  // Nullable: null means uses activity startDate
 }
 
 export interface ParticipantAddressHistory {
@@ -115,7 +115,7 @@ export interface ParticipantAddressHistory {
     participantId: string;
     venueId: string;
     venue?: Venue;
-    effectiveFrom: string;
+    effectiveFrom: string | null;  // Nullable: null means oldest/initial address
 }
 
 export interface Assignment {

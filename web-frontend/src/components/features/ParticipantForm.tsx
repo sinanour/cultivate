@@ -12,6 +12,7 @@ import Header from '@cloudscape-design/components/header';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import DatePicker from '@cloudscape-design/components/date-picker';
+import Badge from '@cloudscape-design/components/badge';
 import type { Participant, ParticipantAddressHistory } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { VenueService } from '../../services/api/venue.service';
@@ -239,7 +240,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     e?.stopPropagation?.();
     setEditingAddress(address);
     setNewAddressVenueId(address.venueId);
-    setNewAddressEffectiveFrom(address.effectiveFrom.split('T')[0]);
+    setNewAddressEffectiveFrom(address.effectiveFrom ? address.effectiveFrom.split('T')[0] : '');
     setAddressFormErrors({});
     setShowAddressForm(true);
   };
@@ -265,11 +266,11 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       newErrors.venue = 'Venue is required';
     }
 
-    if (!newAddressEffectiveFrom) {
-      newErrors.effectiveFrom = 'Effective start date is required';
-    } else {
+    // effectiveFrom is now optional - only validate for duplicates if provided
+    if (newAddressEffectiveFrom) {
       // Check for duplicate dates (excluding current record if editing)
       const isDuplicate = addressHistory.some(addr => {
+        if (addr.effectiveFrom === null) return false; // Skip null dates
         const existingDate = addr.effectiveFrom.split('T')[0];
         const isCurrentRecord = editingAddress && addr.id === editingAddress.id;
         return existingDate === newAddressEffectiveFrom && !isCurrentRecord;
@@ -277,6 +278,16 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
 
       if (isDuplicate) {
         newErrors.duplicate = 'An address history record with this effective date already exists';
+      }
+    } else {
+      // Check if a null effectiveFrom already exists (excluding current record if editing)
+      const hasNullDate = addressHistory.some(addr => {
+        const isCurrentRecord = editingAddress && addr.id === editingAddress.id;
+        return addr.effectiveFrom === null && !isCurrentRecord;
+      });
+
+      if (hasNullDate) {
+        newErrors.duplicate = 'Only one address history record can have no effective date (initial address) per participant';
       }
     }
 
@@ -292,7 +303,8 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       return;
     }
 
-    const isoDate = new Date(newAddressEffectiveFrom).toISOString();
+    // Convert to ISO date or null if empty
+    const isoDate = newAddressEffectiveFrom ? new Date(newAddressEffectiveFrom).toISOString() : null;
 
     if (participant && editingAddress) {
       // Update existing address
@@ -437,9 +449,13 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   // Sort address history by effectiveFrom descending (most recent first)
-  const sortedAddressHistory = [...addressHistory].sort((a, b) => 
-    new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime()
-  );
+  // Null dates (initial address) sort to the end (oldest)
+  const sortedAddressHistory = [...addressHistory].sort((a, b) => {
+    if (a.effectiveFrom === null && b.effectiveFrom === null) return 0;
+    if (a.effectiveFrom === null) return 1; // null goes to end (oldest)
+    if (b.effectiveFrom === null) return -1; // null goes to end (oldest)
+    return new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime();
+  });
 
   return (
     <>
@@ -601,7 +617,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                       <FormField
                         label="Effective Start Date"
                         errorText={addressFormErrors.effectiveFrom}
-                        description="The date when this address became effective"
+                        description="The date when this address became effective (leave empty for initial address)"
                       >
                         <DatePicker
                           value={newAddressEffectiveFrom}
@@ -609,7 +625,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                             setNewAddressEffectiveFrom(detail.value);
                             setAddressFormErrors({ ...addressFormErrors, effectiveFrom: undefined, duplicate: undefined });
                           }}
-                          placeholder="YYYY-MM-DD"
+                          placeholder="YYYY-MM-DD (optional)"
                         />
                       </FormField>
                       <SpaceBetween direction="horizontal" size="xs">
@@ -633,7 +649,9 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                       {
                         id: 'effectiveFrom',
                         header: 'Effective From',
-                        cell: (item) => formatDate(item.effectiveFrom),
+                        cell: (item) => item.effectiveFrom ? formatDate(item.effectiveFrom) : (
+                          <Badge color="blue">Initial Address</Badge>
+                        ),
                       },
                       {
                         id: 'actions',

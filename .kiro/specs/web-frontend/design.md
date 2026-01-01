@@ -214,16 +214,17 @@ src/
 **AddressHistoryTable**
 - Displays participant's home address history in reverse chronological order
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
-- Shows effective start date for each record
+- Shows effective start date for each record (displays "Initial Address" for null dates)
 - Provides edit and delete buttons for each record (no separate View button)
-- Highlights the most recent address (first record in the list)
+- Highlights the most recent address (first record in the list, or null record if no non-null dates exist)
 
 **AddressHistoryForm**
 - Modal form for adding/editing address history records
 - Requires venue selection from dropdown
-- Requires effective start date using CloudScape DatePicker
-- Validates that effective start date is provided
-- Prevents duplicate records with the same effective start date for the same participant
+- Allows optional effective start date using CloudScape DatePicker
+- When effective start date is null, treats it as the oldest home address for the participant
+- Validates at most one null effective start date per participant
+- Prevents duplicate records with the same effective start date (including null) for the same participant
 
 #### 6. Activity Management
 
@@ -276,16 +277,17 @@ src/
 **ActivityVenueHistoryTable**
 - Displays activity's venue history in reverse chronological order
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
-- Shows effective start date for each record
+- Shows effective start date for each record (displays "Since Activity Start" or activity startDate for null dates)
 - Provides delete button for each record (no separate View button)
-- Highlights the most recent venue (first record in the list)
+- Highlights the most recent venue (first record in the list, or null record if no non-null dates exist)
 
 **ActivityVenueHistoryForm**
 - Modal form for adding venue associations
 - Requires venue selection from dropdown
-- Requires effective start date using CloudScape DatePicker
-- Validates that effective start date is provided
-- Prevents duplicate records with the same effective start date for the same activity
+- Allows optional effective start date using CloudScape DatePicker
+- When effective start date is null, treats the venue association start date as the same as the activity start date
+- Validates at most one null effective start date per activity
+- Prevents duplicate records with the same effective start date (including null) for the same activity
 
 #### 7. Assignment Management
 
@@ -745,7 +747,7 @@ src/
 - `deleteActivity(id)`: Deletes activity
 - `getActivityParticipants(id)`: Fetches participants assigned to activity from `/activities/:id/participants`
 - `getActivityVenues(id)`: Fetches venue history for activity from `/activities/:id/venues` ordered by effectiveFrom descending
-- `addActivityVenue(activityId, venueId, effectiveFrom)`: Associates venue with activity with effective start date
+- `addActivityVenue(activityId, venueId, effectiveFrom?)`: Associates venue with activity with optional effective start date (null means uses activity startDate)
 - `removeActivityVenue(activityId, venueId)`: Removes venue association (true deletion)
 
 **AssignmentService**
@@ -895,7 +897,7 @@ interface ParticipantAddressHistory {
   participantId: string;
   venueId: string;
   venue?: Venue;
-  effectiveFrom: string;
+  effectiveFrom: string | null;  // Nullable: null means oldest home address
 }
 
 interface Venue {
@@ -956,7 +958,7 @@ interface ActivityVenueHistory {
   activityId: string;
   venueId: string;
   venue?: Venue;
-  effectiveFrom: string;
+  effectiveFrom: string | null;  // Nullable: null means uses activity startDate
 }
 
 interface Assignment {
@@ -1115,6 +1117,42 @@ interface GeocodingResult {
 }
 ```
 
+### Temporal Data and Null EffectiveFrom Handling
+
+**ParticipantAddressHistory and ActivityVenueHistory** use nullable `effectiveFrom` dates with special semantics:
+
+**Null EffectiveFrom for Participant Address History:**
+- A null `effectiveFrom` represents the **oldest/initial home address** for a participant
+- UI should display null dates as "Initial Address" or similar indicator
+- When sorting by date (descending), null values appear last (oldest)
+- Only one address history record per participant can have null `effectiveFrom`
+
+**Null EffectiveFrom for Activity Venue History:**
+- A null `effectiveFrom` means the venue association **started with the activity** (uses activity's `startDate`)
+- UI should display null dates as "Since Activity Start" or show the activity's `startDate`
+- When sorting by date (descending), null values are compared using the activity's `startDate`
+- Only one venue history record per activity can have null `effectiveFrom`
+
+**UI Considerations:**
+
+1. **Date Display:**
+   - Address history with null date: Display "Initial Address" or leave date field empty with explanatory text
+   - Venue history with null date: Display "Since Activity Start" or show the activity's `startDate` in parentheses
+
+2. **Form Validation:**
+   - AddressHistoryForm: Allow clearing the date field; validate only one null per participant
+   - ActivityVenueHistoryForm: Allow clearing the date field; validate only one null per activity
+   - Show validation error if attempting to create a second null `effectiveFrom` record
+
+3. **Current Record Identification:**
+   - For participants: Current address is the record with the most recent non-null date, or the null record if only null exists
+   - For activities: Current venue is the record with the most recent non-null date, or the null record if only null exists
+
+4. **Map and Analytics:**
+   - When determining current venue for map markers or analytics, handle null `effectiveFrom` appropriately
+   - Null dates for activities should be treated as the activity's `startDate` for temporal filtering
+   - Null dates for participants should be treated as the earliest possible date
+
 ### API Request/Response Types
 
 All API requests and responses follow the Backend API package specifications. The frontend transforms these into the above data models for internal use.
@@ -1271,15 +1309,27 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 12: Address History Required Fields
 
-*For any* address history record submission without venue or effective start date, the validation should fail and prevent creation.
+*For any* address history record submission without venue, the validation should fail and prevent creation.
 
 **Validates: Requirements 4.15**
 
 ### Property 13: Address History Duplicate Prevention
 
-*For any* participant, attempting to create an address history record with the same effective start date as an existing record should be prevented.
+*For any* participant, attempting to create an address history record with the same effective start date (including null) as an existing record should be prevented.
 
-**Validates: Requirements 4.16**
+**Validates: Requirements 4.19**
+
+### Property 13A: Address History Null EffectiveFrom Uniqueness
+
+*For any* participant, attempting to create a second address history record with a null effective start date when one already exists should be prevented.
+
+**Validates: Requirements 4.17, 4.18**
+
+### Property 13B: Address History Null EffectiveFrom Display
+
+*For any* participant address history record with a null effective start date, the UI should indicate it represents the oldest/initial home address.
+
+**Validates: Requirements 4.17**
 
 ### Property 13a: Address History Venue Name Display
 
@@ -1935,11 +1985,47 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 6C.19, 6C.20, 6C.21, 6C.22**
 
+### Property 70A: Map null effectiveFrom handling for activities
+
+*For any* activity marker on the map with a null effectiveFrom date in its venue history, the map should treat the venue association start date as the activity's startDate when determining the current venue.
+
+**Validates: Requirements 6C.23, 6C.25**
+
+### Property 70B: Map null effectiveFrom handling for participants
+
+*For any* participant home marker on the map with a null effectiveFrom date in their address history, the map should treat it as the oldest home address when determining the current home venue.
+
+**Validates: Requirements 6C.24, 6C.26**
+
+### Property 70C: Map current venue determination with null dates
+
+*For any* activity or participant displayed on the map with venue/address history containing null effectiveFrom dates, the map should correctly identify and display the current venue/address location.
+
+**Validates: Requirements 6C.23, 6C.24, 6C.25, 6C.26**
+
 ### Property 71: Geographic Area Filter Application
 
 *For any* analytics dashboard with a geographic area filter applied, only activities and participants associated with venues in that geographic area or its descendants should be included in the metrics.
 
 **Validates: Requirements 7.16**
+
+### Property 71A: Analytics null effectiveFrom handling for activities
+
+*For any* activity in analytics calculations with a null effectiveFrom date in its venue history, the dashboard should treat the venue association start date as the activity's startDate when determining the current venue.
+
+**Validates: Requirements 7.38a, 7.38c**
+
+### Property 71B: Analytics null effectiveFrom handling for participants
+
+*For any* participant in analytics calculations with a null effectiveFrom date in their address history, the dashboard should treat it as the oldest home address when determining the current home venue.
+
+**Validates: Requirements 7.38b, 7.38c**
+
+### Property 71C: Analytics current venue determination with null dates
+
+*For any* activity or participant included in analytics with venue/address history containing null effectiveFrom dates, the dashboard should correctly identify the current venue/address for filtering and aggregation purposes.
+
+**Validates: Requirements 7.38a, 7.38b, 7.38c**
 
 ### Property 72: Geographic Breakdown Chart Display
 

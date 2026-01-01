@@ -87,8 +87,11 @@ The Backend API package provides the RESTful API service that implements all bus
 13. THE API SHALL provide a POST /api/participants/:id/address-history endpoint that creates a new address history record
 14. THE API SHALL provide a PUT /api/participants/:id/address-history/:historyId endpoint that updates an existing address history record
 15. THE API SHALL provide a DELETE /api/participants/:id/address-history/:historyId endpoint that deletes an address history record
-16. WHEN creating an address history record, THE API SHALL require venue ID and effective start date
-17. WHEN creating an address history record, THE API SHALL prevent duplicate records with the same effective start date for the same participant
+16. WHEN creating an address history record, THE API SHALL require venue ID
+17. WHEN creating an address history record, THE API SHALL accept an optional effective start date (effectiveFrom)
+18. WHEN creating an address history record with a null effectiveFrom date, THE API SHALL treat it as the oldest home address for that participant
+19. THE API SHALL enforce that at most one address history record can have a null effectiveFrom date for any given participant
+20. WHEN creating an address history record, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same participant
 18. THE API SHALL provide a GET /api/participants/:id/activities endpoint that returns all activity assignments for the participant with activity and role details
 19. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only participants whose current home venue is in the specified geographic area or its descendants
 
@@ -113,7 +116,10 @@ The Backend API package provides the RESTful API service that implements all bus
 13. THE API SHALL provide a POST /api/activities/:id/venues endpoint that associates a venue with an activity
 14. THE API SHALL provide a DELETE /api/activities/:id/venues/:venueId endpoint that removes a venue association
 15. THE API SHALL track the effective start date for each activity-venue association to support venue changes over time
-16. WHEN creating an activity-venue association, THE API SHALL prevent duplicate records with the same effective start date for the same activity
+16. WHEN creating an activity-venue association, THE API SHALL accept an optional effective start date (effectiveFrom)
+17. WHEN creating an activity-venue association with a null effectiveFrom date, THE API SHALL treat the venue association start date as the same as the activity start date
+18. THE API SHALL enforce that at most one activity-venue association can have a null effectiveFrom date for any given activity
+19. WHEN creating an activity-venue association, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same activity
 17. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only activities whose current venue is in the specified geographic area or its descendants
 
 ### Requirement 5: Assign Participants to Activities
@@ -206,6 +212,10 @@ The Backend API package provides the RESTful API service that implements all bus
 23. WHEN no date range is provided, THE API SHALL calculate metrics for all time
 24. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
 25. THE API SHALL return role distribution across all activities within the filtered and grouped results
+26. WHEN determining current venue for activities with venue history, THE API SHALL treat null effectiveFrom dates as equivalent to the activity start date
+27. WHEN determining current home address for participants with address history, THE API SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
+28. WHEN filtering or aggregating by venue, THE API SHALL correctly identify the current venue for activities considering null effectiveFrom dates
+29. WHEN filtering or aggregating by participant location, THE API SHALL correctly identify the current home venue for participants considering null effectiveFrom dates
 
 ### Requirement 6A: Activity Lifecycle Events Analytics
 

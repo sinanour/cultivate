@@ -10,12 +10,14 @@ import {
 } from '@cloudscape-design/components';
 import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
 import { VenueService } from '../../services/api/venue.service';
+import { formatDate } from '../../utils/date.utils';
 
 interface ActivityVenueHistoryFormProps {
   visible: boolean;
   onDismiss: () => void;
-  onSubmit: (data: { venueId: string; effectiveFrom: string }) => Promise<void>;
-  existingDates?: string[]; // Array of existing effective dates to check for duplicates
+  onSubmit: (data: { venueId: string; effectiveFrom: string | null }) => Promise<void>;
+  existingDates?: (string | null)[]; // Array of existing effective dates to check for duplicates (including null)
+  activityStartDate?: string; // Activity start date for display context
   loading?: boolean;
 }
 
@@ -24,6 +26,7 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
   onDismiss,
   onSubmit,
   existingDates = [],
+  activityStartDate,
   loading = false,
 }) => {
   const [venueId, setVenueId] = useState<string>('');
@@ -46,17 +49,24 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
       newErrors.venue = 'Venue is required';
     }
 
-    if (!effectiveFrom) {
-      newErrors.effectiveFrom = 'Effective start date is required';
-    } else {
+    // effectiveFrom is now optional - only validate for duplicates if provided
+    if (effectiveFrom) {
       // Check for duplicate dates
       const isDuplicate = existingDates.some(date => {
+        if (date === null) return false; // Skip null dates in this check
         const existingDate = date.split('T')[0];
         return existingDate === effectiveFrom;
       });
 
       if (isDuplicate) {
         newErrors.duplicate = 'A venue association with this effective date already exists';
+      }
+    } else {
+      // Check if a null effectiveFrom already exists
+      const hasNullDate = existingDates.some(date => date === null);
+
+      if (hasNullDate) {
+        newErrors.duplicate = 'Only one venue association can have no effective date (since activity start) per activity';
       }
     }
 
@@ -71,8 +81,8 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
 
     setSubmitting(true);
     try {
-      // Convert date to ISO format with time
-      const isoDate = new Date(effectiveFrom).toISOString();
+      // Convert date to ISO format with time, or null if empty
+      const isoDate = effectiveFrom ? new Date(effectiveFrom).toISOString() : null;
       await onSubmit({ venueId, effectiveFrom: isoDate });
       onDismiss();
     } catch (error) {
@@ -148,7 +158,11 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
         <FormField
           label="Effective Start Date"
           errorText={errors.effectiveFrom}
-          description="The date when this venue association became effective"
+          description={
+            activityStartDate
+              ? `The date when this venue association became effective (leave empty to use activity start date: ${formatDate(activityStartDate)})`
+              : "The date when this venue association became effective (leave empty for activity start date)"
+          }
         >
           <DatePicker
             value={effectiveFrom}
@@ -156,7 +170,7 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
               setEffectiveFrom(detail.value);
               setErrors({ ...errors, effectiveFrom: undefined, duplicate: undefined });
             }}
-            placeholder="YYYY-MM-DD"
+            placeholder="YYYY-MM-DD (optional)"
             disabled={loading}
           />
         </FormField>

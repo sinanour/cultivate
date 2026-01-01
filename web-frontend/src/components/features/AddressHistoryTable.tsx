@@ -25,7 +25,11 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
 }) => {
 
   // Sort by effective start date in reverse chronological order (most recent first)
+  // Null dates (initial address) sort to the end (oldest)
   const sortedHistory = [...addressHistory].sort((a, b) => {
+    if (a.effectiveFrom === null && b.effectiveFrom === null) return 0;
+    if (a.effectiveFrom === null) return 1; // null goes to end (oldest)
+    if (b.effectiveFrom === null) return -1; // null goes to end (oldest)
     return new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime();
   });
 
@@ -57,7 +61,12 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
         {
           id: 'effectiveFrom',
           header: 'Effective From',
-          cell: (item: ParticipantAddressHistory) => formatDate(item.effectiveFrom),
+          cell: (item: ParticipantAddressHistory) => 
+            item.effectiveFrom ? formatDate(item.effectiveFrom) : (
+              <Box>
+                <Badge color="blue">Initial Address</Badge>
+              </Box>
+            ),
           sortingField: 'effectiveFrom',
         },
         {

@@ -5,32 +5,61 @@ export class ActivityVenueHistoryRepository {
 
   /**
    * Find all venue history records for an activity, ordered by effectiveFrom descending
+   * Null effectiveFrom values are treated as the activity start date for ordering
    */
   async findByActivityId(activityId: string): Promise<ActivityVenueHistory[]> {
-    return this.prisma.activityVenueHistory.findMany({
+    const records = await this.prisma.activityVenueHistory.findMany({
       where: { activityId },
-      orderBy: { effectiveFrom: 'desc' },
       include: {
         venue: {
           include: {
             geographicArea: true,
           },
         },
+        activity: {
+          select: {
+            startDate: true,
+          },
+        },
       },
+    });
+
+    // Sort manually to handle null effectiveFrom (treat as activity startDate)
+    return records.sort((a, b) => {
+      const dateA = a.effectiveFrom || a.activity.startDate;
+      const dateB = b.effectiveFrom || b.activity.startDate;
+      return dateB.getTime() - dateA.getTime(); // Descending order
     });
   }
 
   /**
-   * Get the current venue (most recent effectiveFrom date)
+   * Get the current venue (most recent non-null effectiveFrom, or null record if no non-null exists)
    */
   async getCurrentVenue(activityId: string): Promise<ActivityVenueHistory | null> {
-    return this.prisma.activityVenueHistory.findFirst({
+    const records = await this.prisma.activityVenueHistory.findMany({
       where: { activityId },
-      orderBy: { effectiveFrom: 'desc' },
       include: {
         venue: true,
+        activity: {
+          select: {
+            startDate: true,
+          },
+        },
       },
     });
+
+    if (records.length === 0) return null;
+
+    // Find the most recent non-null effectiveFrom
+    const nonNullRecords = records.filter(r => r.effectiveFrom !== null);
+    if (nonNullRecords.length > 0) {
+      return nonNullRecords.reduce((latest, current) => {
+        return current.effectiveFrom! > latest.effectiveFrom! ? current : latest;
+      });
+    }
+
+    // If all records have null effectiveFrom, return the null record
+    return records[0];
   }
 
   /**
@@ -50,11 +79,11 @@ export class ActivityVenueHistoryRepository {
   }
 
   /**
-   * Check if a duplicate effectiveFrom exists for the activity
+   * Check if a duplicate effectiveFrom exists for the activity (including null)
    */
   async hasDuplicateEffectiveFrom(
     activityId: string,
-    effectiveFrom: Date,
+    effectiveFrom: Date | null,
     excludeId?: string
   ): Promise<boolean> {
     const existing = await this.prisma.activityVenueHistory.findFirst({
@@ -68,12 +97,26 @@ export class ActivityVenueHistoryRepository {
   }
 
   /**
+   * Check if a null effectiveFrom exists for the activity
+   */
+  async hasNullEffectiveFrom(activityId: string, excludeId?: string): Promise<boolean> {
+    const existing = await this.prisma.activityVenueHistory.findFirst({
+      where: {
+        activityId,
+        effectiveFrom: null,
+        ...(excludeId && { id: { not: excludeId } }),
+      },
+    });
+    return existing !== null;
+  }
+
+  /**
    * Create a new venue history record
    */
   async create(data: {
     activityId: string;
     venueId: string;
-    effectiveFrom: Date;
+    effectiveFrom: Date | null;
   }): Promise<ActivityVenueHistory> {
     return this.prisma.activityVenueHistory.create({
       data,
@@ -94,7 +137,7 @@ export class ActivityVenueHistoryRepository {
     id: string,
     data: {
       venueId?: string;
-      effectiveFrom?: Date;
+      effectiveFrom?: Date | null;
     }
   ): Promise<ActivityVenueHistory> {
     return this.prisma.activityVenueHistory.update({

@@ -34,12 +34,12 @@ export interface UpdateParticipantInput {
 
 export interface CreateAddressHistoryInput {
     venueId: string;
-    effectiveFrom: Date;
+    effectiveFrom: Date | null;
 }
 
 export interface UpdateAddressHistoryInput {
     venueId?: string;
-    effectiveFrom?: Date;
+    effectiveFrom?: Date | null;
 }
 
 export class ParticipantService {
@@ -364,19 +364,34 @@ export class ParticipantService {
             throw new Error('Venue not found');
         }
 
-        // Check for duplicate effectiveFrom
+        // Use provided effectiveFrom, or null if not provided
+        const effectiveDate = data.effectiveFrom !== undefined ? data.effectiveFrom : null;
+
+        // Check for duplicate effectiveFrom (including null)
         const hasDuplicate = await this.addressHistoryRepository.hasDuplicateEffectiveFrom(
             participantId,
-            data.effectiveFrom
+            effectiveDate
         );
         if (hasDuplicate) {
-            throw new Error('An address history record with this effectiveFrom date already exists for this participant');
+            throw new Error(
+                effectiveDate === null
+                    ? 'An address history record with null effective date (initial address) already exists for this participant'
+                    : 'An address history record with this effectiveFrom date already exists for this participant'
+            );
+        }
+
+        // Validate at most one null effectiveFrom per participant
+        if (effectiveDate === null) {
+            const hasNullDate = await this.addressHistoryRepository.hasNullEffectiveFrom(participantId);
+            if (hasNullDate) {
+                throw new Error('Only one address history record can have a null effective date per participant');
+            }
         }
 
         return this.addressHistoryRepository.create({
             participantId,
             venueId: data.venueId,
-            effectiveFrom: data.effectiveFrom,
+            effectiveFrom: effectiveDate,
         });
     }
 

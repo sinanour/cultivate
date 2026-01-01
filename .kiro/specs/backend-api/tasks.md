@@ -276,16 +276,19 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 
   - [x] 7.5 Create participant address history repository
     - Implement CRUD operations for address history
-    - Implement ordering by effectiveFrom descending
-    - Implement duplicate effectiveFrom prevention
-    - _Requirements: 3.12, 3.13, 3.14, 3.15, 3.16, 3.17_
+    - Implement ordering by effectiveFrom descending (null values treated as oldest)
+    - Implement duplicate effectiveFrom prevention (including null)
+    - Validate at most one null effectiveFrom per participant
+    - _Requirements: 3.12, 3.13, 3.14, 3.15, 3.17, 3.18, 3.19, 3.20_
 
   - [ ]* 7.6 Write property tests for address history operations
     - **Property 89: Address History Creation on Venue Update**
     - **Property 90: Address History Retrieval**
     - **Property 91: Current Address Identification**
     - **Property 92: Address History Duplicate Prevention**
-    - **Validates: Requirements 3.11, 3.12, 3.17**
+    - **Property 92A: Address History Null EffectiveFrom Uniqueness**
+    - **Property 92B: Address History Null EffectiveFrom Interpretation**
+    - **Validates: Requirements 3.11, 3.12, 3.18, 3.19, 3.20**
 
 - [x] 8. Implement venue management
   - [x] 8.1 Create venue repository
@@ -394,18 +397,21 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - DELETE /api/activities/:id/venues/:venueId
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.12, 4.13, 4.14_
 
-  - [ ] 11.5 Create activity venue history repository
+  - [x] 11.5 Create activity venue history repository
     - Implement CRUD operations for venue history
-    - Implement ordering by effectiveFrom descending
-    - Implement duplicate effectiveFrom prevention
-    - _Requirements: 4.12, 4.13, 4.14, 4.15, 4.16_
+    - Implement ordering by effectiveFrom descending (null values treated as using activity startDate)
+    - Implement duplicate effectiveFrom prevention (including null)
+    - Validate at most one null effectiveFrom per activity
+    - _Requirements: 4.12, 4.13, 4.14, 4.15, 4.17, 4.18, 4.19_
 
   - [ ]* 11.6 Write property tests for venue history operations
     - **Property 93: Activity Venue Association Creation**
     - **Property 94: Activity Venue History Retrieval**
     - **Property 95: Current Venue Identification**
     - **Property 96: Activity Venue Duplicate Prevention**
-    - **Validates: Requirements 4.11, 4.12, 4.13, 4.15, 4.16**
+    - **Property 96A: Activity Venue Null EffectiveFrom Uniqueness**
+    - **Property 96B: Activity Venue Null EffectiveFrom Interpretation**
+    - **Validates: Requirements 4.11, 4.12, 4.13, 4.17, 4.18, 4.19**
 
 - [x] 12. Implement activity-participant assignments
   - [x] 12.1 Create assignment repository and service
@@ -442,7 +448,9 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Implement geographic breakdown calculation
     - Support date range filtering
     - Support geographic area filtering
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13_
+    - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest date for participants
+    - Correctly identify current venue/address when effectiveFrom is null
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13_
 
   - [ ]* 13.2 Write property tests for analytics calculations
     - **Property 20: Activities at Start of Date Range Counting**
@@ -794,11 +802,22 @@ const where = areaIds ? {
         geographicAreaId: { in: areaIds }
       },
       // Most recent address (no newer record exists)
+      // Handles null effectiveFrom (oldest address) by checking if any record has a non-null date
       NOT: {
         participant: {
           addressHistory: {
             some: {
-              effectiveFrom: { gt: /* this record's effectiveFrom */ }
+              OR: [
+                // Another record with a later date
+                { effectiveFrom: { gt: /* this record's effectiveFrom */ } },
+                // This record is null but another non-null record exists
+                {
+                  AND: [
+                    { effectiveFrom: { not: null } },
+                    /* this record's effectiveFrom is null */
+                  ]
+                }
+              ]
             }
           }
         }
@@ -817,11 +836,22 @@ const where = areaIds ? {
         geographicAreaId: { in: areaIds }
       },
       // Most recent venue (no newer record exists)
+      // Handles null effectiveFrom (uses activity startDate) by checking if any record has a non-null date
       NOT: {
         activity: {
           activityVenueHistory: {
             some: {
-              effectiveFrom: { gt: /* this record's effectiveFrom */ }
+              OR: [
+                // Another record with a later date
+                { effectiveFrom: { gt: /* this record's effectiveFrom */ } },
+                // This record is null but another non-null record exists
+                {
+                  AND: [
+                    { effectiveFrom: { not: null } },
+                    /* this record's effectiveFrom is null */
+                  ]
+                }
+              ]
             }
           }
         }

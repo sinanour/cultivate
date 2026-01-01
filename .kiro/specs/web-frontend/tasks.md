@@ -176,11 +176,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Include version field in update requests for optimistic locking
     - Display inline validation errors
     - Embed address history management section within the form
-    - Allow adding new address history records with venue and effective start date
+    - Allow adding new address history records with venue and optional effective start date
     - Allow editing existing address history records (edit mode only)
     - Allow deleting existing address history records (edit mode only)
     - Display address history table in reverse chronological order within the form
-    - Validate address history for required fields and duplicate prevention
+    - Validate address history for required fields and duplicate prevention (including null dates)
+    - Enforce at most one null effective start date per participant
+    - Display null effective start dates as "Initial Address" or similar indicator
     - Fetch venue details when venue is selected for new address history records
     - Store venue object in temporary records for display before participant is created
     - _Requirements: 4.4, 4.5, 4.7, 4.8, 4.9, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18, 4.19, 4.20_
@@ -203,10 +205,10 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [x] 7.4 Create AddressHistoryTable component
     - Display address history in reverse chronological order by effective start date
-    - Show venue name and effective start date
-    - Highlight most recent address (first record)
+    - Show venue name and effective start date (display "Initial Address" for null dates)
+    - Highlight most recent address (first record, or null record if no non-null dates exist)
     - Provide edit and delete buttons for each record
-    - _Requirements: 4.11_
+    - _Requirements: 4.11, 4.17_
 
   - [ ]* 7.6 Write property test for address history display order
     - **Property 11: Address History Display Order**
@@ -215,15 +217,18 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 7.5 Create AddressHistoryForm component
     - Modal form for add/edit address history
     - Require venue selection from dropdown
-    - Require effective start date using CloudScape DatePicker
-    - Validate effective start date is provided
-    - Prevent duplicate records with same effective start date
-    - _Requirements: 4.12, 4.13, 4.14, 4.15, 4.16_
+    - Allow optional effective start date using CloudScape DatePicker
+    - Validate effective start date is optional (can be null for oldest address)
+    - Prevent duplicate records with same effective start date (including null)
+    - Enforce at most one null effective start date per participant
+    - _Requirements: 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18, 4.19_
 
   - [ ]* 7.7 Write property tests for address history validation
     - **Property 12: Address History Required Fields**
     - **Property 13: Address History Duplicate Prevention**
-    - **Validates: Requirements 4.15, 4.16**
+    - **Property 13A: Address History Null EffectiveFrom Uniqueness**
+    - **Property 13B: Address History Null EffectiveFrom Display**
+    - **Validates: Requirements 4.15, 4.17, 4.18, 4.19**
 
   - [x] 7.6 Implement ParticipantAddressHistoryService
     - Implement getAddressHistory(participantId)
@@ -410,14 +415,16 @@ This implementation plan covers the React-based web application built with TypeS
     - Support venue selection and management
     - Include version field in update requests for optimistic locking
     - Embed venue history management section within the form
-    - Allow adding new venue associations with effective start dates
+    - Allow adding new venue associations with optional effective start dates
     - Allow editing existing venue associations (edit mode only)
     - Allow deleting existing venue associations (edit mode only)
     - Display venue history table in reverse chronological order within the form
-    - Validate venue associations for required fields and duplicate prevention
+    - Validate venue associations for required fields and duplicate prevention (including null dates)
+    - Enforce at most one null effective start date per activity
+    - Display null effective start dates as "Since Activity Start" or show activity startDate
     - Fetch venue details when venue is selected for new venue associations
     - Store venue object in temporary records for display before activity is created
-    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19_
+    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22_
 
   - [ ]* 11.3 Write property tests for activity validation
     - **Property 14: Finite Activity End Date Requirement**
@@ -438,18 +445,19 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [x] 11.4 Create ActivityVenueHistoryTable component
     - Display venue history in reverse chronological order by effective start date
-    - Show venue name and effective start date
-    - Highlight most recent venue (first record)
+    - Show venue name and effective start date (display "Since Activity Start" or activity startDate for null dates)
+    - Highlight most recent venue (first record, or null record if no non-null dates exist)
     - Provide delete button for each record
-    - _Requirements: 5.14_
+    - _Requirements: 5.14, 5.20_
 
   - [x] 11.5 Create ActivityVenueHistoryForm component
     - Modal form for adding venue associations
     - Require venue selection from dropdown
-    - Require effective start date using CloudScape DatePicker
-    - Validate effective start date is provided
-    - Prevent duplicate records with same effective start date
-    - _Requirements: 5.13, 5.14_
+    - Allow optional effective start date using CloudScape DatePicker
+    - Validate effective start date is optional (can be null to use activity startDate)
+    - Prevent duplicate records with same effective start date (including null)
+    - Enforce at most one null effective start date per activity
+    - _Requirements: 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22_
 
   - [x] 11.6 Implement ActivityVenueHistoryService
     - Implement getActivityVenues(activityId)
@@ -496,7 +504,10 @@ This implementation plan covers the React-based web application built with TypeS
     - Filter legend items dynamically based on markers actually rendered on the map
     - Hide legend when no markers are visible
     - Respect global geographic area filter across all modes
-    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.5a, 6C.5b, 6C.5c, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22_
+    - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest address for participants
+    - Correctly identify current venue for activity markers considering null effectiveFrom dates
+    - Correctly identify current home venue for participant markers considering null effectiveFrom dates
+    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.5a, 6C.5b, 6C.5c, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22, 6C.23, 6C.24, 6C.25, 6C.26_
 
   - [ ]* 13.2 Write property tests for map display
     - **Property 60: Map Mode Selector**
@@ -567,6 +578,8 @@ This implementation plan covers the React-based web application built with TypeS
     - Display geographic breakdown chart showing engagement by geographic area
     - Allow drilling down into child geographic areas
     - Display all-time metrics when no date range specified
+    - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest address for participants
+    - Correctly identify current venue/address when effectiveFrom is null for filtering and grouping
     - Synchronize all filter and grouping parameters with URL query parameters:
       - Read URL parameters on component mount to initialize dashboard state
       - Update URL when user changes filters or grouping (using React Router's useSearchParams or similar)
@@ -574,7 +587,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.38a, 7.38b, 7.38c, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46_
 
   - [x] 14.1a Enhance Activities chart with segmented control toggle
     - Rename chart title from "Activities by Type" to "Activities"

@@ -52,7 +52,7 @@ export function ParticipantDetail() {
   });
 
   const createAddressMutation = useMutation({
-    mutationFn: (data: { venueId: string; effectiveFrom: string }) =>
+    mutationFn: (data: { venueId: string; effectiveFrom: string | null }) =>
       ParticipantAddressHistoryService.createAddressHistory(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['participantAddressHistory', id] });
@@ -66,7 +66,7 @@ export function ParticipantDetail() {
   });
 
   const updateAddressMutation = useMutation({
-    mutationFn: (data: { historyId: string; venueId: string; effectiveFrom: string }) =>
+    mutationFn: (data: { historyId: string; venueId: string; effectiveFrom: string | null }) =>
       ParticipantAddressHistoryService.updateAddressHistory(id!, data.historyId, {
         venueId: data.venueId,
         effectiveFrom: data.effectiveFrom,
@@ -110,7 +110,7 @@ export function ParticipantDetail() {
     }
   };
 
-  const handleSubmitAddress = async (data: { venueId: string; effectiveFrom: string }) => {
+  const handleSubmitAddress = async (data: { venueId: string; effectiveFrom: string | null }) => {
     if (editingAddress) {
       await updateAddressMutation.mutateAsync({
         historyId: editingAddress.id,

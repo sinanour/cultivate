@@ -78,7 +78,7 @@ export function ActivityDetail() {
   });
 
   const addVenueMutation = useMutation({
-    mutationFn: (data: { venueId: string; effectiveFrom: string }) =>
+    mutationFn: (data: { venueId: string; effectiveFrom: string | null }) =>
       ActivityService.addActivityVenue(id!, data.venueId, data.effectiveFrom),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity-venues', id] });
@@ -128,7 +128,7 @@ export function ActivityDetail() {
     }
   };
 
-  const handleSubmitVenue = async (data: { venueId: string; effectiveFrom: string }) => {
+  const handleSubmitVenue = async (data: { venueId: string; effectiveFrom: string | null }) => {
     await addVenueMutation.mutateAsync(data);
   };
 

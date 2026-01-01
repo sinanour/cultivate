@@ -493,10 +493,11 @@ The API uses Prisma to define the following database models:
 - id: UUID (primary key)
 - participantId: UUID (foreign key)
 - venueId: UUID (foreign key)
-- effectiveFrom: DateTime
+- effectiveFrom: DateTime (optional, nullable)
 - createdAt: DateTime
 - participant: Participant (relation)
 - venue: Venue (relation)
+- Unique constraint: (participantId, effectiveFrom) to prevent duplicates including null
 
 **Venue**
 - id: UUID (primary key)
@@ -540,10 +541,11 @@ The API uses Prisma to define the following database models:
 - id: UUID (primary key)
 - activityId: UUID (foreign key)
 - venueId: UUID (foreign key)
-- effectiveFrom: DateTime
+- effectiveFrom: DateTime (optional, nullable)
 - createdAt: DateTime
 - activity: Activity (relation)
 - venue: Venue (relation)
+- Unique constraint: (activityId, effectiveFrom) to prevent duplicates including null
 
 **Assignment**
 - id: UUID (primary key)
@@ -587,6 +589,38 @@ The API uses Prisma to define the following database models:
 - ActivityVenueHistory belongs to one Activity and one Venue (many-to-one for each)
 - ParticipantAddressHistory belongs to one Participant and one Venue (many-to-one for each)
 - User has many AuditLogs (one-to-many)
+
+### Temporal Data and Null EffectiveFrom Handling
+
+**ParticipantAddressHistory and ActivityVenueHistory** support optional/nullable `effectiveFrom` dates with special semantics:
+
+**Null EffectiveFrom for Participant Address History:**
+- A null `effectiveFrom` date represents the **oldest/initial home address** for a participant
+- Only one address history record per participant can have a null `effectiveFrom`
+- When determining "current" address, null `effectiveFrom` is treated as the earliest possible date
+- Ordering: null values sort to the end (oldest) when ordering by `effectiveFrom DESC`
+
+**Null EffectiveFrom for Activity Venue History:**
+- A null `effectiveFrom` date means the venue association **started with the activity** (uses activity's `startDate`)
+- Only one venue history record per activity can have a null `effectiveFrom`
+- When determining "current" venue, null `effectiveFrom` is treated as equal to the activity's `startDate`
+- Ordering: null values are compared using the activity's `startDate` when ordering by `effectiveFrom DESC`
+
+**Implementation Considerations:**
+
+1. **Current Record Determination:**
+   - For participants: Current address is the record with the most recent non-null `effectiveFrom`, or the null record if no non-null records exist
+   - For activities: Current venue is the record with the most recent non-null `effectiveFrom`, or the null record if no non-null records exist
+
+2. **Filtering and Analytics:**
+   - When filtering by geographic area, the system must correctly identify the current venue considering null dates
+   - Null `effectiveFrom` for activities should be treated as the activity's `startDate` for temporal queries
+   - Null `effectiveFrom` for participants should be treated as the earliest date for temporal queries
+
+3. **Validation:**
+   - Database unique constraint on `(participantId, effectiveFrom)` prevents duplicate null values
+   - Database unique constraint on `(activityId, effectiveFrom)` prevents duplicate null values
+   - Application-level validation provides clear error messages when attempting to create duplicate null records
 
 ### Referential Integrity
 
@@ -1154,12 +1188,20 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 3.12**
 
 **Property 107: Current address identification**
-*For any* participant with address history, the current address should be the record with the most recent effectiveFrom date.
+*For any* participant with address history, the current address should be the record with the most recent non-null effectiveFrom date, or the record with null effectiveFrom if no non-null records exist.
 **Validates: Requirements 3.11**
 
 **Property 108: Address history duplicate prevention**
-*For any* participant, attempting to create an address history record with the same effectiveFrom date as an existing record should be rejected with a 400 error.
-**Validates: Requirements 3.17**
+*For any* participant, attempting to create an address history record with the same effectiveFrom date (including null) as an existing record should be rejected with a 400 error.
+**Validates: Requirements 3.20**
+
+**Property 108A: Address history null effectiveFrom uniqueness**
+*For any* participant, attempting to create a second address history record with a null effectiveFrom date when one already exists should be rejected with a 400 error.
+**Validates: Requirements 3.18, 3.19**
+
+**Property 108B: Address history null effectiveFrom interpretation**
+*For any* participant address history record with a null effectiveFrom date, the system should treat it as the oldest home address for that participant.
+**Validates: Requirements 3.18**
 
 ### Activity Venue Association Properties
 
@@ -1172,12 +1214,20 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 4.12, 4.15**
 
 **Property 111: Current venue identification**
-*For any* activity with venue history, the current venue should be the record with the most recent effectiveFrom date.
+*For any* activity with venue history, the current venue should be the record with the most recent non-null effectiveFrom date, or the record with null effectiveFrom if no non-null records exist.
 **Validates: Requirements 4.11**
 
 **Property 112: Activity venue duplicate prevention**
-*For any* activity, attempting to create a venue association with the same effectiveFrom date as an existing record should be rejected with a 400 error.
-**Validates: Requirements 4.15**
+*For any* activity, attempting to create a venue association with the same effectiveFrom date (including null) as an existing record should be rejected with a 400 error.
+**Validates: Requirements 4.19**
+
+**Property 112A: Activity venue null effectiveFrom uniqueness**
+*For any* activity, attempting to create a second venue association with a null effectiveFrom date when one already exists should be rejected with a 400 error.
+**Validates: Requirements 4.17, 4.18**
+
+**Property 112B: Activity venue null effectiveFrom interpretation**
+*For any* activity venue association with a null effectiveFrom date, the system should treat the venue association start date as the same as the activity start date.
+**Validates: Requirements 4.17**
 
 ### Geographic Analytics Properties
 
@@ -1196,6 +1246,18 @@ The API uses Prisma to define the following database models:
 **Property 116: Hierarchical statistics aggregation**
 *For any* geographic area, statistics should include data from all descendant geographic areas in the hierarchy.
 **Validates: Requirements 5B.15**
+
+**Property 116A: Analytics null effectiveFrom handling for activities**
+*For any* activity with a null effectiveFrom date in its venue history, analytics queries should treat the venue association start date as the activity's startDate.
+**Validates: Requirements 6.26, 6.28**
+
+**Property 116B: Analytics null effectiveFrom handling for participants**
+*For any* participant with a null effectiveFrom date in their address history, analytics queries should treat it as the oldest home address (earlier than any non-null date).
+**Validates: Requirements 6.27, 6.29**
+
+**Property 116C: Current venue determination with null dates**
+*For any* activity or participant with venue/address history containing null effectiveFrom dates, the system should correctly identify the current venue/address by treating null dates according to their semantic meaning.
+**Validates: Requirements 6.26, 6.27, 6.28, 6.29**
 
 ### Pagination Properties
 
@@ -1320,12 +1382,20 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 3.12**
 
 **Property 91: Current address identification**
-*For any* participant with address history, the current address should be the record with the most recent effectiveFrom date.
+*For any* participant with address history, the current address should be the record with the most recent non-null effectiveFrom date, or the record with null effectiveFrom if no non-null records exist.
 **Validates: Requirements 3.11**
 
 **Property 92: Address history duplicate prevention**
-*For any* participant, attempting to create an address history record with the same effectiveFrom date as an existing record should be rejected with a 400 error.
-**Validates: Requirements 3.17**
+*For any* participant, attempting to create an address history record with the same effectiveFrom date (including null) as an existing record should be rejected with a 400 error.
+**Validates: Requirements 3.20**
+
+**Property 92A: Address history null effectiveFrom uniqueness**
+*For any* participant, attempting to create a second address history record with a null effectiveFrom date when one already exists should be rejected with a 400 error.
+**Validates: Requirements 3.18, 3.19**
+
+**Property 92B: Address history null effectiveFrom interpretation**
+*For any* participant address history record with a null effectiveFrom date, the system should treat it as the oldest home address for that participant.
+**Validates: Requirements 3.18**
 
 ### Activity Venue Association Properties
 
@@ -1338,12 +1408,20 @@ The API uses Prisma to define the following database models:
 **Validates: Requirements 4.12, 4.15**
 
 **Property 95: Current venue identification**
-*For any* activity with venue history, the current venue should be the record with the most recent effectiveFrom date.
+*For any* activity with venue history, the current venue should be the record with the most recent non-null effectiveFrom date, or the record with null effectiveFrom if no non-null records exist.
 **Validates: Requirements 4.11**
 
 **Property 96: Activity venue duplicate prevention**
-*For any* activity, attempting to create a venue association with the same effectiveFrom date as an existing record should be rejected with a 400 error.
-**Validates: Requirements 4.15**
+*For any* activity, attempting to create a venue association with the same effectiveFrom date (including null) as an existing record should be rejected with a 400 error.
+**Validates: Requirements 4.19**
+
+**Property 96A: Activity venue null effectiveFrom uniqueness**
+*For any* activity, attempting to create a second venue association with a null effectiveFrom date when one already exists should be rejected with a 400 error.
+**Validates: Requirements 4.17, 4.18**
+
+**Property 96B: Activity venue null effectiveFrom interpretation**
+*For any* activity venue association with a null effectiveFrom date, the system should treat the venue association start date as the same as the activity start date.
+**Validates: Requirements 4.17**
 
 ### Geographic Analytics Properties
 

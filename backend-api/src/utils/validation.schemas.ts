@@ -164,6 +164,7 @@ export const ActivityUpdateSchema = z.object({
 
 export const ActivityVenueAssociationSchema = z.object({
   venueId: z.string().uuid('Invalid venue ID format'),
+  effectiveFrom: z.string().datetime('Invalid effectiveFrom date format').nullable().optional(),
 });
 
 // Assignment schemas
@@ -261,12 +262,12 @@ export const UuidParamSchema = z.object({
 // Participant Address History schemas
 export const ParticipantAddressHistoryCreateSchema = z.object({
   venueId: z.string().uuid('Invalid venue ID format'),
-  effectiveFrom: z.string().datetime('Invalid effectiveFrom date format'),
+  effectiveFrom: z.string().datetime('Invalid effectiveFrom date format').nullable().optional(),
 });
 
 export const ParticipantAddressHistoryUpdateSchema = z.object({
   venueId: z.string().uuid('Invalid venue ID format').optional(),
-  effectiveFrom: z.string().datetime('Invalid effectiveFrom date format').optional(),
+  effectiveFrom: z.string().datetime('Invalid effectiveFrom date format').nullable().optional(),
 });
 
 export type LoginInput = z.infer<typeof LoginSchema>;

@@ -17,24 +17,35 @@ interface ActivityVenueHistoryRecord {
     name: string;
     address: string;
   };
-  effectiveFrom: string;
+  effectiveFrom: string | null;
+  activity?: {
+    startDate: string;
+  };
 }
 
 interface ActivityVenueHistoryTableProps {
   venueHistory: ActivityVenueHistoryRecord[];
+  activityStartDate?: string; // For displaying null dates
   onDelete: (venueId: string) => void;
   loading?: boolean;
 }
 
 export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps> = ({
   venueHistory,
+  activityStartDate,
   onDelete,
   loading = false,
 }) => {
 
   // Sort by effective start date in reverse chronological order (most recent first)
+  // Null dates (activity start) are treated using activityStartDate for sorting
   const sortedHistory = [...venueHistory].sort((a, b) => {
-    return new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime();
+    const dateA = a.effectiveFrom || activityStartDate || '';
+    const dateB = b.effectiveFrom || activityStartDate || '';
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
   });
 
   return (
@@ -65,7 +76,17 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
         {
           id: 'effectiveFrom',
           header: 'Effective From',
-          cell: (item: ActivityVenueHistoryRecord) => formatDate(item.effectiveFrom),
+          cell: (item: ActivityVenueHistoryRecord) => 
+            item.effectiveFrom ? formatDate(item.effectiveFrom) : (
+              <Box>
+                <Badge color="blue">Since Activity Start</Badge>
+                {activityStartDate && (
+                  <Box variant="small" color="text-body-secondary" margin={{ top: 'xxxs' }}>
+                    ({formatDate(activityStartDate)})
+                  </Box>
+                )}
+              </Box>
+            ),
           sortingField: 'effectiveFrom',
         },
         {

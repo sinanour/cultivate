@@ -37,8 +37,8 @@ describe('ParticipantService - Address History', () => {
             const result = await service.getAddressHistory('participant-1');
 
             expect(result).toEqual(history);
-            expect(result[0].effectiveFrom.getTime()).toBeGreaterThan(result[1].effectiveFrom.getTime());
-            expect(result[1].effectiveFrom.getTime()).toBeGreaterThan(result[2].effectiveFrom.getTime());
+            expect(result[0].effectiveFrom!.getTime()).toBeGreaterThan(result[1].effectiveFrom!.getTime());
+            expect(result[1].effectiveFrom!.getTime()).toBeGreaterThan(result[2].effectiveFrom!.getTime());
         });
 
         it('should throw error for non-existent participant', async () => {

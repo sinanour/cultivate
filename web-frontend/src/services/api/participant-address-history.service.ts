@@ -3,12 +3,12 @@ import { ApiClient } from './api.client';
 
 interface CreateAddressHistoryData {
   venueId: string;
-  effectiveFrom: string;
+  effectiveFrom: string | null;
 }
 
 interface UpdateAddressHistoryData {
   venueId?: string;
-  effectiveFrom?: string;
+  effectiveFrom?: string | null;
 }
 
 export class ParticipantAddressHistoryService {
