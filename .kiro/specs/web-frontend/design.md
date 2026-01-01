@@ -86,6 +86,9 @@ src/
 
 **AppLayout**
 - Uses CloudScape AppLayout component for consistent structure
+- Implements sticky header positioning using CSS (position: sticky or fixed)
+- Ensures header remains visible at the top of the viewport during vertical scrolling
+- Adjusts content area padding/margin to prevent header from obscuring content
 - Renders navigation sidebar with links to all sections
 - Displays user menu with name, role, and logout option
 - Shows connection status indicator (online/offline)
@@ -1782,6 +1785,18 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* user viewing the main dashboard page, the User Administration quick link should only be visible if the user has ADMINISTRATOR role.
 
 **Validates: Requirements 13.7, 13.8**
+
+### Property 43b: Sticky header visibility
+
+*For any* vertical scroll position on any page, the application header (including navigation header and geographic area filter header) should remain visible at the top of the viewport.
+
+**Validates: Requirements 13.9, 13.10**
+
+### Property 43c: Sticky header content clearance
+
+*For any* page with a sticky header, the page content should not be obscured by the header and should have appropriate spacing to account for the header height.
+
+**Validates: Requirements 13.11**
 
 ### Property 44: Form validation error display
 

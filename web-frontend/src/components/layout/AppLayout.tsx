@@ -75,51 +75,58 @@ export function AppLayout() {
 
   return (
     <>
-      <TopNavigation
-        identity={{
-          href: '/',
-          title: 'Community Activity Tracker',
-        }}
-        utilities={[
-          {
-            type: 'button',
-            text: isOnline ? 'Online' : 'Offline',
-            iconName: isOnline ? 'status-positive' : 'status-negative',
-            disableUtilityCollapse: true,
-          },
-          {
-            type: 'menu-dropdown',
-            text: user?.email || 'User',
-            description: user?.role,
-            iconName: 'user-profile',
-            items: [
-              {
-                id: 'role',
-                text: `Role: ${user?.role}`,
-                disabled: true,
-              },
-              {
-                id: 'logout',
-                text: 'Logout',
-              },
-            ],
-            onItemClick: ({ detail }) => {
-              if (detail.id === 'logout') {
-                logout();
-                navigate('/login');
-              }
-            },
-          },
-        ]}
-      />
-      <div style={{ 
-        padding: '8px 20px', 
-        borderBottom: '2px solid #e9ebed', 
-        backgroundColor: selectedGeographicAreaId ? '#f1fdf6' : '#ffffff',
-        boxShadow: '0 1px 1px 0 rgba(0,28,36,0.3)',
-        transition: 'background-color 0.2s ease',
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        backgroundColor: '#ffffff',
       }}>
-        <GeographicAreaFilterSelector />
+        <TopNavigation
+          identity={{
+            href: '/',
+            title: 'Community Activity Tracker',
+          }}
+          utilities={[
+            {
+              type: 'button',
+              text: isOnline ? 'Online' : 'Offline',
+              iconName: isOnline ? 'status-positive' : 'status-negative',
+              disableUtilityCollapse: true,
+            },
+            {
+              type: 'menu-dropdown',
+              text: user?.email || 'User',
+              description: user?.role,
+              iconName: 'user-profile',
+              items: [
+                {
+                  id: 'role',
+                  text: `Role: ${user?.role}`,
+                  disabled: true,
+                },
+                {
+                  id: 'logout',
+                  text: 'Logout',
+                },
+              ],
+              onItemClick: ({ detail }) => {
+                if (detail.id === 'logout') {
+                  logout();
+                  navigate('/login');
+                }
+              },
+            },
+          ]}
+        />
+        <div style={{ 
+          padding: '8px 20px', 
+          borderBottom: '2px solid #e9ebed', 
+          backgroundColor: selectedGeographicAreaId ? '#f1fdf6' : '#ffffff',
+          boxShadow: '0 1px 1px 0 rgba(0,28,36,0.3)',
+          transition: 'background-color 0.2s ease',
+        }}>
+          <GeographicAreaFilterSelector />
+        </div>
       </div>
       <AppLayoutComponent
         navigation={

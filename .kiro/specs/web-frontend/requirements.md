@@ -461,6 +461,9 @@ The Web Frontend package provides a responsive React-based web application that 
 6. THE Web_App SHALL provide quick links on the main dashboard page for accessing key sections
 7. WHEN displaying quick links on the main dashboard, THE Web_App SHALL hide the User Administration quick link from users who do not have ADMINISTRATOR role
 8. WHEN a user has ADMINISTRATOR role, THE Web_App SHALL display the User Administration quick link on the main dashboard
+9. THE Web_App SHALL make the application header (including both the navigation header and the geographic area filter header) sticky to the top of the viewport
+10. WHEN a user scrolls vertically through page content, THE Web_App SHALL keep the header visible at the top of the screen at all times
+11. THE Web_App SHALL ensure the sticky header does not obscure page content by adjusting the content area's top padding or margin appropriately
 
 ### Requirement 14: Form Validation
 
