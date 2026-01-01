@@ -91,13 +91,14 @@ export default function LoginPage() {
         backgroundColor: '#f0f0f0',
       }}
     >
-      <Container
-        header={
-          <Header variant="h1">
-            Cultivate
-          </Header>
-        }
-      >
+      <div style={{ minWidth: '360px', width: '100%', maxWidth: '480px' }}>
+        <Container
+          header={
+            <Header variant="h1">
+              Cultivate
+            </Header>
+          }
+        >
         <form onSubmit={handleSubmit}>
           <Form
             actions={
@@ -117,6 +118,7 @@ export default function LoginPage() {
             <FormField
               label="Email"
               errorText={emailError}
+              stretch={true}
             >
               <Input
                 value={email}
@@ -133,6 +135,7 @@ export default function LoginPage() {
             <FormField
               label="Password"
               errorText={passwordError}
+              stretch={true}
             >
               <Input
                 value={password}
@@ -149,6 +152,7 @@ export default function LoginPage() {
           </Form>
         </form>
       </Container>
+      </div>
     </div>
   );
 }
