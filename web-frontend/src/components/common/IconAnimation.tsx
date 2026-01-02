@@ -23,10 +23,10 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
   }, []);
 
   useEffect(() => {
-    // Trigger onComplete after 2000ms animation duration
+    // Trigger onComplete after 2500ms animation duration
     const timer = setTimeout(() => {
       onComplete();
-    }, 2000);
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, [onComplete]);

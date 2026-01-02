@@ -528,6 +528,15 @@ src/
     - Venue names rendered as hyperlinks to /venues/:id
     - Geographic area names rendered as hyperlinks to /geographic-areas/:id
   - Each metric displayed in its own column for easy comparison
+- Displays pie chart showing breakdown of unique activities by activity category:
+  - Positioned in line width (full width of its container) to the left of the role distribution chart
+  - Uses same filtered data as other dashboard components
+  - Displays activity category names in the legend
+  - Uses consistent color scheme with other dashboard charts
+  - Shows activity category name and count on hover over pie segments
+  - Includes interactive legend allowing users to toggle individual category segments on/off
+  - Displays appropriate message or keeps at least one segment visible when all are hidden
+  - Integrates with InteractiveLegend component for consistent behavior
 - Shows role distribution chart within filtered and grouped results with interactive legend:
   - Allows users to click legend items to toggle individual role series on/off
   - Visually indicates hidden series with dimmed text or reduced opacity
@@ -710,7 +719,7 @@ src/
 **Implementation Details:**
 - Accepts props: chartId (unique identifier), series (array of series names), onVisibilityChange callback
 - Returns visibility state object mapping series names to boolean values
-- Can be used with recharts LineChart, BarChart, AreaChart, and other chart types
+- Can be used with recharts LineChart, BarChart, AreaChart, PieChart, and other chart types
 - Integrates seamlessly with existing chart configurations
 
 ### Service Layer
@@ -1519,6 +1528,54 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* engagement dashboard, the role distribution chart should display counts for all roles within the filtered and grouped results.
 
 **Validates: Requirements 7.32**
+
+### Property 31_pie: Activity Category Pie Chart Display
+
+*For any* engagement dashboard, a pie chart showing the breakdown of unique activities by activity category should be displayed.
+
+**Validates: Requirements 7.32a**
+
+### Property 31_pie_a: Pie Chart Positioning
+
+*For any* engagement dashboard rendering, the activity category pie chart should appear in line width (full container width) and be positioned to the left of the role distribution chart.
+
+**Validates: Requirements 7.32b**
+
+### Property 31_pie_b: Pie Chart Data Consistency
+
+*For any* engagement dashboard with filters applied, the pie chart should use the same filtered data as other dashboard components.
+
+**Validates: Requirements 7.32c**
+
+### Property 31_pie_c: Pie Chart Legend Display
+
+*For any* activity category pie chart, the legend should display activity category names.
+
+**Validates: Requirements 7.32d**
+
+### Property 31_pie_d: Pie Chart Color Consistency
+
+*For any* activity category pie chart, the color scheme should be consistent with other dashboard charts.
+
+**Validates: Requirements 7.32e**
+
+### Property 31_pie_e: Pie Chart Hover Information
+
+*For any* pie chart segment hover event, the activity category name and count should be displayed.
+
+**Validates: Requirements 7.32f**
+
+### Property 31_pie_f: Pie Chart Interactive Legend
+
+*For any* activity category pie chart, the legend should allow users to toggle individual category segments on and off.
+
+**Validates: Requirements 7.32g**
+
+### Property 31_pie_g: Pie Chart Minimum Visibility
+
+*For any* activity category pie chart with all segments hidden, an appropriate message should be displayed or at least one segment should remain visible.
+
+**Validates: Requirements 7.32h**
 
 ### Property 31a: Analytics URL Parameter Synchronization
 

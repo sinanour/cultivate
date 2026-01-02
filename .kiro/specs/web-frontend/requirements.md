@@ -264,6 +264,14 @@ The Web Frontend package provides a responsive React-based web application that 
 30. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
 31. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
 32. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
+32a. THE Web_App SHALL display a pie chart showing the breakdown of unique activities by activity category
+32b. THE pie chart SHALL appear in line width (full width of its container) and positioned to the left of the role distribution chart
+32c. THE pie chart SHALL use the same filtered data as other dashboard components
+32d. THE pie chart SHALL display activity category names in the legend
+32e. THE pie chart SHALL use a consistent color scheme with other dashboard charts
+32f. WHEN a user hovers over a pie chart segment, THE Web_App SHALL display the activity category name and count
+32g. THE pie chart SHALL include an interactive legend allowing users to toggle individual category segments on and off
+32h. WHEN all pie chart segments are hidden, THE Web_App SHALL display an appropriate message or allow at least one segment to remain visible
 33. THE Web_App SHALL synchronize all filter parameters (activity category, activity type, venue, geographic area, start date, end date) with URL query parameters
 34. THE Web_App SHALL synchronize all grouping parameters (group by dimensions) with URL query parameters
 35. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
@@ -706,6 +714,7 @@ The Web Frontend package provides a responsive React-based web application that 
 6. WHEN all data series are hidden, THE Web_App SHALL display an appropriate message or allow at least one series to remain visible
 7. THE Web_App SHALL apply interactive legend functionality to the following charts:
    - Activities chart on Engagement Dashboard (when displaying multiple activity types or categories)
+   - Activity Category Pie Chart on Engagement Dashboard
    - Activity Lifecycle Events chart (when displaying multiple activity types or categories)
    - Growth Dashboard Unique Participants chart (when displaying multiple activity types or categories)
    - Growth Dashboard Unique Activities chart (when displaying multiple activity types or categories)

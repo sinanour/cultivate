@@ -603,6 +603,17 @@ This implementation plan covers the React-based web application built with TypeS
       - Activities started, completed, cancelled within range
       - Participants at start/end of date range
     - Display aggregate counts and breakdowns by activity category and activity type
+    - Render charts for activities distribution, activity category pie chart, role distribution, and geographic breakdown
+    - Display pie chart showing breakdown of unique activities by activity category:
+      - Position in line width (full container width) to the left of role distribution chart
+      - Use recharts PieChart component
+      - Calculate unique activity counts per category from filtered data
+      - Display activity category names in legend
+      - Use consistent color scheme with other dashboard charts
+      - Show activity category name and count on hover
+      - Integrate with InteractiveLegend component for toggling segments
+      - Handle empty state when no activities exist
+      - Ensure at least one segment remains visible or display appropriate message
     - Render charts for activities distribution, role distribution, and geographic breakdown
     - Provide multi-dimensional grouping controls:
       - Activity category grouping
@@ -641,7 +652,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.38a, 7.38b, 7.38c, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.38a, 7.38b, 7.38c, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46_
 
   - [x] 14.1a Enhance Activities chart with segmented control toggle
     - Rename chart title from "Activities by Type" to "Activities"
@@ -688,6 +699,33 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31n: Activities Chart Screen Reader Support**
     - **Validates: Requirements 7.47, 7.48, 7.49, 7.51, 7.52, 7.53, 7.54, 7.56, 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65**
 
+  - [x] 14.1c Add Activity Category Pie Chart to EngagementDashboard
+    - Create ActivityCategoryPieChart component or add pie chart directly to EngagementDashboard
+    - Use recharts PieChart component for visualization
+    - Calculate unique activity counts per category from engagement metrics data
+    - Position chart in line width (full container width) to the left of role distribution chart
+    - Use CSS Grid or Flexbox layout to arrange pie chart and role distribution chart side by side
+    - Display activity category names in legend
+    - Use consistent color palette with other dashboard charts (define color mapping for categories)
+    - Implement hover tooltip showing activity category name and count
+    - Integrate with InteractiveLegend component for toggling category segments
+    - Handle empty state when no activities exist (display message)
+    - Ensure at least one segment remains visible when toggling
+    - Apply all current filters (PropertyFilter tokens, date range, geographic area) to pie chart data
+    - Update pie chart when filters change
+    - _Requirements: 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h_
+
+  - [ ]* 14.1d Write property tests for Activity Category Pie Chart
+    - **Property 31_pie: Activity Category Pie Chart Display**
+    - **Property 31_pie_a: Pie Chart Positioning**
+    - **Property 31_pie_b: Pie Chart Data Consistency**
+    - **Property 31_pie_c: Pie Chart Legend Display**
+    - **Property 31_pie_d: Pie Chart Color Consistency**
+    - **Property 31_pie_e: Pie Chart Hover Information**
+    - **Property 31_pie_f: Pie Chart Interactive Legend**
+    - **Property 31_pie_g: Pie Chart Minimum Visibility**
+    - **Validates: Requirements 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h**
+
   - [ ]* 14.2 Write property tests for engagement metrics
     - **Property 23: Temporal Activity Metrics Display**
     - **Property 24: Temporal Participant Metrics Display**
@@ -703,12 +741,20 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 29: Multiple Filter Application**
     - **Property 30: All-Time Metrics Display**
     - **Property 31: Role Distribution Display**
+    - **Property 31_pie: Activity Category Pie Chart Display**
+    - **Property 31_pie_a: Pie Chart Positioning**
+    - **Property 31_pie_b: Pie Chart Data Consistency**
+    - **Property 31_pie_c: Pie Chart Legend Display**
+    - **Property 31_pie_d: Pie Chart Color Consistency**
+    - **Property 31_pie_e: Pie Chart Hover Information**
+    - **Property 31_pie_f: Pie Chart Interactive Legend**
+    - **Property 31_pie_g: Pie Chart Minimum Visibility**
     - **Property 31a: Analytics URL Parameter Synchronization**
     - **Property 31b: Analytics URL Parameter Application**
     - **Property 31c: Analytics URL Update on State Change**
     - **Property 31d: Analytics Browser Navigation Support**
     - **Property 31e: Analytics URL Shareability**
-    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38**
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38**
 
   - [x] 14.2 Create GrowthDashboard component
     - Display two separate time-series charts: one for unique participant counts and one for unique activity counts

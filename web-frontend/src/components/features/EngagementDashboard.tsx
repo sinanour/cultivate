@@ -475,10 +475,31 @@ export function EngagementDashboard() {
     { name: 'Participants', color: '#00C49F', dataKey: 'participantCount' },
   ];
 
+  // Prepare legend items for Activity Category Pie Chart (before hooks)
+  const activityCategoryPieData = (metrics?.activitiesByCategory || [])
+    .map(category => ({
+      name: category.activityCategoryName,
+      value: category.activitiesAtEnd, // Use current count of activities
+    }))
+    .filter(item => item.value > 0);
+
+  const activityCategoryLegendItems: LegendItem[] = activityCategoryPieData.map((category, index) => ({
+    name: category.name,
+    color: COLORS[index % COLORS.length],
+    dataKey: category.name,
+  }));
+
+  // Create color map for Activity Category Pie Chart
+  const categoryColorMap = activityCategoryPieData.reduce((acc, category, index) => {
+    acc[category.name] = COLORS[index % COLORS.length];
+    return acc;
+  }, {} as Record<string, string>);
+
   // MUST call all hooks before any conditional returns
   const activitiesLegend = useInteractiveLegend('engagement-activities', activitiesLegendItems);
   const roleDistributionLegend = useInteractiveLegend('role-distribution', roleDistributionLegendItems);
   const geographicBreakdownLegend = useInteractiveLegend('geographic-breakdown', geographicBreakdownLegendItems);
+  const activityCategoryLegend = useInteractiveLegend('activity-category-pie', activityCategoryLegendItems);
 
   // Export handler for Engagement Summary table
   const handleExportEngagementSummary = () => {
@@ -1074,41 +1095,92 @@ export function EngagementDashboard() {
         })()}
       />
 
-      {/* Role Distribution */}
-      {metrics.roleDistribution && metrics.roleDistribution.length > 0 && (
-        <Container header={<Header variant="h3">Role Distribution</Header>}>
-          {roleDistributionLegendItems.length > 0 && (
-            <InteractiveLegend
-              chartId="role-distribution"
-              series={roleDistributionLegendItems}
-              onVisibilityChange={roleDistributionLegend.handleVisibilityChange}
-            />
-          )}
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={roleDistributionChartData.filter(role => 
-                  roleDistributionLegend.isSeriesVisible(role.name)
-                )}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(entry) => `${entry.name}: ${entry.value}`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {roleDistributionChartData
-                  .filter(role => roleDistributionLegend.isSeriesVisible(role.name))
-                  .map((role) => (
-                    <Cell key={`cell-${role.name}`} fill={roleColorMap[role.name]} />
-                  ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </Container>
-      )}
+      {/* Activity Category Pie Chart and Role Distribution - Side by Side */}
+      <ColumnLayout columns={2}>
+        {/* Activity Category Pie Chart */}
+        {activityCategoryPieData.length > 0 && (
+          <Container header={<Header variant="h3">Activities by Category</Header>}>
+            {activityCategoryLegendItems.length > 0 && (
+              <InteractiveLegend
+                chartId="activity-category-pie"
+                series={activityCategoryLegendItems}
+                onVisibilityChange={activityCategoryLegend.handleVisibilityChange}
+              />
+            )}
+            {activityCategoryPieData.filter(cat => activityCategoryLegend.isSeriesVisible(cat.name)).length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={activityCategoryPieData.filter(cat => 
+                      activityCategoryLegend.isSeriesVisible(cat.name)
+                    )}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(entry) => `${entry.name}: ${entry.value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {activityCategoryPieData
+                      .filter(cat => activityCategoryLegend.isSeriesVisible(cat.name))
+                      .map((category) => (
+                        <Cell key={`cell-${category.name}`} fill={categoryColorMap[category.name]} />
+                      ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box textAlign="center" padding="l">
+                <b>All categories are hidden. Toggle legend items to show data.</b>
+              </Box>
+            )}
+          </Container>
+        )}
+
+        {/* Role Distribution */}
+        {roleDistributionChartData.length > 0 && (
+          <Container header={<Header variant="h3">Role Distribution</Header>}>
+            {roleDistributionLegendItems.length > 0 && (
+              <InteractiveLegend
+                chartId="role-distribution"
+                series={roleDistributionLegendItems}
+                onVisibilityChange={roleDistributionLegend.handleVisibilityChange}
+              />
+            )}
+            {roleDistributionChartData.filter(role => roleDistributionLegend.isSeriesVisible(role.name)).length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={roleDistributionChartData.filter(role => 
+                      roleDistributionLegend.isSeriesVisible(role.name)
+                    )}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(entry) => `${entry.name}: ${entry.value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {roleDistributionChartData
+                      .filter(role => roleDistributionLegend.isSeriesVisible(role.name))
+                      .map((role) => (
+                        <Cell key={`cell-${role.name}`} fill={roleColorMap[role.name]} />
+                      ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box textAlign="center" padding="l">
+                <b>All roles are hidden. Toggle legend items to show data.</b>
+              </Box>
+            )}
+          </Container>
+        )}
+      </ColumnLayout>
 
       {/* Geographic Breakdown */}
       {metrics.geographicBreakdown && metrics.geographicBreakdown.length > 0 && (
