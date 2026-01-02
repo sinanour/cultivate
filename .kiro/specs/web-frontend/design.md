@@ -75,9 +75,20 @@ src/
 - Validates inputs before submission
 - Displays error messages using CloudScape Alert component
 - Checks for redirect URL parameter in query string (e.g., ?redirect=/activities/123)
-- On successful authentication, redirects to the URL specified in redirect parameter if present
-- If no redirect parameter exists, redirects to dashboard as default
+- On successful authentication, executes animated transition sequence before navigation
+- **Animation Sequence:**
+  1. **Form Fade Out (1000ms)**: Fades out the login form container div until it disappears
+  2. **Icon Display**: Renders icon-no-bg.svg image centered on screen at 256x256 pixels
+  3. **Stroke Animation (2000ms)**: Animates the SVG stroke from 0% to 100% drawn using CSS stroke-dasharray and stroke-dashoffset
+  4. **Navigation**: Redirects to the URL specified in redirect parameter if present, otherwise redirects to dashboard
 - Stores redirect URL in component state during login process
+- Uses CSS transitions and keyframe animations for smooth visual effects
+- Ensures animation completes before navigation occurs
+- **Technical Implementation Notes:**
+  - SVG stroke animation uses `stroke-dasharray` set to total path length and `stroke-dashoffset` animated from total length to 0
+  - Path length calculated using `getTotalLength()` method on SVG path elements
+  - Animation phases orchestrated using React state and `setTimeout` or CSS `animationend` events
+  - Icon asset located at `/public/icon-no-bg.svg`
 
 **ProtectedRoute**
 - Wrapper component that checks authentication status
@@ -1760,6 +1771,30 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* protected route that redirects an unauthenticated user to login, after successful authentication, the user should be redirected back to the original URL they were attempting to access.
 
 **Validates: Requirements 8.8, 8.9**
+
+### Property 34b: Login animation sequence execution
+
+*For any* successful authentication, the login page should execute the complete animation sequence (form fade out, icon display, stroke animation) before navigation occurs.
+
+**Validates: Requirements 8.10, 8.11, 8.12, 8.13, 8.14**
+
+### Property 34c: Login form fade out timing
+
+*For any* successful authentication, the login form container should fade out completely over exactly 1000 milliseconds.
+
+**Validates: Requirements 8.11**
+
+### Property 34d: Icon stroke animation timing
+
+*For any* successful authentication, the icon-no-bg.svg stroke should animate from 0% to 100% drawn over exactly 2000 milliseconds.
+
+**Validates: Requirements 8.13**
+
+### Property 34e: Animation sequence ordering
+
+*For any* successful authentication, the animation phases should execute in the correct order: form fade out, then icon display and stroke animation, then navigation.
+
+**Validates: Requirements 8.10, 8.11, 8.12, 8.13, 8.14**
 
 ### Property 35: Unauthorized action error messages
 

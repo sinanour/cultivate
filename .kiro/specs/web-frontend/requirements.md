@@ -399,6 +399,11 @@ The Web Frontend package provides a responsive React-based web application that 
 7. THE Web_App SHALL redirect to login when tokens expire
 8. WHEN a user is redirected to the login page due to being unauthenticated, THE Web_App SHALL capture the original URL
 9. WHEN a user successfully authenticates after being redirected from a protected route, THE Web_App SHALL redirect the user back to the original URL they were attempting to access
+10. WHEN a user successfully authenticates, THE Web_App SHALL display an animated transition sequence before navigation
+11. THE animated transition SHALL fade out the login form container over 1000 milliseconds until it disappears
+12. AFTER the login form fades out, THE Web_App SHALL display the icon-no-bg.svg image centered on the screen at 256x256 pixels
+13. THE icon image SHALL animate its stroke from nothing to completely drawn over the course of 2000 milliseconds
+14. AFTER the icon stroke animation completes, THE Web_App SHALL navigate to the appropriate destination page
 
 ### Requirement 9: Authorization UI
 

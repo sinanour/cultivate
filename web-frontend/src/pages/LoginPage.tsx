@@ -8,6 +8,9 @@ import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Header from '@cloudscape-design/components/header';
 import { useAuth } from '../hooks/useAuth';
+import IconAnimation from '../components/common/IconAnimation';
+
+type AnimationPhase = 'idle' | 'formFadeOut' | 'iconAnimation' | 'complete';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -19,16 +22,18 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('idle');
 
   // Get redirect URL from query parameter
   const redirectUrl = searchParams.get('redirect') || '/dashboard';
 
   // Redirect to original URL or dashboard if already authenticated
+  // Skip redirect if we're in the middle of an animation
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && animationPhase === 'idle') {
       navigate(redirectUrl, { replace: true });
     }
-  }, [isAuthenticated, navigate, redirectUrl]);
+  }, [isAuthenticated, navigate, redirectUrl, animationPhase]);
 
   const validateEmail = (value: string): boolean => {
     if (!value) {
@@ -69,90 +74,121 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      // Navigation will happen automatically via useEffect when isAuthenticated changes
+      // Start animation sequence instead of immediate navigation
+      setAnimationPhase('formFadeOut');
+      
+      // Phase 1: Form fade out (1000ms)
+      setTimeout(() => {
+        setAnimationPhase('iconAnimation');
+      }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle icon animation completion
+  const handleIconAnimationComplete = () => {
+    // Set to complete phase and wait 500ms before navigating
+    setAnimationPhase('complete');
+    setTimeout(() => {
+      navigate(redirectUrl, { replace: true });
+    }, 500);
+  };
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#0B1F3B',
-      }}
-    >
-      <div style={{ minWidth: '360px', width: '100%', maxWidth: '480px' }}>
-        <Container
-          header={
-            <Header variant="h1">
-              Cultivate
-            </Header>
-          }
+    <>
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#0B1F3B',
+        }}
+      >
+        {/* Login Form Container with fade out animation */}
+        <div
+          style={{
+            minWidth: '360px',
+            width: '100%',
+            maxWidth: '480px',
+            opacity: animationPhase === 'formFadeOut' || animationPhase === 'iconAnimation' || animationPhase === 'complete' ? 0 : 1,
+            transition: 'opacity 1000ms ease-out',
+            display: animationPhase === 'iconAnimation' || animationPhase === 'complete' ? 'none' : 'block',
+          }}
         >
-        <form onSubmit={handleSubmit}>
-          <Form
-            actions={
-              <SpaceBetween direction="horizontal" size="xs">
-                <Button
-                  variant="primary"
-                  loading={isLoading}
-                  disabled={isLoading}
-                  formAction="submit"
-                >
-                  Login
-                </Button>
-              </SpaceBetween>
+          <Container
+            header={
+              <Header variant="h1">
+                Cultivate
+              </Header>
             }
-            errorText={error}
           >
-            <FormField
-              label="Email"
-              errorText={emailError}
-              stretch={true}
+          <form onSubmit={handleSubmit}>
+            <Form
+              actions={
+                <SpaceBetween direction="horizontal" size="xs">
+                  <Button
+                    variant="primary"
+                    loading={isLoading}
+                    disabled={isLoading}
+                    formAction="submit"
+                  >
+                    Login
+                  </Button>
+                </SpaceBetween>
+              }
+              errorText={error}
             >
-              <Input
-                value={email}
-                onChange={({ detail }) => {
-                  setEmail(detail.value);
-                  if (emailError) validateEmail(detail.value);
-                }}
-                onBlur={() => validateEmail(email)}
-                type="email"
-                placeholder="Enter your email"
-                disabled={isLoading}
-              />
-            </FormField>
-            <FormField
-              label="Password"
-              errorText={passwordError}
-              stretch={true}
-            >
-              <Input
-                value={password}
-                onChange={({ detail }) => {
-                  setPassword(detail.value);
-                  if (passwordError) validatePassword(detail.value);
-                }}
-                onBlur={() => validatePassword(password)}
-                type="password"
-                placeholder="Enter your password"
-                disabled={isLoading}
-              />
-            </FormField>
-          </Form>
-        </form>
-      </Container>
+              <FormField
+                label="Email"
+                errorText={emailError}
+                stretch={true}
+              >
+                <Input
+                  value={email}
+                  onChange={({ detail }) => {
+                    setEmail(detail.value);
+                    if (emailError) validateEmail(detail.value);
+                  }}
+                  onBlur={() => validateEmail(email)}
+                  type="email"
+                  placeholder="Enter your email"
+                  disabled={isLoading}
+                />
+              </FormField>
+              <FormField
+                label="Password"
+                errorText={passwordError}
+                stretch={true}
+              >
+                <Input
+                  value={password}
+                  onChange={({ detail }) => {
+                    setPassword(detail.value);
+                    if (passwordError) validatePassword(detail.value);
+                  }}
+                  onBlur={() => validatePassword(password)}
+                  type="password"
+                  placeholder="Enter your password"
+                  disabled={isLoading}
+                />
+              </FormField>
+            </Form>
+          </form>
+        </Container>
+        </div>
       </div>
-    </div>
+
+      {/* Icon Animation Phase */}
+      {(animationPhase === 'iconAnimation' || animationPhase === 'complete') && (
+        <IconAnimation onComplete={handleIconAnimationComplete} />
+      )}
+    </>
   );
 }

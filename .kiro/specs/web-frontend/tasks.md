@@ -76,6 +76,41 @@ This implementation plan covers the React-based web application built with TypeS
     - On successful authentication, redirect to stored URL if present, otherwise redirect to dashboard
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.8, 8.9_
 
+  - [x] 3.2a Implement animated login transition
+    - [x] 3.2a.1 Create animation state management in LoginPage
+      - Add state to track animation phase (idle, formFadeOut, iconAnimation, complete)
+      - Trigger animation sequence on successful authentication
+      - Delay navigation until animation completes
+      - _Requirements: 8.10, 8.14_
+
+    - [x] 3.2a.2 Implement form fade out animation
+      - Wrap login form in container div with fade-out CSS transition
+      - Set opacity to 0 over 1000ms when authentication succeeds
+      - Use CSS transition or React state + inline styles
+      - _Requirements: 8.11_
+
+    - [x] 3.2a.3 Create IconAnimation component
+      - Load and display icon-no-bg.svg centered on screen at 256x256 pixels
+      - Implement SVG stroke animation using CSS stroke-dasharray and stroke-dashoffset
+      - Calculate total path length using getTotalLength() for accurate animation
+      - Animate stroke from 0% to 100% over 2000ms
+      - Use CSS keyframe animation or React animation library
+      - _Requirements: 8.12, 8.13_
+
+    - [x] 3.2a.4 Orchestrate animation sequence timing
+      - Chain animations using setTimeout or Promise-based delays
+      - Ensure proper timing: 1000ms (form) → 2000ms (icon) → navigate
+      - Handle cleanup if component unmounts during animation
+      - Navigate to destination page after complete sequence
+      - _Requirements: 8.10, 8.14_
+
+    - [ ]* 3.2a.5 Write property tests for login animation
+      - **Property 34b: Login Animation Sequence Execution**
+      - **Property 34c: Login Form Fade Out Timing**
+      - **Property 34d: Icon Stroke Animation Timing**
+      - **Property 34e: Animation Sequence Ordering**
+      - **Validates: Requirements 8.10, 8.11, 8.12, 8.13, 8.14**
+
   - [ ]* 3.3 Write property test for unauthenticated access protection
     - **Property 25: Unauthenticated Access Protection**
     - **Validates: Requirements 9.1, 9.2**
