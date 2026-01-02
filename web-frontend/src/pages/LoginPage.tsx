@@ -88,7 +88,7 @@ export default function LoginPage() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#0B1F3B',
       }}
     >
       <div style={{ minWidth: '360px', width: '100%', maxWidth: '480px' }}>
