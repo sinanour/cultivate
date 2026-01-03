@@ -4,6 +4,7 @@ import { ActivityTypeRoutes } from '../../routes/activity-type.routes';
 import { ActivityTypeService } from '../../services/activity-type.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../../middleware/audit-logging.middleware';
 
 jest.mock('../../services/activity-type.service');
 
@@ -12,6 +13,7 @@ describe('ActivityTypeRoutes', () => {
     let mockService: jest.Mocked<ActivityTypeService>;
     let mockAuthMiddleware: jest.Mocked<AuthMiddleware>;
     let mockAuthzMiddleware: jest.Mocked<AuthorizationMiddleware>;
+    let mockAuditMiddleware: jest.Mocked<AuditLoggingMiddleware>;
 
     beforeEach(() => {
         app = express();
@@ -20,6 +22,7 @@ describe('ActivityTypeRoutes', () => {
         mockService = new ActivityTypeService(null as any, null as any) as jest.Mocked<ActivityTypeService>;
         mockAuthMiddleware = new AuthMiddleware(null as any) as jest.Mocked<AuthMiddleware>;
         mockAuthzMiddleware = new AuthorizationMiddleware() as jest.Mocked<AuthorizationMiddleware>;
+        mockAuditMiddleware = new AuditLoggingMiddleware(null as any) as jest.Mocked<AuditLoggingMiddleware>;
 
         // Mock authenticate middleware
         mockAuthMiddleware.authenticate = jest.fn().mockReturnValue((req: any, _res: any, next: any) => {
@@ -31,7 +34,10 @@ describe('ActivityTypeRoutes', () => {
         mockAuthzMiddleware.requireAuthenticated = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
         mockAuthzMiddleware.requireEditor = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
 
-        const routes = new ActivityTypeRoutes(mockService, mockAuthMiddleware, mockAuthzMiddleware);
+        // Mock audit logging middleware
+        mockAuditMiddleware.logEntityModification = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
+
+        const routes = new ActivityTypeRoutes(mockService, mockAuthMiddleware, mockAuthzMiddleware, mockAuditMiddleware);
         app.use('/api/activity-types', routes.getRouter());
 
         jest.clearAllMocks();

@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { UserService } from '../services/user.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import { UserCreateSchema, UserUpdateSchema, UuidParamSchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
@@ -12,7 +13,8 @@ export class UserRoutes {
   constructor(
     private userService: UserService,
     private authMiddleware: AuthMiddleware,
-    private authorizationMiddleware: AuthorizationMiddleware
+    private authorizationMiddleware: AuthorizationMiddleware,
+    private auditLoggingMiddleware: AuditLoggingMiddleware
   ) {
     this.router = Router();
     this.initializeRoutes();
@@ -32,6 +34,7 @@ export class UserRoutes {
       this.authMiddleware.authenticate(),
       this.authorizationMiddleware.requireAdmin(),
       ValidationMiddleware.validateBody(UserCreateSchema),
+      this.auditLoggingMiddleware.logEntityModification('USER'),
       this.create.bind(this)
     );
 
@@ -41,6 +44,8 @@ export class UserRoutes {
       this.authorizationMiddleware.requireAdmin(),
       ValidationMiddleware.validateParams(UuidParamSchema),
       ValidationMiddleware.validateBody(UserUpdateSchema),
+      this.auditLoggingMiddleware.logEntityModification('USER'),
+      this.auditLoggingMiddleware.logRoleChange(),
       this.update.bind(this)
     );
   }

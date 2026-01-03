@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { RoleService } from '../services/role.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import { RoleCreateSchema, RoleUpdateSchema, UuidParamSchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
@@ -12,7 +13,8 @@ export class RoleRoutes {
     constructor(
         private roleService: RoleService,
         private authMiddleware: AuthMiddleware,
-        private authorizationMiddleware: AuthorizationMiddleware
+        private authorizationMiddleware: AuthorizationMiddleware,
+        private auditLoggingMiddleware: AuditLoggingMiddleware
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -31,6 +33,7 @@ export class RoleRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateBody(RoleCreateSchema),
+            this.auditLoggingMiddleware.logEntityModification('ROLE'),
             this.create.bind(this)
         );
 
@@ -40,6 +43,7 @@ export class RoleRoutes {
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             ValidationMiddleware.validateBody(RoleUpdateSchema),
+            this.auditLoggingMiddleware.logEntityModification('ROLE'),
             this.update.bind(this)
         );
 
@@ -48,6 +52,7 @@ export class RoleRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
+            this.auditLoggingMiddleware.logEntityModification('ROLE'),
             this.delete.bind(this)
         );
     }

@@ -15,6 +15,7 @@ import { VenueRepository } from './repositories/venue.repository';
 import { ActivityRepository } from './repositories/activity.repository';
 import { ActivityVenueHistoryRepository } from './repositories/activity-venue-history.repository';
 import { AssignmentRepository } from './repositories/assignment.repository';
+import { AuditLogRepository } from './repositories/audit-log.repository';
 import { AuthService } from './services/auth.service';
 import { UserService } from './services/user.service';
 import { ActivityCategoryService } from './services/activity-category.service';
@@ -31,6 +32,7 @@ import { GeocodingService } from './services/geocoding.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
+import { AuditLoggingMiddleware } from './middleware/audit-logging.middleware';
 import {
   authRateLimiter,
   smartRateLimiter,
@@ -71,6 +73,7 @@ const venueRepository = new VenueRepository(prisma);
 const activityRepository = new ActivityRepository(prisma);
 const activityVenueHistoryRepository = new ActivityVenueHistoryRepository(prisma);
 const assignmentRepository = new AssignmentRepository(prisma);
+const auditLogRepository = new AuditLogRepository(prisma);
 
 // Initialize services
 const authService = new AuthService(userRepository);
@@ -108,37 +111,43 @@ const geocodingService = new GeocodingService();
 // Initialize middleware
 const authMiddleware = new AuthMiddleware(authService);
 const authorizationMiddleware = new AuthorizationMiddleware();
+const auditLoggingMiddleware = new AuditLoggingMiddleware(auditLogRepository);
 
 // Initialize routes
-const authRoutes = new AuthRoutes(authService, authMiddleware);
-const userRoutes = new UserRoutes(userService, authMiddleware, authorizationMiddleware);
+const authRoutes = new AuthRoutes(authService, authMiddleware, auditLoggingMiddleware);
+const userRoutes = new UserRoutes(userService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
 const activityCategoryRoutes = new ActivityCategoryRoutes(
   activityCategoryService,
   authMiddleware,
-  authorizationMiddleware
+  authorizationMiddleware,
+  auditLoggingMiddleware
 );
 const activityTypeRoutes = new ActivityTypeRoutes(
   activityTypeService,
   authMiddleware,
-  authorizationMiddleware
+  authorizationMiddleware,
+  auditLoggingMiddleware
 );
-const roleRoutes = new RoleRoutes(roleService, authMiddleware, authorizationMiddleware);
+const roleRoutes = new RoleRoutes(roleService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
 const participantRoutes = new ParticipantRoutes(
   participantService,
   authMiddleware,
-  authorizationMiddleware
+  authorizationMiddleware,
+  auditLoggingMiddleware
 );
 const geographicAreaRoutes = new GeographicAreaRoutes(
   geographicAreaService,
   authMiddleware,
-  authorizationMiddleware
+  authorizationMiddleware,
+  auditLoggingMiddleware
 );
-const venueRoutes = new VenueRoutes(venueService, authMiddleware, authorizationMiddleware);
-const activityRoutes = new ActivityRoutes(activityService, authMiddleware, authorizationMiddleware);
+const venueRoutes = new VenueRoutes(venueService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
+const activityRoutes = new ActivityRoutes(activityService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
 const assignmentRoutes = new AssignmentRoutes(
   assignmentService,
   authMiddleware,
-  authorizationMiddleware
+  authorizationMiddleware,
+  auditLoggingMiddleware
 );
 const analyticsRoutes = new AnalyticsRoutes(
   analyticsService,

@@ -4,6 +4,7 @@ import { RoleRoutes } from '../../routes/role.routes';
 import { RoleService } from '../../services/role.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../../middleware/audit-logging.middleware';
 
 jest.mock('../../services/role.service');
 
@@ -12,6 +13,7 @@ describe('RoleRoutes', () => {
     let mockService: jest.Mocked<RoleService>;
     let mockAuthMiddleware: jest.Mocked<AuthMiddleware>;
     let mockAuthzMiddleware: jest.Mocked<AuthorizationMiddleware>;
+    let mockAuditMiddleware: jest.Mocked<AuditLoggingMiddleware>;
 
     beforeEach(() => {
         app = express();
@@ -20,6 +22,7 @@ describe('RoleRoutes', () => {
         mockService = new RoleService(null as any) as jest.Mocked<RoleService>;
         mockAuthMiddleware = new AuthMiddleware(null as any) as jest.Mocked<AuthMiddleware>;
         mockAuthzMiddleware = new AuthorizationMiddleware() as jest.Mocked<AuthorizationMiddleware>;
+        mockAuditMiddleware = new AuditLoggingMiddleware(null as any) as jest.Mocked<AuditLoggingMiddleware>;
 
         mockAuthMiddleware.authenticate = jest.fn().mockReturnValue((req: any, _res: any, next: any) => {
             req.user = { userId: 'user-1', email: 'test@example.com', role: 'EDITOR' };
@@ -29,7 +32,10 @@ describe('RoleRoutes', () => {
         mockAuthzMiddleware.requireAuthenticated = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
         mockAuthzMiddleware.requireEditor = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
 
-        const routes = new RoleRoutes(mockService, mockAuthMiddleware, mockAuthzMiddleware);
+        // Mock audit logging middleware
+        mockAuditMiddleware.logEntityModification = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
+
+        const routes = new RoleRoutes(mockService, mockAuthMiddleware, mockAuthzMiddleware, mockAuditMiddleware);
         app.use('/api/roles', routes.getRouter());
 
         jest.clearAllMocks();

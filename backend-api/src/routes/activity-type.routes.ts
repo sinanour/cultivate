@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { ActivityTypeService } from '../services/activity-type.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import {
   ActivityTypeCreateSchema,
@@ -16,7 +17,8 @@ export class ActivityTypeRoutes {
   constructor(
     private activityTypeService: ActivityTypeService,
     private authMiddleware: AuthMiddleware,
-    private authorizationMiddleware: AuthorizationMiddleware
+    private authorizationMiddleware: AuthorizationMiddleware,
+    private auditLoggingMiddleware: AuditLoggingMiddleware
   ) {
     this.router = Router();
     this.initializeRoutes();
@@ -37,6 +39,7 @@ export class ActivityTypeRoutes {
       this.authMiddleware.authenticate(),
       this.authorizationMiddleware.requireEditor(),
       ValidationMiddleware.validateBody(ActivityTypeCreateSchema),
+      this.auditLoggingMiddleware.logEntityModification('ACTIVITY_TYPE'),
       this.create.bind(this)
     );
 
@@ -47,6 +50,7 @@ export class ActivityTypeRoutes {
       this.authorizationMiddleware.requireEditor(),
       ValidationMiddleware.validateParams(UuidParamSchema),
       ValidationMiddleware.validateBody(ActivityTypeUpdateSchema),
+      this.auditLoggingMiddleware.logEntityModification('ACTIVITY_TYPE'),
       this.update.bind(this)
     );
 
@@ -56,6 +60,7 @@ export class ActivityTypeRoutes {
       this.authMiddleware.authenticate(),
       this.authorizationMiddleware.requireEditor(),
       ValidationMiddleware.validateParams(UuidParamSchema),
+      this.auditLoggingMiddleware.logEntityModification('ACTIVITY_TYPE'),
       this.delete.bind(this)
     );
   }

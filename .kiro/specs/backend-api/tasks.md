@@ -1069,3 +1069,53 @@ if (geographicAreaId) {
   - Confirmed empty results are returned when no activities match
   - Confirmed validation errors are returned for invalid inputs
   - All tests pass
+
+
+- [x] 31. Fix audit logging implementation
+  - [x] 31.1 Instantiate AuditLoggingMiddleware in index.ts
+    - Import AuditLogRepository
+    - Create auditLogRepository instance with Prisma client
+    - Create auditLoggingMiddleware instance with auditLogRepository
+    - _Requirements: 12.1, 12.2, 12.3_
+
+  - [x] 31.2 Apply audit logging to authentication routes
+    - Add logAuthenticationEvent('LOGIN') to POST /api/v1/auth/login
+    - Add logAuthenticationEvent('LOGOUT') to POST /api/v1/auth/logout
+    - Add logAuthenticationEvent('REFRESH') to POST /api/v1/auth/refresh
+    - _Requirements: 12.1_
+
+  - [x] 31.3 Apply audit logging to user management routes
+    - Add logRoleChange() to PUT /api/v1/users/:id when role is modified
+    - Add logEntityModification('USER') to POST /api/v1/users
+    - Add logEntityModification('USER') to PUT /api/v1/users/:id
+    - _Requirements: 12.2, 12.3_
+
+  - [x] 31.4 Apply audit logging to entity modification routes
+    - Add logEntityModification('PARTICIPANT') to POST, PUT, DELETE /api/v1/participants
+    - Add logEntityModification('ACTIVITY') to POST, PUT, DELETE /api/v1/activities
+    - Add logEntityModification('VENUE') to POST, PUT, DELETE /api/v1/venues
+    - Add logEntityModification('GEOGRAPHIC_AREA') to POST, PUT, DELETE /api/v1/geographic-areas
+    - Add logEntityModification('ACTIVITY_CATEGORY') to POST, PUT, DELETE /api/v1/activity-categories
+    - Add logEntityModification('ACTIVITY_TYPE') to POST, PUT, DELETE /api/v1/activity-types
+    - Add logEntityModification('ROLE') to POST, PUT, DELETE /api/v1/roles
+    - Add logEntityModification('ASSIGNMENT') to POST, PUT, DELETE /api/v1/activities/:id/participants
+    - _Requirements: 12.3_
+
+  - [x] 31.5 Verify audit logging functionality
+    - Test that authentication events are logged
+    - Test that role changes are logged
+    - Test that entity modifications are logged
+    - Verify audit log entries contain correct user ID, action type, entity type, entity ID, and timestamp
+    - Verify audit log details are stored as JSON
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+
+  - [ ]* 31.6 Write integration tests for audit logging
+    - Test authentication event logging
+    - Test role change logging
+    - Test entity modification logging
+    - Test audit log retrieval (administrator only)
+    - **Validates: Requirements 12.1, 12.2, 12.3, 12.4, 12.5, 12.6**
+
+- [ ] 32. Checkpoint - Verify audit logging is working
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify audit log table contains entries after creating/modifying records

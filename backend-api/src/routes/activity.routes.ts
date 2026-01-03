@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { ActivityService } from '../services/activity.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import {
     ActivityCreateSchema,
@@ -19,7 +20,8 @@ export class ActivityRoutes {
     constructor(
         private activityService: ActivityService,
         private authMiddleware: AuthMiddleware,
-        private authorizationMiddleware: AuthorizationMiddleware
+        private authorizationMiddleware: AuthorizationMiddleware,
+        private auditLoggingMiddleware: AuditLoggingMiddleware
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -69,6 +71,7 @@ export class ActivityRoutes {
           this.authMiddleware.authenticate(),
           this.authorizationMiddleware.requireEditor(),
           ValidationMiddleware.validateBody(ActivityCreateSchema),
+          this.auditLoggingMiddleware.logEntityModification('ACTIVITY'),
           this.create.bind(this)
       );
 
@@ -78,6 +81,7 @@ export class ActivityRoutes {
           this.authorizationMiddleware.requireEditor(),
           ValidationMiddleware.validateParams(UuidParamSchema),
           ValidationMiddleware.validateBody(ActivityVenueAssociationSchema),
+          this.auditLoggingMiddleware.logEntityModification('ACTIVITY'),
           this.associateVenue.bind(this)
       );
 
@@ -87,6 +91,7 @@ export class ActivityRoutes {
           this.authorizationMiddleware.requireEditor(),
           ValidationMiddleware.validateParams(UuidParamSchema),
           ValidationMiddleware.validateBody(ActivityUpdateSchema),
+          this.auditLoggingMiddleware.logEntityModification('ACTIVITY'),
           this.update.bind(this)
       );
 
@@ -95,6 +100,7 @@ export class ActivityRoutes {
           this.authMiddleware.authenticate(),
           this.authorizationMiddleware.requireEditor(),
           ValidationMiddleware.validateParams(UuidParamSchema),
+          this.auditLoggingMiddleware.logEntityModification('ACTIVITY'),
           this.delete.bind(this)
       );
 
@@ -102,6 +108,7 @@ export class ActivityRoutes {
           '/:id/venue-history/:venueHistoryId',
           this.authMiddleware.authenticate(),
           this.authorizationMiddleware.requireEditor(),
+          this.auditLoggingMiddleware.logEntityModification('ACTIVITY'),
           this.removeVenue.bind(this)
       );
   }

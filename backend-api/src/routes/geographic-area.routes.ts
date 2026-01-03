@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { GeographicAreaService } from '../services/geographic-area.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import {
     GeographicAreaCreateSchema,
@@ -18,7 +19,8 @@ export class GeographicAreaRoutes {
     constructor(
         private geographicAreaService: GeographicAreaService,
         private authMiddleware: AuthMiddleware,
-        private authorizationMiddleware: AuthorizationMiddleware
+        private authorizationMiddleware: AuthorizationMiddleware,
+        private auditLoggingMiddleware: AuditLoggingMiddleware
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -92,6 +94,7 @@ export class GeographicAreaRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateBody(GeographicAreaCreateSchema),
+            this.auditLoggingMiddleware.logEntityModification('GEOGRAPHIC_AREA'),
             this.create.bind(this)
         );
 
@@ -101,6 +104,7 @@ export class GeographicAreaRoutes {
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             ValidationMiddleware.validateBody(GeographicAreaUpdateSchema),
+            this.auditLoggingMiddleware.logEntityModification('GEOGRAPHIC_AREA'),
             this.update.bind(this)
         );
 
@@ -109,6 +113,7 @@ export class GeographicAreaRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
+            this.auditLoggingMiddleware.logEntityModification('GEOGRAPHIC_AREA'),
             this.delete.bind(this)
         );
     }

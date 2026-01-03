@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { ActivityCategoryService } from '../services/activity-category.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import {
     ActivityCategoryCreateSchema,
@@ -16,7 +17,8 @@ export class ActivityCategoryRoutes {
     constructor(
         private activityCategoryService: ActivityCategoryService,
         private authMiddleware: AuthMiddleware,
-        private authorizationMiddleware: AuthorizationMiddleware
+        private authorizationMiddleware: AuthorizationMiddleware,
+        private auditLoggingMiddleware: AuditLoggingMiddleware
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -46,6 +48,7 @@ export class ActivityCategoryRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateBody(ActivityCategoryCreateSchema),
+            this.auditLoggingMiddleware.logEntityModification('ACTIVITY_CATEGORY'),
             this.create.bind(this)
         );
 
@@ -56,6 +59,7 @@ export class ActivityCategoryRoutes {
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             ValidationMiddleware.validateBody(ActivityCategoryUpdateSchema),
+            this.auditLoggingMiddleware.logEntityModification('ACTIVITY_CATEGORY'),
             this.update.bind(this)
         );
 
@@ -65,6 +69,7 @@ export class ActivityCategoryRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
+            this.auditLoggingMiddleware.logEntityModification('ACTIVITY_CATEGORY'),
             this.delete.bind(this)
         );
     }

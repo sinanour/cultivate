@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AssignmentService } from '../services/assignment.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import { AssignmentCreateSchema, AssignmentUpdateSchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
@@ -12,7 +13,8 @@ export class AssignmentRoutes {
     constructor(
         private assignmentService: AssignmentService,
         private authMiddleware: AuthMiddleware,
-        private authorizationMiddleware: AuthorizationMiddleware
+        private authorizationMiddleware: AuthorizationMiddleware,
+        private auditLoggingMiddleware: AuditLoggingMiddleware
     ) {
         this.router = Router({ mergeParams: true }); // Merge params from parent router
         this.initializeRoutes();
@@ -33,6 +35,7 @@ export class AssignmentRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateBody(AssignmentCreateSchema),
+            this.auditLoggingMiddleware.logEntityModification('ASSIGNMENT'),
             this.assignParticipant.bind(this)
         );
 
@@ -42,6 +45,7 @@ export class AssignmentRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateBody(AssignmentUpdateSchema),
+            this.auditLoggingMiddleware.logEntityModification('ASSIGNMENT'),
             this.updateParticipant.bind(this)
         );
 
@@ -50,6 +54,7 @@ export class AssignmentRoutes {
             '/:participantId',
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
+            this.auditLoggingMiddleware.logEntityModification('ASSIGNMENT'),
             this.removeParticipant.bind(this)
         );
     }

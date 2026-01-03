@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { VenueService } from '../services/venue.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import {
     VenueCreateSchema,
@@ -19,7 +20,8 @@ export class VenueRoutes {
     constructor(
         private venueService: VenueService,
         private authMiddleware: AuthMiddleware,
-        private authorizationMiddleware: AuthorizationMiddleware
+        private authorizationMiddleware: AuthorizationMiddleware,
+        private auditLoggingMiddleware: AuditLoggingMiddleware
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -85,6 +87,7 @@ export class VenueRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateBody(VenueCreateSchema),
+            this.auditLoggingMiddleware.logEntityModification('VENUE'),
             this.create.bind(this)
         );
 
@@ -94,6 +97,7 @@ export class VenueRoutes {
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             ValidationMiddleware.validateBody(VenueUpdateSchema),
+            this.auditLoggingMiddleware.logEntityModification('VENUE'),
             this.update.bind(this)
         );
 
@@ -102,6 +106,7 @@ export class VenueRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
+            this.auditLoggingMiddleware.logEntityModification('VENUE'),
             this.delete.bind(this)
         );
     }

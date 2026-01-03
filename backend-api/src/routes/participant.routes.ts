@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { ParticipantService } from '../services/participant.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import {
     ParticipantCreateSchema,
@@ -22,7 +23,8 @@ export class ParticipantRoutes {
     constructor(
         private participantService: ParticipantService,
         private authMiddleware: AuthMiddleware,
-        private authorizationMiddleware: AuthorizationMiddleware
+        private authorizationMiddleware: AuthorizationMiddleware,
+        private auditLoggingMiddleware: AuditLoggingMiddleware
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -120,6 +122,7 @@ export class ParticipantRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateBody(ParticipantCreateSchema),
+            this.auditLoggingMiddleware.logEntityModification('PARTICIPANT'),
             this.create.bind(this)
         );
 
@@ -129,6 +132,7 @@ export class ParticipantRoutes {
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             ValidationMiddleware.validateBody(ParticipantUpdateSchema),
+            this.auditLoggingMiddleware.logEntityModification('PARTICIPANT'),
             this.update.bind(this)
         );
 
@@ -137,6 +141,7 @@ export class ParticipantRoutes {
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireEditor(),
             ValidationMiddleware.validateParams(UuidParamSchema),
+            this.auditLoggingMiddleware.logEntityModification('PARTICIPANT'),
             this.delete.bind(this)
         );
     }

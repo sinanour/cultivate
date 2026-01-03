@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
+import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import { LoginSchema, RefreshTokenSchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
@@ -10,7 +11,8 @@ export class AuthRoutes {
 
     constructor(
         private authService: AuthService,
-        private authMiddleware: AuthMiddleware
+        private authMiddleware: AuthMiddleware,
+        private auditLoggingMiddleware: AuditLoggingMiddleware
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -21,6 +23,7 @@ export class AuthRoutes {
         this.router.post(
             '/login',
             ValidationMiddleware.validateBody(LoginSchema),
+            this.auditLoggingMiddleware.logAuthenticationEvent('LOGIN'),
             this.login.bind(this)
         );
 
@@ -28,6 +31,7 @@ export class AuthRoutes {
         this.router.post(
             '/logout',
             this.authMiddleware.authenticate(),
+            this.auditLoggingMiddleware.logAuthenticationEvent('LOGOUT'),
             this.logout.bind(this)
         );
 
@@ -35,6 +39,7 @@ export class AuthRoutes {
         this.router.post(
             '/refresh',
             ValidationMiddleware.validateBody(RefreshTokenSchema),
+            this.auditLoggingMiddleware.logAuthenticationEvent('REFRESH'),
             this.refresh.bind(this)
         );
 

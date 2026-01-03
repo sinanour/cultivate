@@ -3,6 +3,7 @@ import express, { Application } from 'express';
 import { AuthRoutes } from '../../routes/auth.routes';
 import { AuthService } from '../../services/auth.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
+import { AuditLoggingMiddleware } from '../../middleware/audit-logging.middleware';
 
 jest.mock('../../services/auth.service');
 
@@ -10,6 +11,7 @@ describe('AuthRoutes', () => {
     let app: Application;
     let mockAuthService: jest.Mocked<AuthService>;
     let mockAuthMiddleware: jest.Mocked<AuthMiddleware>;
+    let mockAuditMiddleware: jest.Mocked<AuditLoggingMiddleware>;
 
     beforeEach(() => {
         app = express();
@@ -17,6 +19,7 @@ describe('AuthRoutes', () => {
 
         mockAuthService = new AuthService(null as any) as jest.Mocked<AuthService>;
         mockAuthMiddleware = new AuthMiddleware(null as any) as jest.Mocked<AuthMiddleware>;
+        mockAuditMiddleware = new AuditLoggingMiddleware(null as any) as jest.Mocked<AuditLoggingMiddleware>;
 
         // Mock authenticate middleware
         mockAuthMiddleware.authenticate = jest.fn().mockReturnValue((req: any, _res: any, next: any) => {
@@ -24,7 +27,10 @@ describe('AuthRoutes', () => {
             next();
         });
 
-        const authRoutes = new AuthRoutes(mockAuthService, mockAuthMiddleware);
+        // Mock audit logging middleware
+        mockAuditMiddleware.logAuthenticationEvent = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
+
+        const authRoutes = new AuthRoutes(mockAuthService, mockAuthMiddleware, mockAuditMiddleware);
         app.use('/api/auth', authRoutes.getRouter());
 
         jest.clearAllMocks();
