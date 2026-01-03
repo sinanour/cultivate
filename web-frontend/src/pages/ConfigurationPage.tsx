@@ -1,5 +1,4 @@
 import ContentLayout from '@cloudscape-design/components/content-layout';
-import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import { ActivityCategoryList } from '../components/features/ActivityCategoryList';
@@ -15,12 +14,8 @@ export default function ConfigurationPage() {
       }
     >
       <SpaceBetween size="l">
-        <Container>
-          <ActivityCategoryList />
-        </Container>
-        <Container>
-          <ActivityTypeList />
-        </Container>
+        <ActivityCategoryList />
+        <ActivityTypeList />
       </SpaceBetween>
     </ContentLayout>
   );
