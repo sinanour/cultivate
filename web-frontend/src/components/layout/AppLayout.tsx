@@ -27,16 +27,7 @@ export function AppLayout() {
   );
 
   const baseNavigationItems: SideNavigationProps['items'] = [
-    { type: 'link', text: createMenuItem('Dashboard', 'home'), href: '/dashboard' },
-    { type: 'divider' },
-    {
-      type: 'section',
-      text: 'Configuration',
-      items: [
-        { type: 'link', text: createMenuItem('Activity Configuration', 'group-active'), href: '/configuration' },
-        { type: 'link', text: createMenuItem('Participant Roles', 'user-profile-active'), href: '/participant-roles' },
-      ],
-    },
+    { type: 'link', text: createMenuItem('Quick Links', 'anchor-link'), href: '/dashboard' },
     { type: 'divider' },
     {
       type: 'section',
@@ -44,16 +35,8 @@ export function AppLayout() {
       items: [
         { type: 'link', text: createMenuItem('Geographic Areas', 'globe'), href: '/geographic-areas' },
         { type: 'link', text: createMenuItem('Venues', 'location-pin'), href: '/venues' },
-        { type: 'link', text: createMenuItem('Activities', 'group'), href: '/activities' },
         { type: 'link', text: createMenuItem('Participants', 'user-profile'), href: '/participants' },
-      ],
-    },
-    { type: 'divider' },
-    {
-      type: 'section',
-      text: 'Visualization',
-      items: [
-        { type: 'link', text: createMenuItem('Map View', 'map'), href: '/map' },
+        { type: 'link', text: createMenuItem('Activities', 'group'), href: '/activities' },
       ],
     },
     { type: 'divider' },
@@ -61,13 +44,14 @@ export function AppLayout() {
       type: 'section',
       text: 'Analytics',
       items: [
+        { type: 'link', text: createMenuItem('Map View', 'map'), href: '/map' },
         { type: 'link', text: createMenuItem('Engagement', 'gen-ai'), href: '/analytics/engagement' },
         { type: 'link', text: createMenuItem('Growth', 'expand'), href: '/analytics/growth' },
       ],
     },
   ];
 
-  // Add Users section for administrators
+  // Add Administration section for administrators
   const navigationItems: SideNavigationProps['items'] = user?.role === 'ADMINISTRATOR'
     ? [
         ...baseNavigationItems,
@@ -76,6 +60,7 @@ export function AppLayout() {
           type: 'section',
           text: 'Administration',
           items: [
+            { type: 'link', text: createMenuItem('Configuration', 'settings'), href: '/configuration' },
             { type: 'link', text: createMenuItem('Users', 'lock-private'), href: '/users' },
           ],
         },

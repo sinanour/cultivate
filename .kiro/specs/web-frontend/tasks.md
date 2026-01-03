@@ -190,18 +190,21 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 4: Non-Empty Name Validation**
     - **Validates: Requirements 2.9, 2.16, 3.7**
 
-  - [x] 5.5 Create ConfigurationView page
-    - Unified interface for managing both categories and types
-    - Display categories and types in cohesive layout
-    - Show hierarchical relationship
-    - Provide easy navigation between category and type management
-    - _Requirements: 2.1_
+  - [x] 5.5 Create ConfigurationPage
+    - Unified interface for managing activity categories, activity types, and participant roles
+    - Display all three tables in cohesive layout on single page
+    - Stack tables vertically using CloudScape SpaceBetween component
+    - Display in order: Activity Categories, Activity Types, Participant Roles
+    - Shows hierarchical relationship between categories and types
+    - Provides easy navigation between category, type, and role management
+    - _Requirements: 2.1, 2.19, 2.20_
 
 - [x] 6. Implement participant role management UI
   - [x] 6.1 Create ParticipantRoleList and ParticipantRoleForm components
     - Similar structure to activity type management
     - Include version field in update requests for optimistic locking
     - Handle REFERENCED_ENTITY errors on deletion
+    - Integrate ParticipantRoleList into ConfigurationPage
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
 - [x] 7. Implement participant management UI
@@ -1421,7 +1424,47 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 4A: Activity Category Link in Category List**
     - **Validates: Requirements 2.17, 2.18**
 
-- [ ] 29. Checkpoint - Verify configuration page enhancements
+- [x] 29. Merge Participant Roles into Configuration Page
+  - [x] 29.1 Update ConfigurationPage component
+    - Import ParticipantRoleList component
+    - Add ParticipantRoleList to the page layout after ActivityTypeList
+    - Update page header description to reflect all three configuration entities
+    - Use SpaceBetween component to stack all three tables with consistent spacing
+    - Ensure proper visual hierarchy and separation between sections
+    - _Requirements: 2.1, 2.19, 2.20, 3.1_
+
+  - [x] 29.2 Update navigation and routing
+    - Update navigation menu to point to /configuration for all three entity types
+    - Remove separate /participant-roles route if it exists
+    - Update any links that point to separate participant roles page
+    - Ensure breadcrumbs and navigation reflect unified configuration page
+    - _Requirements: 2.1, 2.19, 2.20_
+
+  - [x] 29.3 Remove ParticipantRolesPage component
+    - Delete ParticipantRolesPage.tsx file
+    - Remove route definition for participant roles page
+    - Update any imports or references to the old page
+    - _Requirements: 2.1, 2.19, 2.20_
+
+  - [x] 29.4 Remove ActivityTypesPage component if unused
+    - Check if ActivityTypesPage.tsx is still referenced
+    - If not used, delete the file
+    - Remove route definition if it exists
+    - _Requirements: 2.1_
+
+  - [ ]* 29.5 Write property test for unified configuration page
+    - **Property 121: Configuration Page Displays All Three Tables**
+    - Test that configuration page renders activity categories, activity types, and participant roles
+    - Test that tables are displayed in correct order
+    - Test that all CRUD operations work for each entity type
+    - **Validates: Requirements 2.1, 2.19, 2.20, 3.1**
+
+- [ ] 30. Checkpoint - Verify configuration page consolidation
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify navigation works correctly
+  - Verify all three entity types can be managed from single page
+
+- [ ] 31. Checkpoint - Verify configuration page enhancements
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 30. Implement CSV Import and Export

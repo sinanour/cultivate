@@ -21,7 +21,7 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Recursive_Filter**: A filter that includes the selected entity and all its descendants in a hierarchy
 - **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
-- **Configuration_View**: A unified interface for managing both activity categories and activity types
+- **Configuration_View**: A unified interface for managing activity categories, activity types, and participant roles
 - **Engagement_Summary_Table**: A table on the Engagement Dashboard displaying aggregate and dimensional breakdown metrics for activities and participants
 
 ## Requirements
@@ -39,13 +39,13 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL follow CloudScape design patterns and guidelines
 6. THE Web_App SHALL provide a consistent look and feel across all pages
 
-### Requirement 2: Activity Configuration UI
+### Requirement 2: Configuration UI
 
-**User Story:** As a community organizer, I want to manage activity categories and types in a unified interface, so that I can organize activities at multiple levels of granularity.
+**User Story:** As a community organizer, I want to manage activity categories, activity types, and participant roles in a unified configuration interface, so that I can organize all configuration entities in one place.
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL provide a unified configuration view for managing both activity categories and activity types
+1. THE Web_App SHALL provide a unified configuration view for managing activity categories, activity types, and participant roles
 2. THE Web_App SHALL display a list of all activity categories with predefined and custom categories distinguished
 3. THE Web_App SHALL display a list of all activity types grouped by their category with predefined and custom types distinguished
 4. THE Web_App SHALL provide a form to create new activity categories
@@ -63,10 +63,12 @@ The Web Frontend package provides a responsive React-based web application that 
 16. THE Web_App SHALL validate that activity type names are not empty
 17. WHEN displaying activity categories in the list, THE Web_App SHALL render the activity category name as a clickable link
 18. WHEN an activity category name is clicked in the activity category list, THE Web_App SHALL open the edit form for that activity category
+19. THE Web_App SHALL display the participant roles list within the same configuration view
+20. THE Web_App SHALL display all three tables (activity categories, activity types, and participant roles) in a cohesive layout on a single page
 
 ### Requirement 3: Participant Role Management UI
 
-**User Story:** As a community organizer, I want to manage participant roles in the web interface, so that I can define functions people perform.
+**User Story:** As a community organizer, I want to manage participant roles in the configuration interface, so that I can define functions people perform alongside other configuration entities.
 
 #### Acceptance Criteria
 

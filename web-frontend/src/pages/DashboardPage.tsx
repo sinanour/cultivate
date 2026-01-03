@@ -25,16 +25,16 @@ export default function DashboardPage() {
       description: 'View and manage activity venues',
     },
     {
-      href: '/activities',
-      icon: 'group',
-      title: 'Manage Activities',
-      description: 'View and manage community activities',
-    },
-    {
       href: '/participants',
       icon: 'user-profile',
       title: 'Manage Participants',
       description: 'View and manage community participants',
+    },
+    {
+      href: '/activities',
+      icon: 'group',
+      title: 'Manage Activities',
+      description: 'View and manage community activities',
     },
     {
       href: '/map',
@@ -53,6 +53,13 @@ export default function DashboardPage() {
       icon: 'star',
       title: 'Growth Analytics',
       description: 'View growth trends over time',
+    },
+    {
+      href: '/configuration',
+      icon: 'settings',
+      title: 'Configuration',
+      description: 'Manage activity categories, types, and roles',
+      adminOnly: true,
     },
     {
       href: '/users',

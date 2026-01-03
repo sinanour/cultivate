@@ -8,7 +8,6 @@ import { GlobalGeographicFilterProvider } from '../contexts/GlobalGeographicFilt
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 const ConfigurationPage = lazy(() => import('../pages/ConfigurationPage'));
-const ParticipantRolesPage = lazy(() => import('../pages/ParticipantRolesPage'));
 const ParticipantsPage = lazy(() => import('../pages/ParticipantsPage'));
 const ParticipantDetailPage = lazy(() => import('../pages/ParticipantDetailPage'));
 const ActivitiesPage = lazy(() => import('../pages/ActivitiesPage'));
@@ -49,10 +48,6 @@ export const router = createBrowserRouter([
       {
         path: 'configuration',
         element: <ConfigurationPage />,
-      },
-      {
-        path: 'participant-roles',
-        element: <ParticipantRolesPage />,
       },
       {
         path: 'participants',

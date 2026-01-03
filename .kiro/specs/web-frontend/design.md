@@ -160,10 +160,12 @@ src/
 - Submits to API and updates cache
 
 **ConfigurationView**
-- Unified page/view for managing both activity categories and types
-- Displays categories and types in a cohesive interface
+- Unified page/view for managing activity categories, activity types, and participant roles
+- Displays all three tables in a cohesive interface on a single page
 - Shows hierarchical relationship between categories and types
-- Provides easy navigation between category and type management
+- Provides easy navigation between category, type, and role management
+- Uses CloudScape SpaceBetween component to stack the three tables vertically with appropriate spacing
+- Displays tables in order: Activity Categories, Activity Types, Participant Roles
 
 #### 4. Participant Role Management
 
@@ -173,6 +175,7 @@ src/
 - Renders role name as hyperlink in primary column (links to edit form or detail view)
 - Provides edit and delete actions per row (no separate View button)
 - Handles delete validation (prevents deletion if referenced)
+- Integrated within the ConfigurationView page alongside activity categories and types
 
 **ParticipantRoleForm**
 - Modal form for creating/editing roles
