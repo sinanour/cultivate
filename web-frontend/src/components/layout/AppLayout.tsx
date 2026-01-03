@@ -4,6 +4,7 @@ import AppLayoutComponent from '@cloudscape-design/components/app-layout';
 import SideNavigation, { type SideNavigationProps } from '@cloudscape-design/components/side-navigation';
 import TopNavigation from '@cloudscape-design/components/top-navigation';
 import Spinner from '@cloudscape-design/components/spinner';
+import Icon from '@cloudscape-design/components/icon';
 import { useAuth } from '../../hooks/useAuth';
 import { useConnectionStatus } from '../../hooks/useConnectionStatus';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
@@ -17,15 +18,23 @@ export function AppLayout() {
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [navigationOpen, setNavigationOpen] = useState(true);
 
+  // Helper function to create menu item with icon on the left
+  const createMenuItem = (text: string, iconName: string) => (
+    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <Icon name={iconName as any} />
+      <span>{text}</span>
+    </span>
+  );
+
   const baseNavigationItems: SideNavigationProps['items'] = [
-    { type: 'link', text: 'Dashboard', href: '/dashboard' },
+    { type: 'link', text: createMenuItem('Dashboard', 'home'), href: '/dashboard' },
     { type: 'divider' },
     {
       type: 'section',
       text: 'Configuration',
       items: [
-        { type: 'link', text: 'Activity Configuration', href: '/configuration' },
-        { type: 'link', text: 'Participant Roles', href: '/participant-roles' },
+        { type: 'link', text: createMenuItem('Activity Configuration', 'group-active'), href: '/configuration' },
+        { type: 'link', text: createMenuItem('Participant Roles', 'user-profile-active'), href: '/participant-roles' },
       ],
     },
     { type: 'divider' },
@@ -33,10 +42,10 @@ export function AppLayout() {
       type: 'section',
       text: 'Management',
       items: [
-        { type: 'link', text: 'Geographic Areas', href: '/geographic-areas' },
-        { type: 'link', text: 'Venues', href: '/venues' },
-        { type: 'link', text: 'Activities', href: '/activities' },
-        { type: 'link', text: 'Participants', href: '/participants' },
+        { type: 'link', text: createMenuItem('Geographic Areas', 'globe'), href: '/geographic-areas' },
+        { type: 'link', text: createMenuItem('Venues', 'location-pin'), href: '/venues' },
+        { type: 'link', text: createMenuItem('Activities', 'group'), href: '/activities' },
+        { type: 'link', text: createMenuItem('Participants', 'user-profile'), href: '/participants' },
       ],
     },
     { type: 'divider' },
@@ -44,7 +53,7 @@ export function AppLayout() {
       type: 'section',
       text: 'Visualization',
       items: [
-        { type: 'link', text: 'Map View', href: '/map' },
+        { type: 'link', text: createMenuItem('Map View', 'map'), href: '/map' },
       ],
     },
     { type: 'divider' },
@@ -52,8 +61,8 @@ export function AppLayout() {
       type: 'section',
       text: 'Analytics',
       items: [
-        { type: 'link', text: 'Engagement', href: '/analytics/engagement' },
-        { type: 'link', text: 'Growth', href: '/analytics/growth' },
+        { type: 'link', text: createMenuItem('Engagement', 'gen-ai'), href: '/analytics/engagement' },
+        { type: 'link', text: createMenuItem('Growth', 'expand'), href: '/analytics/growth' },
       ],
     },
   ];
@@ -67,7 +76,7 @@ export function AppLayout() {
           type: 'section',
           text: 'Administration',
           items: [
-            { type: 'link', text: 'Users', href: '/users' },
+            { type: 'link', text: createMenuItem('Users', 'lock-private'), href: '/users' },
           ],
         },
       ]
