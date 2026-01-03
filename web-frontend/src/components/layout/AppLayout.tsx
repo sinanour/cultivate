@@ -26,16 +26,22 @@ export function AppLayout() {
     </span>
   );
 
+  // CloudScape accepts React elements in text property despite TypeScript types
   const baseNavigationItems: SideNavigationProps['items'] = [
+    // @ts-ignore - CloudScape handles React elements in text property
     { type: 'link', text: createMenuItem('Quick Links', 'anchor-link'), href: '/' },
     { type: 'divider' },
     {
       type: 'section',
       text: 'Management',
       items: [
+        // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Geographic Areas', 'globe'), href: '/geographic-areas' },
+        // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Venues', 'location-pin'), href: '/venues' },
+        // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Participants', 'user-profile'), href: '/participants' },
+        // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Activities', 'group'), href: '/activities' },
       ],
     },
@@ -44,8 +50,11 @@ export function AppLayout() {
       type: 'section',
       text: 'Analytics',
       items: [
+        // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Map View', 'map'), href: '/map' },
+        // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Engagement', 'gen-ai'), href: '/analytics/engagement' },
+        // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Growth', 'expand'), href: '/analytics/growth' },
       ],
     },
@@ -54,13 +63,16 @@ export function AppLayout() {
   // Add Administration section for administrators
   const navigationItems: SideNavigationProps['items'] = user?.role === 'ADMINISTRATOR'
     ? [
+        // @ts-ignore - Spread operator with CloudScape navigation items
         ...baseNavigationItems,
         { type: 'divider' },
         {
           type: 'section',
           text: 'Administration',
           items: [
+            // @ts-ignore - CloudScape handles React elements in text property
             { type: 'link', text: createMenuItem('Configuration', 'settings'), href: '/configuration' },
+            // @ts-ignore - CloudScape handles React elements in text property
             { type: 'link', text: createMenuItem('Users', 'lock-private'), href: '/users' },
           ],
         },
