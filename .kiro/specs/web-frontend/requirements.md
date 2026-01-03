@@ -130,6 +130,9 @@ The Web Frontend package provides a responsive React-based web application that 
 10. THE Web_App SHALL validate that activity name, type, and start date are provided
 11. THE Web_App SHALL support activity statuses: PLANNED, ACTIVE, COMPLETED, CANCELLED
 12. THE Web_App SHALL provide a button to update activity status
+12a. WHEN marking an activity as COMPLETED, THE Web_App SHALL implicitly set the end date to today if the end date is null
+12b. WHEN marking an activity as CANCELLED, THE Web_App SHALL implicitly set the end date to today if the end date is null
+12c. WHEN marking an activity as CANCELLED, THE Web_App SHALL implicitly set the start date to today if the start date is in the future
 13. THE Web_App SHALL display a detail view showing activity information and assigned participants
 14. THE Web_App SHALL allow selection of one or more venues for each activity
 15. THE Web_App SHALL display the activity's venue history in reverse chronological order when venues have changed over time

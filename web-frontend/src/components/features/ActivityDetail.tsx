@@ -53,8 +53,13 @@ export function ActivityDetail() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: (data: { id: string; status: string; version: number }) =>
-      ActivityService.updateActivity(data.id, { status: data.status as Activity['status'], version: data.version }),
+    mutationFn: (data: { id: string; status: string; startDate?: string; endDate?: string | null; version: number }) =>
+      ActivityService.updateActivity(data.id, { 
+        status: data.status as Activity['status'], 
+        startDate: data.startDate,
+        endDate: data.endDate,
+        version: data.version 
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity', id] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
@@ -104,11 +109,39 @@ export function ActivityDetail() {
 
   const handleUpdateStatus = (newStatus: string) => {
     if (window.confirm(`Update activity status to ${newStatus}?`)) {
-      updateStatusMutation.mutate({
+      const updateData: { 
+        id: string; 
+        status: string; 
+        startDate?: string;
+        endDate?: string | null; 
+        version: number 
+      } = {
         id: activity!.id,
         status: newStatus,
         version: activity!.version,
-      });
+      };
+
+      // When marking as COMPLETED or CANCELLED, implicitly set endDate to today if null
+      if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayISO = today.toISOString();
+
+        // Set endDate to today if null (converts ongoing to finite)
+        if (!activity!.endDate) {
+          updateData.endDate = todayISO;
+        }
+
+        // For CANCELLED status, also set startDate to today if it's in the future
+        if (newStatus === 'CANCELLED') {
+          const activityStartDate = new Date(activity!.startDate);
+          if (activityStartDate > today) {
+            updateData.startDate = todayISO;
+          }
+        }
+      }
+
+      updateStatusMutation.mutate(updateData);
     }
   };
 

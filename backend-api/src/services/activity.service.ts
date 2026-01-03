@@ -166,8 +166,8 @@ export class ActivityService {
     // Validate end date for finite activities
     // If endDate is provided, it's a finite activity
     if (data.endDate) {
-      if (data.endDate <= data.startDate) {
-        throw new Error('End date must be after start date');
+      if (data.endDate < data.startDate) {
+        throw new Error('End date must be on or after start date');
       }
     }
 
@@ -232,8 +232,8 @@ export class ActivityService {
     // Validate end date if provided (skip validation if explicitly null for clearing)
     if (data.endDate !== undefined && data.endDate !== null) {
       const startDate = data.startDate || existing.startDate;
-      if (data.endDate <= startDate) {
-        throw new Error('End date must be after start date');
+      if (data.endDate < startDate) {
+        throw new Error('End date must be on or after start date');
       }
     }
 

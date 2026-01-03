@@ -128,7 +128,17 @@ describe('ActivityService', () => {
 
             mockActivityTypeRepo.exists = jest.fn().mockResolvedValue(true);
 
-            await expect(service.createActivity(input)).rejects.toThrow('End date must be after start date');
+            await expect(service.createActivity(input)).rejects.toThrow('End date must be on or after start date');
+        });
+
+        it('should allow end date to equal start date for one-day activities', async () => {
+            const sameDate = new Date('2024-12-31');
+            const input = { name: 'Workshop', activityTypeId: 'type-1', startDate: sameDate, endDate: sameDate };
+
+            mockActivityTypeRepo.exists = jest.fn().mockResolvedValue(true);
+
+            // The key test is that this doesn't throw an error about dates
+            await expect(service.createActivity(input)).resolves.toBeDefined();
         });
 
         it('should set default status to PLANNED', async () => {

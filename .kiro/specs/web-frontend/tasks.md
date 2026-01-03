@@ -503,9 +503,11 @@ This implementation plan covers the React-based web application built with TypeS
     - Show activity information with all status values
     - List assigned participants with roles from /activities/:id/participants endpoint
     - Display venue history table in reverse chronological order
-    - Provide status update button (not just "Mark Complete")
+    - Provide status update buttons: "Mark Complete", "Cancel Activity", "Set Active"
+    - When "Mark Complete" is clicked, update status to COMPLETED and implicitly set endDate to today if null
+    - When "Cancel Activity" is clicked, update status to CANCELLED, implicitly set endDate to today if null, and set startDate to today if startDate is in the future
     - Support adding/removing venues via /activities/:id/venues endpoints
-    - _Requirements: 5.11, 5.12, 5.13, 5.14_
+    - _Requirements: 5.11, 5.12, 5.12a, 5.12b, 5.12c, 5.13, 5.14_
 
   - [ ]* 11.4 Write property test for activity detail view
     - **Property 16: Activity Detail View Completeness**
@@ -1789,6 +1791,27 @@ This implementation plan covers the React-based web application built with TypeS
   - Test legend interactivity on all charts
   - Verify accessibility with keyboard navigation and screen readers
   - Verify series visibility persistence across page reloads
+
+- [x] 37. Enhance activity status update to set end date when completing or cancelling
+  - [x] 37.1 Update ActivityDetail component status update logic
+    - Modify handleUpdateStatus function to include startDate and endDate in update payload
+    - When status is COMPLETED or CANCELLED, check if endDate is null
+    - If endDate is null, set endDate to today's date (ISO 8601 datetime format) - this converts ongoing activities to finite
+    - When status is CANCELLED, check if startDate is in the future
+    - If startDate is in the future, set startDate to today's date (ISO 8601 datetime format)
+    - Pass updated fields (status, startDate, endDate, version) to ActivityService.updateActivity
+    - _Requirements: 5.12a, 5.12b, 5.12c_
+
+  - [ ]* 37.2 Write property tests for status update with implicit date setting
+    - **Property 159: Mark Complete Sets End Date When Null**
+    - **Property 160: Cancel Activity Sets End Date When Null**
+    - **Property 161: Cancel Activity Sets Start Date When Future**
+    - Test that marking activity as COMPLETED sets endDate to today when null
+    - Test that marking activity as CANCELLED sets endDate to today when null
+    - Test that marking activity as CANCELLED sets startDate to today when startDate is in the future
+    - Test that marking activity as CANCELLED preserves startDate when startDate is in the past
+    - Test that existing endDate is preserved when not null
+    - **Validates: Requirements 5.12a, 5.12b, 5.12c**
 
 ## Notes
 

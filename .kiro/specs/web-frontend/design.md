@@ -304,7 +304,10 @@ src/
 - Shows venue history table in reverse chronological order
 - Provides interface to add venue associations
 - Provides interface to remove venue associations
-- Shows "Mark Complete" button for finite activities
+- Shows "Mark Complete" button that updates status to COMPLETED
+- Shows "Cancel Activity" button that updates status to CANCELLED
+- When "Mark Complete" is clicked, implicitly sets endDate to today if null (converting ongoing to finite)
+- When "Cancel Activity" is clicked, implicitly sets endDate to today if null and sets startDate to today if startDate is in the future
 
 **ActivityVenueHistoryTable**
 - Displays activity's venue history in reverse chronological order
