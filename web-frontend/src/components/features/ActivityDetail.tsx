@@ -17,7 +17,6 @@ import { ActivityService } from '../../services/api/activity.service';
 import type { Activity } from '../../types';
 import { AssignmentService } from '../../services/api/assignment.service';
 import { AssignmentForm } from './AssignmentForm';
-import { ActivityForm } from './ActivityForm';
 import { ActivityVenueHistoryTable } from './ActivityVenueHistoryTable';
 import { ActivityVenueHistoryForm } from './ActivityVenueHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -31,7 +30,6 @@ export function ActivityDetail() {
   
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [isVenueFormOpen, setIsVenueFormOpen] = useState(false);
-  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [error, setError] = useState('');
 
   const { data: activity, isLoading, error: loadError } = useQuery({
@@ -227,7 +225,7 @@ export function ActivityDetail() {
                         Set Active
                       </Button>
                     )}
-                    <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                    <Button variant="primary" onClick={() => navigate(`/activities/${id}/edit`)}>
                       Edit
                     </Button>
                     <Button 
@@ -404,23 +402,6 @@ export function ActivityDetail() {
         existingDates={existingDates}
         loading={addVenueMutation.isPending}
       />
-
-      <Modal
-        visible={isEditFormOpen}
-        onDismiss={() => setIsEditFormOpen(false)}
-        header="Edit Activity"
-      >
-        {isEditFormOpen && (
-          <ActivityForm
-            activity={activity}
-            onSuccess={() => {
-              setIsEditFormOpen(false);
-              queryClient.invalidateQueries({ queryKey: ['activity', id] });
-            }}
-            onCancel={() => setIsEditFormOpen(false)}
-          />
-        )}
-      </Modal>
     </SpaceBetween>
   );
 }

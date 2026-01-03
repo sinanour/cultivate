@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -9,12 +10,10 @@ import Badge from '@cloudscape-design/components/badge';
 import Link from '@cloudscape-design/components/link';
 import Select from '@cloudscape-design/components/select';
 import Pagination from '@cloudscape-design/components/pagination';
-import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import type { Activity } from '../../types';
 import { ActivityService } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
-import { ActivityForm } from './ActivityForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
@@ -26,10 +25,9 @@ const ITEMS_PER_PAGE = 10;
 
 export function ActivityList() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -97,24 +95,17 @@ export function ActivityList() {
   ];
 
   const handleEdit = (activity: Activity) => {
-    setSelectedActivity(activity);
-    setIsFormOpen(true);
+    navigate(`/activities/${activity.id}/edit`);
   };
 
   const handleCreate = () => {
-    setSelectedActivity(null);
-    setIsFormOpen(true);
+    navigate('/activities/new');
   };
 
   const handleDelete = async (activity: Activity) => {
     if (window.confirm(`Are you sure you want to delete "${activity.name}"?`)) {
       deleteMutation.mutate(activity.id);
     }
-  };
-
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedActivity(null);
   };
 
   const handleExport = async () => {
@@ -338,20 +329,6 @@ export function ActivityList() {
           />
         }
       />
-      <Modal
-        visible={isFormOpen}
-        onDismiss={handleFormClose}
-        size="large"
-        header={selectedActivity ? 'Edit Activity' : 'Create Activity'}
-      >
-        {isFormOpen && (
-          <ActivityForm
-            activity={selectedActivity}
-            onSuccess={handleFormClose}
-            onCancel={handleFormClose}
-          />
-        )}
-      </Modal>
       <ImportResultsModal
         visible={showImportResults}
         result={importResult}

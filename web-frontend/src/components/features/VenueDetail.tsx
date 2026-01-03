@@ -13,10 +13,8 @@ import Icon from '@cloudscape-design/components/icon';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
-import Modal from '@cloudscape-design/components/modal';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
-import { VenueForm } from './VenueForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/date.utils';
 
@@ -24,7 +22,6 @@ export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
-  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
   const { data: venue, isLoading, error } = useQuery({
@@ -91,7 +88,7 @@ export function VenueDetail() {
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
                   <>
-                    <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                    <Button variant="primary" onClick={() => navigate(`/venues/${id}/edit`)}>
                       Edit
                     </Button>
                     <Button 
@@ -241,23 +238,6 @@ export function VenueDetail() {
           </Box>
         }
       />
-      
-      <Modal
-        visible={isEditFormOpen}
-        onDismiss={() => setIsEditFormOpen(false)}
-        size="large"
-        header="Edit Venue"
-      >
-        {isEditFormOpen && (
-          <VenueForm
-            venue={venue}
-            onSuccess={() => {
-              setIsEditFormOpen(false);
-            }}
-            onCancel={() => setIsEditFormOpen(false)}
-          />
-        )}
-      </Modal>
     </SpaceBetween>
   );
 }

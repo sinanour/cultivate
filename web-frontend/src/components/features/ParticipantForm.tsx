@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBlocker } from 'react-router-dom';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
@@ -13,6 +14,7 @@ import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import DatePicker from '@cloudscape-design/components/date-picker';
 import Badge from '@cloudscape-design/components/badge';
+import Modal from '@cloudscape-design/components/modal';
 import type { Participant, ParticipantAddressHistory } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { VenueService } from '../../services/api/venue.service';
@@ -27,9 +29,10 @@ interface ParticipantFormProps {
   participant: Participant | null;
   onSuccess: () => void;
   onCancel: () => void;
+  enableNavigationGuard?: boolean;
 }
 
-export function ParticipantForm({ participant, onSuccess, onCancel }: ParticipantFormProps) {
+export function ParticipantForm({ participant, onSuccess, onCancel, enableNavigationGuard = false }: ParticipantFormProps) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -54,6 +57,21 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const [newAddressEffectiveFrom, setNewAddressEffectiveFrom] = useState('');
   const [addressFormErrors, setAddressFormErrors] = useState<{ venue?: string; effectiveFrom?: string; duplicate?: string }>({});
 
+  // Track initial values for dirty state detection
+  const [initialFormState, setInitialFormState] = useState<{
+    name: string;
+    email: string;
+    phone: string;
+    notes: string;
+    dateOfBirth: string;
+    dateOfRegistration: string;
+    nickname: string;
+  } | null>(null);
+
+  // Navigation guard confirmation state
+  const [showNavigationConfirmation, setShowNavigationConfirmation] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
   // Fetch address history when editing existing participant
   const { data: fetchedAddressHistory = [] } = useQuery({
     queryKey: ['participantAddressHistory', participant?.id],
@@ -64,26 +82,103 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     staleTime: Infinity, // Don't automatically refetch
   });
 
+  // Calculate current form state
+  const currentFormState = useMemo(() => ({
+    name,
+    email,
+    phone,
+    notes,
+    dateOfBirth,
+    dateOfRegistration,
+    nickname,
+  }), [name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname]);
+
+  // Check if form is dirty
+  const isDirty = useMemo(() => {
+    if (!initialFormState || !enableNavigationGuard) return false;
+    
+    // Compare current state with initial state
+    return (
+      name !== initialFormState.name ||
+      email !== initialFormState.email ||
+      phone !== initialFormState.phone ||
+      notes !== initialFormState.notes ||
+      dateOfBirth !== initialFormState.dateOfBirth ||
+      dateOfRegistration !== initialFormState.dateOfRegistration ||
+      nickname !== initialFormState.nickname
+    );
+  }, [currentFormState, initialFormState, enableNavigationGuard]);
+
+  // Navigation blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      enableNavigationGuard && isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Show confirmation dialog when navigation is blocked
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setShowNavigationConfirmation(true);
+      setPendingNavigation(() => blocker.proceed);
+    }
+  }, [blocker.state, blocker.proceed]);
+
+  const handleConfirmNavigation = () => {
+    setShowNavigationConfirmation(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationConfirmation(false);
+    setPendingNavigation(null);
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  };
+
   // Update form state when participant prop changes
   useEffect(() => {
     if (participant) {
-      setName(participant.name || '');
-      setEmail(participant.email || '');
-      setPhone(participant.phone || '');
-      setNotes(participant.notes || '');
-      setDateOfBirth(participant.dateOfBirth ? participant.dateOfBirth.split('T')[0] : '');
-      setDateOfRegistration(participant.dateOfRegistration ? participant.dateOfRegistration.split('T')[0] : '');
-      setNickname(participant.nickname || '');
+      const values = {
+        name: participant.name || '',
+        email: participant.email || '',
+        phone: participant.phone || '',
+        notes: participant.notes || '',
+        dateOfBirth: participant.dateOfBirth ? participant.dateOfBirth.split('T')[0] : '',
+        dateOfRegistration: participant.dateOfRegistration ? participant.dateOfRegistration.split('T')[0] : '',
+        nickname: participant.nickname || '',
+      };
+      setName(values.name);
+      setEmail(values.email);
+      setPhone(values.phone);
+      setNotes(values.notes);
+      setDateOfBirth(values.dateOfBirth);
+      setDateOfRegistration(values.dateOfRegistration);
+      setNickname(values.nickname);
+      setInitialFormState(values);
     } else {
       // Reset to defaults for create mode
-      setName('');
-      setEmail('');
-      setPhone('');
-      setNotes('');
-      setDateOfBirth('');
-      setDateOfRegistration('');
-      setNickname('');
+      const emptyValues = {
+        name: '',
+        email: '',
+        phone: '',
+        notes: '',
+        dateOfBirth: '',
+        dateOfRegistration: '',
+        nickname: '',
+      };
+      setName(emptyValues.name);
+      setEmail(emptyValues.email);
+      setPhone(emptyValues.phone);
+      setNotes(emptyValues.notes);
+      setDateOfBirth(emptyValues.dateOfBirth);
+      setDateOfRegistration(emptyValues.dateOfRegistration);
+      setNickname(emptyValues.nickname);
       setAddressHistory([]);
+      setInitialFormState(emptyValues);
     }
     // Clear errors when switching modes
     setNameError('');
@@ -714,6 +809,30 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
         onRetryWithLatest={versionConflict.handleRetryWithLatest}
         onDiscardChanges={versionConflict.handleDiscardChanges}
       />
+
+      {/* Navigation guard confirmation dialog */}
+      {enableNavigationGuard && (
+        <Modal
+          visible={showNavigationConfirmation}
+          onDismiss={handleCancelNavigation}
+          header="Unsaved Changes"
+          footer={
+            <Box float="right">
+              <SpaceBetween direction="horizontal" size="xs">
+                <Button variant="link" onClick={handleCancelNavigation}>
+                  Stay on Page
+                </Button>
+                <Button variant="primary" onClick={handleConfirmNavigation}>
+                  Discard Changes
+                </Button>
+              </SpaceBetween>
+            </Box>
+          }
+        >
+          You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
+        </Modal>
+      )}
     </>
   );
 }
+

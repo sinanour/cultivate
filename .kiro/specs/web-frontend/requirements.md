@@ -23,6 +23,8 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
 - **Configuration_View**: A unified interface for managing activity categories, activity types, and participant roles
 - **Engagement_Summary_Table**: A table on the Engagement Dashboard displaying aggregate and dimensional breakdown metrics for activities and participants
+- **Dirty_Form**: A form with unsaved changes that differ from the initial values
+- **Navigation_Guard**: A mechanism that intercepts navigation attempts to prevent accidental data loss from dirty forms
 
 ## Requirements
 
@@ -48,14 +50,14 @@ The Web Frontend package provides a responsive React-based web application that 
 1. THE Web_App SHALL provide a unified configuration view for managing activity categories, activity types, and participant roles
 2. THE Web_App SHALL display a list of all activity categories with predefined and custom categories distinguished
 3. THE Web_App SHALL display a list of all activity types grouped by their category with predefined and custom types distinguished
-4. THE Web_App SHALL provide a form to create new activity categories
-5. THE Web_App SHALL provide a form to edit existing activity categories
+4. THE Web_App SHALL provide a modal form to create new activity categories
+5. THE Web_App SHALL provide a modal form to edit existing activity categories
 6. THE Web_App SHALL provide a delete button for activity categories
 7. WHEN deleting an activity category, THE Web_App SHALL prevent deletion if activity types reference it
 8. WHEN deleting an activity category, THE Web_App SHALL display an error message explaining why deletion failed
 9. THE Web_App SHALL validate that activity category names are not empty
-10. THE Web_App SHALL provide a form to create new activity types
-11. THE Web_App SHALL provide a form to edit existing activity types
+10. THE Web_App SHALL provide a modal form to create new activity types
+11. THE Web_App SHALL provide a modal form to edit existing activity types
 12. THE Web_App SHALL provide a delete button for activity types
 13. WHEN creating or editing an activity type, THE Web_App SHALL require selection of an activity category
 14. WHEN deleting an activity type, THE Web_App SHALL prevent deletion if activities reference it
@@ -73,8 +75,8 @@ The Web Frontend package provides a responsive React-based web application that 
 #### Acceptance Criteria
 
 1. THE Web_App SHALL display a list of all participant roles with predefined and custom roles distinguished
-2. THE Web_App SHALL provide a form to create new roles
-3. THE Web_App SHALL provide a form to edit existing roles
+2. THE Web_App SHALL provide a modal form to create new roles
+3. THE Web_App SHALL provide a modal form to edit existing roles
 4. THE Web_App SHALL provide a delete button for roles
 5. WHEN deleting a role, THE Web_App SHALL prevent deletion if assignments reference it
 6. WHEN deleting a role, THE Web_App SHALL display an error message explaining why deletion failed
@@ -89,8 +91,8 @@ The Web Frontend package provides a responsive React-based web application that 
 1. THE Web_App SHALL display a list of all participants with name, email (if provided), and other relevant information
 2. THE Web_App SHALL provide search functionality to find participants by name or email
 3. THE Web_App SHALL provide sorting and filtering for the participant list
-4. THE Web_App SHALL provide a form to create new participants
-5. THE Web_App SHALL provide a form to edit existing participants
+4. THE Web_App SHALL provide a dedicated page to create new participants
+5. THE Web_App SHALL provide a dedicated page to edit existing participants
 6. THE Web_App SHALL provide a delete button for participants
 7. THE Web_App SHALL validate that participant name is provided
 8. WHEN a participant email is provided, THE Web_App SHALL validate email format
@@ -107,8 +109,8 @@ The Web Frontend package provides a responsive React-based web application that 
 17. WHEN an address history record has a null effective start date, THE Web_App SHALL treat it as the oldest home address for that participant
 18. THE Web_App SHALL enforce that at most one address history record can have a null effective start date for any given participant
 19. THE Web_App SHALL prevent duplicate address history records with the same effective start date (including null) for the same participant
-17. WHEN creating a new participant, THE Web_App SHALL allow adding home address history records within the participant creation modal form
-18. WHEN editing an existing participant, THE Web_App SHALL allow adding, editing, and deleting home address history records within the participant edit modal form
+17. WHEN creating a new participant, THE Web_App SHALL allow adding home address history records within the participant creation page
+18. WHEN editing an existing participant, THE Web_App SHALL allow adding, editing, and deleting home address history records within the participant edit page
 19. WHEN adding an address history record to a new participant before the participant is created, THE Web_App SHALL fetch and display the venue name in the address history table
 20. WHEN a venue is selected for a new address history record, THE Web_App SHALL retrieve the venue details from the backend and store them for display purposes
 
@@ -122,8 +124,8 @@ The Web Frontend package provides a responsive React-based web application that 
 2. THE Web_App SHALL provide filtering by activity category, activity type, and status
 3. THE Web_App SHALL provide sorting for the activity list
 4. THE Web_App SHALL distinguish finite and ongoing activities visually
-5. THE Web_App SHALL provide a form to create new activities
-6. THE Web_App SHALL provide a form to edit existing activities
+5. THE Web_App SHALL provide a dedicated page to create new activities
+6. THE Web_App SHALL provide a dedicated page to edit existing activities
 7. THE Web_App SHALL provide a delete button for activities
 8. WHEN creating a finite activity, THE Web_App SHALL require an end date
 9. WHEN creating an ongoing activity, THE Web_App SHALL allow null end date
@@ -136,19 +138,41 @@ The Web Frontend package provides a responsive React-based web application that 
 13. THE Web_App SHALL display a detail view showing activity information and assigned participants
 14. THE Web_App SHALL allow selection of one or more venues for each activity
 15. THE Web_App SHALL display the activity's venue history in reverse chronological order when venues have changed over time
-16. WHEN creating a new activity, THE Web_App SHALL allow adding venue associations with optional effective start dates within the activity creation modal form
-17. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and deleting venue associations within the activity edit modal form
+16. WHEN creating a new activity, THE Web_App SHALL allow adding venue associations with optional effective start dates within the activity creation page
+17. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and deleting venue associations within the activity edit page
 18. WHEN adding a venue association to a new activity before the activity is created, THE Web_App SHALL fetch and display the venue name in the venue history table
 19. WHEN a venue is selected for a new venue association, THE Web_App SHALL retrieve the venue details from the backend and store them for display purposes
 20. WHEN a venue association has a null effective start date, THE Web_App SHALL treat the venue association start date as the same as the activity start date
 21. THE Web_App SHALL enforce that at most one venue association can have a null effective start date for any given activity
 22. THE Web_App SHALL prevent duplicate venue associations with the same effective start date (including null) for the same activity
-23. WHEN creating a new activity, THE Web_App SHALL allow assigning participants with roles and optional notes within the activity creation modal form
-24. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit modal form
+23. WHEN creating a new activity, THE Web_App SHALL allow assigning participants with roles and optional notes within the activity creation page
+24. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit page
 25. WHEN adding a participant assignment to a new activity before the activity is created, THE Web_App SHALL fetch and display the participant name and role in the participant assignments table
 26. WHEN a participant is selected for a new assignment, THE Web_App SHALL retrieve the participant details from the backend and store them for display purposes
-27. THE Web_App SHALL display the venue associations table and participant assignments table stacked vertically within the activity form, with venue associations appearing above participant assignments
+27. THE Web_App SHALL display the venue associations table and participant assignments table stacked vertically within the activity form page, with venue associations appearing above participant assignments
 28. THE Web_App SHALL provide an atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
+
+### Requirement 2A: Form Presentation Pattern for Major Entities
+
+**User Story:** As a mobile user, I want to edit participants, activities, venues, and geographic areas on dedicated pages rather than in modal dialogs, so that I can scroll through large forms comfortably and have a better mobile experience.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL NOT use modal dialogs for creating or editing participants
+2. THE Web_App SHALL NOT use modal dialogs for creating or editing activities
+3. THE Web_App SHALL NOT use modal dialogs for creating or editing venues
+4. THE Web_App SHALL NOT use modal dialogs for creating or editing geographic areas
+5. THE Web_App SHALL use dedicated pages with full-page forms for creating and editing participants, activities, venues, and geographic areas
+6. THE Web_App SHALL allow vertical scrolling on form pages to accommodate large forms with many fields and embedded sections
+7. THE Web_App MAY use modal dialogs for creating or editing simple configuration entities (activity categories, activity types, participant roles) that have few fields
+8. THE Web_App MAY use modal dialogs for creating or editing child records (address history, venue history, assignments) when embedded within parent entity forms
+9. WHEN a user navigates away from a form page with unsaved changes, THE Web_App SHALL detect the dirty form state
+10. WHEN a user attempts to navigate away from a dirty form, THE Web_App SHALL display a confirmation dialog asking if they want to discard their changes
+11. WHEN a user confirms they want to discard changes, THE Web_App SHALL allow navigation to proceed
+12. WHEN a user cancels the discard confirmation, THE Web_App SHALL remain on the form page and preserve all form data
+13. THE Web_App SHALL track form dirty state by comparing current form values to initial values
+14. THE Web_App SHALL clear dirty state after successful form submission
+15. THE Web_App SHALL implement navigation guards using React Router's useBlocker or similar mechanism to intercept navigation attempts
 
 ### Requirement 6: Activity-Participant Assignment UI
 
@@ -156,7 +180,7 @@ The Web Frontend package provides a responsive React-based web application that 
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL provide an interface to assign participants to activities within the activity form (both create and edit modes)
+1. THE Web_App SHALL provide an interface to assign participants to activities within the activity form page (both create and edit modes)
 2. WHEN assigning a participant, THE Web_App SHALL require role selection
 3. THE Web_App SHALL display all assigned participants with their roles on the activity detail view
 4. THE Web_App SHALL provide a button to remove participant assignments
@@ -164,8 +188,8 @@ The Web Frontend package provides a responsive React-based web application that 
 6. THE Web_App SHALL prevent duplicate assignments of the same participant with the same role
 7. THE Web_App SHALL allow optional notes to be added to participant assignments
 8. WHEN creating a new activity, THE Web_App SHALL allow adding participant assignments before the activity is persisted to the backend
-9. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit form
-10. THE Web_App SHALL display the participant assignments interface within the activity form, positioned below the venue associations interface
+9. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit page
+10. THE Web_App SHALL display the participant assignments interface within the activity form page, positioned below the venue associations interface
 
 ### Requirement 6A: Venue Management UI
 
@@ -177,8 +201,8 @@ The Web Frontend package provides a responsive React-based web application that 
 1a. WHEN displaying venues in the list, THE Web_App SHALL render the geographic area name as a hyperlink to the geographic area detail page (/geographic-areas/:id)
 2. THE Web_App SHALL provide search functionality to find venues by name or address
 3. THE Web_App SHALL provide sorting and filtering for the venue list
-4. THE Web_App SHALL provide a form to create new venues
-5. THE Web_App SHALL provide a form to edit existing venues
+4. THE Web_App SHALL provide a dedicated page to create new venues
+5. THE Web_App SHALL provide a dedicated page to edit existing venues
 6. THE Web_App SHALL provide a delete button for venues
 7. THE Web_App SHALL validate that venue name, address, and geographic area are provided
 8. THE Web_App SHALL allow optional fields for latitude, longitude, and venue type
@@ -194,8 +218,8 @@ The Web Frontend package provides a responsive React-based web application that 
 #### Acceptance Criteria
 
 1. THE Web_App SHALL display a hierarchical tree view of all geographic areas
-2. THE Web_App SHALL provide a form to create new geographic areas
-3. THE Web_App SHALL provide a form to edit existing geographic areas
+2. THE Web_App SHALL provide a dedicated page to create new geographic areas
+3. THE Web_App SHALL provide a dedicated page to edit existing geographic areas
 4. THE Web_App SHALL provide a delete button for geographic areas
 5. THE Web_App SHALL validate that geographic area name and type are provided
 6. THE Web_App SHALL allow selection of a parent geographic area
@@ -635,7 +659,7 @@ The Web Frontend package provides a responsive React-based web application that 
 1. THE Web_App SHALL display an edit action button in the header section of all entity detail pages (participants, activities, venues, geographic areas)
 2. THE Web_App SHALL position the edit button as the right-most action in the header when multiple actions are present
 3. THE Web_App SHALL use CloudScape Button component with variant="primary" for all detail page edit buttons
-4. WHEN a user clicks the edit button, THE Web_App SHALL open the edit form for the current entity
+4. WHEN a user clicks the edit button, THE Web_App SHALL navigate to the dedicated edit page for the current entity
 5. THE Web_App SHALL hide the edit button when the user has READ_ONLY role
 6. THE Web_App SHALL display the edit button when the user has EDITOR or ADMINISTRATOR role
 

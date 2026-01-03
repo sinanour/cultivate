@@ -7,13 +7,11 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Badge from '@cloudscape-design/components/badge';
 import Link from '@cloudscape-design/components/link';
-import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import Box from '@cloudscape-design/components/box';
 import TreeView, { type TreeViewProps } from '@cloudscape-design/components/tree-view';
 import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
-import { GeographicAreaForm } from './GeographicAreaForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { buildGeographicAreaTree, type TreeNode } from '../../utils/tree.utils';
@@ -27,8 +25,6 @@ export function GeographicAreaList() {
   const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
-  const [selectedArea, setSelectedArea] = useState<GeographicArea | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
@@ -76,24 +72,17 @@ export function GeographicAreaList() {
   }, [geographicAreas, treeData, expandedItems.length]);
 
   const handleEdit = (area: GeographicArea) => {
-    setSelectedArea(area);
-    setIsFormOpen(true);
+    navigate(`/geographic-areas/${area.id}/edit`);
   };
 
   const handleCreate = () => {
-    setSelectedArea(null);
-    setIsFormOpen(true);
+    navigate('/geographic-areas/new');
   };
 
   const handleDelete = async (area: GeographicArea) => {
     if (window.confirm(`Are you sure you want to delete "${area.name}"?`)) {
       deleteMutation.mutate(area.id);
     }
-  };
-
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedArea(null);
   };
 
   const handleExport = async () => {
@@ -334,20 +323,6 @@ export function GeographicAreaList() {
           )}
         </Container>
       </SpaceBetween>
-      <Modal
-        visible={isFormOpen}
-        onDismiss={handleFormClose}
-        size="large"
-        header={selectedArea ? 'Edit Geographic Area' : 'Create Geographic Area'}
-      >
-        {isFormOpen && (
-          <GeographicAreaForm
-            geographicArea={selectedArea}
-            onSuccess={handleFormClose}
-            onCancel={handleFormClose}
-          />
-        )}
-      </Modal>
       <ImportResultsModal
         visible={showImportResults}
         result={importResult}

@@ -10,12 +10,16 @@ const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 const ConfigurationPage = lazy(() => import('../pages/ConfigurationPage'));
 const ParticipantsPage = lazy(() => import('../pages/ParticipantsPage'));
 const ParticipantDetailPage = lazy(() => import('../pages/ParticipantDetailPage'));
+const ParticipantFormPage = lazy(() => import('../pages/ParticipantFormPage'));
 const ActivitiesPage = lazy(() => import('../pages/ActivitiesPage'));
 const ActivityDetailPage = lazy(() => import('../pages/ActivityDetailPage'));
+const ActivityFormPage = lazy(() => import('../pages/ActivityFormPage'));
 const VenuesPage = lazy(() => import('../pages/VenuesPage'));
 const VenueDetailPage = lazy(() => import('../pages/VenueDetailPage'));
+const VenueFormPage = lazy(() => import('../pages/VenueFormPage'));
 const GeographicAreasPage = lazy(() => import('../pages/GeographicAreasPage'));
 const GeographicAreaDetailPage = lazy(() => import('../pages/GeographicAreaDetailPage'));
+const GeographicAreaFormPage = lazy(() => import('../pages/GeographicAreaFormPage'));
 const MapViewPage = lazy(() => import('../pages/MapViewPage'));
 const EngagementDashboardPage = lazy(() => import('../pages/EngagementDashboardPage'));
 const GrowthDashboardPage = lazy(() => import('../pages/GrowthDashboardPage'));
@@ -50,12 +54,28 @@ export const router = createBrowserRouter([
         element: <ParticipantsPage />,
       },
       {
+        path: 'participants/new',
+        element: <ParticipantFormPage />,
+      },
+      {
+        path: 'participants/:id/edit',
+        element: <ParticipantFormPage />,
+      },
+      {
         path: 'participants/:id',
         element: <ParticipantDetailPage />,
       },
       {
         path: 'activities',
         element: <ActivitiesPage />,
+      },
+      {
+        path: 'activities/new',
+        element: <ActivityFormPage />,
+      },
+      {
+        path: 'activities/:id/edit',
+        element: <ActivityFormPage />,
       },
       {
         path: 'activities/:id',
@@ -66,12 +86,28 @@ export const router = createBrowserRouter([
         element: <VenuesPage />,
       },
       {
+        path: 'venues/new',
+        element: <VenueFormPage />,
+      },
+      {
+        path: 'venues/:id/edit',
+        element: <VenueFormPage />,
+      },
+      {
         path: 'venues/:id',
         element: <VenueDetailPage />,
       },
       {
         path: 'geographic-areas',
         element: <GeographicAreasPage />,
+      },
+      {
+        path: 'geographic-areas/new',
+        element: <GeographicAreaFormPage />,
+      },
+      {
+        path: 'geographic-areas/:id/edit',
+        element: <GeographicAreaFormPage />,
       },
       {
         path: 'geographic-areas/:id',

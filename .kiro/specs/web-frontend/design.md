@@ -193,8 +193,9 @@ src/
 - Applies global geographic area filter from context when active
 - Filters to show only participants whose current home venue is in the filtered geographic area or its descendants
 
-**ParticipantForm**
-- Modal form for creating/editing participants
+**ParticipantFormPage**
+- Dedicated full-page form for creating/editing participants (not a modal)
+- Accessible via routes: /participants/new (create) and /participants/:id/edit (edit)
 - Validates name as required field
 - Validates email format when email is provided (email is optional)
 - Validates dateOfBirth is in the past when provided (optional)
@@ -212,13 +213,16 @@ src/
 - Validates address history records for required fields and duplicate prevention
 - When adding address history to a new participant (before participant is created), fetches venue details from backend and stores in temporary record for display
 - Displays venue name in address history table by accessing venue object from temporary records
+- Implements navigation guard using React Router's useBlocker to detect dirty form state
+- When user attempts to navigate away with unsaved changes, displays confirmation dialog
+- Allows vertical scrolling to accommodate large forms with embedded sections
 
 **ParticipantDetail**
 - Shows participant information in detail view
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
 - Displays delete button in header section next to edit button
 - Positions edit button as right-most action in header (before Back button)
-- Opens ParticipantForm when edit button is clicked
+- Navigates to /participants/:id/edit when edit button is clicked
 - Shows confirmation dialog when delete button is clicked
 - Navigates to participant list page after successful deletion
 - Displays error message when deletion fails
@@ -261,8 +265,9 @@ src/
 - Applies global geographic area filter from context when active
 - Filters to show only activities whose current venue is in the filtered geographic area or its descendants
 
-**ActivityForm**
-- Modal form for creating/editing activities
+**ActivityFormPage**
+- Dedicated full-page form for creating/editing activities (not a modal)
+- Accessible via routes: /activities/new (create) and /activities/:id/edit (edit)
 - Conditionally requires end date for finite activities
 - Allows null end date for ongoing activities
 - Provides clear button (X icon) next to end date field to convert finite activity to ongoing
@@ -287,13 +292,16 @@ src/
 - Displays participant name and role name in assignments table by accessing participant and role objects from temporary records
 - Displays venue associations table and participant assignments table stacked vertically, with venue associations appearing above participant assignments
 - Provides atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
+- Implements navigation guard using React Router's useBlocker to detect dirty form state
+- When user attempts to navigate away with unsaved changes, displays confirmation dialog
+- Allows vertical scrolling to accommodate large forms with embedded sections
 
 **ActivityDetail**
 - Shows activity information in detail view
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
 - Displays delete button in header section next to edit button
 - Positions edit button as right-most action in header (before Back button)
-- Opens ActivityForm when edit button is clicked
+- Navigates to /activities/:id/edit when edit button is clicked
 - Shows confirmation dialog when delete button is clicked
 - Navigates to activity list page after successful deletion
 - Displays error message when deletion fails
@@ -352,8 +360,9 @@ src/
 - Applies global geographic area filter from context when active
 - Filters to show only venues in the filtered geographic area or its descendants
 
-**VenueForm**
-- Modal form for creating/editing venues
+**VenueFormPage**
+- Dedicated full-page form for creating/editing venues (not a modal)
+- Accessible via routes: /venues/new (create) and /venues/:id/edit (edit)
 - Validates name, address, and geographic area are required
 - Provides dropdown for geographic area selection
 - Supports optional latitude, longitude, and venue type fields
@@ -376,13 +385,16 @@ src/
 - Updates map pin position when latitude/longitude fields are manually edited
 - Maintains two-way synchronization between coordinate inputs and map pin at all times
 - Preserves user-adjusted zoom level during coordinate updates (only adjusts center point, not zoom)
+- Implements navigation guard using React Router's useBlocker to detect dirty form state
+- When user attempts to navigate away with unsaved changes, displays confirmation dialog
+- Allows vertical scrolling to accommodate form fields and embedded map view
 
 **VenueDetail**
 - Shows venue information in detail view
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
 - Displays delete button in header section next to edit button
 - Positions edit button as right-most action in header (before Back button)
-- Opens VenueForm when edit button is clicked
+- Navigates to /venues/:id/edit when edit button is clicked
 - Shows confirmation dialog when delete button is clicked
 - Navigates to venue list page after successful deletion
 - Displays error message when deletion fails
@@ -416,20 +428,24 @@ src/
 - Applies global geographic area filter from context when active
 - When filtered, displays the selected area, all its descendants, and all its ancestors (to maintain hierarchy context)
 
-**GeographicAreaForm**
-- Modal form for creating/editing geographic areas
+**GeographicAreaFormPage**
+- Dedicated full-page form for creating/editing geographic areas (not a modal)
+- Accessible via routes: /geographic-areas/new (create) and /geographic-areas/:id/edit (edit)
 - Validates name and area type are required
 - Provides dropdown for area type selection (NEIGHBOURHOOD, COMMUNITY, CITY, etc.)
 - Provides dropdown for parent geographic area selection
 - Prevents circular parent-child relationships
 - Displays inline validation errors
+- Implements navigation guard using React Router's useBlocker to detect dirty form state
+- When user attempts to navigate away with unsaved changes, displays confirmation dialog
+- Allows vertical scrolling to accommodate form fields
 
 **GeographicAreaDetail**
 - Shows geographic area information in detail view
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
 - Displays delete button in header section next to edit button
 - Positions edit button as right-most action in header (before Back button)
-- Opens GeographicAreaForm when edit button is clicked
+- Navigates to /geographic-areas/:id/edit when edit button is clicked
 - Shows confirmation dialog when delete button is clicked
 - Navigates to geographic area list page after successful deletion
 - Displays error message when deletion fails
@@ -737,6 +753,29 @@ src/
 - Returns visibility state object mapping series names to boolean values
 - Can be used with recharts LineChart, BarChart, AreaChart, PieChart, and other chart types
 - Integrates seamlessly with existing chart configurations
+
+**NavigationGuard (useFormNavigationGuard hook)**
+- Custom React hook for implementing navigation guards on form pages
+- Uses React Router's useBlocker to intercept navigation attempts
+- Tracks dirty form state by comparing current form values to initial values
+- Provides `isDirty` boolean indicating if form has unsaved changes
+- Provides `setInitialValues(values)` method to set baseline for comparison
+- Provides `clearDirtyState()` method to reset after successful submission
+- When navigation is attempted with dirty form:
+  - Blocks navigation automatically
+  - Triggers confirmation dialog via callback
+  - Allows navigation to proceed if user confirms discard
+  - Cancels navigation if user chooses to stay
+- Handles browser back/forward button navigation
+- Handles programmatic navigation (Link clicks, navigate() calls)
+- Cleans up blocker when component unmounts
+
+**Implementation Details:**
+- Accepts props: formValues (current form state), initialValues (baseline), onNavigationBlocked (callback for confirmation dialog)
+- Returns: { isDirty, setInitialValues, clearDirtyState, confirmNavigation, cancelNavigation }
+- Uses deep equality comparison for form value changes
+- Ignores changes to non-user-editable fields (timestamps, IDs)
+- Integrates with CloudScape Modal for confirmation dialog
 
 ### Service Layer
 
@@ -2514,6 +2553,54 @@ All entities support optimistic locking via the `version` field. When updating a
 **Property 121: Series Visibility Persistence**
 *For any* chart with toggled series visibility, the visibility state should be persisted in browser session storage and restored when the user returns to the chart.
 **Validates: Requirements 27.12**
+
+### Property 56A: Dirty Form Detection
+
+*For any* form page with unsaved changes, the navigation guard should detect the dirty state by comparing current form values to initial values.
+
+**Validates: Requirements 2A.9, 2A.13**
+
+### Property 56B: Navigation Blocking with Dirty Form
+
+*For any* navigation attempt from a form page with unsaved changes, the navigation guard should intercept the attempt and display a confirmation dialog.
+
+**Validates: Requirements 2A.10**
+
+### Property 56C: Discard Changes Confirmation
+
+*For any* dirty form where the user confirms they want to discard changes, the navigation should proceed to the intended destination.
+
+**Validates: Requirements 2A.11**
+
+### Property 56D: Cancel Discard Confirmation
+
+*For any* dirty form where the user cancels the discard confirmation, the navigation should be cancelled and all form data should be preserved.
+
+**Validates: Requirements 2A.12**
+
+### Property 56E: Dirty State Clearing After Submission
+
+*For any* form page with unsaved changes, after successful form submission, the dirty state should be cleared and subsequent navigation should not trigger confirmation dialogs.
+
+**Validates: Requirements 2A.14**
+
+### Property 56F: Form Page Vertical Scrolling
+
+*For any* form page for major entities (participants, activities, venues, geographic areas), the page should allow vertical scrolling to accommodate large forms with many fields and embedded sections.
+
+**Validates: Requirements 2A.6**
+
+### Property 56G: Modal Dialog Restriction for Major Entities
+
+*For any* create or edit operation on major entities (participants, activities, venues, geographic areas), the UI should use dedicated pages rather than modal dialogs.
+
+**Validates: Requirements 2A.1, 2A.2, 2A.3, 2A.4, 2A.5**
+
+### Property 56H: Modal Dialog Permission for Simple Entities
+
+*For any* create or edit operation on simple configuration entities (activity categories, activity types, participant roles) or child records (address history, venue history, assignments), the UI may use modal dialogs.
+
+**Validates: Requirements 2A.7, 2A.8**
 
 ## Error Handling
 

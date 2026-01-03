@@ -13,9 +13,7 @@ import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
-import Modal from '@cloudscape-design/components/modal';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
-import { GeographicAreaForm } from './GeographicAreaForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/date.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
@@ -24,7 +22,6 @@ export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
-  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
   const { data: geographicArea, isLoading, error } = useQuery({
@@ -103,7 +100,7 @@ export function GeographicAreaDetail() {
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
                   <>
-                    <Button variant="primary" onClick={() => setIsEditFormOpen(true)}>
+                    <Button variant="primary" onClick={() => navigate(`/geographic-areas/${id}/edit`)}>
                       Edit
                     </Button>
                     <Button 
@@ -236,22 +233,6 @@ export function GeographicAreaDetail() {
           </Box>
         }
       />
-      
-      <Modal
-        visible={isEditFormOpen}
-        onDismiss={() => setIsEditFormOpen(false)}
-        header="Edit Geographic Area"
-      >
-        {isEditFormOpen && (
-          <GeographicAreaForm
-            geographicArea={geographicArea}
-            onSuccess={() => {
-              setIsEditFormOpen(false);
-            }}
-            onCancel={() => setIsEditFormOpen(false)}
-          />
-        )}
-      </Modal>
     </SpaceBetween>
   );
 }

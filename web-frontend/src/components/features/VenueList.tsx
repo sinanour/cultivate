@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -8,11 +9,9 @@ import Header from '@cloudscape-design/components/header';
 import Link from '@cloudscape-design/components/link';
 import TextFilter from '@cloudscape-design/components/text-filter';
 import Pagination from '@cloudscape-design/components/pagination';
-import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import type { Venue } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
-import { VenueForm } from './VenueForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { ImportResultsModal } from '../common/ImportResultsModal';
@@ -23,10 +22,9 @@ const ITEMS_PER_PAGE = 10;
 
 export function VenueList() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
-  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [filteringText, setFilteringText] = useState('');
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
@@ -72,24 +70,17 @@ export function VenueList() {
   }, [filteredVenues, currentPageIndex]);
 
   const handleEdit = (venue: Venue) => {
-    setSelectedVenue(venue);
-    setIsFormOpen(true);
+    navigate(`/venues/${venue.id}/edit`);
   };
 
   const handleCreate = () => {
-    setSelectedVenue(null);
-    setIsFormOpen(true);
+    navigate('/venues/new');
   };
 
   const handleDelete = async (venue: Venue) => {
     if (window.confirm(`Are you sure you want to delete "${venue.name}"?`)) {
       deleteMutation.mutate(venue.id);
     }
-  };
-
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedVenue(null);
   };
 
   const handleExport = async () => {
@@ -286,20 +277,6 @@ export function VenueList() {
           />
         }
       />
-      <Modal
-        visible={isFormOpen}
-        onDismiss={handleFormClose}
-        size="large"
-        header={selectedVenue ? 'Edit Venue' : 'Create Venue'}
-      >
-        {isFormOpen && (
-          <VenueForm
-            venue={selectedVenue}
-            onSuccess={handleFormClose}
-            onCancel={handleFormClose}
-          />
-        )}
-      </Modal>
       <ImportResultsModal
         visible={showImportResults}
         result={importResult}

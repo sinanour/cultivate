@@ -17,9 +17,18 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 2. Set up routing and layout
   - [x] 2.1 Configure React Router
     - Set up route definitions for all pages
+    - Add routes for major entity form pages:
+      - /participants/new (create participant)
+      - /participants/:id/edit (edit participant)
+      - /activities/new (create activity)
+      - /activities/:id/edit (edit activity)
+      - /venues/new (create venue)
+      - /venues/:id/edit (edit venue)
+      - /geographic-areas/new (create geographic area)
+      - /geographic-areas/:id/edit (edit geographic area)
     - Implement protected routes for authenticated pages
     - Configure route-based code splitting
-    - _Requirements: 13.1, 13.3, 9.1_
+    - _Requirements: 13.1, 13.3, 9.1, 2A.5_
 
   - [x] 2.2 Create AppLayout component
     - Use CloudScape AppLayout component
@@ -208,6 +217,21 @@ This implementation plan covers the React-based web application built with TypeS
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
 - [x] 7. Implement participant management UI
+  - [x] 7.0 Create useFormNavigationGuard hook
+    - Create custom React hook for navigation guard functionality
+    - Use React Router's useBlocker to intercept navigation attempts
+    - Track dirty form state by comparing current form values to initial values
+    - Provide isDirty boolean
+    - Provide setInitialValues(values) method
+    - Provide clearDirtyState() method
+    - Implement deep equality comparison for form values
+    - Ignore non-user-editable fields (timestamps, IDs) in comparison
+    - Return confirmNavigation and cancelNavigation methods for dialog integration
+    - Handle browser back/forward navigation
+    - Handle programmatic navigation
+    - Clean up blocker on component unmount
+    - _Requirements: 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
+
   - [x] 7.1 Create ParticipantList component
     - Display table with search, sort, and filter
     - Use CloudScape Table with optional pagination support
@@ -222,8 +246,9 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 6: Participant Search Functionality**
     - **Validates: Requirements 4.2**
 
-  - [x] 7.2 Create ParticipantForm component
-    - Modal form for create/edit
+  - [x] 7.2 Create ParticipantFormPage component
+    - Dedicated full-page form for create/edit (not a modal)
+    - Accessible via routes: /participants/new and /participants/:id/edit
     - Validate name, email format, and required fields
     - Support optional phone and notes
     - Support home venue selection (homeVenueId)
@@ -239,7 +264,10 @@ This implementation plan covers the React-based web application built with TypeS
     - Display null effective start dates as "Initial Address" or similar indicator
     - Fetch venue details when venue is selected for new address history records
     - Store venue object in temporary records for display before participant is created
-    - _Requirements: 4.4, 4.5, 4.7, 4.8, 4.9, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18, 4.19, 4.20_
+    - Implement navigation guard using useFormNavigationGuard hook
+    - Display confirmation dialog when user attempts to navigate away with unsaved changes
+    - Allow vertical scrolling for large forms
+    - _Requirements: 4.4, 4.5, 4.7, 4.8, 4.9, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18, 4.19, 4.20, 2A.1, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
 
   - [ ]* 7.4 Write property tests for participant validation
     - **Property 7: Required Field Validation**
@@ -247,11 +275,24 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 9: Optional Field Acceptance**
     - **Validates: Requirements 4.7, 4.8, 4.9**
 
+  - [ ]* 7.4a Write property tests for navigation guards
+    - **Property 56A: Dirty Form Detection**
+    - **Property 56B: Navigation Blocking with Dirty Form**
+    - **Property 56C: Discard Changes Confirmation**
+    - **Property 56D: Cancel Discard Confirmation**
+    - **Property 56E: Dirty State Clearing After Submission**
+    - **Property 56F: Form Page Vertical Scrolling**
+    - **Property 56G: Modal Dialog Restriction for Major Entities**
+    - **Property 56H: Modal Dialog Permission for Simple Entities**
+    - **Validates: Requirements 2A.1, 2A.2, 2A.3, 2A.4, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15**
+
   - [x] 7.3 Create ParticipantDetail component
     - Show participant information
     - List all activities with roles
     - Display address history table in reverse chronological order
-    - _Requirements: 4.10, 4.11_
+    - Add primary edit button that navigates to /participants/:id/edit
+    - Add delete button with confirmation dialog
+    - _Requirements: 4.10, 4.11, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
   - [ ]* 7.5 Write property test for participant detail view
     - **Property 10: Participant Detail View Completeness**
@@ -317,12 +358,17 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 54a: Venue List Geographic Area Hyperlink**
     - **Validates: Requirements 6A.1, 6A.1a, 6A.2**
 
-  - [x] 8.2 Create VenueForm component
+  - [x] 8.2 Create VenueFormPage component
+    - Dedicated full-page form for create/edit (not a modal)
+    - Accessible via routes: /venues/new and /venues/:id/edit
     - Validate required fields (name, address, geographic area)
     - Support optional latitude, longitude, venue type
     - Include version field in update requests for optimistic locking
     - Handle delete validation (REFERENCED_ENTITY error)
-    - _Requirements: 6A.4, 6A.5, 6A.6, 6A.7, 6A.8, 6A.10, 6A.11_
+    - Implement navigation guard using useFormNavigationGuard hook
+    - Display confirmation dialog when user attempts to navigate away with unsaved changes
+    - Allow vertical scrolling for large forms with embedded map
+    - _Requirements: 6A.4, 6A.5, 6A.6, 6A.7, 6A.8, 6A.10, 6A.11, 2A.3, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
 
   - [ ]* 8.3 Write property tests for venue validation
     - **Property 46: Venue Required Field Validation**
@@ -335,7 +381,9 @@ This implementation plan covers the React-based web application built with TypeS
     - List associated activities from /venues/:id/activities endpoint
     - List participants with venue as home from /venues/:id/participants endpoint
     - Display geographic area hierarchy using /geographic-areas/:id/ancestors endpoint
-    - _Requirements: 6A.9_
+    - Add primary edit button that navigates to /venues/:id/edit
+    - Add delete button with confirmation dialog
+    - _Requirements: 6A.9, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
   - [ ]* 8.4 Write property test for venue detail view
     - **Property 49: Venue Detail View Completeness**
@@ -365,7 +413,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Handle empty coordinate state (no marker displayed)
       - _Requirements: 21.11, 21.12, 21.13, 21.14, 21.18_
 
-    - [x] 8.5.3 Update VenueForm component with geocoding and map
+    - [x] 8.5.3 Update VenueFormPage component with geocoding and map
       - Add "Geocode Address" button next to latitude/longitude fields
       - Disable geocode button when address field is empty
       - Disable geocode button when offline
@@ -421,13 +469,18 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 50: Geographic Area Hierarchical Display**
     - **Validates: Requirements 6B.1**
 
-  - [x] 9.2 Create GeographicAreaForm component
+  - [x] 9.2 Create GeographicAreaFormPage component
+    - Dedicated full-page form for create/edit (not a modal)
+    - Accessible via routes: /geographic-areas/new and /geographic-areas/:id/edit
     - Validate required fields (name, area type)
     - Provide dropdown for area type selection (NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD)
     - Support parent selection
     - Prevent circular relationships (CIRCULAR_REFERENCE error)
     - Include version field in update requests for optimistic locking
-    - _Requirements: 6B.2, 6B.3, 6B.5, 6B.6, 6B.7_
+    - Implement navigation guard using useFormNavigationGuard hook
+    - Display confirmation dialog when user attempts to navigate away with unsaved changes
+    - Allow vertical scrolling for form fields
+    - _Requirements: 6B.2, 6B.3, 6B.5, 6B.6, 6B.7, 2A.4, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
 
   - [ ]* 9.3 Write property tests for geographic area validation
     - **Property 51: Geographic Area Required Field Validation**
@@ -440,7 +493,9 @@ This implementation plan covers the React-based web application built with TypeS
     - List child areas from /geographic-areas/:id/children endpoint
     - List associated venues from /geographic-areas/:id/venues endpoint
     - Show statistics from /geographic-areas/:id/statistics endpoint
-    - _Requirements: 6B.8, 6B.11_
+    - Add primary edit button that navigates to /geographic-areas/:id/edit
+    - Add delete button with confirmation dialog
+    - _Requirements: 6B.8, 6B.11, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
   - [ ]* 9.4 Write property test for hierarchy path display
     - **Property 54: Geographic Area Hierarchy Path Display**
@@ -464,7 +519,9 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 13: Finite vs Ongoing Activity Distinction**
     - **Validates: Requirements 5.1, 5.2, 5.4**
 
-  - [x] 11.2 Create ActivityForm component
+  - [x] 11.2 Create ActivityFormPage component
+    - Dedicated full-page form for create/edit (not a modal)
+    - Accessible via routes: /activities/new and /activities/:id/edit
     - Conditionally require end date for finite activities
     - Allow null end date for ongoing
     - Validate name, type, start date
@@ -492,7 +549,10 @@ This implementation plan covers the React-based web application built with TypeS
     - Display participant name and role name in assignments table by accessing objects from temporary records
     - Display venue associations table above participant assignments table (stacked vertically)
     - Provide atomic user experience where all activity details, venue associations, and participant assignments can be configured before backend persistence
-    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 6.1, 6.2, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
+    - Implement navigation guard using useFormNavigationGuard hook
+    - Display confirmation dialog when user attempts to navigate away with unsaved changes
+    - Allow vertical scrolling for large forms with embedded sections
+    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 6.1, 6.2, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 2A.2, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
 
   - [ ]* 11.3 Write property tests for activity validation
     - **Property 14: Finite Activity End Date Requirement**
@@ -507,7 +567,9 @@ This implementation plan covers the React-based web application built with TypeS
     - When "Mark Complete" is clicked, update status to COMPLETED and implicitly set endDate to today if null
     - When "Cancel Activity" is clicked, update status to CANCELLED, implicitly set endDate to today if null, and set startDate to today if startDate is in the future
     - Support adding/removing venues via /activities/:id/venues endpoints
-    - _Requirements: 5.11, 5.12, 5.12a, 5.12b, 5.12c, 5.13, 5.14_
+    - Add primary edit button that navigates to /activities/:id/edit
+    - Add delete button with confirmation dialog
+    - _Requirements: 5.11, 5.12, 5.12a, 5.12b, 5.12c, 5.13, 5.14, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
   - [ ]* 11.4 Write property test for activity detail view
     - **Property 16: Activity Detail View Completeness**
@@ -1111,43 +1173,43 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 23.1 Update ParticipantDetail component
     - Add primary edit button to header section using CloudScape Button with variant="primary"
     - Position edit button as right-most action in header
-    - Open ParticipantForm when edit button is clicked
+    - Navigate to /participants/:id/edit when edit button is clicked
     - Hide edit button when user has READ_ONLY role
     - Show edit button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.1, 2A.5_
 
   - [x] 23.2 Update ActivityDetail component
     - Add primary edit button to header section using CloudScape Button with variant="primary"
     - Position edit button as right-most action in header
-    - Open ActivityForm when edit button is clicked
+    - Navigate to /activities/:id/edit when edit button is clicked
     - Hide edit button when user has READ_ONLY role
     - Show edit button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.2, 2A.5_
 
   - [x] 23.3 Update VenueDetail component
     - Add primary edit button to header section using CloudScape Button with variant="primary"
     - Position edit button as right-most action in header
-    - Open VenueForm when edit button is clicked
+    - Navigate to /venues/:id/edit when edit button is clicked
     - Hide edit button when user has READ_ONLY role
     - Show edit button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.3, 2A.5_
 
   - [x] 23.4 Update GeographicAreaDetail component
     - Add primary edit button to header section using CloudScape Button with variant="primary"
     - Position edit button as right-most action in header
-    - Open GeographicAreaForm when edit button is clicked
+    - Navigate to /geographic-areas/:id/edit when edit button is clicked
     - Hide edit button when user has READ_ONLY role
     - Show edit button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6_
+    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.4, 2A.5_
 
   - [ ]* 23.5 Write property tests for edit buttons on detail pages
     - **Property 79: Edit Button on Detail Pages**
-    - **Property 80: Edit Button Opens Edit Form**
+    - **Property 80: Edit Button Navigates to Edit Page**
     - Test that edit button is displayed in header for EDITOR and ADMINISTRATOR roles
     - Test that edit button is hidden for READ_ONLY role
     - Test that edit button is positioned as right-most action
-    - Test that clicking edit button opens the edit form
-    - **Validates: Requirements 23.1, 23.2, 23.3, 23.4, 23.5, 23.6**
+    - Test that clicking edit button navigates to the dedicated edit page
+    - **Validates: Requirements 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.5**
 
 - [x] 23A. Implement delete action buttons on detail pages
   - [x] 23A.1 Update ParticipantDetail component
