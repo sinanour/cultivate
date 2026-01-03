@@ -577,14 +577,14 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                         id: 'effectiveFrom',
                         header: 'Effective From',
                         cell: (item) => item.effectiveFrom ? formatDate(item.effectiveFrom) : (
-                          <Box>
+                          <SpaceBetween direction="horizontal" size="xs">
                             <Badge color="blue">Since Activity Start</Badge>
                             {startDate && (
-                              <Box variant="small" color="text-body-secondary" margin={{ top: 'xxxs' }}>
+                              <Box variant="small" color="text-body-secondary">
                                 ({startDate})
                               </Box>
                             )}
-                          </Box>
+                          </SpaceBetween>
                         ),
                       },
                       {
