@@ -89,11 +89,8 @@ export default function LoginPage() {
 
   // Handle icon animation completion
   const handleIconAnimationComplete = () => {
-    // Set to complete phase and wait 500ms before navigating
-    setAnimationPhase('complete');
-    setTimeout(() => {
-      navigate(redirectUrl, { replace: true });
-    }, 500);
+    // Navigate immediately after animation completes
+    navigate(redirectUrl, { replace: true });
   };
 
   return (

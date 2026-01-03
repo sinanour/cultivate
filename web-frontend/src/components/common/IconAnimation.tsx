@@ -23,10 +23,10 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
   }, []);
 
   useEffect(() => {
-    // Trigger onComplete after 2500ms animation duration
+    // Trigger onComplete after stroke animation (2000ms) + scale/fade animation (800ms)
     const timer = setTimeout(() => {
       onComplete();
-    }, 2500);
+    }, 2800);
 
     return () => clearTimeout(timer);
   }, [onComplete]);
@@ -52,15 +52,18 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
         height="256"
         viewBox="0 0 100 100"
         xmlns="http://www.w3.org/2000/svg"
+        style={{
+          animation: isReady ? 'scaleAndFade 800ms ease-in-out 2000ms forwards' : 'none',
+        }}
       >
         <path
           d="M50 50
-             a8 8 0 1 0 0 -16
-             a8 8 0 1 0 0 16
-             a16 16 0 0 0 0 -32
-             a32 32 0 1 0 0 64
-             a32 32 0 1 0 0 -64
-             a16 16 0 0 0 0 32"
+             a8 8 0 1 1 0 -16
+             a8 8 0 1 1 0 16
+             a16 16 0 0 1 0 -32
+             a32 32 0 1 1 0 64
+             a32 32 0 1 1 0 -64
+             a16 16 0 0 1 0 32"
           fill="none"
           stroke="#D4AF37"
           strokeWidth="4"
@@ -75,6 +78,12 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
         @keyframes drawStroke {
           to {
             stroke-dashoffset: 0;
+          }
+        }
+        @keyframes scaleAndFade {
+          to {
+            transform: scale(3);
+            opacity: 0;
           }
         }
       `}</style>
