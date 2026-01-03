@@ -3,6 +3,9 @@
 # Cultivate - Local Database Setup Script
 # This script sets up a local PostgreSQL database using Finch container runtime
 # 
+# Usage: ./setup-local-db.sh [-v|--verbose]
+#   -v, --verbose    Enable verbose output with detailed command logging
+#
 # Why Finch instead of Docker Desktop?
 # - Finch is open-source and freely available (Apache 2.0 license)
 # - No licensing restrictions for commercial use
@@ -28,21 +31,50 @@ POSTGRES_USER="cat_user"
 POSTGRES_PASSWORD="cat_local_dev_password"
 VOLUME_NAME="cat-postgres-data"
 
-# Print colored output
+# Verbose mode flag
+VERBOSE=false
+if [[ "$1" == "-v" ]] || [[ "$1" == "--verbose" ]]; then
+    VERBOSE=true
+fi
+
+# Get timestamp for logging
+get_timestamp() {
+    date '+%Y-%m-%d %H:%M:%S'
+}
+
+# Print colored output with timestamps
 print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}[$(get_timestamp)] [INFO]${NC} $1"
 }
 
 print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[$(get_timestamp)] [SUCCESS]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}[$(get_timestamp)] [WARNING]${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[$(get_timestamp)] [ERROR]${NC} $1"
+}
+
+print_verbose() {
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${BLUE}[$(get_timestamp)] [VERBOSE]${NC} $1"
+    fi
+}
+
+# Execute command with logging in verbose mode
+execute_command() {
+    local cmd="$1"
+    print_verbose "Executing: $cmd"
+    
+    if [ "$VERBOSE" = true ]; then
+        eval "$cmd"
+    else
+        eval "$cmd" &> /dev/null
+    fi
 }
 
 # Detect operating system
@@ -70,9 +102,53 @@ check_finch_installed() {
     fi
 }
 
+# Verify Finch installation is functional
+verify_finch_installation() {
+    print_info "Verifying Finch installation..."
+    
+    # Check if finch binary is in PATH
+    if ! command -v finch &> /dev/null; then
+        print_error "Finch binary not found in PATH after installation"
+        return 1
+    fi
+    
+    # Try to get version with retries (PATH may need time to update)
+    local max_retries=5
+    local retry_count=0
+    local wait_time=2
+    
+    while [ $retry_count -lt $max_retries ]; do
+        if finch --version &> /dev/null; then
+            local version=$(finch --version 2>/dev/null)
+            print_success "Finch installation verified: $version"
+            return 0
+        fi
+        
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt $max_retries ]; then
+            print_info "Waiting for Finch to be available (attempt $retry_count/$max_retries)..."
+            sleep $wait_time
+            wait_time=$((wait_time * 2))  # Exponential backoff
+            
+            # Try to refresh PATH
+            if [ -f ~/.zshrc ]; then
+                source ~/.zshrc 2>/dev/null || true
+            elif [ -f ~/.bashrc ]; then
+                source ~/.bashrc 2>/dev/null || true
+            fi
+        fi
+    done
+    
+    print_error "Finch installation verification failed after $max_retries attempts"
+    print_error "Please ensure Finch is properly installed and in your PATH"
+    print_info "Try running: finch --version"
+    return 1
+}
+
 # Check if Finch VM is running
 check_finch_running() {
-    if finch vm status 2>/dev/null | grep -q "Running"; then
+    local vm_status=$(finch vm status 2>&1)
+    if echo "$vm_status" | grep -q "Running"; then
         return 0
     else
         return 1
@@ -84,18 +160,39 @@ check_finch_vm_exists() {
     # Check if VM status returns anything other than "does not exist" or error
     local vm_status=$(finch vm status 2>&1)
     
-    if echo "$vm_status" | grep -q "does not exist\|No such file\|cannot find"; then
+    if echo "$vm_status" | grep -q "does not exist\|No such file\|cannot find\|not been created"; then
         return 1  # VM does not exist
-    elif echo "$vm_status" | grep -q "Stopped\|Nonexistent\|Running"; then
+    elif echo "$vm_status" | grep -q "Stopped\|Running"; then
         return 0  # VM exists (may be stopped or running)
     else
-        return 1  # Unknown state, assume doesn't exist
+        # Unknown state - try to be more specific
+        print_warning "Unknown VM state: $vm_status"
+        return 1  # Assume doesn't exist to trigger initialization
     fi
 }
 
-# Get Finch VM status
+# Get Finch VM status with retry logic
 get_finch_vm_status() {
-    finch vm status 2>&1 | head -n 1
+    local max_retries=3
+    local retry_count=0
+    
+    while [ $retry_count -lt $max_retries ]; do
+        local status=$(finch vm status 2>&1 | head -n 1)
+        
+        # If we got a valid status, return it
+        if [ -n "$status" ]; then
+            echo "$status"
+            return 0
+        fi
+        
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt $max_retries ]; then
+            sleep 1
+        fi
+    done
+    
+    echo "unknown"
+    return 1
 }
 
 # Install Finch on macOS using Homebrew
@@ -285,41 +382,120 @@ initialize_finch_vm() {
         # VM exists but is not running - just start it
         print_info "Finch VM exists but is not running. Starting VM..."
         if finch vm start; then
-            print_success "Finch VM started successfully"
+            print_success "Finch VM start command completed"
         else
             print_error "Failed to start Finch VM"
-            print_info "You may need to run: finch vm stop && finch vm start"
+            print_info "Recovery steps:"
+            print_info "  1. Try: finch vm stop"
+            print_info "  2. Then: finch vm start"
+            print_info "  3. If that fails: finch vm remove && finch vm init"
             exit 1
         fi
     else
         # VM doesn't exist - need to initialize first
         print_info "Finch VM has not been initialized. Initializing VM..."
+        print_info "This may take 1-2 minutes..."
         
         if finch vm init; then
             print_success "Finch VM initialized successfully"
         else
             print_error "Failed to initialize Finch VM"
+            print_info "Common issues:"
+            print_info "  - Insufficient disk space (need ~2GB)"
+            print_info "  - Conflicting VM software (VirtualBox, VMware)"
+            print_info "  - Permission issues"
+            print_info "Recovery: Try running with sudo or check system requirements"
             exit 1
         fi
         
         print_info "Starting Finch VM..."
         if finch vm start; then
-            print_success "Finch VM started successfully"
+            print_success "Finch VM start command completed"
         else
-            print_error "Failed to start Finch VM"
+            print_error "Failed to start Finch VM after initialization"
+            print_info "Recovery steps:"
+            print_info "  1. Try: finch vm remove"
+            print_info "  2. Then re-run this script"
             exit 1
         fi
     fi
     
-    # Wait a moment for VM to fully start
+    # Wait for VM to be fully ready
     print_info "Waiting for VM to be fully ready..."
-    sleep 3
+    if ! wait_for_vm_ready; then
+        print_error "VM failed to become ready"
+        print_info "Check VM status with: finch vm status"
+        print_info "Check VM logs with: finch vm status --debug"
+        exit 1
+    fi
     
-    # Verify VM is now running
-    if check_finch_running; then
-        print_success "Finch VM is now running and ready"
-    else
-        print_warning "VM may not be fully ready yet, but continuing..."
+    print_success "Finch VM is now running and ready"
+    
+    # Display VM resource information
+    display_vm_info
+}
+
+# Wait for VM to be fully ready with timeout
+wait_for_vm_ready() {
+    local max_wait=60  # Maximum 60 seconds
+    local elapsed=0
+    local check_interval=2
+    
+    while [ $elapsed -lt $max_wait ]; do
+        # Check if VM reports as running
+        if check_finch_running; then
+            # VM reports running, now verify it's functional
+            print_info "VM reports as running, verifying functionality..."
+            
+            # Test that we can execute basic commands
+            if finch ps &> /dev/null; then
+                print_success "VM is fully functional"
+                return 0
+            else
+                print_info "VM is starting, waiting for it to be fully ready..."
+            fi
+        fi
+        
+        sleep $check_interval
+        elapsed=$((elapsed + check_interval))
+        echo -n "."
+    done
+    
+    echo ""
+    print_error "VM did not become ready within ${max_wait} seconds"
+    return 1
+}
+
+# Test VM functionality before proceeding
+test_vm_functionality() {
+    print_info "Testing VM functionality..."
+    
+    # Test that we can list containers
+    if ! finch ps &> /dev/null; then
+        print_error "VM is not responding to commands"
+        return 1
+    fi
+    
+    # Test that we can list images
+    if ! finch images &> /dev/null; then
+        print_error "VM cannot list images"
+        return 1
+    fi
+    
+    print_success "VM functionality verified"
+    return 0
+}
+
+# Display VM resource information
+display_vm_info() {
+    print_verbose "Retrieving VM resource information..."
+    
+    # Try to get VM info (may not be available on all platforms)
+    local vm_info=$(finch vm status 2>/dev/null || echo "")
+    
+    if [ -n "$vm_info" ]; then
+        print_info "VM Resource Allocation:"
+        echo "$vm_info" | grep -E "CPUs|Memory|Disk" | sed 's/^/  /' || true
     fi
 }
 
@@ -336,6 +512,7 @@ if check_finch_installed; then
     print_success "Finch is already installed"
     FINCH_VERSION=$(finch --version 2>/dev/null || echo "unknown")
     print_info "Finch version: $FINCH_VERSION"
+    FINCH_NEWLY_INSTALLED=false
 else
     print_warning "Finch is not installed"
     print_info "Finch is an open-source container runtime (Apache 2.0 license)"
@@ -346,6 +523,15 @@ else
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         install_finch
+        FINCH_NEWLY_INSTALLED=true
+        
+        # Verify installation succeeded
+        echo ""
+        if ! verify_finch_installation; then
+            print_error "Finch installation verification failed"
+            print_error "Cannot proceed without a working Finch installation"
+            exit 1
+        fi
     else
         print_error "Finch installation declined. Cannot proceed without Finch."
         print_info "To install Finch manually, visit: https://github.com/runfinch/finch"
@@ -360,6 +546,20 @@ print_info "Step 2: Checking Finch VM status..."
 
 if check_finch_running; then
     print_success "Finch VM is running"
+    
+    # Even if running, verify it's functional
+    if ! test_vm_functionality; then
+        print_warning "VM is running but not responding properly"
+        print_info "Attempting to restart VM..."
+        
+        if finch vm stop; then
+            sleep 2
+            initialize_finch_vm
+        else
+            print_error "Failed to stop VM for restart"
+            exit 1
+        fi
+    fi
 elif check_finch_vm_exists; then
     print_warning "Finch VM exists but is not running"
     vm_status=$(get_finch_vm_status)
@@ -368,6 +568,15 @@ elif check_finch_vm_exists; then
 else
     print_warning "Finch VM has not been initialized"
     initialize_finch_vm
+fi
+
+# Final verification that VM is ready
+echo ""
+print_info "Performing final VM readiness check..."
+if ! test_vm_functionality; then
+    print_error "VM is not ready for container operations"
+    print_info "Please check VM status with: finch vm status"
+    exit 1
 fi
 
 echo ""
