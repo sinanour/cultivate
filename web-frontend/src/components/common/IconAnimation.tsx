@@ -23,10 +23,10 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
   }, []);
 
   useEffect(() => {
-    // Trigger onComplete after stroke animation (2000ms) + scale/fade animation (800ms)
+    // Trigger onComplete after stroke animation (2000ms) + scale/fade animation (1000ms)
     const timer = setTimeout(() => {
       onComplete();
-    }, 2800);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [onComplete]);
@@ -44,16 +44,17 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
         alignItems: 'center',
         backgroundColor: '#0B1F3B',
         zIndex: 9999,
+        animation: isReady ? 'fadeToWhite 1000ms ease-in-out 2000ms forwards' : 'none',
       }}
     >
       <svg
         ref={svgRef}
         width="256"
         height="256"
-        viewBox="0 0 100 100"
+        viewBox="0 0 100 120"
         xmlns="http://www.w3.org/2000/svg"
         style={{
-          animation: isReady ? 'scaleAndFade 800ms ease-in-out 2000ms forwards' : 'none',
+          animation: isReady ? 'scaleAndFade 1000ms ease-in-out 2000ms forwards' : 'none',
         }}
       >
         <path
@@ -73,6 +74,22 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
             animation: isReady ? 'drawStroke 2000ms ease-in-out forwards' : 'none',
           }}
         />
+        <text
+          x="50"
+          y="105"
+          textAnchor="middle"
+          fill="#D4AF37"
+          fontSize="14"
+          fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+          fontWeight="300"
+          letterSpacing="0.5"
+          style={{
+            opacity: 0,
+            animation: isReady ? 'fadeInText 800ms ease-in-out 1500ms forwards' : 'none',
+          }}
+        >
+          Cultivate
+        </text>
       </svg>
       <style>{`
         @keyframes drawStroke {
@@ -84,6 +101,16 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
           to {
             transform: scale(3);
             opacity: 0;
+          }
+        }
+        @keyframes fadeInText {
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes fadeToWhite {
+          to {
+            background-color: #ffffff;
           }
         }
       `}</style>
