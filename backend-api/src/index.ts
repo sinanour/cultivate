@@ -27,6 +27,7 @@ import { ActivityService } from './services/activity.service';
 import { AssignmentService } from './services/assignment.service';
 import { AnalyticsService } from './services/analytics.service';
 import { SyncService } from './services/sync.service';
+import { GeocodingService } from './services/geocoding.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
@@ -47,6 +48,7 @@ import { ActivityRoutes } from './routes/activity.routes';
 import { AssignmentRoutes } from './routes/assignment.routes';
 import { AnalyticsRoutes } from './routes/analytics.routes';
 import { SyncRoutes } from './routes/sync.routes';
+import { GeocodingRoutes } from './routes/geocoding.routes';
 
 // Load environment variables
 dotenv.config();
@@ -101,6 +103,7 @@ const assignmentService = new AssignmentService(
 );
 const analyticsService = new AnalyticsService(prisma, geographicAreaRepository);
 const syncService = new SyncService(prisma);
+const geocodingService = new GeocodingService();
 
 // Initialize middleware
 const authMiddleware = new AuthMiddleware(authService);
@@ -143,6 +146,7 @@ const analyticsRoutes = new AnalyticsRoutes(
   authorizationMiddleware
 );
 const syncRoutes = new SyncRoutes(syncService, authMiddleware, authorizationMiddleware);
+const geocodingRoutes = new GeocodingRoutes(geocodingService, authMiddleware, authorizationMiddleware);
 
 // Middleware
 app.use(
@@ -181,6 +185,7 @@ app.use('/api/v1/activities', smartRateLimiter, activityRoutes.getRouter());
 app.use('/api/v1/activities/:id/participants', smartRateLimiter, assignmentRoutes.getRouter());
 app.use('/api/v1/analytics', smartRateLimiter, analyticsRoutes.getRouter());
 app.use('/api/v1/sync', smartRateLimiter, syncRoutes.getRouter());
+app.use('/api/v1/geocoding', smartRateLimiter, geocodingRoutes.getRouter());
 
 // 404 handler for undefined routes
 app.use(ErrorHandlerMiddleware.notFound());

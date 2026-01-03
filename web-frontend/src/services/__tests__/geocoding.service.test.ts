@@ -8,6 +8,28 @@ describe('GeocodingService', () => {
 
         // Reset fetch mock
         global.fetch = vi.fn();
+
+        // Mock localStorage with valid auth tokens
+        const localStorageMock = {
+            getItem: vi.fn((key: string) => {
+                if (key === 'authTokens') {
+                    return JSON.stringify({
+                        accessToken: 'mock-token-123',
+                        refreshToken: 'mock-refresh-token'
+                    });
+                }
+                return null;
+            }),
+            setItem: vi.fn(),
+            removeItem: vi.fn(),
+            clear: vi.fn(),
+            length: 0,
+            key: vi.fn()
+        };
+        Object.defineProperty(window, 'localStorage', {
+            value: localStorageMock,
+            writable: true
+        });
     });
 
     describe('geocodeAddress', () => {
@@ -20,25 +42,28 @@ describe('GeocodingService', () => {
         });
 
         it('should return geocoding results for valid address', async () => {
-            const mockResponse = [
-                {
-                    lat: '47.6062',
-                    lon: '-122.3321',
-                    display_name: '123 Main Street, Seattle, WA, USA',
-                    address: {
-                        road: 'Main Street',
-                        city: 'Seattle',
-                        state: 'Washington',
-                        country: 'United States',
-                        postcode: '98101'
-                    },
-                    boundingbox: ['47.6061', '47.6063', '-122.3322', '-122.3320']
-                }
-            ];
+            const mockApiResponse = {
+                success: true,
+                data: [
+                    {
+                        latitude: 47.6062,
+                        longitude: -122.3321,
+                        displayName: '123 Main Street, Seattle, WA, USA',
+                        address: {
+                            road: 'Main Street',
+                            city: 'Seattle',
+                            state: 'Washington',
+                            country: 'United States',
+                            postcode: '98101'
+                        },
+                        boundingBox: [47.6061, 47.6063, -122.3322, -122.3320]
+                    }
+                ]
+            };
 
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => mockResponse
+                json: async () => mockApiResponse
             });
 
             const results = await GeocodingService.geocodeAddress('123 Main Street, Seattle, WA');
@@ -48,12 +73,22 @@ describe('GeocodingService', () => {
             expect(results[0].longitude).toBe(-122.3321);
             expect(results[0].displayName).toBe('123 Main Street, Seattle, WA, USA');
             expect(results[0].address.city).toBe('Seattle');
+
+            // Verify it called the backend proxy endpoint
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining('/geocoding/search'),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'Authorization': 'Bearer mock-token-123'
+                    })
+                })
+            );
         });
 
         it('should return empty array when no results found', async () => {
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => []
+                json: async () => ({ success: true, data: [] })
             });
 
             const results = await GeocodingService.geocodeAddress('Invalid Address XYZ123');
@@ -62,24 +97,27 @@ describe('GeocodingService', () => {
         });
 
         it('should return multiple results when available', async () => {
-            const mockResponse = [
-                {
-                    lat: '47.6062',
-                    lon: '-122.3321',
-                    display_name: 'Main Street, Seattle, WA',
-                    address: { city: 'Seattle' }
-                },
-                {
-                    lat: '45.5152',
-                    lon: '-122.6784',
-                    display_name: 'Main Street, Portland, OR',
-                    address: { city: 'Portland' }
-                }
-            ];
+            const mockApiResponse = {
+                success: true,
+                data: [
+                    {
+                        latitude: 47.6062,
+                        longitude: -122.3321,
+                        displayName: 'Main Street, Seattle, WA',
+                        address: { city: 'Seattle' }
+                    },
+                    {
+                        latitude: 45.5152,
+                        longitude: -122.6784,
+                        displayName: 'Main Street, Portland, OR',
+                        address: { city: 'Portland' }
+                    }
+                ]
+            };
 
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => mockResponse
+                json: async () => mockApiResponse
             });
 
             const results = await GeocodingService.geocodeAddress('Main Street');
@@ -99,36 +137,41 @@ describe('GeocodingService', () => {
         });
 
         it('should include User-Agent header in request', async () => {
+            // This test is no longer relevant since User-Agent is set by backend
+            // Instead, verify that Authorization header is included
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => []
+                json: async () => ({ success: true, data: [] })
             });
 
             await GeocodingService.geocodeAddress('123 Main St');
 
             expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining('nominatim.openstreetmap.org'),
+                expect.stringContaining('/geocoding/search'),
                 expect.objectContaining({
-                    headers: {
-                        'User-Agent': 'CommunityActivityTracker/1.0'
-                    }
+                    headers: expect.objectContaining({
+                        'Authorization': 'Bearer mock-token-123'
+                    })
                 })
             );
         });
 
         it('should cache results for same address', async () => {
-            const mockResponse = [
-                {
-                    lat: '47.6062',
-                    lon: '-122.3321',
-                    display_name: 'Seattle, WA',
-                    address: {}
-                }
-            ];
+            const mockApiResponse = {
+                success: true,
+                data: [
+                    {
+                        latitude: 47.6062,
+                        longitude: -122.3321,
+                        displayName: 'Seattle, WA',
+                        address: {}
+                    }
+                ]
+            };
 
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => mockResponse
+                json: async () => mockApiResponse
             });
 
             // First call
@@ -142,18 +185,21 @@ describe('GeocodingService', () => {
         });
 
         it('should normalize address for cache key', async () => {
-            const mockResponse = [
-                {
-                    lat: '47.6062',
-                    lon: '-122.3321',
-                    display_name: 'Seattle, WA',
-                    address: {}
-                }
-            ];
+            const mockApiResponse = {
+                success: true,
+                data: [
+                    {
+                        latitude: 47.6062,
+                        longitude: -122.3321,
+                        displayName: 'Seattle, WA',
+                        address: {}
+                    }
+                ]
+            };
 
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => mockResponse
+                json: async () => mockApiResponse
             });
 
             // First call with different casing and whitespace
@@ -166,18 +212,21 @@ describe('GeocodingService', () => {
         });
 
         it('should handle missing address details gracefully', async () => {
-            const mockResponse = [
-                {
-                    lat: '47.6062',
-                    lon: '-122.3321',
-                    display_name: 'Unknown Location'
-                    // No address field
-                }
-            ];
+            const mockApiResponse = {
+                success: true,
+                data: [
+                    {
+                        latitude: 47.6062,
+                        longitude: -122.3321,
+                        displayName: 'Unknown Location'
+                        // No address field
+                    }
+                ]
+            };
 
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => mockResponse
+                json: async () => mockApiResponse
             });
 
             const results = await GeocodingService.geocodeAddress('Unknown');
@@ -187,18 +236,21 @@ describe('GeocodingService', () => {
         });
 
         it('should handle missing bounding box gracefully', async () => {
-            const mockResponse = [
-                {
-                    lat: '47.6062',
-                    lon: '-122.3321',
-                    display_name: 'Location'
-                    // No boundingbox field
-                }
-            ];
+            const mockApiResponse = {
+                success: true,
+                data: [
+                    {
+                        latitude: 47.6062,
+                        longitude: -122.3321,
+                        displayName: 'Location'
+                        // No boundingBox field
+                    }
+                ]
+            };
 
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => mockResponse
+                json: async () => mockApiResponse
             });
 
             const results = await GeocodingService.geocodeAddress('Location');
@@ -206,22 +258,43 @@ describe('GeocodingService', () => {
             expect(results).toHaveLength(1);
             expect(results[0].boundingBox).toBeUndefined();
         });
+
+        it('should throw error when authentication token is missing', async () => {
+            // Mock localStorage without token
+            const localStorageMock = {
+                getItem: vi.fn(() => null),
+                setItem: vi.fn(),
+                removeItem: vi.fn(),
+                clear: vi.fn(),
+                length: 0,
+                key: vi.fn()
+            };
+            Object.defineProperty(window, 'localStorage', {
+                value: localStorageMock,
+                writable: true
+            });
+
+            await expect(GeocodingService.geocodeAddress('Seattle, WA')).rejects.toThrow('Authentication required');
+        });
     });
 
     describe('clearCache', () => {
         it('should clear the cache', async () => {
-            const mockResponse = [
-                {
-                    lat: '47.6062',
-                    lon: '-122.3321',
-                    display_name: 'Seattle, WA',
-                    address: {}
-                }
-            ];
+            const mockApiResponse = {
+                success: true,
+                data: [
+                    {
+                        latitude: 47.6062,
+                        longitude: -122.3321,
+                        displayName: 'Seattle, WA',
+                        address: {}
+                    }
+                ]
+            };
 
             (global.fetch as any).mockResolvedValueOnce({
                 ok: true,
-                json: async () => mockResponse
+                json: async () => mockApiResponse
             });
 
             // Add to cache
@@ -240,18 +313,21 @@ describe('GeocodingService', () => {
         });
 
         it('should return correct cache size', async () => {
-            const mockResponse = [
-                {
-                    lat: '47.6062',
-                    lon: '-122.3321',
-                    display_name: 'Location',
-                    address: {}
-                }
-            ];
+            const mockApiResponse = {
+                success: true,
+                data: [
+                    {
+                        latitude: 47.6062,
+                        longitude: -122.3321,
+                        displayName: 'Location',
+                        address: {}
+                    }
+                ]
+            };
 
             (global.fetch as any).mockResolvedValue({
                 ok: true,
-                json: async () => mockResponse
+                json: async () => mockApiResponse
             });
 
             await GeocodingService.geocodeAddress('Address 1');
@@ -262,3 +338,4 @@ describe('GeocodingService', () => {
         });
     });
 });
+

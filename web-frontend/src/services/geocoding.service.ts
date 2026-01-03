@@ -1,11 +1,11 @@
 /**
  * Geocoding Service
  * 
- * Integrates with Nominatim API (OpenStreetMap) to convert addresses to coordinates.
- * Respects Nominatim usage policy with rate limiting and User-Agent header.
+ * Integrates with backend geocoding proxy to convert addresses to coordinates.
+ * The backend proxies requests to Nominatim API with proper User-Agent header.
  * 
- * API Documentation: https://nominatim.org/release-docs/latest/api/Overview/
- * Usage Policy: https://operations.osmfoundation.org/policies/nominatim/
+ * Note: Direct browser requests to Nominatim cannot set custom User-Agent headers
+ * due to browser security restrictions. The backend proxy solves this limitation.
  */
 
 export interface GeocodingResult {
@@ -22,29 +22,12 @@ export interface GeocodingResult {
     boundingBox?: [number, number, number, number];
 }
 
-interface NominatimResponse {
-    lat: string;
-    lon: string;
-    display_name: string;
-    address?: {
-        road?: string;
-        city?: string;
-        state?: string;
-        country?: string;
-        postcode?: string;
-    };
-    boundingbox?: string[];
-}
-
 export class GeocodingService {
-    private static readonly BASE_URL = 'https://nominatim.openstreetmap.org';
-    private static readonly USER_AGENT = 'CommunityActivityTracker/1.0';
-    private static readonly RATE_LIMIT_MS = 1000; // 1 request per second
-    private static lastRequestTime = 0;
+    private static readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
     private static cache = new Map<string, GeocodingResult[]>();
 
     /**
-     * Geocode an address to coordinates using Nominatim API
+     * Geocode an address to coordinates using backend proxy
      * 
      * @param address - Full address string to geocode
      * @returns Array of geocoding results (may be empty if no results found)
@@ -63,65 +46,54 @@ export class GeocodingService {
             return this.cache.get(normalizedAddress)!;
         }
 
-        // Enforce rate limiting (1 request per second)
-        await this.enforceRateLimit();
-
         // Build query parameters
         const params = new URLSearchParams({
-            q: address,
-            format: 'json',
-            limit: '5',
-            addressdetails: '1'
+            q: address
         });
 
-        // Make API request
-        const response = await fetch(`${this.BASE_URL}/search?${params}`, {
+        // Get auth token from localStorage
+        const tokensStr = localStorage.getItem('authTokens');
+        if (!tokensStr) {
+            throw new Error('Authentication required for geocoding');
+        }
+
+        let accessToken: string;
+        try {
+            const tokens = JSON.parse(tokensStr);
+            accessToken = tokens.accessToken;
+            if (!accessToken) {
+                throw new Error('Authentication required for geocoding');
+            }
+        } catch (error) {
+            throw new Error('Authentication required for geocoding');
+        }
+
+        // Make API request to backend proxy
+        const response = await fetch(`${this.API_BASE_URL}/geocoding/search?${params}`, {
             headers: {
-                'User-Agent': this.USER_AGENT
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
             }
         });
 
         if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error('Authentication required for geocoding');
+            }
             throw new Error(`Geocoding failed: ${response.statusText}`);
         }
 
-        const data: NominatimResponse[] = await response.json();
-        this.lastRequestTime = Date.now();
-
-        // Transform to our format
-        const results: GeocodingResult[] = data.map((item) => ({
-            latitude: parseFloat(item.lat),
-            longitude: parseFloat(item.lon),
-            displayName: item.display_name,
+        const result = await response.json();
+        const data: GeocodingResult[] = result.data.map((item: any) => ({
+            ...item,
             address: item.address || {},
-            boundingBox: item.boundingbox
-                ? [
-                    parseFloat(item.boundingbox[0]),
-                    parseFloat(item.boundingbox[1]),
-                    parseFloat(item.boundingbox[2]),
-                    parseFloat(item.boundingbox[3])
-                ]
-                : undefined
+            boundingBox: item.boundingBox || undefined
         }));
 
         // Cache results
-        this.cache.set(normalizedAddress, results);
+        this.cache.set(normalizedAddress, data);
 
-        return results;
-    }
-
-    /**
-     * Enforce rate limiting to respect Nominatim usage policy
-     * Waits if necessary to maintain max 1 request per second
-     */
-    private static async enforceRateLimit(): Promise<void> {
-        const now = Date.now();
-        const timeSinceLastRequest = now - this.lastRequestTime;
-
-        if (timeSinceLastRequest < this.RATE_LIMIT_MS) {
-            const waitTime = this.RATE_LIMIT_MS - timeSinceLastRequest;
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-        }
+        return data;
     }
 
     /**

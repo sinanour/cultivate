@@ -177,6 +177,94 @@ export const openApiSpec = {
                 },
             },
         },
+        '/api/v1/geocoding/search': {
+            get: {
+                tags: ['Geocoding'],
+                summary: 'Geocode an address to coordinates',
+                description: 'Proxies geocoding requests to Nominatim API with proper User-Agent header. Returns array of geocoding results with coordinates and address details.',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'q',
+                        in: 'query',
+                        required: true,
+                        description: 'Address string to geocode',
+                        schema: {
+                            type: 'string',
+                            minLength: 1,
+                            maxLength: 500
+                        },
+                        example: '123 Main Street, New York, NY'
+                    }
+                ],
+                responses: {
+                    '200': {
+                        description: 'Geocoding results',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean' },
+                                        data: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    latitude: { type: 'number' },
+                                                    longitude: { type: 'number' },
+                                                    displayName: { type: 'string' },
+                                                    address: {
+                                                        type: 'object',
+                                                        properties: {
+                                                            road: { type: 'string' },
+                                                            city: { type: 'string' },
+                                                            state: { type: 'string' },
+                                                            country: { type: 'string' },
+                                                            postcode: { type: 'string' }
+                                                        }
+                                                    },
+                                                    boundingBox: {
+                                                        type: 'array',
+                                                        items: { type: 'number' },
+                                                        minItems: 4,
+                                                        maxItems: 4
+                                                    }
+                                                }
+                                            }
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Validation error',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/Error' },
+                            },
+                        },
+                    },
+                    '401': {
+                        description: 'Authentication required',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/Error' },
+                            },
+                        },
+                    },
+                    '502': {
+                        description: 'External API error',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/Error' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
         '/api/activity-types': {
             get: {
                 tags: ['Activity Types'],
