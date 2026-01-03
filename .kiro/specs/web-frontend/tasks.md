@@ -1923,3 +1923,28 @@ This implementation plan has been updated to align with the Backend API contract
 3. Low: Rate limit display, advanced conflict resolution
 
 See `API_ALIGNMENT_SUMMARY.md` for detailed alignment documentation.
+
+
+- [x] 38. Fix navigation guard and detail page refresh issues on entity edit pages
+  - [x] 38.1 Fix navigation guard not clearing after successful update
+    - Update ParticipantForm to call clearDirtyState or setInitialValues after successful update
+    - In updateMutation.onSuccess callback, update initialFormState to match current form values
+    - This prevents navigation guard from triggering after successful save
+    - Apply same fix to ActivityForm, VenueForm, and GeographicAreaForm components
+    - _Requirements: 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14_
+
+  - [x] 38.2 Fix detail page not refreshing after edit
+    - Update ParticipantFormPage to invalidate participant detail query after successful update
+    - In handleSuccess callback, call queryClient.invalidateQueries for both list and detail queries
+    - Invalidate queries: ['participants'], ['participant', id], ['participantAddressHistory', id]
+    - Apply same fix to ActivityFormPage, VenueFormPage, and GeographicAreaFormPage
+    - Ensure detail pages show updated data immediately after navigation from edit page
+    - _Requirements: 4.5, 5.6, 6A.5, 6B.3_
+
+  - [ ]* 38.3 Write property tests for navigation guard and refresh behavior
+    - **Property 162: Navigation Guard Clears After Successful Update**
+    - **Property 163: Detail Page Shows Updated Data After Edit**
+    - Test that navigation guard does not trigger after successful form submission
+    - Test that detail page displays updated data without manual refresh
+    - Test that form dirty state is cleared after successful save
+    - **Validates: Requirements 2A.9, 2A.10, 2A.14, 4.5, 5.6, 6A.5, 6B.3**

@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBlocker } from 'react-router-dom';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
@@ -7,6 +8,8 @@ import Select from '@cloudscape-design/components/select';
 import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
+import Modal from '@cloudscape-design/components/modal';
+import Box from '@cloudscape-design/components/box';
 import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { VersionConflictModal } from '../common/VersionConflictModal';
@@ -31,17 +34,97 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
   const [parentError, setParentError] = useState('');
   const [error, setError] = useState('');
 
+  // Track initial values for dirty state detection
+  const [initialFormState, setInitialFormState] = useState<{
+    name: string;
+    areaType: string;
+    parentGeographicAreaId: string;
+  } | null>(null);
+
+  // Track if we should bypass navigation guard (set when submitting)
+  const [bypassNavigationGuard, setBypassNavigationGuard] = useState(false);
+
+  // Navigation guard confirmation state
+  const [showNavigationConfirmation, setShowNavigationConfirmation] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
+  // Check if form is dirty
+  const isDirty = useMemo(() => {
+    if (!initialFormState) return false;
+    
+    // Bypass guard if we're in the process of submitting
+    if (bypassNavigationGuard) return false;
+    
+    // Compare current state with initial state
+    return (
+      name !== initialFormState.name ||
+      areaType !== initialFormState.areaType ||
+      parentGeographicAreaId !== initialFormState.parentGeographicAreaId
+    );
+  }, [name, areaType, parentGeographicAreaId, initialFormState, bypassNavigationGuard]);
+
+  // Navigation blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Show confirmation dialog when navigation is blocked
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setShowNavigationConfirmation(true);
+      setPendingNavigation(() => blocker.proceed);
+    }
+  }, [blocker.state, blocker.proceed]);
+
+  const handleConfirmNavigation = () => {
+    setShowNavigationConfirmation(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationConfirmation(false);
+    setPendingNavigation(null);
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  };
+
+  const handleCancelClick = () => {
+    // If form is dirty, the blocker will intercept and show confirmation
+    // If form is clean, just navigate away
+    onCancel();
+  };
+
   // Update form state when geographicArea prop changes
   useEffect(() => {
+    // Reset bypass flag when switching modes or when geographic area data loads
+    setBypassNavigationGuard(false);
+    
     if (geographicArea) {
-      setName(geographicArea.name || '');
-      setAreaType(geographicArea.areaType || '');
-      setParentGeographicAreaId(geographicArea.parentGeographicAreaId || '');
+      const values = {
+        name: geographicArea.name || '',
+        areaType: geographicArea.areaType || '',
+        parentGeographicAreaId: geographicArea.parentGeographicAreaId || '',
+      };
+      setName(values.name);
+      setAreaType(values.areaType);
+      setParentGeographicAreaId(values.parentGeographicAreaId);
+      setInitialFormState(values);
     } else {
       // Reset to defaults for create mode
-      setName('');
-      setAreaType('');
-      setParentGeographicAreaId('');
+      const emptyValues = {
+        name: '',
+        areaType: '',
+        parentGeographicAreaId: '',
+      };
+      setName(emptyValues.name);
+      setAreaType(emptyValues.areaType);
+      setParentGeographicAreaId(emptyValues.parentGeographicAreaId);
+      setInitialFormState(emptyValues);
     }
     // Clear errors when switching modes
     setNameError('');
@@ -93,10 +176,22 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
       version?: number;
     }) => GeographicAreaService.updateGeographicArea(data.id, data),
     onSuccess: () => {
+      // Set flag to bypass navigation guard
+      setBypassNavigationGuard(true);
+      
       queryClient.invalidateQueries({ queryKey: ['geographicAreas'] });
+      if (geographicArea?.id) {
+        queryClient.invalidateQueries({ queryKey: ['geographicArea', geographicArea.id] });
+        queryClient.invalidateQueries({ queryKey: ['geographicAreaChildren', geographicArea.id] });
+        queryClient.invalidateQueries({ queryKey: ['geographicAreaAncestors', geographicArea.id] });
+        queryClient.invalidateQueries({ queryKey: ['geographicAreaVenues', geographicArea.id] });
+        queryClient.invalidateQueries({ queryKey: ['geographicAreaStatistics', geographicArea.id] });
+      }
+      
       onSuccess();
     },
     onError: (err: Error) => {
+      setBypassNavigationGuard(false);
       if (!versionConflict.handleError(err)) {
         setError(err.message || 'Failed to update geographic area');
       }
@@ -140,6 +235,9 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
       return;
     }
 
+    // Set flag to bypass navigation guard during submission
+    setBypassNavigationGuard(true);
+
     // Build update data - send null for cleared fields
     const data: any = {
       name: name.trim(),
@@ -161,7 +259,11 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
         version: getEntityVersion(geographicArea),
       });
     } else {
-      createMutation.mutate(data);
+      try {
+        await createMutation.mutateAsync(data);
+      } catch (err: any) {
+        setBypassNavigationGuard(false);
+      }
     }
   };
 
@@ -173,7 +275,7 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
         <Form
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
+              <Button variant="link" onClick={handleCancelClick} disabled={isSubmitting} formAction="none">
                 Cancel
               </Button>
               <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
@@ -255,6 +357,27 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
         onRetryWithLatest={versionConflict.handleRetryWithLatest}
         onDiscardChanges={versionConflict.handleDiscardChanges}
       />
+
+      {/* Navigation guard confirmation dialog */}
+      <Modal
+        visible={showNavigationConfirmation}
+        onDismiss={handleCancelNavigation}
+        header="Unsaved Changes"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={handleCancelNavigation}>
+                Stay on Page
+              </Button>
+              <Button variant="primary" onClick={handleConfirmNavigation}>
+                Discard Changes
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
+      </Modal>
     </>
   );
 }

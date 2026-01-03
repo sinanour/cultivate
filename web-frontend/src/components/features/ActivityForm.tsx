@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBlocker } from 'react-router-dom';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
@@ -16,6 +17,7 @@ import Box from '@cloudscape-design/components/box';
 import Badge from '@cloudscape-design/components/badge';
 import Textarea from '@cloudscape-design/components/textarea';
 import Link from '@cloudscape-design/components/link';
+import Modal from '@cloudscape-design/components/modal';
 import type { Activity, ActivityVenueHistory, Assignment } from '../../types';
 import { ActivityService } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
@@ -72,6 +74,23 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const [newNotes, setNewNotes] = useState('');
   const [assignmentFormErrors, setAssignmentFormErrors] = useState<{ participant?: string; role?: string; duplicate?: string }>({});
 
+  // Track initial values for dirty state detection
+  const [initialFormState, setInitialFormState] = useState<{
+    name: string;
+    activityTypeId: string;
+    status: Activity['status'];
+    startDate: string;
+    endDate: string;
+    isOngoing: boolean;
+  } | null>(null);
+
+  // Track if we should bypass navigation guard (set when submitting)
+  const [bypassNavigationGuard, setBypassNavigationGuard] = useState(false);
+
+  // Navigation guard confirmation state
+  const [showNavigationConfirmation, setShowNavigationConfirmation] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
   // Fetch venue history when editing existing activity
   const { data: fetchedVenueHistory = [] } = useQuery({
     queryKey: ['activityVenues', activity?.id],
@@ -92,25 +111,100 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     staleTime: Infinity, // Don't automatically refetch
   });
 
+  // Check if form is dirty
+  const isDirty = useMemo(() => {
+    if (!initialFormState) return false;
+    
+    // Bypass guard if we're in the process of submitting
+    if (bypassNavigationGuard) return false;
+    
+    // Compare current state with initial state
+    return (
+      name !== initialFormState.name ||
+      activityTypeId !== initialFormState.activityTypeId ||
+      status !== initialFormState.status ||
+      startDate !== initialFormState.startDate ||
+      endDate !== initialFormState.endDate ||
+      isOngoing !== initialFormState.isOngoing
+    );
+  }, [name, activityTypeId, status, startDate, endDate, isOngoing, initialFormState, bypassNavigationGuard]);
+
+  // Navigation blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Show confirmation dialog when navigation is blocked
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setShowNavigationConfirmation(true);
+      setPendingNavigation(() => blocker.proceed);
+    }
+  }, [blocker.state, blocker.proceed]);
+
+  const handleConfirmNavigation = () => {
+    setShowNavigationConfirmation(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationConfirmation(false);
+    setPendingNavigation(null);
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  };
+
+  const handleCancelClick = () => {
+    // If form is dirty, the blocker will intercept and show confirmation
+    // If form is clean, just navigate away
+    onCancel();
+  };
+
   // Update form state when activity prop changes
   useEffect(() => {
+    // Reset bypass flag when switching modes or when activity data loads
+    setBypassNavigationGuard(false);
+    
     if (activity) {
-      setName(activity.name || '');
-      setActivityTypeId(activity.activityTypeId || '');
-      setStatus(activity.status || 'PLANNED');
-      setStartDate(activity.startDate?.split('T')[0] || '');
-      setEndDate(activity.endDate?.split('T')[0] || '');
-      setIsOngoing(activity.isOngoing || false);
+      const values = {
+        name: activity.name || '',
+        activityTypeId: activity.activityTypeId || '',
+        status: activity.status || 'PLANNED' as Activity['status'],
+        startDate: activity.startDate?.split('T')[0] || '',
+        endDate: activity.endDate?.split('T')[0] || '',
+        isOngoing: activity.isOngoing || false,
+      };
+      setName(values.name);
+      setActivityTypeId(values.activityTypeId);
+      setStatus(values.status);
+      setStartDate(values.startDate);
+      setEndDate(values.endDate);
+      setIsOngoing(values.isOngoing);
+      setInitialFormState(values);
     } else {
       // Reset to defaults for create mode
-      setName('');
-      setActivityTypeId('');
-      setStatus('PLANNED');
-      setStartDate('');
-      setEndDate('');
-      setIsOngoing(false);
+      const emptyValues = {
+        name: '',
+        activityTypeId: '',
+        status: 'PLANNED' as Activity['status'],
+        startDate: '',
+        endDate: '',
+        isOngoing: false,
+      };
+      setName(emptyValues.name);
+      setActivityTypeId(emptyValues.activityTypeId);
+      setStatus(emptyValues.status);
+      setStartDate(emptyValues.startDate);
+      setEndDate(emptyValues.endDate);
+      setIsOngoing(emptyValues.isOngoing);
       setVenueHistory([]);
       setAssignments([]);
+      setInitialFormState(emptyValues);
     }
     // Clear errors when switching modes
     setNameError('');
@@ -189,10 +283,21 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       version?: number;
     }) => ActivityService.updateActivity(data.id, data),
     onSuccess: () => {
+      // Set flag to bypass navigation guard
+      setBypassNavigationGuard(true);
+      
+      // Invalidate all related queries to ensure detail page shows updated data
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      if (activity?.id) {
+        queryClient.invalidateQueries({ queryKey: ['activity', activity.id] });
+        queryClient.invalidateQueries({ queryKey: ['activityVenues', activity.id] });
+        queryClient.invalidateQueries({ queryKey: ['activity-participants', activity.id] });
+      }
+      
       onSuccess();
     },
     onError: (err: Error) => {
+      setBypassNavigationGuard(false);
       if (!versionConflict.handleError(err)) {
         setError(err.message || 'Failed to update activity');
       }
@@ -473,6 +578,9 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       return;
     }
 
+    // Set flag to bypass navigation guard during submission
+    setBypassNavigationGuard(true);
+
     // Build update data - send null for cleared fields
     const data: any = {
       name: name.trim(),
@@ -535,6 +643,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         queryClient.invalidateQueries({ queryKey: ['activity-participants'] });
         onSuccess();
       } catch (err: any) {
+        setBypassNavigationGuard(false);
         setError(err.message || 'Failed to create activity');
       }
     }
@@ -559,7 +668,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         <Form
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
+              <Button variant="link" onClick={handleCancelClick} disabled={isSubmitting} formAction="none">
                 Cancel
               </Button>
               <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
@@ -949,6 +1058,27 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         onRetryWithLatest={versionConflict.handleRetryWithLatest}
         onDiscardChanges={versionConflict.handleDiscardChanges}
       />
+
+      {/* Navigation guard confirmation dialog */}
+      <Modal
+        visible={showNavigationConfirmation}
+        onDismiss={handleCancelNavigation}
+        header="Unsaved Changes"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={handleCancelNavigation}>
+                Stay on Page
+              </Button>
+              <Button variant="primary" onClick={handleConfirmNavigation}>
+                Discard Changes
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
+      </Modal>
     </>
   );
 }

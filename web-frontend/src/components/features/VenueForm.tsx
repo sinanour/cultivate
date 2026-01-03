@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBlocker } from 'react-router-dom';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
@@ -50,6 +51,23 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const [showResultsDialog, setShowResultsDialog] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // Track initial values for dirty state detection
+  const [initialFormState, setInitialFormState] = useState<{
+    name: string;
+    address: string;
+    geographicAreaId: string;
+    latitude: string;
+    longitude: string;
+    venueType: string;
+  } | null>(null);
+
+  // Track if we should bypass navigation guard (set when submitting)
+  const [bypassNavigationGuard, setBypassNavigationGuard] = useState(false);
+
+  // Navigation guard confirmation state
+  const [showNavigationConfirmation, setShowNavigationConfirmation] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
   // Monitor online/offline status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -64,23 +82,98 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
     };
   }, []);
 
+  // Check if form is dirty
+  const isDirty = useMemo(() => {
+    if (!initialFormState) return false;
+    
+    // Bypass guard if we're in the process of submitting
+    if (bypassNavigationGuard) return false;
+    
+    // Compare current state with initial state
+    return (
+      name !== initialFormState.name ||
+      address !== initialFormState.address ||
+      geographicAreaId !== initialFormState.geographicAreaId ||
+      latitude !== initialFormState.latitude ||
+      longitude !== initialFormState.longitude ||
+      venueType !== initialFormState.venueType
+    );
+  }, [name, address, geographicAreaId, latitude, longitude, venueType, initialFormState, bypassNavigationGuard]);
+
+  // Navigation blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Show confirmation dialog when navigation is blocked
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setShowNavigationConfirmation(true);
+      setPendingNavigation(() => blocker.proceed);
+    }
+  }, [blocker.state, blocker.proceed]);
+
+  const handleConfirmNavigation = () => {
+    setShowNavigationConfirmation(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationConfirmation(false);
+    setPendingNavigation(null);
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  };
+
+  const handleCancelClick = () => {
+    // If form is dirty, the blocker will intercept and show confirmation
+    // If form is clean, just navigate away
+    onCancel();
+  };
+
   // Update form state when venue prop changes
   useEffect(() => {
+    // Reset bypass flag when switching modes or when venue data loads
+    setBypassNavigationGuard(false);
+    
     if (venue) {
-      setName(venue.name || '');
-      setAddress(venue.address || '');
-      setGeographicAreaId(venue.geographicAreaId || '');
-      setLatitude(venue.latitude?.toString() || '');
-      setLongitude(venue.longitude?.toString() || '');
-      setVenueType(venue.venueType || '');
+      const values = {
+        name: venue.name || '',
+        address: venue.address || '',
+        geographicAreaId: venue.geographicAreaId || '',
+        latitude: venue.latitude?.toString() || '',
+        longitude: venue.longitude?.toString() || '',
+        venueType: venue.venueType || '',
+      };
+      setName(values.name);
+      setAddress(values.address);
+      setGeographicAreaId(values.geographicAreaId);
+      setLatitude(values.latitude);
+      setLongitude(values.longitude);
+      setVenueType(values.venueType);
+      setInitialFormState(values);
     } else {
       // Reset to defaults for create mode
-      setName('');
-      setAddress('');
-      setGeographicAreaId('');
-      setLatitude('');
-      setLongitude('');
-      setVenueType('');
+      const emptyValues = {
+        name: '',
+        address: '',
+        geographicAreaId: '',
+        latitude: '',
+        longitude: '',
+        venueType: '',
+      };
+      setName(emptyValues.name);
+      setAddress(emptyValues.address);
+      setGeographicAreaId(emptyValues.geographicAreaId);
+      setLatitude(emptyValues.latitude);
+      setLongitude(emptyValues.longitude);
+      setVenueType(emptyValues.venueType);
+      setInitialFormState(emptyValues);
     }
     // Clear errors when switching modes
     setNameError('');
@@ -132,10 +225,20 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
       version?: number;
     }) => VenueService.updateVenue(data.id, data),
     onSuccess: () => {
+      // Set flag to bypass navigation guard
+      setBypassNavigationGuard(true);
+      
       queryClient.invalidateQueries({ queryKey: ['venues'] });
+      if (venue?.id) {
+        queryClient.invalidateQueries({ queryKey: ['venue', venue.id] });
+        queryClient.invalidateQueries({ queryKey: ['venueActivities', venue.id] });
+        queryClient.invalidateQueries({ queryKey: ['venueParticipants', venue.id] });
+      }
+      
       onSuccess();
     },
     onError: (err: Error) => {
+      setBypassNavigationGuard(false);
       if (!versionConflict.handleError(err)) {
         setError(err.message || 'Failed to update venue');
       }
@@ -213,6 +316,9 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
       return;
     }
 
+    // Set flag to bypass navigation guard during submission
+    setBypassNavigationGuard(true);
+
     // Build update data - send null for cleared fields, undefined for unchanged
     const data: any = {
       name: name.trim(),
@@ -247,7 +353,11 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
         version: getEntityVersion(venue),
       });
     } else {
-      createMutation.mutate(data);
+      try {
+        await createMutation.mutateAsync(data);
+      } catch (err: any) {
+        setBypassNavigationGuard(false);
+      }
     }
   };
 
@@ -312,7 +422,7 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
         <Form
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
+              <Button variant="link" onClick={handleCancelClick} disabled={isSubmitting} formAction="none">
                 Cancel
               </Button>
               <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
@@ -468,6 +578,27 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
         onRetryWithLatest={versionConflict.handleRetryWithLatest}
         onDiscardChanges={versionConflict.handleDiscardChanges}
       />
+
+      {/* Navigation guard confirmation dialog */}
+      <Modal
+        visible={showNavigationConfirmation}
+        onDismiss={handleCancelNavigation}
+        header="Unsaved Changes"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={handleCancelNavigation}>
+                Stay on Page
+              </Button>
+              <Button variant="primary" onClick={handleConfirmNavigation}>
+                Discard Changes
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
+      </Modal>
 
       <Modal
         visible={showResultsDialog}

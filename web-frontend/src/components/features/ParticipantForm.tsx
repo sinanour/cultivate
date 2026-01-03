@@ -29,10 +29,9 @@ interface ParticipantFormProps {
   participant: Participant | null;
   onSuccess: () => void;
   onCancel: () => void;
-  enableNavigationGuard?: boolean;
 }
 
-export function ParticipantForm({ participant, onSuccess, onCancel, enableNavigationGuard = false }: ParticipantFormProps) {
+export function ParticipantForm({ participant, onSuccess, onCancel }: ParticipantFormProps) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -68,6 +67,9 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
     nickname: string;
   } | null>(null);
 
+  // Track if we should bypass navigation guard (set when submitting)
+  const [bypassNavigationGuard, setBypassNavigationGuard] = useState(false);
+
   // Navigation guard confirmation state
   const [showNavigationConfirmation, setShowNavigationConfirmation] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
@@ -82,20 +84,12 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
     staleTime: Infinity, // Don't automatically refetch
   });
 
-  // Calculate current form state
-  const currentFormState = useMemo(() => ({
-    name,
-    email,
-    phone,
-    notes,
-    dateOfBirth,
-    dateOfRegistration,
-    nickname,
-  }), [name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname]);
-
   // Check if form is dirty
   const isDirty = useMemo(() => {
-    if (!initialFormState || !enableNavigationGuard) return false;
+    if (!initialFormState) return false;
+    
+    // Bypass guard if we're in the process of submitting
+    if (bypassNavigationGuard) return false;
     
     // Compare current state with initial state
     return (
@@ -107,12 +101,12 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
       dateOfRegistration !== initialFormState.dateOfRegistration ||
       nickname !== initialFormState.nickname
     );
-  }, [currentFormState, initialFormState, enableNavigationGuard]);
+  }, [name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname, initialFormState, bypassNavigationGuard]);
 
   // Navigation blocker
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      enableNavigationGuard && isDirty && currentLocation.pathname !== nextLocation.pathname
+      isDirty && currentLocation.pathname !== nextLocation.pathname
   );
 
   // Show confirmation dialog when navigation is blocked
@@ -139,8 +133,17 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
     }
   };
 
+  const handleCancelClick = () => {
+    // If form is dirty, the blocker will intercept and show confirmation
+    // If form is clean, just navigate away
+    onCancel();
+  };
+
   // Update form state when participant prop changes
   useEffect(() => {
+    // Reset bypass flag when switching modes or when participant data loads
+    setBypassNavigationGuard(false);
+    
     if (participant) {
       const values = {
         name: participant.name || '',
@@ -245,10 +248,21 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
         version: data.version,
       }),
     onSuccess: () => {
+      // Set flag to bypass navigation guard
+      setBypassNavigationGuard(true);
+      
+      // Invalidate all related queries to ensure detail page shows updated data
       queryClient.invalidateQueries({ queryKey: ['participants'] });
+      if (participant?.id) {
+        queryClient.invalidateQueries({ queryKey: ['participant', participant.id] });
+        queryClient.invalidateQueries({ queryKey: ['participantAddressHistory', participant.id] });
+        queryClient.invalidateQueries({ queryKey: ['participantActivities', participant.id] });
+      }
+      
       onSuccess();
     },
     onError: (err: Error) => {
+      setBypassNavigationGuard(false);
       if (!versionConflict.handleError(err)) {
         setError(err.message || 'Failed to update participant');
       }
@@ -469,6 +483,9 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
       return;
     }
 
+    // Set flag to bypass navigation guard during submission
+    setBypassNavigationGuard(true);
+
     // Build update data - send null for cleared fields, undefined for unchanged
     const data: any = {
       name: name.trim(),
@@ -536,6 +553,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
         queryClient.invalidateQueries({ queryKey: ['participantAddressHistory'] });
         onSuccess();
       } catch (err: any) {
+        setBypassNavigationGuard(false);
         setError(err.message || 'Failed to create participant');
       }
     }
@@ -558,7 +576,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
         <Form
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
+              <Button variant="link" onClick={handleCancelClick} disabled={isSubmitting} formAction="none">
                 Cancel
               </Button>
               <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
@@ -811,27 +829,25 @@ export function ParticipantForm({ participant, onSuccess, onCancel, enableNaviga
       />
 
       {/* Navigation guard confirmation dialog */}
-      {enableNavigationGuard && (
-        <Modal
-          visible={showNavigationConfirmation}
-          onDismiss={handleCancelNavigation}
-          header="Unsaved Changes"
-          footer={
-            <Box float="right">
-              <SpaceBetween direction="horizontal" size="xs">
-                <Button variant="link" onClick={handleCancelNavigation}>
-                  Stay on Page
-                </Button>
-                <Button variant="primary" onClick={handleConfirmNavigation}>
-                  Discard Changes
-                </Button>
-              </SpaceBetween>
-            </Box>
-          }
-        >
-          You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
-        </Modal>
-      )}
+      <Modal
+        visible={showNavigationConfirmation}
+        onDismiss={handleCancelNavigation}
+        header="Unsaved Changes"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={handleCancelNavigation}>
+                Stay on Page
+              </Button>
+              <Button variant="primary" onClick={handleConfirmNavigation}>
+                Discard Changes
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
+      </Modal>
     </>
   );
 }

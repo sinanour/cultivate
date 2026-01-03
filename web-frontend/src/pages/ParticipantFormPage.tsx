@@ -2,8 +2,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import ContentLayout from '@cloudscape-design/components/content-layout';
 import Header from '@cloudscape-design/components/header';
-import SpaceBetween from '@cloudscape-design/components/space-between';
-import Button from '@cloudscape-design/components/button';
 import Box from '@cloudscape-design/components/box';
 import { ParticipantForm } from '../components/features/ParticipantForm';
 import { ParticipantService } from '../services/api/participant.service';
@@ -45,14 +43,7 @@ export default function ParticipantFormPage() {
   return (
     <ContentLayout
       header={
-        <Header
-          variant="h1"
-          actions={
-            <SpaceBetween direction="horizontal" size="xs">
-              <Button onClick={handleCancel}>Cancel</Button>
-            </SpaceBetween>
-          }
-        >
+        <Header variant="h1">
           {isEditMode ? 'Edit Participant' : 'Create Participant'}
         </Header>
       }
@@ -61,7 +52,6 @@ export default function ParticipantFormPage() {
         participant={participant || null}
         onSuccess={handleSuccess}
         onCancel={handleCancel}
-        enableNavigationGuard={true}
       />
     </ContentLayout>
   );
