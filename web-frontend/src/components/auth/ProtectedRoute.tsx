@@ -26,7 +26,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   if (requiredRole && user?.role !== requiredRole) {
     // For now, just redirect to dashboard if user doesn't have required role
     // In a real app, you might show an error page
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

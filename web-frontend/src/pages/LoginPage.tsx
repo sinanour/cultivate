@@ -25,9 +25,9 @@ export default function LoginPage() {
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('idle');
 
   // Get redirect URL from query parameter
-  const redirectUrl = searchParams.get('redirect') || '/dashboard';
+  const redirectUrl = searchParams.get('redirect') || '/';
 
-  // Redirect to original URL or dashboard if already authenticated
+  // Redirect to original URL or home page if already authenticated
   // Skip redirect if we're in the middle of an animation
   useEffect(() => {
     if (isAuthenticated && animationPhase === 'idle') {

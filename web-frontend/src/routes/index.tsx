@@ -39,10 +39,6 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/dashboard" replace />,
-      },
-      {
-        path: 'dashboard',
         element: <DashboardPage />,
       },
       {
@@ -104,6 +100,10 @@ export const router = createBrowserRouter([
             <UsersPage />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
       },
     ],
   },

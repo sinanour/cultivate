@@ -27,7 +27,7 @@ export function AppLayout() {
   );
 
   const baseNavigationItems: SideNavigationProps['items'] = [
-    { type: 'link', text: createMenuItem('Quick Links', 'anchor-link'), href: '/dashboard' },
+    { type: 'link', text: createMenuItem('Quick Links', 'anchor-link'), href: '/' },
     { type: 'divider' },
     {
       type: 'section',
