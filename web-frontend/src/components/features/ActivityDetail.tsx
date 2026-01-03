@@ -267,7 +267,11 @@ export function ActivityDetail() {
         </ColumnLayout>
       </Container>
 
-      <Container
+      <ActivityVenueHistoryTable
+        venueHistory={venueHistory}
+        activityStartDate={activity.startDate}
+        onDelete={handleDeleteVenue}
+        loading={isLoadingVenues}
         header={
           <Header
             variant="h3"
@@ -282,15 +286,9 @@ export function ActivityDetail() {
             Venue History
           </Header>
         }
-      >
-        <ActivityVenueHistoryTable
-          venueHistory={venueHistory}
-          onDelete={handleDeleteVenue}
-          loading={isLoadingVenues}
-        />
-      </Container>
+      />
 
-      <Container
+      <Table
         header={
           <Header
             variant="h3"
@@ -305,65 +303,51 @@ export function ActivityDetail() {
             Assigned Participants
           </Header>
         }
-      >
-        {assignments.length > 0 ? (
-          <Table
-            columnDefinitions={[
-              {
-                id: 'participant',
-                header: 'Participant',
-                cell: (item) => (
-                  <Link href={`/participants/${item.participantId}`}>
-                    {item.participant?.name || 'Unknown'}
-                  </Link>
-                ),
-              },
-              {
-                id: 'email',
-                header: 'Email',
-                cell: (item) => item.participant?.email || '-',
-              },
-              {
-                id: 'role',
-                header: 'Role',
-                cell: (item) => item.role?.name || '-',
-              },
-              {
-                id: 'actions',
-                header: 'Actions',
-                cell: (item) => (
-                  canEdit() && (
-                    <Button
-                      variant="inline-link"
-                      onClick={() => handleRemoveAssignment(item.participantId)}
-                    >
-                      Remove
-                    </Button>
-                  )
-                ),
-              },
-            ]}
-            items={assignments}
-            empty={
-              <Box textAlign="center" color="inherit">
-                <b>No assignments</b>
-              </Box>
-            }
-          />
-        ) : (
+        columnDefinitions={[
+          {
+            id: 'participant',
+            header: 'Participant',
+            cell: (item) => (
+              <Link href={`/participants/${item.participantId}`}>
+                {item.participant?.name || 'Unknown'}
+              </Link>
+            ),
+          },
+          {
+            id: 'email',
+            header: 'Email',
+            cell: (item) => item.participant?.email || '-',
+          },
+          {
+            id: 'role',
+            header: 'Role',
+            cell: (item) => item.role?.name || '-',
+          },
+          {
+            id: 'actions',
+            header: 'Actions',
+            cell: (item) => (
+              canEdit() && (
+                <Button
+                  variant="inline-link"
+                  onClick={() => handleRemoveAssignment(item.participantId)}
+                >
+                  Remove
+                </Button>
+              )
+            ),
+          },
+        ]}
+        items={assignments}
+        empty={
           <Box textAlign="center" color="inherit">
-            <b>No assigned participants</b>
+            <b>No assignments</b>
             <Box padding={{ bottom: 's' }} variant="p" color="inherit">
               No participants are assigned to this activity.
             </Box>
-            {canEdit() && (
-              <Button onClick={() => setIsAssignmentFormOpen(true)}>
-                Assign Participant
-              </Button>
-            )}
           </Box>
-        )}
-      </Container>
+        }
+      />
 
       <Modal
         visible={isAssignmentFormOpen}

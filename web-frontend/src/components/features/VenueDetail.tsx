@@ -179,82 +179,68 @@ export function VenueDetail() {
         </ColumnLayout>
       </Container>
 
-      <Container header={<Header variant="h3">Associated Activities</Header>}>
-        {activities.length > 0 ? (
-          <Table
-            columnDefinitions={[
-              {
-                id: 'name',
-                header: 'Activity Name',
-                cell: (item) => (
-                  <Link href={`/activities/${item.id}`}>
-                    {item.name || 'Unknown'}
-                  </Link>
-                ),
-              },
-              {
-                id: 'type',
-                header: 'Type',
-                cell: (item) => item.activityType?.name || '-',
-              },
-              {
-                id: 'status',
-                header: 'Status',
-                cell: (item) => <Badge color={item.status === 'ACTIVE' ? 'green' : 'grey'}>{item.status}</Badge>,
-              },
-            ]}
-            items={activities}
-            empty={
-              <Box textAlign="center" color="inherit">
-                <b>No activities</b>
-              </Box>
-            }
-          />
-        ) : (
+      <Table
+        header={<Header variant="h3">Associated Activities</Header>}
+        columnDefinitions={[
+          {
+            id: 'name',
+            header: 'Activity Name',
+            cell: (item) => (
+              <Link href={`/activities/${item.id}`}>
+                {item.name || 'Unknown'}
+              </Link>
+            ),
+          },
+          {
+            id: 'type',
+            header: 'Type',
+            cell: (item) => item.activityType?.name || '-',
+          },
+          {
+            id: 'status',
+            header: 'Status',
+            cell: (item) => <Badge color={item.status === 'ACTIVE' ? 'green' : 'grey'}>{item.status}</Badge>,
+          },
+        ]}
+        items={activities}
+        empty={
           <Box textAlign="center" color="inherit">
             <b>No activities</b>
             <Box padding={{ bottom: 's' }} variant="p" color="inherit">
               No activities are associated with this venue.
             </Box>
           </Box>
-        )}
-      </Container>
+        }
+      />
 
-      <Container header={<Header variant="h3">Participants with Home Address Here</Header>}>
-        {participants.length > 0 ? (
-          <Table
-            columnDefinitions={[
-              {
-                id: 'name',
-                header: 'Name',
-                cell: (item) => (
-                  <Link href={`/participants/${item.id}`}>
-                    {item.name || 'Unknown'}
-                  </Link>
-                ),
-              },
-              {
-                id: 'email',
-                header: 'Email',
-                cell: (item) => item.email || '-',
-              },
-            ]}
-            items={participants}
-            empty={
-              <Box textAlign="center" color="inherit">
-                <b>No participants</b>
-              </Box>
-            }
-          />
-        ) : (
+      <Table
+        header={<Header variant="h3">Participants with Home Address Here</Header>}
+        columnDefinitions={[
+          {
+            id: 'name',
+            header: 'Name',
+            cell: (item) => (
+              <Link href={`/participants/${item.id}`}>
+                {item.name || 'Unknown'}
+              </Link>
+            ),
+          },
+          {
+            id: 'email',
+            header: 'Email',
+            cell: (item) => item.email || '-',
+          },
+        ]}
+        items={participants}
+        empty={
           <Box textAlign="center" color="inherit">
             <b>No participants</b>
             <Box padding={{ bottom: 's' }} variant="p" color="inherit">
               No participants have this venue as their home address.
             </Box>
           </Box>
-        )}
-      </Container>
+        }
+      />
       
       <Modal
         visible={isEditFormOpen}

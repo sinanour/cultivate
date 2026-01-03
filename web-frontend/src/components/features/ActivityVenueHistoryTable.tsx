@@ -28,6 +28,7 @@ interface ActivityVenueHistoryTableProps {
   activityStartDate?: string; // For displaying null dates
   onDelete: (venueHistoryId: string) => void;
   loading?: boolean;
+  header?: React.ReactNode;
 }
 
 export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps> = ({
@@ -35,6 +36,7 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
   activityStartDate,
   onDelete,
   loading = false,
+  header,
 }) => {
 
   // Sort by effective start date in reverse chronological order (most recent first)
@@ -50,6 +52,7 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
 
   return (
     <Table
+      header={header}
       columnDefinitions={[
         {
           id: 'venue',

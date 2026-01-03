@@ -181,69 +181,61 @@ export function GeographicAreaDetail() {
       )}
 
       {children.length > 0 && (
-        <Container header={<Header variant="h3">Sub-Divisions Within This Area</Header>}>
-          <Table
-            columnDefinitions={[
-              {
-                id: 'name',
-                header: 'Name',
-                cell: (item) => (
-                  <Link href={`/geographic-areas/${item.id}`}>
-                    {item.name}
-                  </Link>
-                ),
-              },
-              {
-                id: 'type',
-                header: 'Type',
-                cell: (item) => <Badge color={getAreaTypeBadgeColor(item.areaType)}>{item.areaType}</Badge>,
-              },
-            ]}
-            items={children}
-            empty={
-              <Box textAlign="center" color="inherit">
-                <b>No sub-divisions</b>
-              </Box>
-            }
-          />
-        </Container>
+        <Table
+          header={<Header variant="h3">Sub-Divisions Within This Area</Header>}
+          columnDefinitions={[
+            {
+              id: 'name',
+              header: 'Name',
+              cell: (item) => (
+                <Link href={`/geographic-areas/${item.id}`}>
+                  {item.name}
+                </Link>
+              ),
+            },
+            {
+              id: 'type',
+              header: 'Type',
+              cell: (item) => <Badge color={getAreaTypeBadgeColor(item.areaType)}>{item.areaType}</Badge>,
+            },
+          ]}
+          items={children}
+          empty={
+            <Box textAlign="center" color="inherit">
+              <b>No sub-divisions</b>
+            </Box>
+          }
+        />
       )}
 
-      <Container header={<Header variant="h3">Venues in This Area</Header>}>
-        {venues.length > 0 ? (
-          <Table
-            columnDefinitions={[
-              {
-                id: 'name',
-                header: 'Name',
-                cell: (item) => (
-                  <Link href={`/venues/${item.id}`}>
-                    {item.name || 'Unknown'}
-                  </Link>
-                ),
-              },
-              {
-                id: 'address',
-                header: 'Address',
-                cell: (item) => item.address || '-',
-              },
-            ]}
-            items={venues}
-            empty={
-              <Box textAlign="center" color="inherit">
-                <b>No venues</b>
-              </Box>
-            }
-          />
-        ) : (
+      <Table
+        header={<Header variant="h3">Venues in This Area</Header>}
+        columnDefinitions={[
+          {
+            id: 'name',
+            header: 'Name',
+            cell: (item) => (
+              <Link href={`/venues/${item.id}`}>
+                {item.name || 'Unknown'}
+              </Link>
+            ),
+          },
+          {
+            id: 'address',
+            header: 'Address',
+            cell: (item) => item.address || '-',
+          },
+        ]}
+        items={venues}
+        empty={
           <Box textAlign="center" color="inherit">
             <b>No venues</b>
             <Box padding={{ bottom: 's' }} variant="p" color="inherit">
               No venues are in this geographic area.
             </Box>
           </Box>
-        )}
-      </Container>
+        }
+      />
       
       <Modal
         visible={isEditFormOpen}

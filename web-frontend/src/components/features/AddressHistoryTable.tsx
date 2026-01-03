@@ -15,6 +15,7 @@ interface AddressHistoryTableProps {
   onEdit: (record: ParticipantAddressHistory) => void;
   onDelete: (recordId: string) => void;
   loading?: boolean;
+  header?: React.ReactNode;
 }
 
 export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
@@ -22,6 +23,7 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
   onEdit,
   onDelete,
   loading = false,
+  header,
 }) => {
 
   // Sort by effective start date in reverse chronological order (most recent first)
@@ -35,6 +37,7 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
 
   return (
     <Table
+      header={header}
       columnDefinitions={[
         {
           id: 'venue',

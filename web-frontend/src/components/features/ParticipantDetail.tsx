@@ -239,7 +239,11 @@ export function ParticipantDetail() {
         </ColumnLayout>
       </Container>
 
-      <Container
+      <AddressHistoryTable
+        addressHistory={addressHistory}
+        onEdit={handleEditAddress}
+        onDelete={handleDeleteAddress}
+        loading={isLoadingHistory}
         header={
           <Header
             variant="h3"
@@ -254,87 +258,67 @@ export function ParticipantDetail() {
             Address History
           </Header>
         }
-      >
-        <AddressHistoryTable
-          addressHistory={addressHistory}
-          onEdit={handleEditAddress}
-          onDelete={handleDeleteAddress}
-          loading={isLoadingHistory}
-        />
-      </Container>
+      />
 
-      <Container header={<Header variant="h3">Activities</Header>}>
-        {isLoadingActivities ? (
-          <Box textAlign="center" padding="xxl">
-            <Spinner size="large" />
-          </Box>
-        ) : activities.length === 0 ? (
+      <Table
+        header={<Header variant="h3">Activities</Header>}
+        columnDefinitions={[
+          {
+            id: 'activity',
+            header: 'Activity',
+            cell: (item) => (
+              <Link href={`/activities/${item.activityId}`}>
+                {item.activity?.name || 'Unknown'}
+              </Link>
+            ),
+          },
+          {
+            id: 'type',
+            header: 'Type',
+            cell: (item) => item.activity?.activityType?.name || '-',
+          },
+          {
+            id: 'role',
+            header: 'Role',
+            cell: (item) => item.role?.name || '-',
+          },
+          {
+            id: 'status',
+            header: 'Status',
+            cell: (item) => item.activity ? (
+              <Badge color={getStatusColor(item.activity.status)}>
+                {item.activity.status}
+              </Badge>
+            ) : '-',
+          },
+          {
+            id: 'dates',
+            header: 'Dates',
+            cell: (item) => {
+              if (!item.activity) return '-';
+              if (item.activity.isOngoing) {
+                return `${formatDate(item.activity.startDate)} - Ongoing`;
+              }
+              return `${formatDate(item.activity.startDate)} - ${formatDate(item.activity.endDate)}`;
+            },
+          },
+          {
+            id: 'notes',
+            header: 'Notes',
+            cell: (item) => item.notes || '-',
+          },
+        ]}
+        items={activities}
+        loading={isLoadingActivities}
+        empty={
           <Box textAlign="center" color="inherit">
-            <Box variant="p" color="inherit">
-              No activity assignments found.
+            <b>No activities</b>
+            <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+              This participant is not assigned to any activities.
             </Box>
           </Box>
-        ) : (
-          <Table
-            columnDefinitions={[
-              {
-                id: 'activity',
-                header: 'Activity',
-                cell: (item) => (
-                  <Link href={`/activities/${item.activityId}`}>
-                    {item.activity?.name || 'Unknown'}
-                  </Link>
-                ),
-              },
-              {
-                id: 'type',
-                header: 'Type',
-                cell: (item) => item.activity?.activityType?.name || '-',
-              },
-              {
-                id: 'role',
-                header: 'Role',
-                cell: (item) => item.role?.name || '-',
-              },
-              {
-                id: 'status',
-                header: 'Status',
-                cell: (item) => item.activity ? (
-                  <Badge color={getStatusColor(item.activity.status)}>
-                    {item.activity.status}
-                  </Badge>
-                ) : '-',
-              },
-              {
-                id: 'dates',
-                header: 'Dates',
-                cell: (item) => {
-                  if (!item.activity) return '-';
-                  if (item.activity.isOngoing) {
-                    return `${formatDate(item.activity.startDate)} - Ongoing`;
-                  }
-                  return `${formatDate(item.activity.startDate)} - ${formatDate(item.activity.endDate)}`;
-                },
-              },
-              {
-                id: 'notes',
-                header: 'Notes',
-                cell: (item) => item.notes || '-',
-              },
-            ]}
-            items={activities}
-            variant="embedded"
-            empty={
-              <Box textAlign="center" color="inherit">
-                <b>No activities</b>
-                <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-                  This participant is not assigned to any activities.
-                </Box>
-              </Box>
-            }
-          />
-        )}
-      </Container>
+        }
+      />
 
       <AddressHistoryForm
         visible={isAddressFormOpen}
