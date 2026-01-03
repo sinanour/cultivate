@@ -478,7 +478,18 @@ This implementation plan covers the React-based web application built with TypeS
     - Display null effective start dates as "Since Activity Start" or show activity startDate
     - Fetch venue details when venue is selected for new venue associations
     - Store venue object in temporary records for display before activity is created
-    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22_
+    - Embed participant assignment management section within the form
+    - Allow adding new participant assignments with participant, role, and optional notes
+    - Allow editing existing participant assignments (edit mode only)
+    - Allow removing existing participant assignments (edit mode only)
+    - Display participant assignments table within the form
+    - Validate participant assignments for required fields (participant, role) and duplicate prevention (same participant + role)
+    - Fetch participant and role details when assignment is added to new activity (before activity is created)
+    - Store participant and role objects in temporary records for display before activity is created
+    - Display participant name and role name in assignments table by accessing objects from temporary records
+    - Display venue associations table above participant assignments table (stacked vertically)
+    - Provide atomic user experience where all activity details, venue associations, and participant assignments can be configured before backend persistence
+    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 6.1, 6.2, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
 
   - [ ]* 11.3 Write property tests for activity validation
     - **Property 14: Finite Activity End Date Requirement**
@@ -521,13 +532,15 @@ This implementation plan covers the React-based web application built with TypeS
     - _Requirements: 5.13, 5.14_
 
 - [x] 12. Implement assignment management UI
-  - [x] 12.1 Create AssignmentForm component
+  - [x] 12.1 Create AssignmentForm component (embedded in ActivityForm)
+    - Note: This component is now embedded within ActivityForm for both create and edit modes
     - Require role selection
     - Validate role is selected
     - Prevent duplicate assignments (DUPLICATE_ASSIGNMENT error)
     - Support optional notes field
-    - Use /activities/:activityId/participants endpoint
-    - _Requirements: 6.1, 6.2, 6.5, 6.6_
+    - Use /activities/:activityId/participants endpoint (only in edit mode when activity exists)
+    - In create mode: Store assignments in temporary state until activity is created
+    - _Requirements: 6.1, 6.2, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
 
   - [ ]* 12.2 Write property tests for assignments
     - **Property 17: Assignment Role Requirement**
@@ -540,6 +553,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Show participant name, role, and notes
     - Provide remove button using DELETE /activities/:activityId/participants/:participantId
     - Support updating assignments via PUT /activities/:activityId/participants/:participantId
+    - Also used within ActivityForm to display temporary assignments during creation
     - _Requirements: 6.3, 6.4_
 
 - [x] 13. Implement map view UI
@@ -1751,13 +1765,15 @@ This implementation plan covers the React-based web application built with TypeS
 - Validate address history records before form submission
 - Submit participant data and address history changes in appropriate sequence
 
-**ActivityForm with Venue History:**
-- The ActivityForm component should include an embedded section for managing venue associations
-- In create mode: Allow adding venue associations that will be created after the activity is created
-- In edit mode: Display existing venue associations with add/edit/delete capabilities
-- Use a mini-table or expandable section within the form to display venue history
-- Validate venue associations before form submission
-- Submit activity data and venue association changes in appropriate sequence
+**ActivityForm with Venue History and Participant Assignments:**
+- The ActivityForm component should include embedded sections for managing both venue associations and participant assignments
+- Display venue associations table and participant assignments table stacked vertically, with venue associations appearing above participant assignments
+- In create mode: Allow adding venue associations and participant assignments that will be created after the activity is created
+- In edit mode: Display existing venue associations and participant assignments with add/edit/delete capabilities
+- Use mini-tables or expandable sections within the form to display venue history and participant assignments
+- Validate venue associations and participant assignments before form submission
+- Submit activity data, venue association changes, and participant assignment changes in appropriate sequence
+- Provide atomic user experience where all activity configuration can be completed before backend persistence
 
 ## API Alignment Notes
 

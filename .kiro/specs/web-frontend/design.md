@@ -274,6 +274,16 @@ src/
 - Validates venue associations for required fields and duplicate prevention
 - When adding venue associations to a new activity (before activity is created), fetches venue details from backend and stores in temporary record for display
 - Displays venue name in venue history table by accessing venue object from temporary records
+- Includes embedded participant assignment management section within the form
+- Allows adding new participant assignments with participant, role, and optional notes
+- Allows editing existing participant assignments (edit mode only)
+- Allows removing existing participant assignments (edit mode only)
+- Displays participant assignments table in reverse chronological order or by participant name within the form
+- Validates participant assignments for required fields (participant, role) and duplicate prevention (same participant + role)
+- When adding participant assignments to a new activity (before activity is created), fetches participant details from backend and finds role from already-loaded roles list (no additional API call)
+- Displays participant name and role name in assignments table by accessing participant and role objects from temporary records
+- Displays venue associations table and participant assignments table stacked vertically, with venue associations appearing above participant assignments
+- Provides atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
 
 **ActivityDetail**
 - Shows activity information in detail view
@@ -1427,6 +1437,24 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 5.18, 5.19**
 
+### Property 19b: Activity Participant Assignment Name Display
+
+*For any* participant assignment added to a new activity before the activity is created, the participant name and role name should be fetched from the backend and displayed in the participant assignments table.
+
+**Validates: Requirements 5.25, 5.26**
+
+### Property 19c: Activity Form Vertical Table Stacking
+
+*For any* activity form rendering (create or edit mode), the venue associations table should appear above the participant assignments table in a vertical stack layout.
+
+**Validates: Requirements 5.27**
+
+### Property 19d: Activity Form Atomic Experience
+
+*For any* activity creation workflow, all activity details, venue associations, and participant assignments should be configurable within the form before any data is persisted to the backend.
+
+**Validates: Requirements 5.28**
+
 ### Property 20: Assignment Role Requirement
 
 *For any* participant assignment attempt without a role selected, the validation should fail and prevent assignment.
@@ -1444,6 +1472,18 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* attempt to create an assignment with the same participant and role combination that already exists for an activity, the operation should be prevented.
 
 **Validates: Requirements 6.6**
+
+### Property 22a: Assignment Notes Support
+
+*For any* participant assignment, optional notes should be accepted and stored with the assignment.
+
+**Validates: Requirements 6.7**
+
+### Property 22b: Assignment Interface in Activity Form
+
+*For any* activity form (create or edit mode), an interface for managing participant assignments should be displayed within the form, positioned below the venue associations interface.
+
+**Validates: Requirements 6.1, 6.8, 6.9, 6.10**
 
 ### Property 23: Temporal activity metrics display
 

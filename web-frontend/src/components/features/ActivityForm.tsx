@@ -14,10 +14,15 @@ import Header from '@cloudscape-design/components/header';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import Badge from '@cloudscape-design/components/badge';
-import type { Activity, ActivityVenueHistory } from '../../types';
+import Textarea from '@cloudscape-design/components/textarea';
+import Link from '@cloudscape-design/components/link';
+import type { Activity, ActivityVenueHistory, Assignment } from '../../types';
 import { ActivityService } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { VenueService } from '../../services/api/venue.service';
+import { ParticipantService } from '../../services/api/participant.service';
+import { ParticipantRoleService } from '../../services/api/participant-role.service';
+import { AssignmentService } from '../../services/api/assignment.service';
 import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
@@ -59,10 +64,28 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const [newVenueEffectiveFrom, setNewVenueEffectiveFrom] = useState('');
   const [venueFormErrors, setVenueFormErrors] = useState<{ venue?: string; effectiveFrom?: string; duplicate?: string }>({});
 
+  // Participant assignment state
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [showAssignmentForm, setShowAssignmentForm] = useState(false);
+  const [newParticipantId, setNewParticipantId] = useState('');
+  const [newRoleId, setNewRoleId] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+  const [assignmentFormErrors, setAssignmentFormErrors] = useState<{ participant?: string; role?: string; duplicate?: string }>({});
+
   // Fetch venue history when editing existing activity
   const { data: fetchedVenueHistory = [] } = useQuery({
     queryKey: ['activityVenues', activity?.id],
     queryFn: () => activity ? ActivityService.getActivityVenues(activity.id) : Promise.resolve([]),
+    enabled: !!activity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: Infinity, // Don't automatically refetch
+  });
+
+  // Fetch participant assignments when editing existing activity
+  const { data: fetchedAssignments = [] } = useQuery({
+    queryKey: ['activity-participants', activity?.id],
+    queryFn: () => activity ? ActivityService.getActivityParticipants(activity.id) : Promise.resolve([]),
     enabled: !!activity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -87,6 +110,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       setEndDate('');
       setIsOngoing(false);
       setVenueHistory([]);
+      setAssignments([]);
     }
     // Clear errors when switching modes
     setNameError('');
@@ -95,6 +119,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     setEndDateError('');
     setError('');
     setShowVenueForm(false);
+    setShowAssignmentForm(false);
   }, [activity]);
 
   // Update venue history when fetched data changes (separate effect to avoid resetting form fields)
@@ -103,6 +128,13 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       setVenueHistory(fetchedVenueHistory);
     }
   }, [activity, fetchedVenueHistory]);
+
+  // Update assignments when fetched data changes (separate effect to avoid resetting form fields)
+  useEffect(() => {
+    if (activity && fetchedAssignments) {
+      setAssignments(fetchedAssignments);
+    }
+  }, [activity, fetchedAssignments]);
 
   const versionConflict = useVersionConflict({
     queryKey: ['activities'],
@@ -114,9 +146,19 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     queryFn: () => ActivityTypeService.getActivityTypes(),
   });
 
+  const { data: roles = [] } = useQuery({
+    queryKey: ['participantRoles'],
+    queryFn: () => ParticipantRoleService.getRoles(),
+  });
+
   const activityTypeOptions = activityTypes.map((t) => ({
     label: t.name,
     value: t.id,
+  }));
+
+  const roleOptions = roles.map((r) => ({
+    label: r.name,
+    value: r.id,
   }));
 
   const createMutation = useMutation({
@@ -303,6 +345,121 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     setVenueFormErrors({});
   };
 
+  // Participant assignment management functions
+  const handleAddAssignment = (e?: any) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    setNewParticipantId('');
+    setNewRoleId('');
+    setNewNotes('');
+    setAssignmentFormErrors({});
+    setShowAssignmentForm(true);
+  };
+
+  const handleDeleteAssignment = async (assignmentId: string, participantId: string, e?: any) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    
+    if (!activity) {
+      // Remove from pending list for new activity
+      setAssignments(prev => prev.filter(a => a.id !== assignmentId));
+      return;
+    }
+    
+    try {
+      await AssignmentService.removeParticipant(activity.id, participantId);
+      setAssignments(prev => prev.filter(a => a.id !== assignmentId));
+    } catch (err) {
+      setError('Failed to remove participant assignment');
+    }
+  };
+
+  const validateAssignmentForm = (): boolean => {
+    const newErrors: { participant?: string; role?: string; duplicate?: string } = {};
+
+    if (!newParticipantId) {
+      newErrors.participant = 'Participant is required';
+    }
+
+    if (!newRoleId) {
+      newErrors.role = 'Role is required';
+    }
+
+    // Check for duplicate assignments (same participant + role)
+    if (newParticipantId && newRoleId) {
+      const isDuplicate = assignments.some(a => 
+        a.participantId === newParticipantId && a.roleId === newRoleId
+      );
+
+      if (isDuplicate) {
+        newErrors.duplicate = 'This participant is already assigned with this role';
+      }
+    }
+
+    setAssignmentFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveAssignment = async (e?: any) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    
+    if (!validateAssignmentForm()) {
+      return;
+    }
+
+    if (activity) {
+      // Add assignment to existing activity
+      try {
+        await AssignmentService.addParticipant(
+          activity.id,
+          newParticipantId,
+          newRoleId,
+          newNotes.trim() || undefined
+        );
+        const updated = await ActivityService.getActivityParticipants(activity.id);
+        setAssignments(updated);
+        setShowAssignmentForm(false);
+      } catch (err) {
+        setError('Failed to add participant assignment');
+      }
+    } else {
+      // Add to pending list for new activity (will be created after activity is created)
+      try {
+        // Fetch participant details and find role from already-loaded roles list
+        const participant = await ParticipantService.getParticipant(newParticipantId);
+        const role = roles.find(r => r.id === newRoleId);
+        
+        if (!role) {
+          setError('Selected role not found');
+          return;
+        }
+        
+        const tempAssignment: Assignment = {
+          id: `temp-${Date.now()}`,
+          activityId: '',
+          participantId: newParticipantId,
+          roleId: newRoleId,
+          notes: newNotes.trim() || undefined,
+          participant: participant,
+          role: role,
+          createdAt: new Date().toISOString(),
+        };
+        setAssignments(prev => [...prev, tempAssignment]);
+        setShowAssignmentForm(false);
+      } catch (err) {
+        setError('Failed to fetch participant details');
+      }
+    }
+  };
+
+  const handleCancelAssignmentForm = (e?: any) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    setShowAssignmentForm(false);
+    setAssignmentFormErrors({});
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -362,8 +519,20 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
           await ActivityService.addActivityVenue(created.id, venue.venueId, venue.effectiveFrom);
         }
         
+        // Create participant assignments if any were added
+        const pendingAssignments = assignments.filter(a => a.id.startsWith('temp-'));
+        for (const assignment of pendingAssignments) {
+          await AssignmentService.addParticipant(
+            created.id,
+            assignment.participantId,
+            assignment.roleId,
+            assignment.notes
+          );
+        }
+        
         queryClient.invalidateQueries({ queryKey: ['activities'] });
         queryClient.invalidateQueries({ queryKey: ['activityVenues'] });
+        queryClient.invalidateQueries({ queryKey: ['activity-participants'] });
         onSuccess();
       } catch (err: any) {
         setError(err.message || 'Failed to create activity');
@@ -615,6 +784,156 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                   <Box textAlign="center" color="inherit">
                     <Box padding={{ bottom: 's' }} variant="p" color="inherit">
                       No venue associations yet. Click "Add Venue" to add one.
+                    </Box>
+                  </Box>
+                )}
+              </SpaceBetween>
+            </Container>
+
+            {/* Embedded Participant Assignment Management */}
+            <Container
+              header={
+                <Header
+                  variant="h3"
+                  actions={
+                    <Button
+                      onClick={(e) => handleAddAssignment(e)}
+                      disabled={isSubmitting}
+                      iconName="add-plus"
+                    >
+                      Assign Participant
+                    </Button>
+                  }
+                >
+                  Participant Assignments
+                </Header>
+              }
+            >
+              <SpaceBetween size="m">
+                {showAssignmentForm && (
+                  <Container>
+                    <SpaceBetween size="m">
+                      {assignmentFormErrors.duplicate && (
+                        <Alert type="error">{assignmentFormErrors.duplicate}</Alert>
+                      )}
+                      <FormField
+                        label="Participant"
+                        errorText={assignmentFormErrors.participant}
+                        description="Select the participant to assign"
+                      >
+                        <AsyncEntitySelect
+                          value={newParticipantId}
+                          onChange={(value) => {
+                            setNewParticipantId(value);
+                            setAssignmentFormErrors({ ...assignmentFormErrors, participant: undefined, duplicate: undefined });
+                          }}
+                          entityType="participant"
+                          fetchFunction={async (params) => {
+                            const data = await ParticipantService.getParticipants(
+                              params.page,
+                              params.limit,
+                              params.geographicAreaId,
+                              params.search
+                            );
+                            return { data };
+                          }}
+                          formatOption={(p) => ({
+                            value: p.id,
+                            label: p.name,
+                            description: p.email,
+                          })}
+                          placeholder="Search for a participant"
+                          invalid={!!assignmentFormErrors.participant}
+                          ariaLabel="Select participant"
+                        />
+                      </FormField>
+                      <FormField
+                        label="Role"
+                        errorText={assignmentFormErrors.role}
+                        description="Select the role for this participant"
+                      >
+                        <Select
+                          selectedOption={roleOptions.find((o) => o.value === newRoleId) || null}
+                          onChange={({ detail }) => {
+                            setNewRoleId(detail.selectedOption.value || '');
+                            setAssignmentFormErrors({ ...assignmentFormErrors, role: undefined, duplicate: undefined });
+                          }}
+                          options={roleOptions}
+                          placeholder="Select a role"
+                          empty="No roles available"
+                        />
+                      </FormField>
+                      <FormField
+                        label="Notes"
+                        description="Optional notes about this assignment"
+                      >
+                        <Textarea
+                          value={newNotes}
+                          onChange={({ detail }) => setNewNotes(detail.value)}
+                          placeholder="Enter any notes"
+                          rows={3}
+                        />
+                      </FormField>
+                      <SpaceBetween direction="horizontal" size="xs">
+                        <Button onClick={(e) => handleCancelAssignmentForm(e)}>Cancel</Button>
+                        <Button variant="primary" onClick={(e) => handleSaveAssignment(e)}>
+                          Add
+                        </Button>
+                      </SpaceBetween>
+                    </SpaceBetween>
+                  </Container>
+                )}
+
+                {assignments.length > 0 ? (
+                  <Table<Assignment>
+                    columnDefinitions={[
+                      {
+                        id: 'participant',
+                        header: 'Participant',
+                        cell: (item) => item.participant ? (
+                          <Link href={`/participants/${item.participantId}`}>
+                            {item.participant.name}
+                          </Link>
+                        ) : 'Unknown',
+                      },
+                      {
+                        id: 'role',
+                        header: 'Role',
+                        cell: (item) => item.role?.name || 'Unknown',
+                      },
+                      {
+                        id: 'notes',
+                        header: 'Notes',
+                        cell: (item) => item.notes || '-',
+                      },
+                      {
+                        id: 'actions',
+                        header: 'Actions',
+                        cell: (item) => (
+                          <Button
+                            variant="inline-icon"
+                            iconName="remove"
+                            onClick={(e) => handleDeleteAssignment(item.id, item.participantId, e)}
+                            disabled={isSubmitting}
+                          />
+                        ),
+                      },
+                    ]}
+                    items={assignments}
+                    variant="embedded"
+                    empty={
+                      <Box textAlign="center" color="inherit">
+                        <b>No participant assignments</b>
+                        <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+                          Assign participants to track who is involved in this activity.
+                        </Box>
+                      </Box>
+                    }
+                  />
+                ) : (
+                  <Box textAlign="center" color="inherit">
+                    <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+                      No participant assignments yet. Click "Assign Participant" to add one.
                     </Box>
                   </Box>
                 )}

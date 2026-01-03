@@ -138,6 +138,12 @@ The Web Frontend package provides a responsive React-based web application that 
 20. WHEN a venue association has a null effective start date, THE Web_App SHALL treat the venue association start date as the same as the activity start date
 21. THE Web_App SHALL enforce that at most one venue association can have a null effective start date for any given activity
 22. THE Web_App SHALL prevent duplicate venue associations with the same effective start date (including null) for the same activity
+23. WHEN creating a new activity, THE Web_App SHALL allow assigning participants with roles and optional notes within the activity creation modal form
+24. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit modal form
+25. WHEN adding a participant assignment to a new activity before the activity is created, THE Web_App SHALL fetch and display the participant name and role in the participant assignments table
+26. WHEN a participant is selected for a new assignment, THE Web_App SHALL retrieve the participant details from the backend and store them for display purposes
+27. THE Web_App SHALL display the venue associations table and participant assignments table stacked vertically within the activity form, with venue associations appearing above participant assignments
+28. THE Web_App SHALL provide an atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
 
 ### Requirement 6: Activity-Participant Assignment UI
 
@@ -145,12 +151,16 @@ The Web Frontend package provides a responsive React-based web application that 
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL provide an interface to assign participants to activities
+1. THE Web_App SHALL provide an interface to assign participants to activities within the activity form (both create and edit modes)
 2. WHEN assigning a participant, THE Web_App SHALL require role selection
 3. THE Web_App SHALL display all assigned participants with their roles on the activity detail view
 4. THE Web_App SHALL provide a button to remove participant assignments
 5. THE Web_App SHALL validate that a role is selected before allowing assignment
 6. THE Web_App SHALL prevent duplicate assignments of the same participant with the same role
+7. THE Web_App SHALL allow optional notes to be added to participant assignments
+8. WHEN creating a new activity, THE Web_App SHALL allow adding participant assignments before the activity is persisted to the backend
+9. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit form
+10. THE Web_App SHALL display the participant assignments interface within the activity form, positioned below the venue associations interface
 
 ### Requirement 6A: Venue Management UI
 
