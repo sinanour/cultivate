@@ -106,6 +106,7 @@ export default function MapViewPage() {
                     placeholder="Filter by populations"
                     filteringType="auto"
                     tokenLimit={2}
+                    disabled={mapMode === 'venues'}
                   />
                 </div>
               </div>

@@ -504,6 +504,8 @@ src/
 - Updates map markers based on selected filters
 - When population filter is applied: shows only activities with participants in specified populations
 - When population filter is applied in Participant Homes mode: shows only participants in specified populations
+- Disables population filter control when map mode is "Venues" (population filtering has no effect on venues)
+- Enables population filter control when map mode is "Activities", "Activity Categories", or "Participant Homes"
 - Provides geographic area boundary toggle
 - Includes button to center map on specific venue or geographic area
 

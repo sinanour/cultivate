@@ -728,7 +728,12 @@ This implementation plan covers the React-based web application built with TypeS
     - Support geographic area boundary toggle
     - Provide center button
     - _Requirements: 6C.14, 6C.14a, 6C.14b, 6C.14c, 6C.15, 6C.17_
-    - _Requirements: 6C.14, 6C.15, 6C.17_
+
+  - [x] 13.3a Implement conditional population filter enabling based on map mode
+    - Disable population filter control when map mode is "Venues"
+    - Enable population filter control when map mode is "Activities", "Activity Categories", or "Participant Homes"
+    - Update MapViewPage component to pass disabled state to Multiselect component
+    - _Requirements: 6C.14d, 6C.14e_
 
   - [x] 13.4 Create MapPopup component
     - In Activities mode: display activity name (hyperlinked to /activities/:id), category, type, start date, and participant count

@@ -288,6 +288,8 @@ The Web Frontend package provides a responsive React-based web application that 
 14a. THE Web_App SHALL provide a population filter control on the map view
 14b. WHEN a population filter is applied on the map, THE Web_App SHALL display only activities that have at least one participant belonging to at least one of the specified populations
 14c. WHEN a population filter is applied in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses for participants who belong to at least one of the specified populations
+14d. WHEN the map mode is "Venues", THE Web_App SHALL disable the population filter control
+14e. WHEN the map mode is "Activities", "Activity Categories", or "Participant Homes", THE Web_App SHALL enable the population filter control
 15. THE Web_App SHALL provide geographic area boundary overlays when available
 16. THE Web_App SHALL allow zooming and panning of the map
 17. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
