@@ -19,17 +19,21 @@ export function AppLayout() {
   const [navigationOpen, setNavigationOpen] = useState(true);
 
   // Helper function to create menu item with icon on the left
-  const createMenuItem = (text: string, iconName: string) => (
-    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <Icon name={iconName as any} />
-      <span>{text}</span>
-    </span>
-  );
+  // Accepts either an icon name or a URL (URLs should start with '/' or 'http')
+  const createMenuItem = (text: string, iconNameOrUrl: string) => {
+    const isUrl = iconNameOrUrl.startsWith('/') || iconNameOrUrl.startsWith('http');
+    return (
+      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {isUrl ? <Icon url={iconNameOrUrl} /> : <Icon name={iconNameOrUrl as any} />}
+        <span>{text}</span>
+      </span>
+    );
+  };
 
   // CloudScape accepts React elements in text property despite TypeScript types
   const baseNavigationItems: SideNavigationProps['items'] = [
     // @ts-ignore - CloudScape handles React elements in text property
-    { type: 'link', text: createMenuItem('Home', 'anchor-link'), href: '/' },
+    { type: 'link', text: createMenuItem('Home', '/src/assets/home.svg'), href: '/' },
     { type: 'divider' },
     {
       type: 'section',
