@@ -43,7 +43,7 @@ This implementation plan covers the React-based web application built with TypeS
     - _Requirements: 13.1, 13.2, 13.4, 13.5, 13.9, 13.10, 13.11, 10.5_
 
   - [x] 2.2a Create DashboardPage with role-based quick links
-    - Display quick links for key sections (Geographic Areas, Venues, Activities, Participants, Map, Analytics)
+    - Display quick links for key sections (Geographic Areas, Venues, Activities, Participants, Map, Analytics, About)
     - Filter quick links based on user role
     - Hide User Administration quick link from non-administrators
     - Show User Administration quick link only for ADMINISTRATOR role

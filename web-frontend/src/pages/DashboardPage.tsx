@@ -68,6 +68,12 @@ export default function DashboardPage() {
       description: 'Manage system users and permissions',
       adminOnly: true,
     },
+    {
+      href: '/about',
+      icon: 'status-info',
+      title: 'About',
+      description: 'Learn about the Cultivate application',
+    },
   ];
 
   // Filter quick links based on user role
