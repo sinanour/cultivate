@@ -684,7 +684,7 @@ export function EngagementDashboard() {
             i18nStrings={{
               filteringAriaLabel: 'Filter engagement data',
               dismissAriaLabel: 'Dismiss',
-              filteringPlaceholder: 'Filter by activity category, type, or venue',
+              filteringPlaceholder: 'Filter by activity category, type, venue, or population',
               groupValuesText: 'Values',
               groupPropertiesText: 'Properties',
               operatorsText: 'Operators',
@@ -1116,6 +1116,11 @@ export function EngagementDashboard() {
           const label = propertyFilterQuery.tokens.find(t => t.propertyKey === 'venue' && t.operator === '=')?.value;
           const uuid = label ? getUuidFromLabel(label) : undefined;
           return uuid ? [uuid] : undefined;
+        })()}
+        populationIds={(() => {
+          const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
+          const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+          return uuids.length > 0 ? uuids : undefined;
         })()}
       />
 

@@ -7,11 +7,14 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import Select from '@cloudscape-design/components/select';
+import Multiselect from '@cloudscape-design/components/multiselect';
+import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
+import { PopulationService } from '../../services/api/population.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
@@ -53,6 +56,12 @@ type ViewMode = 'all' | 'type' | 'category';
 export function GrowthDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+
+  // Fetch all populations for filter
+  const { data: allPopulations = [] } = useQuery({
+    queryKey: ['populations'],
+    queryFn: PopulationService.getPopulations,
+  });
 
   // Initialize state from URL parameters
   const [period, setPeriod] = useState<TimePeriod>(() => {
@@ -127,6 +136,30 @@ export function GrowthDashboard() {
     return null;
   });
 
+  // Population filter state
+  const [selectedPopulations, setSelectedPopulations] = useState<MultiselectProps.Options>(() => {
+    const urlPopIds = searchParams.getAll('populationIds');
+    if (urlPopIds.length > 0) {
+      // Will be populated with labels once populations are loaded
+      return urlPopIds.map(id => ({ label: '', value: id }));
+    }
+    return [];
+  });
+
+  // Update population labels when populations are loaded
+  useEffect(() => {
+    if (allPopulations.length > 0 && selectedPopulations.some(opt => !opt.label)) {
+      const updated = selectedPopulations.map(opt => {
+        const pop = allPopulations.find(p => p.id === opt.value);
+        return pop ? { label: pop.name, value: pop.id } : opt;
+      }).filter(opt => opt.label); // Remove any that couldn't be found
+      
+      if (JSON.stringify(updated) !== JSON.stringify(selectedPopulations)) {
+        setSelectedPopulations(updated);
+      }
+    }
+  }, [allPopulations, selectedPopulations]);
+
   // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
@@ -156,8 +189,16 @@ export function GrowthDashboard() {
       params.delete('relativePeriod');
     }
 
+    // Update population filters
+    params.delete('populationIds'); // Clear existing
+    if (selectedPopulations.length > 0) {
+      selectedPopulations.forEach(pop => {
+        params.append('populationIds', pop.value!);
+      });
+    }
+
     setSearchParams(params, { replace: true });
-  }, [period, viewMode, dateRange, searchParams, setSearchParams]);
+  }, [period, viewMode, dateRange, selectedPopulations, searchParams, setSearchParams]);
 
   // Store view mode in localStorage
   useEffect(() => {
@@ -169,7 +210,7 @@ export function GrowthDashboard() {
   }, [viewMode]);
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['growthMetrics', dateRange, period, selectedGeographicAreaId, viewMode],
+    queryKey: ['growthMetrics', dateRange, period, selectedGeographicAreaId, selectedPopulations, viewMode],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
@@ -205,11 +246,14 @@ export function GrowthDashboard() {
         }
       }
       
+      const populationIds = selectedPopulations.map(opt => opt.value!);
+      
       const params: GrowthMetricsParams = {
         startDate,
         endDate,
         period,
         geographicAreaId: selectedGeographicAreaId || undefined,
+        populationIds: populationIds.length > 0 ? populationIds : undefined,
         groupBy: viewMode === 'all' ? undefined : viewMode,
       };
       
@@ -392,6 +436,18 @@ export function GrowthDashboard() {
                 { id: 'type', text: 'Activity Type' },
                 { id: 'category', text: 'Activity Category' },
               ]}
+            />
+          </div>
+
+          <div>
+            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Populations</Box>
+            <Multiselect
+              selectedOptions={selectedPopulations}
+              onChange={({ detail }) => setSelectedPopulations(detail.selectedOptions)}
+              options={allPopulations.map(pop => ({ label: pop.name, value: pop.id }))}
+              placeholder="Filter by populations"
+              filteringType="auto"
+              tokenLimit={3}
             />
           </div>
         </SpaceBetween>

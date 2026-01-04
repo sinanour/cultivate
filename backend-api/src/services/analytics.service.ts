@@ -865,7 +865,7 @@ export class AnalyticsService {
         timePeriod: TimePeriod,
         filters: AnalyticsFilters = {}
     ): Promise<GrowthMetrics> {
-        const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, groupBy } = filters;
+        const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, populationIds, groupBy } = filters;
 
         // Get venue IDs if geographic filter is provided
         let venueIds: string[] | undefined;
@@ -947,6 +947,23 @@ export class AnalyticsService {
             });
         }
 
+        // Add population filtering
+        if (populationIds && populationIds.length > 0) {
+            activityWhere.AND.push({
+                assignments: {
+                    some: {
+                        participant: {
+                            participantPopulations: {
+                                some: {
+                                    populationId: { in: populationIds },
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        }
+
         const activities = await this.prisma.activity.findMany({
             where: activityWhere,
             include: {
@@ -956,8 +973,16 @@ export class AnalyticsService {
                     },
                 },
                 assignments: {
-                    select: {
-                        participantId: true,
+                    include: {
+                        participant: {
+                            include: {
+                                participantPopulations: populationIds && populationIds.length > 0 ? {
+                                    include: {
+                                        population: true,
+                                    },
+                                } : false,
+                            },
+                        },
                     },
                 },
             },
@@ -1003,7 +1028,10 @@ export class AnalyticsService {
             startDate: Date;
             endDate: Date | null;
             status: any; // Use any to accept Prisma's ActivityStatus enum
-            assignments: Array<{ participantId: string }>;
+            assignments: Array<{
+                participantId: string;
+                participant?: any; // Include participant when population filtering is used
+            }>;
         }>
     ): GrowthPeriodData[] {
         const timeSeries: GrowthPeriodData[] = [];

@@ -26,6 +26,7 @@ interface ActivityLifecycleChartProps {
   activityCategoryIds?: string[];
   activityTypeIds?: string[];
   venueIds?: string[];
+  populationIds?: string[];
 }
 
 export function ActivityLifecycleChart({
@@ -35,6 +36,7 @@ export function ActivityLifecycleChart({
   activityCategoryIds,
   activityTypeIds,
   venueIds,
+  populationIds,
 }: ActivityLifecycleChartProps) {
   // View mode state with localStorage persistence
   const [viewMode, setViewMode] = useState<LifecycleViewMode>(() => {
@@ -83,6 +85,7 @@ export function ActivityLifecycleChart({
           activityCategoryIds,
           activityTypeIds,
           venueIds,
+          populationIds,
         });
 
         setData(result);
@@ -95,7 +98,7 @@ export function ActivityLifecycleChart({
     };
 
     fetchData();
-  }, [startDate, endDate, viewMode, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds]);
+  }, [startDate, endDate, viewMode, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds]);
 
   // Transform data for chart
   const chartData = data

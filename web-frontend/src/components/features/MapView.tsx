@@ -69,6 +69,7 @@ type MapMode = 'activities' | 'participantHomes' | 'venues' | 'activityCategorie
 interface MapViewProps {
   mode: MapMode;
   activityTypes: ActivityType[];
+  populationIds?: string[];
 }
 
 // Component to handle map bounds adjustment
@@ -94,7 +95,7 @@ function MapBoundsAdjuster({ markers }: { markers: Array<{ position: [number, nu
   return null;
 }
 
-export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
+export function MapView({ mode: mapMode, activityTypes, populationIds = [] }: MapViewProps) {
   // Get global geographic filter
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
@@ -110,11 +111,60 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
     queryFn: () => ParticipantService.getParticipants(undefined, undefined, selectedGeographicAreaId),
   });
 
+  // Fetch participant populations for filtering
+  const { data: participantPopulationsMap = new Map() } = useQuery({
+    queryKey: ['participantPopulationsMap', participants.map(p => p.id), populationIds],
+    queryFn: async () => {
+      if (populationIds.length === 0) return new Map();
+      
+      const map = new Map<string, string[]>(); // participantId -> populationIds
+      await Promise.all(
+        participants.map(async (participant) => {
+          try {
+            const { ParticipantPopulationService } = await import('../../services/api/population.service');
+            const pops = await ParticipantPopulationService.getParticipantPopulations(participant.id);
+            map.set(participant.id, pops.map(pp => pp.populationId));
+          } catch (error) {
+            console.error(`Failed to fetch populations for participant ${participant.id}:`, error);
+          }
+        })
+      );
+      return map;
+    },
+    enabled: participants.length > 0 && populationIds.length > 0,
+  });
+
   // Fetch all venues (for Venues mode)
   const { data: venues = [] } = useQuery({
     queryKey: ['venues', selectedGeographicAreaId],
     queryFn: () => VenueService.getVenues(undefined, undefined, selectedGeographicAreaId),
     enabled: mapMode === 'venues',
+  });
+
+  // Fetch assignments for activities to enable population filtering
+  const { data: activityAssignmentsMap = new Map() } = useQuery({
+    queryKey: ['activityAssignments', activities.map(a => a.id), populationIds],
+    queryFn: async () => {
+      const map = new Map<string, string[]>(); // activityId -> participantIds
+      
+      if (populationIds.length === 0) {
+        // No filtering needed
+        return map;
+      }
+      
+      await Promise.all(
+        activities.map(async (activity) => {
+          try {
+            const assignments = await ActivityService.getActivityParticipants(activity.id);
+            map.set(activity.id, assignments.map(a => a.participantId));
+          } catch (error) {
+            console.error(`Failed to fetch assignments for activity ${activity.id}:`, error);
+          }
+        })
+      );
+      return map;
+    },
+    enabled: activities.length > 0 && populationIds.length > 0 && (mapMode === 'activities' || mapMode === 'activityCategories'),
   });
 
   // Fetch venue history for all activities
@@ -137,7 +187,7 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
       );
       return map;
     },
-    enabled: activities.length > 0 && mapMode === 'activities',
+    enabled: activities.length > 0 && (mapMode === 'activities' || mapMode === 'activityCategories'),
   });
 
   // Fetch address history for all participants
@@ -188,9 +238,31 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
     activityTypeColorMap.set(type.id, typeColors[index % typeColors.length]);
   });
 
+  // Filter activities by population if needed
+  const filteredActivities = populationIds.length > 0
+    ? activities.filter(activity => {
+        // Activity must have at least one participant in the selected populations
+        const activityParticipantIds = activityAssignmentsMap.get(activity.id) || [];
+        
+        // Check if any of the activity's participants are in the selected populations
+        return activityParticipantIds.some((participantId: string) => {
+          const participantPops = participantPopulationsMap.get(participantId) || [];
+          return populationIds.some(popId => participantPops.includes(popId));
+        });
+      })
+    : activities;
+
+  // Filter participants by population if needed
+  const filteredParticipants = populationIds.length > 0
+    ? participants.filter(participant => {
+        const participantPops = participantPopulationsMap.get(participant.id) || [];
+        return populationIds.some(popId => participantPops.includes(popId));
+      })
+    : participants;
+
   // Prepare markers based on mode
   const markers = mapMode === 'activities' || mapMode === 'activityCategories'
-    ? activities
+    ? filteredActivities
         .map((activity) => {
           const venueHistory = activityVenueMap.get(activity.id);
           if (!venueHistory?.venue?.latitude || !venueHistory?.venue?.longitude) {
@@ -206,7 +278,7 @@ export function MapView({ mode: mapMode, activityTypes }: MapViewProps) {
         })
         .filter((m) => m !== null)
     : mapMode === 'participantHomes'
-    ? participants
+    ? filteredParticipants
         .map((participant) => {
           const addressHistory = participantAddressMap.get(participant.id);
           if (!addressHistory?.venue?.latitude || !addressHistory?.venue?.longitude) {
