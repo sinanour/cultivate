@@ -194,6 +194,61 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - DELETE /api/roles/:id
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
+- [x] 6B. Implement population management (admin only)
+  - [x] 6B.1 Create population repository
+    - Implement CRUD operations using Prisma
+    - Implement reference counting for deletion validation
+    - _Requirements: 2A.1, 2A.2, 2A.3, 2A.4, 2A.6_
+
+  - [x] 6B.2 Create population service
+    - Implement business logic for CRUD operations
+    - Validate name uniqueness
+    - Prevent deletion if participants reference the population
+    - Restrict create/update/delete to ADMINISTRATOR role
+    - Allow all roles to view populations
+    - _Requirements: 2A.5, 2A.6, 2A.14, 2A.15_
+
+  - [ ]* 6B.3 Write property tests for population operations
+    - **Property 1: Resource Creation Persistence**
+    - **Property 2: Resource Update Persistence**
+    - **Property 3: Resource Deletion Removes Resource**
+    - **Property 4: Name Uniqueness Enforcement**
+    - **Property 13: Referenced Entity Deletion Prevention**
+    - **Validates: Requirements 2A.2, 2A.3, 2A.4, 2A.5, 2A.6**
+
+  - [x] 6B.4 Create population routes
+    - GET /api/v1/populations (all roles)
+    - POST /api/v1/populations (admin only)
+    - PUT /api/v1/populations/:id (admin only)
+    - DELETE /api/v1/populations/:id (admin only)
+    - _Requirements: 2A.1, 2A.2, 2A.3, 2A.4, 2A.14, 2A.15_
+
+  - [x] 6B.5 Create participant-population association repository
+    - Implement CRUD operations for associations
+    - Implement duplicate prevention (same participant and population)
+    - _Requirements: 2A.7, 2A.8, 2A.9, 2A.10, 2A.12_
+
+  - [x] 6B.6 Create participant-population association routes
+    - GET /api/v1/participants/:id/populations
+    - POST /api/v1/participants/:id/populations
+    - DELETE /api/v1/participants/:id/populations/:populationId
+    - Validate participant and population exist
+    - Prevent duplicate associations
+    - _Requirements: 2A.8, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13_
+
+  - [x] 6B.7 Create Zod validation schemas
+    - PopulationCreateSchema
+    - PopulationUpdateSchema
+    - ParticipantPopulationCreateSchema
+    - _Requirements: 15.1, 15.4_
+
+  - [ ]* 6B.8 Write property tests for participant-population associations
+    - **Property 164: Participant Population Association Creation**
+    - **Property 165: Duplicate Association Prevention**
+    - **Property 166: Association Deletion Completeness**
+    - **Property 167: Multiple Population Membership Support**
+    - **Validates: Requirements 2A.7, 2A.8, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13**
+
 - [x] 6A. Implement user management (admin only)
   - [x] 6A.1 Update user repository
     - Add findAll() method to list all users
@@ -439,8 +494,8 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Calculate activities started, completed, and cancelled within date range
     - Calculate participants at start and end of date range
     - Provide aggregate counts and breakdowns by activity category and activity type
-    - Support multi-dimensional grouping (activity category, activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity)
-    - Support flexible filtering (point filters for activity category, activity type, venue, geographic area; range filter for dates)
+    - Support multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity)
+    - Support flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates)
     - Apply multiple filters using AND logic
     - Calculate role distribution within filtered and grouped results
     - Implement growth metrics calculation with unique participant and activity counts per period (snapshots, not cumulative)
@@ -448,9 +503,10 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Implement geographic breakdown calculation
     - Support date range filtering
     - Support geographic area filtering
+    - Support population filtering (include only participants in specified populations, include only activities with at least one participant in specified populations)
     - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest date for participants
     - Correctly identify current venue/address when effectiveFrom is null
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13_
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19a, 6.19b, 6.19c, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.9a, 7.9b, 7.9c, 7.10, 7.11, 7.12, 7.13_
 
   - [ ]* 13.2 Write property tests for analytics calculations
     - **Property 20: Activities at Start of Date Range Counting**
@@ -501,12 +557,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - When no dates: count all activities started/completed (all-time)
     - Exclude cancelled activities from both counts
     - Group by activity category or type based on groupBy parameter
-    - Apply optional filters (geographicAreaIds, activityTypeIds, venueIds) using AND logic
+    - Apply optional filters (geographicAreaIds, activityTypeIds, venueIds, populationIds) using AND logic
+    - When populationIds filter provided: include only activities with at least one participant in specified populations
     - Sort results alphabetically by groupName
-    - Create ActivityLifecycleQuerySchema validation schema with optional dates
+    - Create ActivityLifecycleQuerySchema validation schema with optional dates and populationIds
     - Add GET /api/analytics/activity-lifecycle route with validation
     - Return array of {groupName, started, completed} objects
-    - _Requirements: 6A.1, 6A.2, 6A.3, 6A.4, 6A.5, 6A.6, 6A.7, 6A.8, 6A.9, 6A.10, 6A.11, 6A.12, 6A.13, 6A.14, 6A.15, 6A.16, 6A.17, 6A.18, 6A.19, 6A.20, 6A.21, 6A.22, 6A.23_
+    - _Requirements: 6A.1, 6A.2, 6A.3, 6A.4, 6A.5, 6A.6, 6A.7, 6A.8, 6A.9, 6A.10, 6A.11, 6A.12, 6A.13, 6A.14, 6A.15, 6A.16, 6A.17, 6A.17a, 6A.17b, 6A.18, 6A.19, 6A.20, 6A.21, 6A.22, 6A.23_
 
 - [x] 14. Implement offline synchronization
   - [x] 14.1 Create sync service

@@ -21,6 +21,7 @@ import { AnalyticsService, type EngagementMetricsParams } from '../../services/a
 import { activityCategoryService } from '../../services/api/activity-category.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { VenueService } from '../../services/api/venue.service';
+import { PopulationService } from '../../services/api/population.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import { ActivityLifecycleChart } from './ActivityLifecycleChart';
@@ -186,6 +187,12 @@ export function EngagementDashboard() {
       groupValuesLabel: 'Venue values',
       operators: ['=', '!='],
     },
+    {
+      key: 'population',
+      propertyLabel: 'Population',
+      groupValuesLabel: 'Population values',
+      operators: ['=', '!='],
+    },
   ];
 
   // Async loading of property values with cache population
@@ -234,6 +241,19 @@ export function EngagementDashboard() {
           propertyKey: 'venue',
           value: venue.name, // Use label as value for display
           label: venue.name,
+        }));
+      } else if (filteringProperty.key === 'population') {
+        const populations = await PopulationService.getPopulations();
+        const filtered = populations.filter(pop => 
+          !filteringText || pop.name.toLowerCase().includes(filteringText.toLowerCase())
+        );
+        
+        // Add to cache and create options with labels as values
+        filtered.forEach(pop => addToCache(pop.id, pop.name));
+        options = filtered.map(pop => ({
+          propertyKey: 'population',
+          value: pop.name, // Use label as value for display
+          label: pop.name,
         }));
       }
 
@@ -424,6 +444,9 @@ export function EngagementDashboard() {
       const venueLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'venue' && t.operator === '=')?.value;
       const venueId = venueLabel ? getUuidFromLabel(venueLabel) : undefined;
       
+      const populationLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
+      const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+      
       const params: EngagementMetricsParams = {
         startDate,
         endDate,
@@ -431,6 +454,7 @@ export function EngagementDashboard() {
         activityCategoryId,
         activityTypeId,
         venueId,
+        populationIds: populationIds.length > 0 ? populationIds : undefined,
         groupBy: groupByDimensions.map(d => d.value as GroupingDimension),
       };
       

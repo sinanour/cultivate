@@ -21,7 +21,8 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Recursive_Filter**: A filter that includes the selected entity and all its descendants in a hierarchy
 - **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
-- **Configuration_View**: A unified interface for managing activity categories, activity types, and participant roles
+- **Configuration_View**: A unified interface for managing activity categories, activity types, participant roles, and populations
+- **Population**: A label or demographic grouping that can be assigned to participants for segmentation and analysis (e.g., Youth, Adults, Families, Seekers)
 - **Engagement_Summary_Table**: A table on the Engagement Dashboard displaying aggregate and dimensional breakdown metrics for activities and participants
 - **Dirty_Form**: A form with unsaved changes that differ from the initial values
 - **Navigation_Guard**: A mechanism that intercepts navigation attempts to prevent accidental data loss from dirty forms
@@ -43,11 +44,11 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 2: Configuration UI
 
-**User Story:** As a community organizer, I want to manage activity categories, activity types, and participant roles in a unified configuration interface, so that I can organize all configuration entities in one place.
+**User Story:** As a community organizer, I want to manage activity categories, activity types, participant roles, and populations in a unified configuration interface, so that I can organize all configuration entities in one place.
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL provide a unified configuration view for managing activity categories, activity types, and participant roles
+1. THE Web_App SHALL provide a unified configuration view for managing activity categories, activity types, participant roles, and populations
 2. THE Web_App SHALL display a list of all activity categories with predefined and custom categories distinguished
 3. THE Web_App SHALL display a list of all activity types grouped by their category with predefined and custom types distinguished
 4. THE Web_App SHALL provide a modal form to create new activity categories
@@ -66,7 +67,16 @@ The Web Frontend package provides a responsive React-based web application that 
 17. WHEN displaying activity categories in the list, THE Web_App SHALL render the activity category name as a clickable link
 18. WHEN an activity category name is clicked in the activity category list, THE Web_App SHALL open the edit form for that activity category
 19. THE Web_App SHALL display the participant roles list within the same configuration view
-20. THE Web_App SHALL display all three tables (activity categories, activity types, and participant roles) in a cohesive layout on a single page
+20. THE Web_App SHALL display all four tables (activity categories, activity types, participant roles, and populations) in a cohesive layout on a single page
+21. THE Web_App SHALL display the populations list within the same configuration view
+22. THE Web_App SHALL provide a modal form to create new populations
+23. THE Web_App SHALL provide a modal form to edit existing populations
+24. THE Web_App SHALL provide a delete button for populations
+25. WHEN deleting a population, THE Web_App SHALL prevent deletion if participants reference it
+26. WHEN deleting a population, THE Web_App SHALL display an error message explaining why deletion failed
+27. THE Web_App SHALL validate that population names are not empty
+28. THE Web_App SHALL restrict population create, edit, and delete actions to ADMINISTRATOR role only
+29. THE Web_App SHALL allow EDITOR and READ_ONLY roles to view populations but not modify them
 
 ### Requirement 3: Participant Role Management UI
 
@@ -81,6 +91,23 @@ The Web Frontend package provides a responsive React-based web application that 
 5. WHEN deleting a role, THE Web_App SHALL prevent deletion if assignments reference it
 6. WHEN deleting a role, THE Web_App SHALL display an error message explaining why deletion failed
 7. THE Web_App SHALL validate that role names are not empty
+
+### Requirement 3A: Population Management UI
+
+**User Story:** As an administrator, I want to manage populations in the configuration interface, so that I can categorize participants into demographic or interest-based groups for segmentation and analysis.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display a list of all populations within the configuration view
+2. THE Web_App SHALL provide a modal form to create new populations
+3. THE Web_App SHALL provide a modal form to edit existing populations
+4. THE Web_App SHALL provide a delete button for populations
+5. WHEN deleting a population, THE Web_App SHALL prevent deletion if participants reference it
+6. WHEN deleting a population, THE Web_App SHALL display an error message explaining why deletion failed
+7. THE Web_App SHALL validate that population names are not empty
+8. THE Web_App SHALL restrict population create, edit, and delete actions to ADMINISTRATOR role only
+9. THE Web_App SHALL allow EDITOR and READ_ONLY roles to view populations but not modify them
+10. THE Web_App SHALL display the populations table within the same configuration view alongside activity categories, activity types, and participant roles
 
 ### Requirement 4: Participant Management UI
 
@@ -113,6 +140,12 @@ The Web Frontend package provides a responsive React-based web application that 
 18. WHEN editing an existing participant, THE Web_App SHALL allow adding, editing, and deleting home address history records within the participant edit page
 19. WHEN adding an address history record to a new participant before the participant is created, THE Web_App SHALL fetch and display the venue name in the address history table
 20. WHEN a venue is selected for a new address history record, THE Web_App SHALL retrieve the venue details from the backend and store them for display purposes
+21. THE Web_App SHALL provide an interface to manage participant population memberships within the participant form page (both create and edit modes)
+22. THE Web_App SHALL display all populations the participant belongs to in a list or table
+23. THE Web_App SHALL provide an interface to add the participant to populations
+24. THE Web_App SHALL provide an interface to remove the participant from populations
+25. THE Web_App SHALL allow a participant to belong to zero, one, or multiple populations
+26. THE Web_App SHALL display population memberships on the participant detail view
 
 ### Requirement 5: Activity Management UI
 
@@ -251,7 +284,10 @@ The Web Frontend package provides a responsive React-based web application that 
 11. WHEN in "Venues" mode, THE Web_App SHALL display markers for all venues with latitude and longitude coordinates, regardless of whether they have activities or participants
 12. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL display a popup showing the venue name, address, and geographic area
 13. WHEN a venue marker popup is displayed in "Venues" mode, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
-14. THE Web_App SHALL provide filtering controls to show/hide activities by category, type, status, or date range
+14. THE Web_App SHALL provide filtering controls to show/hide activities by category, type, status, date range, or population
+14a. THE Web_App SHALL provide a population filter control on the map view
+14b. WHEN a population filter is applied on the map, THE Web_App SHALL display only activities that have at least one participant belonging to at least one of the specified populations
+14c. WHEN a population filter is applied in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses for participants who belong to at least one of the specified populations
 15. THE Web_App SHALL provide geographic area boundary overlays when available
 16. THE Web_App SHALL allow zooming and panning of the map
 17. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
@@ -285,11 +321,14 @@ The Web Frontend package provides a responsive React-based web application that 
 12. THE Web_App SHALL display all participant counts in aggregate across all activity categories and types
 13. THE Web_App SHALL display all participant counts broken down by activity category
 14. THE Web_App SHALL display all participant counts broken down by activity type
-15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity category, activity type, venue, and geographic area
+15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity category, activity type, venue, geographic area, and population
 16. THE Web_App SHALL provide filter controls for activity category (point filter)
 17. THE Web_App SHALL provide filter controls for activity type (point filter)
 18. THE Web_App SHALL provide filter controls for venue (point filter)
 19. THE Web_App SHALL provide filter controls for geographic area (point filter, includes descendants)
+19a. THE Web_App SHALL provide filter controls for population (point filter, includes only participants belonging to specified populations)
+19b. WHEN a population filter is applied, THE Web_App SHALL include only participants who belong to at least one of the specified populations
+19c. WHEN a population filter is applied, THE Web_App SHALL include only activities that have at least one participant belonging to at least one of the specified populations
 20. THE Web_App SHALL provide filter controls for date range (range filter with start and end dates)
 21. THE Web_App SHALL render an "Engagement Summary" table that displays aggregate metrics and dimensional breakdowns
 22. THE Web_App SHALL render the first row of the Engagement Summary table with the label "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end) in subsequent columns

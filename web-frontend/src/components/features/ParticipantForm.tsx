@@ -24,6 +24,8 @@ import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
 import { formatDate } from '../../utils/date.utils';
 import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
+import { PopulationMembershipManager } from '../participants/PopulationMembershipManager';
+import { ParticipantPopulationService } from '../../services/api/population.service';
 
 interface ParticipantFormProps {
   participant: Participant | null;
@@ -56,6 +58,9 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const [newAddressEffectiveFrom, setNewAddressEffectiveFrom] = useState('');
   const [addressFormErrors, setAddressFormErrors] = useState<{ venue?: string; effectiveFrom?: string; duplicate?: string }>({});
 
+  // Population state
+  const [populationIds, setPopulationIds] = useState<string[]>([]);
+
   // Track initial values for dirty state detection
   const [initialFormState, setInitialFormState] = useState<{
     name: string;
@@ -65,6 +70,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     dateOfBirth: string;
     dateOfRegistration: string;
     nickname: string;
+    populationIds: string[];
   } | null>(null);
 
   // Track if we should bypass navigation guard (set when submitting)
@@ -92,6 +98,8 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     if (bypassNavigationGuard) return false;
     
     // Compare current state with initial state
+    const populationsChanged = JSON.stringify([...populationIds].sort()) !== JSON.stringify([...initialFormState.populationIds].sort());
+    
     return (
       name !== initialFormState.name ||
       email !== initialFormState.email ||
@@ -99,9 +107,10 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       notes !== initialFormState.notes ||
       dateOfBirth !== initialFormState.dateOfBirth ||
       dateOfRegistration !== initialFormState.dateOfRegistration ||
-      nickname !== initialFormState.nickname
+      nickname !== initialFormState.nickname ||
+      populationsChanged
     );
-  }, [name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname, initialFormState, bypassNavigationGuard]);
+  }, [name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname, populationIds, initialFormState, bypassNavigationGuard]);
 
   // Navigation blocker
   const blocker = useBlocker(
@@ -153,6 +162,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
         dateOfBirth: participant.dateOfBirth ? participant.dateOfBirth.split('T')[0] : '',
         dateOfRegistration: participant.dateOfRegistration ? participant.dateOfRegistration.split('T')[0] : '',
         nickname: participant.nickname || '',
+        populationIds: [], // Will be set by PopulationMembershipManager
       };
       setName(values.name);
       setEmail(values.email);
@@ -172,6 +182,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
         dateOfBirth: '',
         dateOfRegistration: '',
         nickname: '',
+        populationIds: [],
       };
       setName(emptyValues.name);
       setEmail(emptyValues.email);
@@ -181,6 +192,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       setDateOfRegistration(emptyValues.dateOfRegistration);
       setNickname(emptyValues.nickname);
       setAddressHistory([]);
+      setPopulationIds([]);
       setInitialFormState(emptyValues);
     }
     // Clear errors when switching modes
@@ -530,11 +542,55 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
     }
 
     if (participant) {
-      updateMutation.mutate({
-        id: participant.id,
-        ...data,
-        version: getEntityVersion(participant),
-      });
+      // For existing participants, update participant data
+      try {
+        await updateMutation.mutateAsync({
+          id: participant.id,
+          ...data,
+          version: getEntityVersion(participant),
+        });
+
+        // Sync population changes
+        const initialPopIds = initialFormState?.populationIds || [];
+        const currentPopIds = populationIds;
+
+        // Find added populations (not in initial)
+        const addedPopIds = currentPopIds.filter(id => !initialPopIds.includes(id));
+        // Find removed populations (in initial but not in current)
+        const removedPopIds = initialPopIds.filter(id => !currentPopIds.includes(id));
+
+        // Add new populations (with error handling for duplicates)
+        for (const popId of addedPopIds) {
+          try {
+            await ParticipantPopulationService.addParticipantToPopulation(participant.id, popId);
+          } catch (err: any) {
+            // Ignore duplicate errors (population already added)
+            if (err.response?.data?.code !== 'DUPLICATE_ASSOCIATION') {
+              throw err;
+            }
+          }
+        }
+
+        // Remove populations
+        for (const popId of removedPopIds) {
+          try {
+            await ParticipantPopulationService.removeParticipantFromPopulation(participant.id, popId);
+          } catch (err: any) {
+            // Ignore not found errors (population already removed)
+            if (err.response?.data?.code !== 'NOT_FOUND') {
+              throw err;
+            }
+          }
+        }
+
+        // Update initial state to reflect saved populations
+        setInitialFormState(prev => prev ? { ...prev, populationIds: currentPopIds } : null);
+
+        queryClient.invalidateQueries({ queryKey: ['participantPopulations', participant.id] });
+      } catch (err: any) {
+        setBypassNavigationGuard(false);
+        setError(err.message || 'Failed to update participant');
+      }
     } else {
       // For new participants, create participant first, then create address history records
       try {
@@ -817,6 +873,18 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                 )}
               </SpaceBetween>
             </Container>
+
+            {/* Embedded Population Membership Management */}
+            <PopulationMembershipManager 
+              participantId={participant?.id || null}
+              value={populationIds}
+              onChange={setPopulationIds}
+              onInitialLoad={(ids) => {
+                // Update initial state when populations are first loaded
+                setInitialFormState(prev => prev ? { ...prev, populationIds: ids } : null);
+              }}
+              disabled={isSubmitting}
+            />
           </SpaceBetween>
         </Form>
       </form>

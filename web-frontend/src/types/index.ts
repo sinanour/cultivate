@@ -29,6 +29,22 @@ export interface ParticipantRole {
     updatedAt: string;
 }
 
+export interface Population {
+    id: string;
+    name: string;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ParticipantPopulation {
+    id: string;
+    participantId: string;
+    populationId: string;
+    population?: Population;
+    createdAt: string;
+}
+
 export interface Participant {
     id: string;
     name: string;

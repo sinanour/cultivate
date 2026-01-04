@@ -84,6 +84,17 @@ POST   /api/v1/roles                   -> Create role
 PUT    /api/v1/roles/:id               -> Update role
 DELETE /api/v1/roles/:id               -> Delete role
 
+// Population Routes (Admin Only)
+GET    /api/v1/populations             -> List all populations
+POST   /api/v1/populations             -> Create population (admin only)
+PUT    /api/v1/populations/:id         -> Update population (admin only)
+DELETE /api/v1/populations/:id         -> Delete population (admin only)
+
+// Participant Population Association Routes
+GET    /api/v1/participants/:id/populations           -> List participant's populations
+POST   /api/v1/participants/:id/populations           -> Add participant to population
+DELETE /api/v1/participants/:id/populations/:populationId -> Remove participant from population
+
 // User Routes (Admin Only)
 GET    /api/v1/users                   -> List all users (admin only)
 POST   /api/v1/users                   -> Create user (admin only)
@@ -167,13 +178,14 @@ Services implement business logic and coordinate operations:
 - **ActivityCategoryService**: Manages activity category CRUD operations, validates uniqueness, prevents deletion of referenced categories
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, validates activity category references, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
+- **PopulationService**: Manages population CRUD operations (admin only for create/update/delete), validates uniqueness, prevents deletion of referenced populations, manages participant-population associations (many-to-many), validates participant and population existence, prevents duplicate associations
 - **UserService**: Manages user CRUD operations (admin only), validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates
 - **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
-- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support)
+- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering)
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
 - **AuditService**: Logs user actions, stores audit records
@@ -185,6 +197,8 @@ Repositories encapsulate Prisma database access:
 - **ActivityCategoryRepository**: CRUD operations for activity categories
 - **ActivityTypeRepository**: CRUD operations for activity types
 - **RoleRepository**: CRUD operations for roles
+- **PopulationRepository**: CRUD operations for populations, reference counting for deletion validation
+- **ParticipantPopulationRepository**: CRUD operations for participant-population associations, duplicate prevention
 - **UserRepository**: CRUD operations for users, includes findAll, findByEmail, findById, create, and update methods
 - **ParticipantRepository**: CRUD operations and text-based search for participants (supports filtering by name/email and geographic area with pagination)
 - **ActivityRepository**: CRUD operations and queries for activities
@@ -241,6 +255,11 @@ ActivityTypeCreateSchema = {
 
 // Role Schema
 RoleCreateSchema = {
+  name: string (required, min 1 char, max 100 chars)
+}
+
+// Population Schema
+PopulationCreateSchema = {
   name: string (required, min 1 char, max 100 chars)
 }
 
@@ -413,6 +432,7 @@ Returns activity lifecycle event data showing activities started and completed w
 - `geographicAreaIds` (optional): Array of geographic area UUIDs - filters to activities at venues in these areas or descendants
 - `activityTypeIds` (optional): Array of activity type UUIDs - filters to specific activity types
 - `venueIds` (optional): Array of venue UUIDs - filters to activities at specific venues
+- `populationIds` (optional): Array of population UUIDs - filters to activities with participants in these populations
 
 **Response:**
 ```typescript
@@ -475,6 +495,22 @@ The API uses Prisma to define the following database models:
 - updatedAt: DateTime
 - assignments: Assignment[] (relation)
 
+**Population**
+- id: UUID (primary key)
+- name: String (unique)
+- createdAt: DateTime
+- updatedAt: DateTime
+- participantPopulations: ParticipantPopulation[] (relation)
+
+**ParticipantPopulation**
+- id: UUID (primary key)
+- participantId: UUID (foreign key)
+- populationId: UUID (foreign key)
+- createdAt: DateTime
+- participant: Participant (relation)
+- population: Population (relation)
+- Unique constraint: (participantId, populationId) to prevent duplicate associations
+
 **Participant**
 - id: UUID (primary key)
 - name: String
@@ -488,6 +524,7 @@ The API uses Prisma to define the following database models:
 - updatedAt: DateTime
 - assignments: Assignment[] (relation)
 - addressHistory: ParticipantAddressHistory[] (relation)
+- participantPopulations: ParticipantPopulation[] (relation)
 
 **ParticipantAddressHistory**
 - id: UUID (primary key)
@@ -578,6 +615,9 @@ The API uses Prisma to define the following database models:
 - Activity has many ActivityVenueHistory records (one-to-many)
 - Participant has many Assignments (one-to-many)
 - Participant has many ParticipantAddressHistory records (one-to-many)
+- Participant has many ParticipantPopulation records (one-to-many)
+- Population has many ParticipantPopulation records (one-to-many)
+- ParticipantPopulation belongs to one Participant and one Population (many-to-one for each)
 - Role has many Assignments (one-to-many)
 - Assignment belongs to one Activity, one Participant, and one Role (many-to-one for each)
 - Venue belongs to one GeographicArea (many-to-one)
@@ -626,9 +666,9 @@ The API uses Prisma to define the following database models:
 
 - Foreign key constraints enforce referential integrity
 - Cascade deletes are NOT used to prevent accidental data loss
-- Deletion of referenced entities (ActivityCategory, ActivityType, Role, Venue, GeographicArea) is prevented by checking for existing references
+- Deletion of referenced entities (ActivityCategory, ActivityType, Role, Population, Venue, GeographicArea) is prevented by checking for existing references
 - Deletion of Activities cascades to Assignments and ActivityVenueHistory (business rule: removing an activity removes all assignments and venue history)
-- Deletion of Participants cascades to Assignments and ParticipantAddressHistory (business rule: removing a participant removes all assignments and address history)
+- Deletion of Participants cascades to Assignments, ParticipantAddressHistory, and ParticipantPopulation (business rule: removing a participant removes all assignments, address history, and population memberships)
 - Circular parent-child relationships in GeographicArea are prevented by validation logic
 
 ## Correctness Properties

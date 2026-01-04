@@ -14,6 +14,7 @@ import Link from '@cloudscape-design/components/link';
 import Badge from '@cloudscape-design/components/badge';
 import { ParticipantService } from '../../services/api/participant.service';
 import { ParticipantAddressHistoryService } from '../../services/api/participant-address-history.service';
+import { ParticipantPopulationService } from '../../services/api/population.service';
 import { AddressHistoryTable } from './AddressHistoryTable';
 import { AddressHistoryForm } from './AddressHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -45,6 +46,12 @@ export function ParticipantDetail() {
   const { data: activities = [], isLoading: isLoadingActivities } = useQuery({
     queryKey: ['participantActivities', id],
     queryFn: () => ParticipantService.getParticipantActivities(id!),
+    enabled: !!id,
+  });
+
+  const { data: populations = [] } = useQuery({
+    queryKey: ['participantPopulations', id],
+    queryFn: () => ParticipantPopulationService.getParticipantPopulations(id!),
     enabled: !!id,
   });
 
@@ -192,7 +199,14 @@ export function ParticipantDetail() {
               </SpaceBetween>
             }
           >
-            {participant.name}
+            <SpaceBetween direction="horizontal" size="xs" alignItems="center">
+              <span>{participant.name}</span>
+              {populations.map((pp) => (
+                <Badge key={pp.id} color="blue">
+                  {pp.population?.name || 'Unknown'}
+                </Badge>
+              ))}
+            </SpaceBetween>
           </Header>
         }
       >

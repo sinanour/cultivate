@@ -70,6 +70,33 @@ model Role {
   @@map("roles")
 }
 
+// Population model for participant demographic/interest groupings
+model Population {
+  id                     String                  @id @default(uuid())
+  name                   String                  @unique
+  version                Int                     @default(1)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  participantPopulations ParticipantPopulation[]
+
+  @@map("populations")
+}
+
+// ParticipantPopulation join table for many-to-many relationship
+model ParticipantPopulation {
+  id            String      @id @default(uuid())
+  participantId String
+  populationId  String
+  createdAt     DateTime    @default(now())
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  population    Population  @relation(fields: [populationId], references: [id])
+
+  @@unique([participantId, populationId])
+  @@index([participantId])
+  @@index([populationId])
+  @@map("participant_populations")
+}
+
 // Geographic Area model for hierarchical geographic regions
 model GeographicArea {
   id                     String           @id @default(uuid())
@@ -143,6 +170,7 @@ model Participant {
   updatedAt          DateTime                    @updatedAt
   assignments        Assignment[]
   addressHistory     ParticipantAddressHistory[]
+  participantPopulations ParticipantPopulation[]
 
   @@index([email])
   @@index([name])

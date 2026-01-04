@@ -9,6 +9,7 @@ export interface EngagementMetricsParams {
     activityCategoryId?: string;
     activityTypeId?: string;
     venueId?: string;
+    populationIds?: string[];
     groupBy?: GroupingDimension[];
     dateGranularity?: DateGranularity;
 }
@@ -18,6 +19,7 @@ export interface GrowthMetricsParams {
     endDate?: string;
     period?: TimePeriod;
     geographicAreaId?: string;
+    populationIds?: string[];
     groupBy?: 'type' | 'category';
 }
 
@@ -35,6 +37,7 @@ export interface ActivityLifecycleParams {
     activityCategoryIds?: string[];
     activityTypeIds?: string[];
     venueIds?: string[];
+    populationIds?: string[];
 }
 
 export class AnalyticsService {
@@ -48,6 +51,13 @@ export class AnalyticsService {
         if (params.activityTypeId) queryParams.append('activityTypeId', params.activityTypeId);
         if (params.venueId) queryParams.append('venueId', params.venueId);
         if (params.dateGranularity) queryParams.append('dateGranularity', params.dateGranularity);
+
+        // Handle populationIds array parameter
+        if (params.populationIds && params.populationIds.length > 0) {
+            params.populationIds.forEach(id => {
+                queryParams.append('populationIds', id);
+            });
+        }
 
         // Handle groupBy array parameter
         if (params.groupBy && params.groupBy.length > 0) {
@@ -68,6 +78,13 @@ export class AnalyticsService {
         if (params.period) queryParams.append('period', params.period);
         if (params.geographicAreaId) queryParams.append('geographicAreaId', params.geographicAreaId);
         if (params.groupBy) queryParams.append('groupBy', params.groupBy);
+
+        // Handle populationIds array parameter
+        if (params.populationIds && params.populationIds.length > 0) {
+            params.populationIds.forEach(id => {
+                queryParams.append('populationIds', id);
+            });
+        }
 
         const query = queryParams.toString();
         return ApiClient.get<GrowthMetrics>(`/analytics/growth${query ? `?${query}` : ''}`);
@@ -114,6 +131,12 @@ export class AnalyticsService {
         if (params.venueIds && params.venueIds.length > 0) {
             params.venueIds.forEach(id => {
                 queryParams.append('venueIds', id);
+            });
+        }
+
+        if (params.populationIds && params.populationIds.length > 0) {
+            params.populationIds.forEach(id => {
+                queryParams.append('populationIds', id);
             });
         }
 

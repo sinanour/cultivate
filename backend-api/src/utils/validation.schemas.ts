@@ -51,6 +51,20 @@ export const RoleUpdateSchema = z.object({
   version: z.number().int().positive().optional(),
 });
 
+// Population schemas
+export const PopulationCreateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
+});
+
+export const PopulationUpdateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
+  version: z.number().int().positive().optional(),
+});
+
+export const ParticipantPopulationCreateSchema = z.object({
+  populationId: z.string().uuid('Invalid population ID format'),
+});
+
 // User schemas
 export const UserCreateSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -187,6 +201,17 @@ export const EngagementQuerySchema = z.object({
   activityCategoryId: z.string().uuid('Invalid activity category ID format').optional(),
   activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
   venueId: z.string().uuid('Invalid venue ID format').optional(),
+  populationIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid population ID format')).optional()
+  ),
   groupBy: z.union([
     z.nativeEnum(GroupingDimension),
     z.array(z.nativeEnum(GroupingDimension))
@@ -203,6 +228,17 @@ export const GrowthQuerySchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  populationIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid population ID format')).optional()
+  ),
   groupBy: z.enum(['type', 'category']).optional(),
 });
 
@@ -255,6 +291,17 @@ export const ActivityLifecycleQuerySchema = z.object({
       return values.length > 0 ? values : undefined;
     },
     z.array(z.string().uuid('Invalid venue ID format')).optional()
+  ),
+  populationIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid population ID format')).optional()
   ),
 });
 

@@ -18,6 +18,7 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, cluster, county, province, state, country, continent, hemisphere, world)
 - **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
+- **Population**: A label or demographic grouping that can be assigned to participants for segmentation and analysis (e.g., Youth, Adults, Families, Seekers)
 
 ## Requirements
 
@@ -62,6 +63,28 @@ The Backend API package provides the RESTful API service that implements all bus
 5. WHEN creating a role, THE API SHALL validate that the name is provided and unique
 6. WHEN deleting a role, THE API SHALL prevent deletion if assignments reference it
 7. THE API SHALL seed the following predefined roles on initial database setup: "Tutor", "Teacher", "Animator", "Host", "Participant"
+
+### Requirement 2A: Manage Populations
+
+**User Story:** As an administrator, I want to define and manage populations via API, so that I can categorize participants into demographic or interest-based groups for segmentation and analysis.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a GET /api/v1/populations endpoint that returns all populations
+2. THE API SHALL provide a POST /api/v1/populations endpoint that creates a new population
+3. THE API SHALL provide a PUT /api/v1/populations/:id endpoint that updates a population
+4. THE API SHALL provide a DELETE /api/v1/populations/:id endpoint that deletes a population
+5. WHEN creating a population, THE API SHALL validate that the name is provided and unique
+6. WHEN deleting a population, THE API SHALL prevent deletion if participants reference it
+7. THE API SHALL support many-to-many relationships between participants and populations
+8. THE API SHALL provide a GET /api/v1/participants/:id/populations endpoint that returns all populations for a participant
+9. THE API SHALL provide a POST /api/v1/participants/:id/populations endpoint that adds a participant to a population
+10. THE API SHALL provide a DELETE /api/v1/participants/:id/populations/:populationId endpoint that removes a participant from a population
+11. WHEN adding a participant to a population, THE API SHALL validate that both the participant and population exist
+12. WHEN adding a participant to a population, THE API SHALL prevent duplicate associations (same participant and population)
+13. THE API SHALL allow a participant to belong to zero, one, or multiple populations
+14. THE API SHALL restrict population management endpoints (create, update, delete) to ADMINISTRATOR role only
+15. THE API SHALL allow EDITOR and READ_ONLY roles to view populations but not modify them
 
 ### Requirement 3: Track Participants
 
@@ -201,11 +224,14 @@ The Backend API package provides the RESTful API service that implements all bus
 12. THE API SHALL provide participant counts in aggregate across all activity categories and types
 13. THE API SHALL provide participant counts broken down by activity category
 14. THE API SHALL provide participant counts broken down by activity type
-15. THE API SHALL support grouping engagement metrics by one or more dimensions: activity category, activity type, venue, geographic area, and date (with weekly, monthly, quarterly, or yearly granularity)
+15. THE API SHALL support grouping engagement metrics by one or more dimensions: activity category, activity type, venue, geographic area, population, and date (with weekly, monthly, quarterly, or yearly granularity)
 16. THE API SHALL support filtering engagement metrics by activity category (point filter)
 17. THE API SHALL support filtering engagement metrics by activity type (point filter)
 18. THE API SHALL support filtering engagement metrics by venue (point filter)
 19. THE API SHALL support filtering engagement metrics by geographic area (point filter, includes descendants)
+19a. THE API SHALL support filtering engagement metrics by population (point filter, includes only participants belonging to specified populations)
+19b. WHEN a population filter is provided, THE API SHALL include only participants who belong to at least one of the specified populations
+19c. WHEN a population filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
 20. THE API SHALL support filtering engagement metrics by date range (range filter with start and end dates)
 21. WHEN multiple grouping dimensions are specified, THE API SHALL return metrics organized hierarchically by the specified dimensions in order
 22. WHEN multiple filters are specified, THE API SHALL apply all filters using AND logic
@@ -240,6 +266,8 @@ The Backend API package provides the RESTful API service that implements all bus
 15. WHEN activityTypeIds filter is provided, THE API SHALL include only activities of the specified types
 16. THE API SHALL support optional venueIds query parameter to filter by one or more venues
 17. WHEN venueIds filter is provided, THE API SHALL include only activities at the specified venues
+17a. THE API SHALL support optional populationIds query parameter to filter by one or more populations
+17b. WHEN populationIds filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
 18. WHEN multiple filters are provided, THE API SHALL apply all filters using AND logic
 19. THE API SHALL return an array of objects with groupName, started count, and completed count
 20. THE API SHALL sort results alphabetically by groupName
@@ -271,6 +299,9 @@ The Backend API package provides the RESTful API service that implements all bus
 7. THE API SHALL calculate percentage change between consecutive periods for both participants and activities
 8. WHEN calculating growth metrics, THE API SHALL accept an optional geographic area ID filter
 9. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
+9a. WHEN calculating growth metrics, THE API SHALL accept an optional populationIds array filter
+9b. WHEN a population filter is provided, THE API SHALL include only participants who belong to at least one of the specified populations
+9c. WHEN a population filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
 10. THE API SHALL accept an optional groupBy query parameter with string values 'type' or 'category' (not 'activityType' or 'activityCategory')
 11. WHEN groupBy is 'type', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_TYPE enum and return separate time-series data for each activity type in the groupedTimeSeries field
 12. WHEN groupBy is 'category', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_CATEGORY enum and return separate time-series data for each activity category in the groupedTimeSeries field

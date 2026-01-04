@@ -216,6 +216,40 @@ This implementation plan covers the React-based web application built with TypeS
     - Integrate ParticipantRoleList into ConfigurationPage
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
+- [x] 6A. Implement population management UI (admin only)
+  - [x] 6A.1 Create PopulationList component
+    - Display table using CloudScape Table
+    - Render population name as hyperlink in primary column
+    - Provide edit and delete actions per row (no separate View button)
+    - Handle delete validation (REFERENCED_ENTITY error when participants reference it)
+    - Restrict edit and delete actions to ADMINISTRATOR role only
+    - Allow all roles to view populations
+    - Display version number for debugging
+    - _Requirements: 3A.1, 3A.4, 3A.5, 3A.6, 3A.8, 3A.9, 3A.10_
+
+  - [x] 6A.2 Create PopulationForm component
+    - Modal form for create/edit
+    - Validate name is not empty
+    - Include version field in update requests for optimistic locking
+    - Submit to API and update cache
+    - Only accessible to ADMINISTRATOR role
+    - _Requirements: 3A.2, 3A.3, 3A.7, 3A.8_
+
+  - [x] 6A.3 Integrate PopulationList into ConfigurationPage
+    - Add PopulationList to ConfigurationPage after ParticipantRoleList
+    - Update page header to reflect four configuration entities
+    - Stack all four tables vertically with consistent spacing
+    - Display in order: Activity Categories, Activity Types, Participant Roles, Populations
+    - _Requirements: 2.1, 2.20, 2.21, 3A.10_
+
+  - [ ]* 6A.4 Write property tests for population management
+    - **Property 1: Type/Role/Population Distinction in Lists**
+    - **Property 2: Referential Integrity on Deletion**
+    - **Property 3: Deletion Error Messages**
+    - **Property 4: Non-Empty Name Validation**
+    - **Property 168: Population Administrator Restriction**
+    - **Validates: Requirements 3A.1, 3A.2, 3A.3, 3A.4, 3A.5, 3A.6, 3A.7, 3A.8, 3A.9**
+
 - [x] 7. Implement participant management UI
   - [x] 7.0 Create useFormNavigationGuard hook
     - Create custom React hook for navigation guard functionality
@@ -342,6 +376,32 @@ This implementation plan covers the React-based web application built with TypeS
     - Format dates using formatDate() utility
     - Handle ongoing activities (display "Ongoing" instead of end date)
     - _Requirements: 4.10_
+
+  - [x] 7.8 Implement participant population membership management
+    - [x] 7.8.1 Create ParticipantPopulationService
+      - Implement getParticipantPopulations(participantId) to fetch from /participants/:id/populations
+      - Implement addParticipantToPopulation(participantId, populationId) via POST /participants/:id/populations
+      - Implement removeParticipantFromPopulation(participantId, populationId) via DELETE /participants/:id/populations/:populationId
+      - _Requirements: 4.21, 4.23, 4.24_
+
+    - [x] 7.8.2 Create PopulationMembershipManager component
+      - Display list or table of populations the participant belongs to
+      - Provide interface to add participant to populations (multi-select or dropdown)
+      - Provide interface to remove participant from populations (remove button per population)
+      - Support zero, one, or multiple population memberships
+      - Embed within ParticipantFormPage (both create and edit modes)
+      - _Requirements: 4.21, 4.22, 4.23, 4.24, 4.25_
+
+    - [x] 7.8.3 Update ParticipantDetail to display populations
+      - Fetch and display populations the participant belongs to
+      - Show population names in a list or table
+      - _Requirements: 4.26_
+
+    - [ ]* 7.8.4 Write property tests for population membership
+      - **Property 169: Participant Population Membership Display**
+      - **Property 170: Multiple Population Membership Support**
+      - **Property 171: Population Membership Management in Form**
+      - **Validates: Requirements 4.21, 4.22, 4.23, 4.24, 4.25, 4.26**
 
 - [x] 8. Implement venue management UI
   - [x] 8.1 Create VenueList component
@@ -660,10 +720,14 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.19, 6C.20, 6C.21, 6C.22**
 
   - [x] 13.3 Create MapFilters component
-    - Provide filter controls for category, type, status, date range
+    - Provide filter controls for category, type, status, date range, and population
+    - Add population filter control to map view
+    - When population filter applied: show only activities with participants in specified populations
+    - When population filter applied in Participant Homes mode: show only participants in specified populations
     - Update markers based on filters
     - Support geographic area boundary toggle
     - Provide center button
+    - _Requirements: 6C.14, 6C.14a, 6C.14b, 6C.14c, 6C.15, 6C.17_
     - _Requirements: 6C.14, 6C.15, 6C.17_
 
   - [x] 13.4 Create MapPopup component
@@ -945,21 +1009,24 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 14.6 Replace filter dropdowns with PropertyFilter component
     - Remove separate Select components for activity type and venue filters
     - Add CloudScape PropertyFilter component to EngagementDashboard
-    - Configure filtering properties: Activity Category, Activity Type, Venue
+    - Configure filtering properties: Activity Category, Activity Type, Venue, Population
     - Implement handleLoadItems function for async property value loading:
       - Fetch activity categories from ActivityCategoryService
       - Fetch activity types from ActivityTypeService
       - Fetch venues from VenueService with geographic area filtering
+      - Fetch populations from PopulationService
       - Filter results based on user input text (case-insensitive)
     - Configure PropertyFilter with operators: = (equals) and != (not equals)
     - Manage PropertyFilter query state with tokens and operation
     - Extract filter values from PropertyFilter tokens (propertyKey and value)
-    - Apply extracted filters to analytics API queries (activityCategoryId, activityTypeId, venueId)
-    - Update URL synchronization to persist PropertyFilter tokens
-    - Update ActivityLifecycleChart to use PropertyFilter tokens for filtering
+    - Apply extracted filters to analytics API queries (activityCategoryId, activityTypeId, venueId, populationIds)
+    - When population filter applied: include only participants in specified populations
+    - When population filter applied: include only activities with at least one participant in specified populations
+    - Update URL synchronization to persist PropertyFilter tokens including population
+    - Update ActivityLifecycleChart to use PropertyFilter tokens for filtering including population
     - Display loading indicator while fetching property values
     - Provide comprehensive i18nStrings for PropertyFilter accessibility
-    - _Requirements: 7B.1, 7B.2, 7B.3, 7B.4, 7B.5, 7B.6, 7B.7, 7B.8, 7B.9, 7B.10, 7B.11, 7B.12, 7B.13, 7B.14, 7B.15, 7B.16, 7B.17_
+    - _Requirements: 7B.1, 7B.2, 7B.3, 7B.4, 7B.5, 7B.6, 7B.7, 7B.8, 7B.9, 7B.10, 7B.11, 7B.12, 7B.13, 7B.14, 7B.15, 7B.16, 7B.17, 7.19a, 7.19b, 7.19c_
 
   - [ ]* 14.7 Write property tests for PropertyFilter
     - **Property 31o: PropertyFilter Lazy Loading**
@@ -971,7 +1038,7 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 15. Implement offline support
   - [x] 15.1 Create OfflineStorage service
     - Use Dexie.js for IndexedDB management
-    - Store tables for all entities (participants, activities, activityTypes, roles, assignments, venues, geographicAreas)
+    - Store tables for all entities (participants, activities, activityTypes, roles, populations, assignments, venues, geographicAreas)
     - Implement syncFromServer to fetch and cache all data
     - Implement getLocalData
     - _Requirements: 10.1, 10.2_

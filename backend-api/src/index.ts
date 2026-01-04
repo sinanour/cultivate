@@ -8,6 +8,8 @@ import { UserRepository } from './repositories/user.repository';
 import { ActivityCategoryRepository } from './repositories/activity-category.repository';
 import { ActivityTypeRepository } from './repositories/activity-type.repository';
 import { RoleRepository } from './repositories/role.repository';
+import { PopulationRepository } from './repositories/population.repository';
+import { ParticipantPopulationRepository } from './repositories/participant-population.repository';
 import { ParticipantRepository } from './repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from './repositories/participant-address-history.repository';
 import { GeographicAreaRepository } from './repositories/geographic-area.repository';
@@ -21,6 +23,7 @@ import { UserService } from './services/user.service';
 import { ActivityCategoryService } from './services/activity-category.service';
 import { ActivityTypeService } from './services/activity-type.service';
 import { RoleService } from './services/role.service';
+import { PopulationService } from './services/population.service';
 import { ParticipantService } from './services/participant.service';
 import { GeographicAreaService } from './services/geographic-area.service';
 import { VenueService } from './services/venue.service';
@@ -43,6 +46,7 @@ import { UserRoutes } from './routes/user.routes';
 import { ActivityCategoryRoutes } from './routes/activity-category.routes';
 import { ActivityTypeRoutes } from './routes/activity-type.routes';
 import { RoleRoutes } from './routes/role.routes';
+import { PopulationRoutes } from './routes/population.routes';
 import { ParticipantRoutes } from './routes/participant.routes';
 import { GeographicAreaRoutes } from './routes/geographic-area.routes';
 import { VenueRoutes } from './routes/venue.routes';
@@ -66,6 +70,8 @@ const userRepository = new UserRepository(prisma);
 const activityCategoryRepository = new ActivityCategoryRepository(prisma);
 const activityTypeRepository = new ActivityTypeRepository(prisma);
 const roleRepository = new RoleRepository(prisma);
+const populationRepository = new PopulationRepository(prisma);
+const participantPopulationRepository = new ParticipantPopulationRepository(prisma);
 const participantRepository = new ParticipantRepository(prisma);
 const addressHistoryRepository = new ParticipantAddressHistoryRepository(prisma);
 const geographicAreaRepository = new GeographicAreaRepository(prisma);
@@ -81,6 +87,11 @@ const userService = new UserService(userRepository);
 const activityCategoryService = new ActivityCategoryService(activityCategoryRepository);
 const activityTypeService = new ActivityTypeService(activityTypeRepository, activityCategoryRepository);
 const roleService = new RoleService(roleRepository);
+const populationService = new PopulationService(
+  populationRepository,
+  participantPopulationRepository,
+  participantRepository
+);
 const participantService = new ParticipantService(
   participantRepository,
   addressHistoryRepository,
@@ -129,6 +140,7 @@ const activityTypeRoutes = new ActivityTypeRoutes(
   auditLoggingMiddleware
 );
 const roleRoutes = new RoleRoutes(roleService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
+const populationRoutes = new PopulationRoutes(populationService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
 const participantRoutes = new ParticipantRoutes(
   participantService,
   authMiddleware,
@@ -187,6 +199,7 @@ app.use('/api/v1/users', smartRateLimiter, userRoutes.getRouter());
 app.use('/api/v1/activity-categories', smartRateLimiter, activityCategoryRoutes.getRouter());
 app.use('/api/v1/activity-types', smartRateLimiter, activityTypeRoutes.getRouter());
 app.use('/api/v1/roles', smartRateLimiter, roleRoutes.getRouter());
+app.use('/api/v1', smartRateLimiter, populationRoutes.getRouter());
 app.use('/api/v1/participants', smartRateLimiter, participantRoutes.getRouter());
 app.use('/api/v1/geographic-areas', smartRateLimiter, geographicAreaRoutes.getRouter());
 app.use('/api/v1/venues', smartRateLimiter, venueRoutes.getRouter());

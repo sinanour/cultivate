@@ -55,7 +55,7 @@ export class AnalyticsRoutes {
 
     private async getEngagement(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, groupBy, dateGranularity } = req.query;
+            const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, populationIds, groupBy, dateGranularity } = req.query;
 
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
@@ -64,6 +64,7 @@ export class AnalyticsRoutes {
                 activityCategoryId: activityCategoryId as string | undefined,
                 activityTypeId: activityTypeId as string | undefined,
                 venueId: venueId as string | undefined,
+                populationIds: populationIds as string[] | undefined,
                 groupBy: groupBy as any[] | undefined, // Already normalized by Zod transform
                 dateGranularity: dateGranularity as any | undefined,
             };
@@ -82,7 +83,7 @@ export class AnalyticsRoutes {
 
     private async getGrowth(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { period, startDate, endDate, geographicAreaId, groupBy } = req.query;
+            const { period, startDate, endDate, geographicAreaId, populationIds, groupBy } = req.query;
 
             // Parse groupBy parameter
             let groupByDimensions: GroupingDimension[] | undefined;
@@ -96,6 +97,7 @@ export class AnalyticsRoutes {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
                 geographicAreaId: geographicAreaId as string | undefined,
+                populationIds: populationIds as string[] | undefined,
                 groupBy: groupByDimensions,
             };
 
@@ -137,7 +139,7 @@ export class AnalyticsRoutes {
     private async getActivityLifecycle(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             // Query parameters have been validated and transformed by ValidationMiddleware
-            const { startDate, endDate, groupBy, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds } = req.query;
+            const { startDate, endDate, groupBy, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds } = req.query;
 
             const data = await this.analyticsService.getActivityLifecycleEvents(
                 startDate ? new Date(startDate as string) : undefined,
@@ -148,6 +150,7 @@ export class AnalyticsRoutes {
                     activityCategoryIds: activityCategoryIds as string[] | undefined,
                     activityTypeIds: activityTypeIds as string[] | undefined,
                     venueIds: venueIds as string[] | undefined,
+                    populationIds: populationIds as string[] | undefined,
                 }
             );
 

@@ -160,12 +160,12 @@ src/
 - Submits to API and updates cache
 
 **ConfigurationView**
-- Unified page/view for managing activity categories, activity types, and participant roles
-- Displays all three tables in a cohesive interface on a single page
+- Unified page/view for managing activity categories, activity types, participant roles, and populations
+- Displays all four tables in a cohesive interface on a single page
 - Shows hierarchical relationship between categories and types
-- Provides easy navigation between category, type, and role management
-- Uses CloudScape SpaceBetween component to stack the three tables vertically with appropriate spacing
-- Displays tables in order: Activity Categories, Activity Types, Participant Roles
+- Provides easy navigation between category, type, role, and population management
+- Uses CloudScape SpaceBetween component to stack the four tables vertically with appropriate spacing
+- Displays tables in order: Activity Categories, Activity Types, Participant Roles, Populations
 
 #### 4. Participant Role Management
 
@@ -181,6 +181,23 @@ src/
 - Modal form for creating/editing roles
 - Validates name is not empty
 - Submits to API and updates cache
+
+#### 4A. Population Management
+
+**PopulationList**
+- Displays table of populations using CloudScape Table
+- Renders population name as hyperlink in primary column (links to edit form or detail view)
+- Provides edit and delete actions per row (no separate View button)
+- Handles delete validation (prevents deletion if referenced by participants)
+- Integrated within the ConfigurationView page alongside activity categories, types, and roles
+- Edit and delete actions restricted to ADMINISTRATOR role only
+- All roles can view populations
+
+**PopulationForm**
+- Modal form for creating/editing populations
+- Validates name is not empty
+- Submits to API and updates cache
+- Only accessible to ADMINISTRATOR role
 
 #### 5. Participant Management
 
@@ -216,6 +233,11 @@ src/
 - Implements navigation guard using React Router's useBlocker to detect dirty form state
 - When user attempts to navigate away with unsaved changes, displays confirmation dialog
 - Allows vertical scrolling to accommodate large forms with embedded sections
+- Includes embedded population membership management section within the form
+- Allows adding participant to populations
+- Allows removing participant from populations
+- Displays populations the participant belongs to in a list or table
+- Supports zero, one, or multiple population memberships per participant
 
 **ParticipantDetail**
 - Shows participant information in detail view
@@ -236,6 +258,8 @@ src/
 - Provides interface to add new address history records
 - Provides interface to edit existing address history records
 - Provides interface to delete address history records
+- Displays population memberships in a list or table
+- Shows which populations the participant belongs to
 
 **AddressHistoryTable**
 - Displays participant's home address history in reverse chronological order
@@ -476,8 +500,10 @@ src/
 - Respects global geographic area filter across all modes
 
 **MapFilters**
-- Provides filter controls for activity category, activity type, status, and date range
+- Provides filter controls for activity category, activity type, status, date range, and population
 - Updates map markers based on selected filters
+- When population filter is applied: shows only activities with participants in specified populations
+- When population filter is applied in Participant Homes mode: shows only participants in specified populations
 - Provides geographic area boundary toggle
 - Includes button to center map on specific venue or geographic area
 
@@ -844,6 +870,17 @@ src/
 - `updateRole(id, data, version?)`: Updates existing role with optional version for optimistic locking
 - `deleteRole(id)`: Deletes role (validates references, returns REFERENCED_ENTITY error if referenced)
 
+**PopulationService**
+- `getPopulations()`: Fetches all populations from `/populations` endpoint
+- `createPopulation(data)`: Creates new population (admin only)
+- `updatePopulation(id, data, version?)`: Updates existing population with optional version for optimistic locking (admin only)
+- `deletePopulation(id)`: Deletes population (validates references, returns REFERENCED_ENTITY error if referenced, admin only)
+
+**ParticipantPopulationService**
+- `getParticipantPopulations(participantId)`: Fetches populations for a participant from `/participants/:id/populations`
+- `addParticipantToPopulation(participantId, populationId)`: Adds participant to population via POST `/participants/:id/populations`
+- `removeParticipantFromPopulation(participantId, populationId)`: Removes participant from population via DELETE `/participants/:id/populations/:populationId`
+
 **ParticipantService**
 - `getParticipants(page?, limit?, geographicAreaId?, search?)`: Fetches all participants with optional pagination, optional geographic area filter, and optional text search filter
 - `getParticipant(id)`: Fetches single participant
@@ -913,17 +950,19 @@ src/
 
 **AnalyticsService**
 - `getEngagementMetrics(params)`: Fetches comprehensive engagement data from `/analytics/engagement` with flexible parameters
-  - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityCategoryId?`, `activityTypeId?`, `venueId?`, `groupBy?` (array of dimensions)
+  - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityCategoryId?`, `activityTypeId?`, `venueId?`, `populationIds?`, `groupBy?` (array of dimensions)
   - Returns temporal analysis: activities/participants at start/end, activities started/completed/cancelled
   - Returns aggregate counts and breakdowns by activity category and activity type
   - Returns hierarchically grouped results when multiple dimensions specified
   - Returns role distribution within filtered results
-- `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?, groupBy?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR; groupBy: 'type' | 'category' for optional grouping)
+  - When populationIds provided: includes only participants in specified populations and activities with at least one participant in specified populations
+- `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?, populationIds?, groupBy?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR; groupBy: 'type' | 'category' for optional grouping; populationIds for population filtering)
 - `getGeographicAnalytics(startDate?, endDate?)`: Fetches geographic breakdown from `/analytics/geographic`
 - `getActivityLifecycleEvents(params)`: Fetches activity lifecycle event data from `/analytics/activity-lifecycle`
-  - Parameters: `startDate` (required), `endDate` (required), `groupBy` ('category' | 'type'), `geographicAreaIds?`, `activityTypeIds?`, `venueIds?`
+  - Parameters: `startDate` (required), `endDate` (required), `groupBy` ('category' | 'type'), `geographicAreaIds?`, `activityTypeIds?`, `venueIds?`, `populationIds?`
   - Returns array of objects with `groupName`, `started` count, and `completed` count
   - Applies all provided filters using AND logic
+  - When populationIds provided: includes only activities with at least one participant in specified populations
 
 **UserService** (Admin only)
 - `getUsers()`: Fetches all users (admin only)
@@ -998,6 +1037,22 @@ interface ParticipantRole {
   version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+interface Population {
+  id: string;
+  name: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ParticipantPopulation {
+  id: string;
+  participantId: string;
+  populationId: string;
+  population?: Population;
+  createdAt: string;
 }
 
 interface Participant {
@@ -1165,6 +1220,7 @@ interface EngagementMetrics {
     activityTypeId?: string;
     venueId?: string;
     geographicAreaId?: string;
+    populationIds?: string[];
     startDate?: string;
     endDate?: string;
   };
@@ -1195,7 +1251,7 @@ interface ActivityLifecycleData {
 
 interface QueuedOperation {
   id: string;
-  entityType: 'Activity' | 'Participant' | 'ActivityParticipant' | 'Venue' | 'GeographicArea' | 'ActivityType' | 'Role';
+  entityType: 'Activity' | 'Participant' | 'ActivityParticipant' | 'Venue' | 'GeographicArea' | 'ActivityType' | 'Role' | 'Population';
   entityId: string;
   operation: 'CREATE' | 'UPDATE' | 'DELETE';
   data: any;

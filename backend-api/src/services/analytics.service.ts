@@ -92,6 +92,7 @@ export interface EngagementMetrics {
         activityTypeId?: string;
         venueId?: string;
         geographicAreaId?: string;
+        populationIds?: string[];
         startDate?: string;
         endDate?: string;
     };
@@ -122,6 +123,7 @@ export interface AnalyticsFilters {
     activityCategoryId?: string;
     activityTypeId?: string;
     venueId?: string;
+    populationIds?: string[];
     groupBy?: GroupingDimension[];
     dateGranularity?: DateGranularity;
 }
@@ -133,7 +135,7 @@ export class AnalyticsService {
     ) { }
 
     async getEngagementMetrics(filters: AnalyticsFilters = {}): Promise<EngagementMetrics> {
-        const { startDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, groupBy } = filters;
+        const { startDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, populationIds, groupBy } = filters;
 
         // Default endDate to now if startDate is provided but endDate is not
         const endDate = filters.endDate || (startDate ? new Date() : undefined);
@@ -172,6 +174,21 @@ export class AnalyticsService {
             };
         }
 
+        // Add population filtering
+        if (populationIds && populationIds.length > 0) {
+            activityWhere.assignments = {
+                some: {
+                    participant: {
+                        participantPopulations: {
+                            some: {
+                                populationId: { in: populationIds },
+                            },
+                        },
+                    },
+                },
+            };
+        }
+
         // Get all activities (we'll filter by date in memory for temporal analysis)
         const allActivities = await this.prisma.activity.findMany({
             where: activityWhere,
@@ -184,7 +201,15 @@ export class AnalyticsService {
                 activityVenueHistory: true,
                 assignments: {
                     include: {
-                        participant: true,
+                        participant: {
+                            include: {
+                                participantPopulations: {
+                                    include: {
+                                        population: true,
+                                    },
+                                },
+                            },
+                        },
                         role: true,
                     },
                 },
@@ -1043,9 +1068,10 @@ export class AnalyticsService {
             activityCategoryIds?: string[];
             activityTypeIds?: string[];
             venueIds?: string[];
+            populationIds?: string[];
         } = {}
     ): Promise<ActivityLifecycleData[]> {
-        const { geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds } = filters;
+        const { geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds } = filters;
 
         // Get venue IDs if geographic filter is provided
         let effectiveVenueIds: string[] | undefined = venueIds;
@@ -1083,6 +1109,21 @@ export class AnalyticsService {
             activityWhere.activityVenueHistory = {
                 some: {
                     venueId: { in: effectiveVenueIds },
+                },
+            };
+        }
+
+        // Add population filtering
+        if (populationIds && populationIds.length > 0) {
+            activityWhere.assignments = {
+                some: {
+                    participant: {
+                        participantPopulations: {
+                            some: {
+                                populationId: { in: populationIds },
+                            },
+                        },
+                    },
                 },
             };
         }
