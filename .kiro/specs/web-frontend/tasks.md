@@ -398,7 +398,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Parse Nominatim response to extract coordinates and display names
       - Cache recent geocoding results to reduce API calls
       - Handle API errors and network failures gracefully
-      - _Requirements: 21.1, 21.3, 21.9_
+      - _Requirements: 22.1, 22.3, 22.9_
 
     - [x] 8.5.2 Create VenueFormMapView component
       - Create reusable map component for venue form using Leaflet
@@ -411,7 +411,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Center map on marker when coordinates change (without resetting zoom if user-adjusted)
       - Preserve user-adjusted zoom level during coordinate updates
       - Handle empty coordinate state (no marker displayed)
-      - _Requirements: 21.11, 21.12, 21.13, 21.14, 21.18_
+      - _Requirements: 22.11, 22.12, 22.13, 22.14, 22.18_
 
     - [x] 8.5.3 Update VenueFormPage component with geocoding and map
       - Add "Geocode Address" button next to latitude/longitude fields
@@ -429,7 +429,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Update map pin when latitude/longitude inputs are manually edited
       - Maintain two-way synchronization between inputs and map
       - Preserve user-adjusted zoom level during coordinate updates
-      - _Requirements: 21.2, 21.4, 21.5, 21.6, 21.7, 21.8, 21.10, 21.11, 21.12, 21.13, 21.14, 21.15, 21.16, 21.17, 21.18_
+      - _Requirements: 22.2, 22.4, 22.5, 22.6, 22.7, 22.8, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18_
 
     - [ ]* 8.5.4 Write property tests for geocoding and map interaction
       - **Property 69: Geocoding Request Success**
@@ -446,7 +446,7 @@ This implementation plan covers the React-based web application built with TypeS
       - **Property 91: Coordinate Input Updates Pin**
       - **Property 92: Two-Way Coordinate Synchronization**
       - **Property 93: Zoom Level Preservation**
-      - **Validates: Requirements 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.10, 21.11, 21.12, 21.13, 21.14, 21.15, 21.16, 21.17, 21.18**
+      - **Validates: Requirements 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18**
 
 - [x] 9. Implement geographic area management UI
   - [x] 9.1 Create GeographicAreaList component
@@ -1024,13 +1024,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Highlight invalid fields
     - Prevent submission when validation fails
     - Preserve valid field values
-    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
+    - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
 
   - [ ]* 17.2 Write property tests for form validation
     - **Property 35: Form Validation Error Display**
     - **Property 36: Invalid Form Submission Prevention**
     - **Property 37: Valid Field Value Preservation**
-    - **Validates: Requirements 14.2, 14.3, 14.4, 14.5**
+    - **Validates: Requirements 15.2, 15.3, 15.4, 15.5**
 
   - [x] 17.2 Create error handling utilities
     - Display user-friendly error messages
@@ -1041,72 +1041,72 @@ This implementation plan covers the React-based web application built with TypeS
     - Parse and display specific error codes (VALIDATION_ERROR, REFERENCED_ENTITY, CIRCULAR_REFERENCE, etc.)
     - Maintain application state during errors
     - Log errors to console
-    - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 18.2, 18.3, 19.1, 19.2_
+    - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 19.2, 19.3, 20.1, 20.2_
 
   - [ ]* 17.3 Write property tests for error handling
     - **Property 38: Error Notification Type**
     - **Property 39: Error State Preservation**
     - **Property 40: Error Console Logging**
-    - **Validates: Requirements 15.2, 15.3, 15.5, 15.6**
+    - **Validates: Requirements 16.2, 16.3, 16.5, 16.6**
 
   - [x] 17.3 Create date formatting utility
     - Implement formatDate() function to convert ISO-8601 strings to YYYY-MM-DD format
     - Handle both full datetime strings and date-only strings
     - Apply to all date displays in tables, detail views, forms, and charts
-    - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7_
+    - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7_
 
   - [ ]* 17.4 Write property test for date formatting
     - **Property 68: Date Formatting Consistency**
-    - **Validates: Requirements 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7**
+    - **Validates: Requirements 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7**
 
 - [x] 17A. Implement optimistic locking and conflict resolution
   - [x] 17A.1 Create version conflict detection utility
     - Detect 409 errors with VERSION_CONFLICT code
     - Extract version information from error response
-    - _Requirements: 18.2_
+    - _Requirements: 19.2_
 
   - [x] 17A.2 Create conflict resolution UI component
     - Display conflict notification modal
     - Show current vs server version differences
     - Provide options: retry with latest, discard changes, view details
     - Refetch latest entity data on conflict
-    - _Requirements: 18.2, 18.3, 18.4_
+    - _Requirements: 19.2, 19.3, 19.4_
 
   - [x] 17A.3 Update all entity forms to include version
     - Pass version field in all update requests
     - Handle version conflicts gracefully
-    - _Requirements: 18.1_
+    - _Requirements: 19.1_
 
   - [ ]* 17A.4 Write property tests for optimistic locking
     - Test version conflict detection
     - Test conflict resolution flow
     - Test version field inclusion in updates
-    - **Validates: Requirements 18.1, 18.2, 18.3, 18.4**
+    - **Validates: Requirements 19.1, 19.2, 19.3, 19.4**
 
 - [x] 17B. Implement rate limiting handling
   - [x] 17B.1 Create rate limit detection utility
     - Detect 429 errors with RATE_LIMIT_EXCEEDED code
     - Parse X-RateLimit-* headers from responses
     - Calculate retry-after time from X-RateLimit-Reset header
-    - _Requirements: 19.1, 19.2_
+    - _Requirements: 20.1, 20.2_
 
   - [x] 17B.2 Create rate limit notification component
     - Display rate limit exceeded message
     - Show countdown timer for retry-after period
     - Display remaining request counts when available
-    - _Requirements: 19.1, 19.2, 19.5_
+    - _Requirements: 20.1, 20.2, 20.5_
 
   - [x] 17B.3 Implement automatic retry logic
     - Queue requests when rate limited
     - Automatically retry after cooldown period
     - Log rate limit events for debugging
-    - _Requirements: 19.3, 19.4_
+    - _Requirements: 20.3, 20.4_
 
   - [ ]* 17B.4 Write property tests for rate limiting
     - Test rate limit detection
     - Test retry logic
     - Test cooldown period calculation
-    - **Validates: Requirements 19.1, 19.2, 19.3, 19.4**
+    - **Validates: Requirements 20.1, 20.2, 20.3, 20.4**
 
 - [x] 18. Implement loading states
   - [x] 18.1 Create loading components
@@ -1115,20 +1115,48 @@ This implementation plan covers the React-based web application built with TypeS
     - Display skeleton screens for lists
     - Provide progress indicators
     - Display success messages
-    - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5_
+    - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5_
 
   - [ ]* 18.2 Write property tests for loading states
     - **Property 41: Loading State Indicators**
     - **Property 42: Form Button Disabling During Submission**
     - **Property 43: Success Message Display**
-    - **Validates: Requirements 16.1, 16.2, 16.3, 16.4, 16.5**
+    - **Validates: Requirements 17.1, 17.2, 17.3, 17.4, 17.5**
 
 - [x] 19. Implement user management (admin only)
   - [x] 19.1 Create UserList and UserForm components
     - Display table of all users (admin only)
     - Allow role assignment and modification
     - Hide from non-administrators
-    - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6_
+    - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6_
+
+- [x] 19A. Implement About page
+  - [x] 19A.1 Create AboutPage component
+    - Create new page component accessible via route /about
+    - Use CloudScape Container and SpaceBetween components for layout
+    - Display Cultivate app icon (icon-no-bg.svg) at 200x200 pixels
+    - Display Universal House of Justice excerpt in a prominent text block using CloudScape Box or TextContent
+    - Include attribution text: "— The Universal House of Justice"
+    - Display disclaimer text about individual initiative using CloudScape Alert or Box component
+    - Add hyperlink to https://www.bahai.org using CloudScape Link component with external icon
+    - Ensure responsive layout for tablet and desktop screens
+    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7_
+
+  - [x] 19A.2 Add About page route to router configuration
+    - Add /about route to React Router configuration
+    - Make route accessible to all authenticated users (no role restrictions)
+    - _Requirements: 14.1, 14.8_
+
+  - [x] 19A.3 Add About link to navigation menu
+    - Add "About" link to navigation sidebar
+    - Position in appropriate location (e.g., at bottom of navigation or in user menu)
+    - Ensure link is visible to all authenticated users
+    - _Requirements: 14.1, 14.8_
+
+  - [ ]* 19A.4 Write property tests for About page
+    - **Property 43d: About Page Content Display**
+    - **Property 43e: About Page Accessibility**
+    - **Validates: Requirements 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.8**
 
 - [x] 20. Checkpoint - Verify error handling and conflict resolution
   - Ensure all tests pass, ask the user if questions arise.
@@ -1149,7 +1177,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Remove "View" action buttons from Actions column in all list components
     - Use CloudScape Link component for all hyperlinks
     - Preserve Edit and Delete action buttons where appropriate
-    - _Requirements: 22.1, 22.2, 22.3, 22.5, 22.6, 22.7_
+    - _Requirements: 23.1, 23.2, 23.3, 23.5, 23.6, 23.7_
 
   - [x] 22.2 Update detail page associated record tables
     - Update AddressHistoryTable: Make venue name column hyperlinked to /venues/:id
@@ -1160,14 +1188,14 @@ This implementation plan covers the React-based web application built with TypeS
     - Update ParticipantDetail activity table: Already implemented with hyperlinked activity names
     - Remove "View" action buttons from these tables where present
     - Use CloudScape Link component for all hyperlinks
-    - _Requirements: 22.4, 22.5, 22.6_
+    - _Requirements: 23.4, 23.5, 23.6_
 
   - [ ]* 22.3 Write property test for hyperlinked primary columns
     - **Property 76: Hyperlinked Primary Column Navigation**
     - Test that clicking hyperlinked primary column navigates to correct detail view
     - Test that View buttons are not present when primary column is hyperlinked
     - Test that Edit and Delete buttons are preserved
-    - **Validates: Requirements 22.1, 22.2, 22.3, 22.7**
+    - **Validates: Requirements 23.1, 23.2, 23.3, 23.7**
 
 - [x] 23. Implement edit action buttons on detail pages
   - [x] 23.1 Update ParticipantDetail component
@@ -1176,7 +1204,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Navigate to /participants/:id/edit when edit button is clicked
     - Hide edit button when user has READ_ONLY role
     - Show edit button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.1, 2A.5_
+    - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 2A.1, 2A.5_
 
   - [x] 23.2 Update ActivityDetail component
     - Add primary edit button to header section using CloudScape Button with variant="primary"
@@ -1184,7 +1212,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Navigate to /activities/:id/edit when edit button is clicked
     - Hide edit button when user has READ_ONLY role
     - Show edit button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.2, 2A.5_
+    - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 2A.2, 2A.5_
 
   - [x] 23.3 Update VenueDetail component
     - Add primary edit button to header section using CloudScape Button with variant="primary"
@@ -1192,7 +1220,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Navigate to /venues/:id/edit when edit button is clicked
     - Hide edit button when user has READ_ONLY role
     - Show edit button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.3, 2A.5_
+    - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 2A.3, 2A.5_
 
   - [x] 23.4 Update GeographicAreaDetail component
     - Add primary edit button to header section using CloudScape Button with variant="primary"
@@ -1200,7 +1228,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Navigate to /geographic-areas/:id/edit when edit button is clicked
     - Hide edit button when user has READ_ONLY role
     - Show edit button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.4, 2A.5_
+    - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 2A.4, 2A.5_
 
   - [ ]* 23.5 Write property tests for edit buttons on detail pages
     - **Property 79: Edit Button on Detail Pages**
@@ -1209,7 +1237,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Test that edit button is hidden for READ_ONLY role
     - Test that edit button is positioned as right-most action
     - Test that clicking edit button navigates to the dedicated edit page
-    - **Validates: Requirements 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 2A.5**
+    - **Validates: Requirements 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 2A.5**
 
 - [x] 23A. Implement delete action buttons on detail pages
   - [x] 23A.1 Update ParticipantDetail component
@@ -1220,7 +1248,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error message on deletion failure
     - Hide delete button when user has READ_ONLY role
     - Show delete button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10_
+    - _Requirements: 24A.1, 24A.2, 24A.3, 24A.4, 24A.5, 24A.6, 24A.7, 24A.8, 24A.9, 24A.10_
 
   - [x] 23A.2 Update ActivityDetail component
     - Add delete button to header section next to edit button
@@ -1230,7 +1258,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error message on deletion failure
     - Hide delete button when user has READ_ONLY role
     - Show delete button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10_
+    - _Requirements: 24A.1, 24A.2, 24A.3, 24A.4, 24A.5, 24A.6, 24A.7, 24A.8, 24A.9, 24A.10_
 
   - [x] 23A.3 Update VenueDetail component
     - Add delete button to header section next to edit button
@@ -1240,7 +1268,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error message on deletion failure
     - Hide delete button when user has READ_ONLY role
     - Show delete button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10_
+    - _Requirements: 24A.1, 24A.2, 24A.3, 24A.4, 24A.5, 24A.6, 24A.7, 24A.8, 24A.9, 24A.10_
 
   - [x] 23A.4 Update GeographicAreaDetail component
     - Add delete button to header section next to edit button
@@ -1250,7 +1278,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error message on deletion failure
     - Hide delete button when user has READ_ONLY role
     - Show delete button when user has EDITOR or ADMINISTRATOR role
-    - _Requirements: 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10_
+    - _Requirements: 24A.1, 24A.2, 24A.3, 24A.4, 24A.5, 24A.6, 24A.7, 24A.8, 24A.9, 24A.10_
 
   - [ ]* 23A.5 Write property tests for delete buttons on detail pages
     - **Property 93a: Delete Button on Detail Pages**
@@ -1262,7 +1290,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Test that confirmation dialog appears on delete click
     - Test that successful deletion navigates to list page
     - Test that failed deletion displays error message
-    - **Validates: Requirements 23A.1, 23A.2, 23A.3, 23A.4, 23A.5, 23A.6, 23A.7, 23A.8, 23A.9, 23A.10**
+    - **Validates: Requirements 24A.1, 24A.2, 24A.3, 24A.4, 24A.5, 24A.6, 24A.7, 24A.8, 24A.9, 24A.10**
 
 - [x] 24. Implement global persistent geographic area filter
   - [x] 24.1 Create GlobalGeographicFilterContext
@@ -1285,7 +1313,7 @@ This implementation plan covers the React-based web application built with TypeS
     - For each area, fetch ancestor hierarchy using /geographic-areas/:id/ancestors endpoint
     - Build hierarchyPath string with format "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
     - Store areas with hierarchy information in availableAreas state
-    - _Requirements: 24.1, 24.2, 24.3, 24.6, 24.7, 24.8, 24.9, 24.12, 24.13, 24.14, 24.15, 24.16, 24.17_
+    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17_
 
   - [ ] 24.2 Create useGlobalGeographicFilter hook
     - Export custom hook to access GlobalGeographicFilterContext
@@ -1305,7 +1333,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Display visual indicator (badge or highlighted text) of active filter
     - Position prominently in header for accessibility from all views
     - Use availableAreas from context (respects current filter scope)
-    - _Requirements: 24.1, 24.2, 24.3, 24.10, 24.11, 24.12, 24.13, 24.14, 24.15, 24.16, 24.17_
+    - _Requirements: 25.1, 25.2, 25.3, 25.10, 25.11, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17_
 
   - [ ] 24.4 Update ActivityList to apply global filter
     - Read selectedGeographicAreaId from GlobalGeographicFilterContext
@@ -1369,50 +1397,50 @@ This implementation plan covers the React-based web application built with TypeS
     - Handle empty states when no results match
     - Handle error states gracefully
     - Provide accessible keyboard navigation
-    - _Requirements: 25.1, 25.2, 25.3, 25.4, 25.5, 25.6, 25.7, 25.9_
+    - _Requirements: 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7, 26.9_
 
   - [x] 25.2 Update ParticipantForm to use AsyncEntitySelect
     - Replace venue dropdown with AsyncEntitySelect for venue selection
     - Configure for participant entity type
     - Pass appropriate fetch function and display formatter
-    - _Requirements: 25.2_
+    - _Requirements: 26.2_
 
   - [x] 25.3 Update ActivityForm to use AsyncEntitySelect
     - Replace venue dropdown with AsyncEntitySelect for venue selection
     - Configure for venue entity type
-    - _Requirements: 25.1_
+    - _Requirements: 26.1_
 
   - [x] 25.4 Update AssignmentForm to use AsyncEntitySelect
     - Replace participant dropdown with AsyncEntitySelect
     - Configure for participant entity type
-    - _Requirements: 25.2_
+    - _Requirements: 26.2_
 
   - [x] 25.5 Update VenueForm to use AsyncEntitySelect
     - Replace geographic area dropdown with AsyncEntitySelect
     - Configure for geographic area entity type
-    - _Requirements: 25.3_
+    - _Requirements: 26.3_
 
   - [x] 25.6 Update GeographicAreaForm to use AsyncEntitySelect
     - Replace parent geographic area dropdown with AsyncEntitySelect
     - Configure for geographic area entity type
-    - _Requirements: 25.3_
+    - _Requirements: 26.3_
 
   - [x] 25.7 Update AddressHistoryForm to use AsyncEntitySelect
     - Replace venue dropdown with AsyncEntitySelect
     - Configure for venue entity type
-    - _Requirements: 25.1_
+    - _Requirements: 26.1_
 
   - [x] 25.8 Update ActivityVenueHistoryForm to use AsyncEntitySelect
     - Replace venue dropdown with AsyncEntitySelect
     - Configure for venue entity type
-    - _Requirements: 25.1_
+    - _Requirements: 26.1_
 
   - [x] 25.9 Update API service methods to support search parameter
     - Update ParticipantService.getParticipants to accept search parameter
     - Update VenueService.getVenues to accept search parameter
     - Update GeographicAreaService.getGeographicAreas to accept search parameter
     - Add search as query parameter in API requests
-    - _Requirements: 25.5_
+    - _Requirements: 26.5_
 
   - [ ]* 25.10 Write property tests for async dropdown filtering
     - **Property 94: Async Dropdown Initial Load**
@@ -1420,7 +1448,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 96: Dropdown Input Debouncing**
     - **Property 97: Dropdown Loading Indicator**
     - **Property 98: Dropdown Combined Filtering**
-    - **Validates: Requirements 25.4, 25.5, 25.6, 25.7**
+    - **Validates: Requirements 26.4, 26.5, 26.6, 26.7**
 
 - [ ] 26. Enhance Participant entity with additional optional fields
   - [ ] 26.1 Update ParticipantForm component
@@ -1536,7 +1564,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Create downloadBlob(blob, filename) utility function for triggering browser downloads
     - Create validateCSVFile(file) utility function for file validation (.csv extension, max 10MB)
     - Add to utils directory
-    - _Requirements: 28.19, 28.20_
+    - _Requirements: 29.19, 29.20_
 
   - [x] 30.2 Add CSV export methods to API services
     - Add exportParticipants(geographicAreaId?) to ParticipantService
@@ -1546,7 +1574,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Use axios with responseType: 'blob' for binary response
     - Call downloadBlob() to trigger browser download
     - Generate filename with current date
-    - _Requirements: 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.24_
+    - _Requirements: 29.1, 29.2, 29.3, 29.4, 29.5, 29.6, 29.24_
 
   - [x] 30.3 Add CSV import methods to API services
     - Add importParticipants(file) to ParticipantService
@@ -1556,7 +1584,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Create FormData and append file
     - Set Content-Type header to multipart/form-data
     - Return ImportResult from response
-    - _Requirements: 28.8, 28.9, 28.10, 28.11, 28.12, 28.13_
+    - _Requirements: 29.8, 29.9, 29.10, 29.11, 29.12, 29.13_
 
   - [x] 30.4 Add Export CSV button to ParticipantList
     - Add CloudScape Button with iconName="download" to table header actions
@@ -1567,7 +1595,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error notification on failure
     - Hide button from READ_ONLY users
     - Show button to EDITOR and ADMINISTRATOR users
-    - _Requirements: 28.1, 28.5, 28.16, 28.17, 28.22, 28.23, 28.24, 28.25_
+    - _Requirements: 29.1, 29.5, 29.16, 29.17, 29.22, 29.23, 29.24, 29.25_
 
   - [x] 30.5 Add Import CSV button to ParticipantList
     - Add hidden file input with accept=".csv"
@@ -1580,25 +1608,25 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error notification on failure
     - Hide button from READ_ONLY users
     - Show button to EDITOR and ADMINISTRATOR users
-    - _Requirements: 28.8, 28.12, 28.13, 28.14, 28.15, 28.16, 28.17, 28.18, 28.19, 28.20, 28.22, 28.23_
+    - _Requirements: 29.8, 29.12, 29.13, 29.14, 29.15, 29.16, 29.17, 29.18, 29.19, 29.20, 29.22, 29.23_
 
   - [x] 30.6 Add Export and Import CSV buttons to VenueList
     - Implement same pattern as ParticipantList
     - Use VenueService export/import methods
     - Apply global geographic filter to exports
-    - _Requirements: 28.2, 28.9, 28.22, 28.23, 28.24_
+    - _Requirements: 29.2, 29.9, 29.22, 29.23, 29.24_
 
   - [x] 30.7 Add Export and Import CSV buttons to ActivityList
     - Implement same pattern as ParticipantList
     - Use ActivityService export/import methods
     - Apply global geographic filter to exports
-    - _Requirements: 28.3, 28.10, 28.22, 28.23, 28.24_
+    - _Requirements: 29.3, 29.10, 29.22, 29.23, 29.24_
 
   - [x] 30.8 Add Export and Import CSV buttons to GeographicAreaList
     - Implement same pattern as ParticipantList
     - Use GeographicAreaService export/import methods
     - No geographic filter for geographic areas export
-    - _Requirements: 28.4, 28.11, 28.22, 28.23_
+    - _Requirements: 29.4, 29.11, 29.22, 29.23_
 
   - [x] 30.9 Create ImportResultsModal component
     - Create reusable CloudScape Modal component for displaying import results
@@ -1606,13 +1634,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error table with row numbers and error messages using CloudScape Table
     - Provide close button
     - Accept ImportResult as prop
-    - _Requirements: 28.14, 28.15_
+    - _Requirements: 29.14, 29.15_
 
   - [x] 30.10 Create TypeScript types for CSV operations
     - Create ImportResult interface with totalRows, successCount, failureCount, errors
     - Create ImportError interface with row, data, errors
     - Add to types directory
-    - _Requirements: 28.14, 28.15_
+    - _Requirements: 29.14, 29.15_
 
   - [ ]* 30.11 Write property tests for CSV operations
     - **Property 142: CSV Export Button Visibility**
@@ -1625,7 +1653,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 149: CSV File Validation**
     - **Property 150: CSV Operation Loading States**
     - **Property 151: CSV Export Geographic Filtering**
-    - **Validates: Requirements 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.7, 28.8, 28.9, 28.10, 28.11, 28.12, 28.14, 28.15, 28.16, 28.17, 28.18, 28.19, 28.20, 28.22, 28.23, 28.24, 28.25**
+    - **Validates: Requirements 29.1, 29.2, 29.3, 29.4, 29.5, 29.6, 29.7, 29.8, 29.9, 29.10, 29.11, 29.12, 29.14, 29.15, 29.16, 29.17, 29.18, 29.19, 29.20, 29.22, 29.23, 29.24, 29.25**
 
 - [x] 30A. Implement Engagement Summary Table CSV Export
   - [x] 30A.1 Create generateEngagementSummaryCSV utility function
@@ -1637,7 +1665,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Escape CSV special characters (quotes, commas, newlines)
     - Return Blob with CSV content
     - Add to utils directory
-    - _Requirements: 29.2, 29.3, 29.4, 29.5, 29.6, 29.7_
+    - _Requirements: 30.2, 30.3, 30.4, 30.5, 30.6, 30.7_
 
   - [x] 30A.2 Add Export CSV button to EngagementDashboard
     - Add CloudScape Button with iconName="download" near Engagement Summary table header
@@ -1651,14 +1679,14 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error notification on failure
     - Hide button from READ_ONLY users
     - Show button to EDITOR and ADMINISTRATOR users
-    - _Requirements: 29.1, 29.8, 29.9, 29.10, 29.11, 29.12, 29.13, 29.14, 29.17_
+    - _Requirements: 30.1, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.14, 30.17_
 
   - [x] 30A.3 Handle filtered and grouped data in CSV export
     - Ensure CSV export uses the same filtered metrics displayed in the table
     - Preserve grouping structure in CSV output
     - Export only data matching current filter state (PropertyFilter tokens, date range, geographic area)
     - Handle empty table case (export header row only)
-    - _Requirements: 29.15, 29.16, 29.18_
+    - _Requirements: 30.15, 30.16, 30.18_
 
   - [ ]* 30A.4 Write property tests for Engagement Summary CSV export
     - **Property 152: Engagement Summary CSV Export Button Presence**
@@ -1668,7 +1696,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 156: Engagement Summary CSV Export Loading State**
     - **Property 157: Engagement Summary CSV Export Filtered Data**
     - **Property 158: Engagement Summary CSV Empty Table Handling**
-    - **Validates: Requirements 29.1, 29.2, 29.3, 29.4, 29.5, 29.6, 29.8, 29.9, 29.10, 29.11, 29.13, 29.14, 29.15, 29.16, 29.17, 29.18**
+    - **Validates: Requirements 30.1, 30.2, 30.3, 30.4, 30.5, 30.6, 30.8, 30.9, 30.10, 30.11, 30.13, 30.14, 30.15, 30.16, 30.17, 30.18**
 
 - [ ] 31. Checkpoint - Verify CSV import/export functionality
   - Ensure all tests pass, ask the user if questions arise.
@@ -1680,7 +1708,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Hide clear button when field is empty
     - Call onClear callback when X button is clicked
     - Support for text inputs (email, phone, notes, nickname)
-    - _Requirements: 26.1, 26.2, 26.4, 26.7, 26.8_
+    - _Requirements: 27.1, 27.2, 27.4, 27.7, 27.8_
 
   - [ ] 32.2 Create ClearableDatePicker component
     - Create reusable component that wraps CloudScape DatePicker with clear button
@@ -1688,7 +1716,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Hide clear button when date is empty
     - Call onClear callback when X button is clicked
     - Support for date inputs (dateOfBirth, dateOfRegistration, endDate)
-    - _Requirements: 26.1, 26.3, 26.7, 26.8_
+    - _Requirements: 27.1, 27.3, 27.7, 27.8_
 
   - [ ] 32.3 Create ClearableSelect component
     - Create reusable component that wraps CloudScape Select with clear button
@@ -1696,7 +1724,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Hide clear button when no option selected
     - Call onClear callback when X button is clicked
     - Support for select inputs (venueType)
-    - _Requirements: 26.2, 26.7, 26.8_
+    - _Requirements: 27.2, 27.7, 27.8_
 
   - [ ] 32.4 Update ParticipantForm to use clearable components
     - Replace Input with ClearableInput for email, phone, notes, nickname fields
@@ -1705,7 +1733,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Track which fields have been explicitly cleared vs unchanged
     - Send null for cleared fields in API request
     - Omit unchanged fields from API request
-    - _Requirements: 26.1, 26.5, 26.6, 26.7, 26.8, 26.9_
+    - _Requirements: 27.1, 27.5, 27.6, 27.7, 27.8, 27.9_
 
   - [ ] 32.5 Update VenueForm to use clearable components
     - Replace Input with ClearableInput for latitude, longitude fields
@@ -1715,7 +1743,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Track which fields have been explicitly cleared vs unchanged
     - Send null for cleared fields in API request
     - Omit unchanged fields from API request
-    - _Requirements: 26.2, 26.5, 26.6, 26.7, 26.8, 26.9_
+    - _Requirements: 27.2, 27.5, 27.6, 27.7, 27.8, 27.9_
 
   - [ ] 32.6 Update ActivityForm to use clearable components
     - Replace DatePicker with ClearableDatePicker for endDate field
@@ -1723,7 +1751,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Track which fields have been explicitly cleared vs unchanged
     - Send null for cleared endDate in API request
     - Omit unchanged fields from API request
-    - _Requirements: 26.3, 26.5, 26.6, 26.7, 26.8, 26.9_
+    - _Requirements: 27.3, 27.5, 27.6, 27.7, 27.8, 27.9_
 
   - [ ] 32.7 Update AssignmentForm to use clearable components
     - Replace Input with ClearableInput for notes field
@@ -1731,7 +1759,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Track which fields have been explicitly cleared vs unchanged
     - Send null for cleared notes in API request
     - Omit unchanged fields from API request
-    - _Requirements: 26.4, 26.5, 26.6, 26.7, 26.8, 26.9_
+    - _Requirements: 27.4, 27.5, 27.6, 27.7, 27.8, 27.9_
 
   - [ ]* 32.8 Write property tests for optional field clearing
     - **Property 107: Optional Field Clearing in Participant Form**
@@ -1740,7 +1768,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 110: Notes Clearing in Assignment Form**
     - **Property 111: Clear Button Visibility**
     - **Property 112: Field Clearing vs Omission Distinction**
-    - **Validates: Requirements 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7, 26.8, 26.9**
+    - **Validates: Requirements 27.1, 27.2, 27.3, 27.4, 27.5, 27.6, 27.7, 27.8, 27.9**
 
 - [ ] 33. Checkpoint - Verify optional field clearing functionality
   - Ensure all tests pass, ask the user if questions arise.

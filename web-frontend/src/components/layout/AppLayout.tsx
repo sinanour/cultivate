@@ -80,8 +80,17 @@ export function AppLayout() {
             { type: 'link', text: createMenuItem('Users', 'lock-private'), href: '/users' },
           ],
         },
+        { type: 'divider' },
+        // @ts-ignore - CloudScape handles React elements in text property
+        { type: 'link', text: createMenuItem('About', 'status-info'), href: '/about' },
       ]
-    : baseNavigationItems;
+    : [
+        // @ts-ignore - Spread operator with CloudScape navigation items
+        ...baseNavigationItems,
+        { type: 'divider' },
+        // @ts-ignore - CloudScape handles React elements in text property
+        { type: 'link', text: createMenuItem('About', 'status-info'), href: '/about' },
+      ];
 
   return (
     <>

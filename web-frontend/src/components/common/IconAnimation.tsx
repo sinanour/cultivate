@@ -58,13 +58,13 @@ export default function IconAnimation({ onComplete }: IconAnimationProps) {
         }}
       >
         <path
-          d="M50 50
-             a8 8 0 1 1 0 -16
-             a8 8 0 1 1 0 16
-             a16 16 0 0 1 0 -32
-             a32 32 0 1 1 0 64
-             a32 32 0 1 1 0 -64
-             a16 16 0 0 1 0 32"
+          d="M50 62
+              a12 12 0 1 1 0 -24
+              a12 12 0 1 1 0 24
+              a24 24 0 0 1 0 -48
+              a36 36 0 1 1 0 72
+              a36 36 0 1 1 0 -72
+              a24 24 0 0 1 0 48"
           fill="none"
           stroke="#D4AF37"
           strokeWidth="4"

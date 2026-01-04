@@ -523,7 +523,22 @@ The Web Frontend package provides a responsive React-based web application that 
 10. WHEN a user scrolls vertically through page content, THE Web_App SHALL keep the header visible at the top of the screen at all times
 11. THE Web_App SHALL ensure the sticky header does not obscure page content by adjusting the content area's top padding or margin appropriately
 
-### Requirement 14: Form Validation
+### Requirement 14: About Page
+
+**User Story:** As a user, I want to view information about the Cultivate application, so that I can understand its purpose and learn more about the Bahá'í Faith.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide an About page accessible from the navigation menu
+2. THE Web_App SHALL display the Cultivate app icon (icon-no-bg.svg) on the About page
+3. THE Web_App SHALL display the following excerpt from the Universal House of Justice: "The Formative Age is that critical period in the Faith's development in which the friends increasingly come to appreciate the mission with which Bahá'u'lláh has entrusted them, deepen their understanding of the meaning and implications of His revealed Word, and systematically cultivate capacity—their own and that of others—in order to put into practice His teachings for the betterment of the world."
+4. THE Web_App SHALL attribute the excerpt to the Universal House of Justice
+5. THE Web_App SHALL display a disclaimer stating that this software is an individual initiative to help communities more systematically track their growth, and has not been officially sponsored by any Bahá'í Institution
+6. THE Web_App SHALL provide a hyperlink to the official Bahá'í website at https://www.bahai.org
+7. THE Web_App SHALL use CloudScape design components for consistent styling on the About page
+8. THE Web_App SHALL make the About page accessible to all authenticated users regardless of role
+
+### Requirement 15: Form Validation
 
 **User Story:** As a user, I want clear form validation, so that I know when I've entered invalid data.
 
@@ -535,7 +550,7 @@ The Web Frontend package provides a responsive React-based web application that 
 4. THE Web_App SHALL prevent form submission when validation fails
 5. THE Web_App SHALL preserve valid field values when validation fails
 
-### Requirement 15: Error Handling
+### Requirement 16: Error Handling
 
 **User Story:** As a user, I want clear error messages, so that I understand what went wrong and how to fix it.
 
@@ -548,7 +563,7 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL maintain application state when errors occur
 6. THE Web_App SHALL log detailed errors to console for debugging
 
-### Requirement 16: Loading States
+### Requirement 17: Loading States
 
 **User Story:** As a user, I want visual feedback during operations, so that I know the application is working.
 
@@ -560,7 +575,7 @@ The Web Frontend package provides a responsive React-based web application that 
 4. THE Web_App SHALL provide progress indicators for long operations
 5. THE Web_App SHALL display success messages after successful operations
 
-### Requirement 17: User Management (Admin Only)
+### Requirement 18: User Management (Admin Only)
 
 **User Story:** As an administrator, I want to manage users in the web interface, so that I can control system access.
 
@@ -573,7 +588,7 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL allow administrators to assign and modify user roles
 6. THE Web_App SHALL hide user management from non-administrators
 
-### Requirement 18: Optimistic Locking and Conflict Resolution
+### Requirement 19: Optimistic Locking and Conflict Resolution
 
 **User Story:** As a user, I want to be notified when my changes conflict with another user's changes, so that I can resolve conflicts appropriately.
 
@@ -585,7 +600,7 @@ The Web Frontend package provides a responsive React-based web application that 
 4. THE Web_App SHALL refetch the latest entity data when a conflict is detected
 5. THE Web_App SHALL log version conflict details for debugging
 
-### Requirement 19: Rate Limiting Handling
+### Requirement 20: Rate Limiting Handling
 
 **User Story:** As a user, I want to be informed when I've exceeded rate limits, so that I know when I can retry my actions.
 
@@ -597,7 +612,7 @@ The Web Frontend package provides a responsive React-based web application that 
 4. THE Web_App SHALL log rate limit details for debugging
 5. THE Web_App SHALL display remaining request counts from rate limit headers when available
 
-### Requirement 20: Date Formatting Consistency
+### Requirement 21: Date Formatting Consistency
 
 **User Story:** As a user, I want all dates displayed consistently throughout the application, so that I can easily read and compare dates.
 
@@ -611,7 +626,7 @@ The Web Frontend package provides a responsive React-based web application that 
 6. THE Web_App SHALL apply consistent date formatting to all date fields in forms and date pickers
 7. THE Web_App SHALL apply consistent date formatting to analytics dashboard date ranges
 
-### Requirement 21: Venue Geocoding Integration
+### Requirement 22: Venue Geocoding Integration
 
 **User Story:** As a community organizer, I want to automatically populate venue coordinates from addresses, so that I can quickly add venues to the map without manually looking up coordinates.
 
@@ -636,7 +651,7 @@ The Web Frontend package provides a responsive React-based web application that 
 17. THE Web_App SHALL maintain two-way synchronization between the coordinate input fields and the map pin position at all times
 18. WHEN the user manually adjusts the map zoom level, THE Web_App SHALL preserve that zoom level during subsequent coordinate updates and only adjust the map center point
 
-### Requirement 22: Hyperlinked Primary Columns in Tables
+### Requirement 23: Hyperlinked Primary Columns in Tables
 
 **User Story:** As a user, I want to click on entity names in tables to view their details, so that I can navigate quickly without needing separate action buttons.
 
@@ -650,7 +665,7 @@ The Web Frontend package provides a responsive React-based web application that 
 6. THE Web_App SHALL maintain consistent link styling across all tables using CloudScape design patterns
 7. THE Web_App SHALL preserve Edit and Delete action buttons in the Actions column where appropriate based on user permissions
 
-### Requirement 23: Edit Action Buttons on Detail Pages
+### Requirement 24: Edit Action Buttons on Detail Pages
 
 **User Story:** As a user, I want to quickly edit records from their detail pages, so that I can make changes without navigating back to the list view.
 
@@ -663,7 +678,7 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL hide the edit button when the user has READ_ONLY role
 6. THE Web_App SHALL display the edit button when the user has EDITOR or ADMINISTRATOR role
 
-### Requirement 23A: Delete Action Buttons on Detail Pages
+### Requirement 24A: Delete Action Buttons on Detail Pages
 
 **User Story:** As a user, I want to delete records from their detail pages, so that I can remove entities without navigating back to the list view.
 
@@ -680,7 +695,7 @@ The Web Frontend package provides a responsive React-based web application that 
 9. THE Web_App SHALL display the delete button when the user has EDITOR or ADMINISTRATOR role
 10. THE Web_App SHALL handle referential integrity errors gracefully and display user-friendly messages
 
-### Requirement 24: Global Persistent Geographic Area Filter
+### Requirement 25: Global Persistent Geographic Area Filter
 
 **User Story:** As a community organizer, I want to set a global geographic area filter that applies to all views with hierarchical context display, so that I can focus on a specific region without repeatedly filtering each list while understanding the geographic hierarchy.
 
@@ -704,7 +719,7 @@ The Web Frontend package provides a responsive React-based web application that 
 16. WHEN the global geographic area filter is active, THE Web_App SHALL display only the descendants (recursively) of the currently filtered geographic area in the filter selector dropdown
 17. WHEN the global geographic area filter is set to "Global" (no filter), THE Web_App SHALL display all geographic areas in the filter selector dropdown
 
-### Requirement 25: High-Cardinality Dropdown Filtering
+### Requirement 26: High-Cardinality Dropdown Filtering
 
 **User Story:** As a community organizer working with large datasets, I want dropdown lists for venues, participants, and geographic areas to support text-based filtering, so that I can efficiently find and select items even when there are millions of records.
 
@@ -723,7 +738,7 @@ The Web Frontend package provides a responsive React-based web application that 
 11. WHEN viewing data at a large geographic scale (country or global), THE Web_App SHALL rely on text-based filtering to manage the large result sets efficiently
 
 
-### Requirement 26: Clear Optional Fields
+### Requirement 27: Clear Optional Fields
 
 **User Story:** As a community organizer, I want to clear optional fields that have been previously populated in the web interface, so that I can remove information that is no longer relevant or was entered incorrectly.
 
@@ -739,7 +754,7 @@ The Web Frontend package provides a responsive React-based web application that 
 8. WHEN a field is cleared, THE Web_App SHALL visually indicate that the field is now empty
 9. THE Web_App SHALL distinguish between leaving a field unchanged (omit from request) and explicitly clearing it (send null/empty)
 
-### Requirement 27: Interactive Chart Legends
+### Requirement 28: Interactive Chart Legends
 
 **User Story:** As a data analyst, I want to interact with chart legends to toggle individual data series on and off, so that I can focus on specific subsets of data and make comparisons easier.
 
@@ -765,11 +780,11 @@ The Web Frontend package provides a responsive React-based web application that 
 10. THE Web_App SHALL provide visual feedback (e.g., hover state) when the user hovers over legend items to indicate they are clickable
 11. THE Web_App SHALL maintain accessibility by ensuring legend items are keyboard navigable and screen reader compatible
 
-### Requirement 28: CSV Import and Export
+### Requirement 29: CSV Import and Export
 
 **User Story:** As a community organizer, I want to import and export data in CSV format, so that I can bulk load data from external sources and share data with other systems.
 
-### Requirement 28: CSV Import and Export
+### Requirement 29: CSV Import and Export
 
 **User Story:** As a community organizer, I want to import and export data in CSV format, so that I can bulk load data from external sources and share data with other systems.
 
@@ -801,7 +816,7 @@ The Web Frontend package provides a responsive React-based web application that 
 24. WHEN exporting data with the global geographic area filter active, THE Web_App SHALL include the filter in the export request to export only filtered records
 25. WHEN exporting filtered data, THE Web_App SHALL indicate in the success message that only filtered records were exported
 
-### Requirement 29: Engagement Summary Table CSV Export
+### Requirement 30: Engagement Summary Table CSV Export
 
 **User Story:** As a community organizer, I want to export the Engagement Summary table to CSV format, so that I can analyze engagement metrics in spreadsheet applications and share reports with stakeholders.
 

@@ -457,7 +457,7 @@ src/
 - Shows statistics (activity and participant counts) for the area and descendants (recursive aggregation)
 - **Note:** Venue list should recursively include venues from all child and descendant geographic areas, matching the recursive behavior of statistics
 
-#### 10. Map View
+#### 11. Map View
 
 **MapView**
 - Renders interactive map using Leaflet or Mapbox GL JS
@@ -487,7 +487,7 @@ src/
 - In Venues mode: displays venue name (hyperlinked to /venues/:id), address, and geographic area
 - Provides navigation to detail pages via hyperlinked names
 
-#### 11. Analytics Dashboards
+#### 13. Analytics Dashboards
 
 **EngagementDashboard**
 - Displays comprehensive temporal metrics using CloudScape Cards:
@@ -713,7 +713,23 @@ src/
 - Allows role assignment and modification
 - Only accessible to administrators
 
-#### 12. Common Components
+#### 10. About Page
+
+**AboutPage**
+- Displays information about the Cultivate application
+- Accessible via route: /about
+- Renders the Cultivate app icon (icon-no-bg.svg) at appropriate size (e.g., 200x200 pixels)
+- Displays the Universal House of Justice excerpt in a prominent text block:
+  - "The Formative Age is that critical period in the Faith's development in which the friends increasingly come to appreciate the mission with which Bahá'u'lláh has entrusted them, deepen their understanding of the meaning and implications of His revealed Word, and systematically cultivate capacity—their own and that of others—in order to put into practice His teachings for the betterment of the world."
+  - Includes attribution: "— The Universal House of Justice"
+- Displays disclaimer text explaining this is an individual initiative:
+  - "This software is an individual initiative to help communities more systematically track their growth, and has not been officially sponsored by any Bahá'í Institution."
+- Provides hyperlink to official Bahá'í website (https://www.bahai.org) using CloudScape Link component
+- Uses CloudScape Container, Header, and SpaceBetween components for consistent layout
+- Accessible to all authenticated users (no role restrictions)
+- Includes navigation link in the application menu
+
+#### 14. Common Components
 
 **AsyncEntitySelect**
 - Reusable dropdown component for high-cardinality entity selection (venues, participants, geographic areas)
@@ -2010,59 +2026,71 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 13.11**
 
+### Property 43d: About Page Content Display
+
+*For any* About page rendering, the page should display the Cultivate app icon, the Universal House of Justice excerpt with attribution, the disclaimer about individual initiative, and a hyperlink to the official Bahá'í website.
+
+**Validates: Requirements 14.2, 14.3, 14.4, 14.5, 14.6**
+
+### Property 43e: About Page Accessibility
+
+*For any* authenticated user regardless of role, the About page should be accessible from the navigation menu.
+
+**Validates: Requirements 14.1, 14.8**
+
 ### Property 44: Form validation error display
 
 *For any* invalid form field, the field should be visually highlighted and display an inline error message.
 
-**Validates: Requirements 14.2, 14.3**
+**Validates: Requirements 15.2, 15.3**
 
 ### Property 45: Invalid form submission prevention
 
 *For any* form with validation errors, the submit button should be disabled or submission should be prevented.
 
-**Validates: Requirements 14.4**
+**Validates: Requirements 15.4**
 
 ### Property 46: Valid field value preservation
 
 *For any* form with validation errors, all valid field values should remain unchanged after validation fails.
 
-**Validates: Requirements 14.5**
+**Validates: Requirements 15.5**
 
 ### Property 47: Error Notification Type
 
 *For any* error, transient errors should display toast notifications while critical errors should display modal dialogs.
 
-**Validates: Requirements 15.2, 15.3**
+**Validates: Requirements 16.2, 16.3**
 
 ### Property 48: Error State Preservation
 
 *For any* error occurrence, the application state should remain unchanged (no data loss or corruption).
 
-**Validates: Requirements 15.5**
+**Validates: Requirements 16.5**
 
 ### Property 49: Error Console Logging
 
 *For any* error, detailed error information should be logged to the browser console.
 
-**Validates: Requirements 15.6**
+**Validates: Requirements 16.6**
 
 ### Property 50: Loading State Indicators
 
 *For any* asynchronous operation (API request, data loading, long operation), appropriate loading indicators should be displayed (spinners, skeleton screens, or progress bars).
 
-**Validates: Requirements 16.1, 16.3, 16.4**
+**Validates: Requirements 17.1, 17.3, 17.4**
 
 ### Property 51: Form Button Disabling During Submission
 
 *For any* form submission in progress, the submit button should be disabled to prevent duplicate submissions.
 
-**Validates: Requirements 16.2**
+**Validates: Requirements 17.2**
 
 ### Property 52: Success Message Display
 
 *For any* successful operation (create, update, delete), a success message should be displayed to the user.
 
-**Validates: Requirements 16.5**
+**Validates: Requirements 17.5**
 
 ### Property 53: Venue List Display
 
@@ -2272,287 +2300,287 @@ All entities support optimistic locking via the `version` field. When updating a
 
 *For any* date value displayed in the UI (activity dates, address history dates, venue history dates, analytics date ranges, table columns, detail views, forms), the rendered output should use ISO-8601 format (YYYY-MM-DD).
 
-**Validates: Requirements 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7**
+**Validates: Requirements 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7**
 
 ### Property 75: Geocoding Request Success
 
 *For any* valid address string, when the geocode button is clicked, the Nominatim API should be called with the address and return at least one result or an error.
 
-**Validates: Requirements 21.2, 21.3**
+**Validates: Requirements 22.2, 22.3**
 
 ### Property 76: Geocoding Coordinate Population
 
 *For any* successful geocoding response with a single result, the latitude and longitude fields should be automatically populated with the returned coordinates.
 
-**Validates: Requirements 21.4**
+**Validates: Requirements 22.4**
 
 ### Property 77: Geocoding Multiple Results Handling
 
 *For any* geocoding response with multiple results, a selection dialog should be displayed allowing the user to choose the correct location.
 
-**Validates: Requirements 21.5**
+**Validates: Requirements 22.5**
 
 ### Property 78: Geocoding Error Handling
 
 *For any* geocoding request that returns no results or fails, an appropriate error message should be displayed to the user.
 
-**Validates: Requirements 21.6**
+**Validates: Requirements 22.6**
 
 ### Property 79: Geocoding Loading State
 
 *For any* geocoding request in progress, a loading indicator should be displayed and the geocode button should be disabled.
 
-**Validates: Requirements 21.7**
+**Validates: Requirements 22.7**
 
 ### Property 80: Geocoding Manual Override
 
 *For any* geocoded coordinates, users should be able to manually edit the latitude and longitude fields to override the geocoded values.
 
-**Validates: Requirements 21.8**
+**Validates: Requirements 22.8**
 
 ### Property 81: Geocoding Offline Behavior
 
 *For any* offline state, the geocode button should be disabled and display a message that geocoding requires connectivity.
 
-**Validates: Requirements 21.10**
+**Validates: Requirements 22.10**
 
 ### Property 82: Map View Display in Venue Form
 
 *For any* venue form (create or edit mode), an interactive map view component should be displayed positioned to the right of the form fields.
 
-**Validates: Requirements 21.11**
+**Validates: Requirements 22.11**
 
 ### Property 83: Map Pin Rendering
 
 *For any* venue form with populated latitude and longitude coordinates, a pin should be rendered on the map at those exact coordinates.
 
-**Validates: Requirements 21.12**
+**Validates: Requirements 22.12**
 
 ### Property 84: Map Zoom Level
 
 *For any* venue form with populated coordinates, the map should be set to a reasonable zoom level for viewing the venue location.
 
-**Validates: Requirements 21.13**
+**Validates: Requirements 22.13**
 
 ### Property 85: Pin Drag Updates Coordinates
 
 *For any* venue form with a map pin, when the pin is dragged to a new position on the map, the latitude and longitude input fields should be updated with the new coordinates.
 
-**Validates: Requirements 21.14, 21.15**
+**Validates: Requirements 22.14, 22.15**
 
 ### Property 86: Coordinate Input Updates Pin
 
 *For any* venue form with a map pin, when the latitude or longitude input fields are manually edited with valid coordinates, the pin position on the map should be updated to reflect the new coordinates.
 
-**Validates: Requirements 21.16**
+**Validates: Requirements 22.16**
 
 ### Property 87: Two-Way Coordinate Synchronization
 
 *For any* venue form, changes to either the coordinate input fields or the map pin position should immediately synchronize with the other, maintaining consistency at all times.
 
-**Validates: Requirements 21.17**
+**Validates: Requirements 22.17**
 
 ### Property 88: Zoom Level Preservation
 
 *For any* venue form where the user has manually adjusted the map zoom level, subsequent coordinate updates (via input fields or pin drag) should preserve the user's zoom level and only adjust the map center point.
 
-**Validates: Requirements 21.18**
+**Validates: Requirements 22.18**
 
 ### Property 89: Hyperlinked Primary Column Navigation
 
 *For any* entity list table, clicking the hyperlinked primary column value should navigate to the detail view for that entity.
 
-**Validates: Requirements 22.1, 22.2**
+**Validates: Requirements 23.1, 23.2**
 
 ### Property 90: View Button Exclusion with Hyperlinked Primary Column
 
 *For any* table with a hyperlinked primary column, the Actions column should NOT include a separate "View" action button.
 
-**Validates: Requirements 22.3**
+**Validates: Requirements 23.3**
 
 ### Property 91: Hyperlinked Primary Column Consistency
 
 *For any* table in the application (list views or detail page tables), the primary column should use the CloudScape Link component with consistent styling.
 
-**Validates: Requirements 22.5, 22.6**
+**Validates: Requirements 23.5, 23.6**
 
 ### Property 92: Edit Button on Detail Pages
 
 *For any* entity detail page (participants, activities, venues, geographic areas), when the user has EDITOR or ADMINISTRATOR role, an edit button should be displayed in the header section as the right-most action using CloudScape Button with variant="primary".
 
-**Validates: Requirements 23.1, 23.2, 23.3, 23.5, 23.6**
+**Validates: Requirements 24.1, 24.2, 24.3, 24.5, 24.6**
 
 ### Property 93: Edit Button Opens Edit Form
 
 *For any* entity detail page with an edit button, clicking the edit button should open the edit form for the current entity.
 
-**Validates: Requirements 23.4**
+**Validates: Requirements 24.4**
 
 ### Property 93a: Delete Button on Detail Pages
 
 *For any* entity detail page (participants, activities, venues, geographic areas), when the user has EDITOR or ADMINISTRATOR role, a delete button should be displayed in the header section next to the edit button.
 
-**Validates: Requirements 23A.1, 23A.2, 23A.3, 23A.8, 23A.9**
+**Validates: Requirements 24A.1, 24A.2, 24A.3, 24A.8, 24A.9**
 
 ### Property 93b: Delete Confirmation Dialog
 
 *For any* delete button click on an entity detail page, a confirmation dialog should be displayed before proceeding with the deletion.
 
-**Validates: Requirements 23A.4**
+**Validates: Requirements 24A.4**
 
 ### Property 93c: Delete Success Navigation
 
 *For any* successful entity deletion from a detail page, the application should navigate back to the corresponding entity list page.
 
-**Validates: Requirements 23A.5, 23A.6**
+**Validates: Requirements 24A.5, 24A.6**
 
 ### Property 93d: Delete Error Handling
 
 *For any* failed entity deletion from a detail page, an error message should be displayed explaining why the deletion failed.
 
-**Validates: Requirements 23A.7, 23A.10**
+**Validates: Requirements 24A.7, 24A.10**
 
 ### Property 94: Global Filter URL Synchronization
 
 *For any* geographic area selected in the global filter, the URL query parameter should be updated to reflect the selected area ID, and navigating to a URL with a geographic area query parameter should apply that filter automatically.
 
-**Validates: Requirements 24.6, 24.7**
+**Validates: Requirements 25.6, 25.7**
 
 ### Property 95: Global Filter Persistence
 
 *For any* geographic area selected in the global filter, the selection should be persisted to localStorage so it can be restored in future sessions.
 
-**Validates: Requirements 24.8**
+**Validates: Requirements 25.8**
 
 ### Property 96: Global Filter Restoration
 
 *For any* user returning to the application, the last-selected geographic area filter should be restored from localStorage and applied automatically.
 
-**Validates: Requirements 24.9**
+**Validates: Requirements 25.9**
 
 ### Property 97: Recursive Geographic Filtering
 
 *For any* geographic area selected in the global filter, all filtered results should include records associated with the selected area and all its descendant areas (recursive aggregation).
 
-**Validates: Requirements 24.4, 24.5**
+**Validates: Requirements 25.4, 25.5**
 
 ### Property 98: Global Filter Application to All Lists
 
 *For any* list view (activities, participants, venues, geographic areas), when the global geographic area filter is active, only records associated with venues in the filtered geographic area or its descendants should be displayed.
 
-**Validates: Requirements 24.5**
+**Validates: Requirements 25.5**
 
 ### Property 99: Global Filter Clear Functionality
 
 *For any* active global geographic area filter, the user should be able to clear the filter and return to the "Global" (all areas) view with a single action.
 
-**Validates: Requirements 24.11**
+**Validates: Requirements 25.11**
 
 ### Property 100: Async Dropdown Initial Load
 
 *For any* high-cardinality entity dropdown (venue, participant, geographic area), when the dropdown is opened, the first page of results should be automatically loaded from the backend.
 
-**Validates: Requirements 25.4**
+**Validates: Requirements 26.4**
 
 ### Property 101: Async Dropdown Text Filtering
 
 *For any* high-cardinality entity dropdown with user text input, the dropdown should asynchronously fetch and display filtered results from the backend based on the input text.
 
-**Validates: Requirements 25.5**
+**Validates: Requirements 26.5**
 
 ### Property 102: Dropdown Input Debouncing
 
 *For any* text input in a high-cardinality dropdown, API requests should be debounced with a minimum 300ms delay to prevent excessive requests.
 
-**Validates: Requirements 25.6**
+**Validates: Requirements 26.6**
 
 ### Property 103: Dropdown Loading Indicator
 
 *For any* high-cardinality dropdown while fetching results, a loading indicator should be displayed to provide visual feedback.
 
-**Validates: Requirements 25.7**
+**Validates: Requirements 26.7**
 
 ### Property 104: Dropdown Combined Filtering
 
 *For any* high-cardinality dropdown with both text search and geographic area filter active, both filters should be applied using AND logic.
 
-**Validates: Requirements 25.7 (implied from backend requirement 21.7)**
+**Validates: Requirements 26.7 (implied from backend requirement 22.7)**
 
 ### Property 105: Global Filter Dropdown Hierarchical Display
 
 *For any* geographic area displayed in the global filter dropdown, the option should show the area type and the full ancestor hierarchy path formatted with closest ancestor on the left and most distant ancestor on the right, separated by " > ".
 
-**Validates: Requirements 24.12, 24.13, 24.14, 24.15**
+**Validates: Requirements 25.12, 25.13, 25.14, 25.15**
 
 ### Property 106: Global Filter Dropdown Scoped Options
 
 *For any* active global geographic area filter, the filter selector dropdown should display only the descendants (recursively) of the currently filtered area, and when the filter is "Global", all geographic areas should be displayed.
 
-**Validates: Requirements 24.16, 24.17**
+**Validates: Requirements 25.16, 25.17**
 
 ### Optional Field Clearing Properties
 
 **Property 107: Optional field clearing in participant form**
 *For any* participant form with populated optional fields (email, phone, notes, dateOfBirth, dateOfRegistration, nickname), clicking the clear button should set the field to null and send null to the API on save, resulting in the field being empty in subsequent views.
-**Validates: Requirements 26.1, 26.5, 26.6, 26.7, 26.8**
+**Validates: Requirements 27.1, 27.5, 27.6, 27.7, 27.8**
 
 **Property 108: Optional field clearing in venue form**
 *For any* venue form with populated optional fields (latitude, longitude, venueType), clicking the clear button should set the field to null and send null to the API on save, resulting in the field being empty in subsequent views.
-**Validates: Requirements 26.2, 26.5, 26.6, 26.7, 26.8**
+**Validates: Requirements 27.2, 27.5, 27.6, 27.7, 27.8**
 
 **Property 109: End date clearing in activity form**
 *For any* activity form with a populated endDate, clicking the clear button should set endDate to null and send null to the API on save, converting the activity to ongoing.
-**Validates: Requirements 26.3, 26.5, 26.6, 26.7, 26.8**
+**Validates: Requirements 27.3, 27.5, 27.6, 27.7, 27.8**
 
 **Property 110: Notes clearing in assignment form**
 *For any* assignment form with populated notes, clicking the clear button should set notes to null and send null to the API on save, resulting in the notes being empty in subsequent views.
-**Validates: Requirements 26.4, 26.5, 26.6, 26.7, 26.8**
+**Validates: Requirements 27.4, 27.5, 27.6, 27.7, 27.8**
 
 **Property 111: Clear button visibility**
 *For any* optional field with a value, a clear button (X icon) should be visible next to the field, and when the field is empty, the clear button should be hidden.
-**Validates: Requirements 26.7, 26.8**
+**Validates: Requirements 27.7, 27.8**
 
 **Property 112: Field clearing vs omission distinction**
 *For any* form update, fields that are not modified should be omitted from the API request (preserving existing values), while fields that are explicitly cleared should send null to the API (clearing the values).
-**Validates: Requirements 26.9**
+**Validates: Requirements 27.9**
 
 ### Interactive Chart Legend Properties
 
 **Property 113: Legend Item Click Toggles Series Visibility**
 *For any* chart with multiple data series and an interactive legend, clicking a legend item should toggle the visibility of the corresponding data series in the chart.
-**Validates: Requirements 27.2**
+**Validates: Requirements 28.2**
 
 **Property 114: Hidden Series Visual Indication**
 *For any* chart legend with hidden data series, the legend should visually indicate which series are hidden through dimmed text, reduced opacity, or other clear visual treatment.
-**Validates: Requirements 27.3, 27.4**
+**Validates: Requirements 28.3, 28.4**
 
 **Property 115: Independent Series Toggling**
 *For any* chart with multiple data series, each series should be independently toggleable without affecting the visibility state of other series.
-**Validates: Requirements 27.5**
+**Validates: Requirements 28.5**
 
 **Property 116: Minimum Visible Series**
 *For any* chart with interactive legend, at least one data series should remain visible at all times, or an appropriate message should be displayed when attempting to hide all series.
-**Validates: Requirements 27.6**
+**Validates: Requirements 28.6**
 
 **Property 117: Interactive Legend Application to All Multi-Series Charts**
 *For any* chart that displays multiple data series (Activities chart, Activity Lifecycle chart, Growth Dashboard charts, Geographic breakdown chart, Role distribution chart), an interactive legend should be provided.
-**Validates: Requirements 27.1, 27.7**
+**Validates: Requirements 28.1, 28.7**
 
 **Property 118: Chart Responsiveness with Series Toggling**
 *For any* chart with series toggled on or off, the chart should remain interactive and responsive, with axis scales and ranges updating appropriately to reflect the visible data.
-**Validates: Requirements 27.8, 27.9**
+**Validates: Requirements 28.8, 28.9**
 
 **Property 119: Legend Item Hover Feedback**
 *For any* interactive legend item, hovering over it should provide visual feedback (e.g., cursor change, highlight) to indicate it is clickable.
-**Validates: Requirements 27.10**
+**Validates: Requirements 28.10**
 
 **Property 120: Legend Accessibility**
 *For any* interactive legend, legend items should be keyboard navigable (Tab key) and screen reader compatible with appropriate ARIA attributes.
-**Validates: Requirements 27.11**
+**Validates: Requirements 28.11**
 
 **Property 121: Series Visibility Persistence**
 *For any* chart with toggled series visibility, the visibility state should be persisted in browser session storage and restored when the user returns to the chart.
-**Validates: Requirements 27.12**
+**Validates: Requirements 28.12**
 
 ### Property 56A: Dirty Form Detection
 
@@ -3211,71 +3239,71 @@ interface ImportError {
 
 **Property 142: CSV export button visibility**
 *For any* user with READ_ONLY role, the Export CSV button should be hidden; for users with EDITOR or ADMINISTRATOR role, it should be visible.
-**Validates: Requirements 26.22, 26.23**
+**Validates: Requirements 29.22, 29.23**
 
 **Property 143: CSV import button visibility**
 *For any* user with READ_ONLY role, the Import CSV button should be hidden; for users with EDITOR or ADMINISTRATOR role, it should be visible.
-**Validates: Requirements 26.22, 26.23**
+**Validates: Requirements 29.22, 29.23**
 
 **Property 144: CSV export trigger**
 *For any* Export CSV button click, the application should call the appropriate backend export endpoint and trigger a browser download.
-**Validates: Requirements 26.1, 26.2, 26.3, 26.4, 26.5, 26.6**
+**Validates: Requirements 29.1, 29.2, 29.3, 29.4, 29.5, 29.6**
 
 **Property 145: Empty CSV download**
 *For any* export operation with no records, the application should download a CSV file with only the header row.
-**Validates: Requirements 26.7**
+**Validates: Requirements 29.7**
 
 **Property 146: CSV import file selection**
 *For any* Import CSV button click, the application should open a file selection dialog.
-**Validates: Requirements 26.8, 26.9, 26.10, 26.11, 26.12**
+**Validates: Requirements 29.8, 29.9, 29.10, 29.11, 29.12**
 
 **Property 147: CSV import success handling**
 *For any* successful CSV import, the application should display a success message with counts and refresh the entity list.
-**Validates: Requirements 26.14, 26.18**
+**Validates: Requirements 29.14, 29.18**
 
 **Property 148: CSV import error handling**
 *For any* failed CSV import, the application should display detailed error messages for failed rows.
-**Validates: Requirements 26.15**
+**Validates: Requirements 29.15**
 
 **Property 149: CSV file validation**
 *For any* non-CSV file selected for import, the application should display an error message and prevent upload.
-**Validates: Requirements 26.19, 26.20**
+**Validates: Requirements 29.19, 29.20**
 
 **Property 150: CSV operation loading states**
 *For any* import or export operation in progress, the application should display a loading indicator and disable the corresponding button.
-**Validates: Requirements 26.16, 26.17**
+**Validates: Requirements 29.16, 29.17**
 
 **Property 151: CSV export geographic filtering**
 *For any* export operation with the global geographic area filter active, the application should include the filter in the export request and indicate in the success message that only filtered records were exported.
-**Validates: Requirements 28.24, 28.25**
+**Validates: Requirements 29.24, 29.25**
 
 **Property 152: Engagement Summary CSV export button presence**
 *For any* Engagement Dashboard rendering, an "Export CSV" button should be displayed near the Engagement Summary table for users with EDITOR or ADMINISTRATOR roles.
-**Validates: Requirements 29.1, 29.13, 29.14**
+**Validates: Requirements 30.1, 30.13, 30.14**
 
 **Property 153: Engagement Summary CSV content completeness**
 *For any* Engagement Summary table with data, the exported CSV should include the Total row, all dimensional breakdown rows (when grouping is active), and all metric columns.
-**Validates: Requirements 29.2, 29.3, 29.4, 29.6**
+**Validates: Requirements 30.2, 30.3, 30.4, 30.6**
 
 **Property 154: Engagement Summary CSV human-friendly labels**
 *For any* Engagement Summary CSV export with dimensional breakdowns, all dimension columns should contain human-friendly labels (activity category names, activity type names, venue names, geographic area names) instead of UUIDs.
-**Validates: Requirements 29.5**
+**Validates: Requirements 30.5**
 
 **Property 155: Engagement Summary CSV filename format**
 *For any* Engagement Summary CSV export, the downloaded filename should include "engagement-summary" and the current date in ISO-8601 format (YYYY-MM-DD).
-**Validates: Requirements 29.8, 29.17**
+**Validates: Requirements 30.8, 30.17**
 
 **Property 156: Engagement Summary CSV export loading state**
 *For any* Engagement Summary CSV export operation in progress, a loading indicator should be displayed and the Export CSV button should be disabled.
-**Validates: Requirements 29.9, 29.10**
+**Validates: Requirements 30.9, 30.10**
 
 **Property 157: Engagement Summary CSV export filtered data**
 *For any* Engagement Summary CSV export with filters or grouping dimensions applied, the exported CSV should contain only the filtered and grouped data matching the current dashboard state.
-**Validates: Requirements 29.15, 29.16**
+**Validates: Requirements 30.15, 30.16**
 
 **Property 158: Engagement Summary CSV empty table handling**
 *For any* Engagement Summary table with no data rows, the exported CSV should contain only the header row.
-**Validates: Requirements 29.18**
+**Validates: Requirements 30.18**
 
 ## Testing Strategy
 
