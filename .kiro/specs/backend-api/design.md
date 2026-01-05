@@ -636,13 +636,13 @@ The API uses Prisma to define the following database models:
 
 **AuditLog**
 - id: UUID (primary key)
-- userId: UUID (foreign key)
+- userId: UUID (foreign key, optional/nullable for pre-authentication events)
 - actionType: String
 - entityType: String
 - entityId: String
 - details: JSON
 - timestamp: DateTime
-- user: User (relation)
+- user: User (relation, optional)
 
 ### Data Relationships
 
@@ -1383,8 +1383,8 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Validates: Requirements 12.3**
 
 **Property 72: Audit log completeness**
-*For any* audit log entry, it should contain user ID, action type, entity type, entity ID, and timestamp.
-**Validates: Requirements 12.4**
+*For any* audit log entry, it should contain action type, entity type, entity ID, and timestamp, with user ID included when available (nullable for pre-authentication events).
+**Validates: Requirements 12.4, 12.4a, 12.4b**
 
 **Property 73: Audit log detail format**
 *For any* audit log entry, additional details should be stored as valid JSON.

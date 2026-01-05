@@ -86,6 +86,12 @@ export class AuthService {
       return {
           accessToken,
           refreshToken,
+          user: {
+              id: user.id,
+              email: user.email,
+              role: user.role,
+              displayName: user.displayName,
+          },
       };
   }
 
@@ -126,6 +132,12 @@ export class AuthService {
           return {
               accessToken: newAccessToken,
               refreshToken: newRefreshToken,
+              user: {
+                  id: user.id,
+                  email: user.email,
+                  role: user.role,
+                  displayName: user.displayName,
+              },
           };
       } catch (error) {
           throw new Error('Invalid refresh token');

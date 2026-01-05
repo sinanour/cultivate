@@ -115,11 +115,25 @@ describe('AuditLoggingMiddleware', () => {
 
             const originalSend = mockResponse.send as jest.Mock;
             mockResponse.statusCode = 200;
-            originalSend('response data');
+            // Send proper login response structure with user ID
+            const loginResponse = JSON.stringify({
+                success: true,
+                data: {
+                    user: {
+                        id: 'user-1',
+                        email: 'test@example.com',
+                        role: 'EDITOR'
+                    },
+                    accessToken: 'token',
+                    refreshToken: 'refresh'
+                }
+            });
+            originalSend(loginResponse);
 
             setTimeout(() => {
                 expect(mockAuditRepo.create).toHaveBeenCalledWith(
                     expect.objectContaining({
+                        userId: 'user-1',
                         actionType: 'LOGIN',
                         entityType: 'AUTH',
                     })
@@ -142,6 +156,30 @@ describe('AuditLoggingMiddleware', () => {
 
             setTimeout(() => {
                 expect(mockAuditRepo.create).not.toHaveBeenCalled();
+                done();
+            }, 100);
+        });
+
+        it('should log LOGOUT events using authenticated user', (done) => {
+            mockAuditRepo.create = jest.fn().mockResolvedValue({});
+
+            const handler = middleware.logAuthenticationEvent('LOGOUT');
+            handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+
+            expect(mockNext).toHaveBeenCalled();
+
+            const originalSend = mockResponse.send as jest.Mock;
+            mockResponse.statusCode = 200;
+            originalSend(JSON.stringify({ success: true }));
+
+            setTimeout(() => {
+                expect(mockAuditRepo.create).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        userId: 'user-1',
+                        actionType: 'LOGOUT',
+                        entityType: 'AUTH',
+                    })
+                );
                 done();
             }, 100);
         });

@@ -1187,9 +1187,42 @@ if (geographicAreaId) {
     - Test audit log retrieval (administrator only)
     - **Validates: Requirements 12.1, 12.2, 12.3, 12.4, 12.5, 12.6**
 
-- [ ] 32. Checkpoint - Verify audit logging is working
+- [x] 31A. Fix audit logging foreign key constraint violation
+  - [x] 31A.1 Make userId nullable in AuditLog Prisma model
+    - Update AuditLog model to make userId field optional (userId String?)
+    - Update foreign key relation to handle nullable userId
+    - Create Prisma migration for schema change
+    - _Requirements: 12.1, 12.4_
+
+  - [x] 31A.2 Update AuditLogRepository to handle nullable userId
+    - Update create() method to accept optional userId
+    - Ensure repository can create audit logs without userId
+    - _Requirements: 12.1, 12.4_
+
+  - [x] 31A.3 Fix logAuthenticationEvent to handle pre-authentication state
+    - For LOGIN events, extract userId from response body after successful authentication
+    - Parse response JSON to get the authenticated user's ID
+    - Only create audit log if userId can be determined from response
+    - For LOGOUT and REFRESH, use req.user.userId (already authenticated)
+    - Remove fallback to email or 'unknown' string
+    - _Requirements: 12.1_
+
+  - [x] 31A.4 Update audit logging to gracefully handle missing userId
+    - Ensure all audit logging methods check for valid userId before logging
+    - Log warning when userId cannot be determined but don't fail the request
+    - Update error handling to be more informative
+    - _Requirements: 12.1, 12.4_
+
+  - [ ]* 31A.5 Write integration tests for nullable userId audit logs
+    - Test that audit logs can be created without userId
+    - Test that LOGIN events correctly extract userId from response
+    - Test that failed authentication doesn't create audit logs
+    - **Validates: Requirements 12.1, 12.4**
+
+- [x] 32. Checkpoint - Verify audit logging is working
   - Ensure all tests pass, ask the user if questions arise.
   - Verify audit log table contains entries after creating/modifying records
+  - Verify no foreign key constraint violations occur
 
 - [ ] 33. Implement geographic authorization system
   - [ ] 33.1 Create Prisma migration for UserGeographicAuthorization table

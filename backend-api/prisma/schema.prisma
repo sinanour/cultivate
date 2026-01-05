@@ -290,13 +290,13 @@ model Assignment {
 // Audit Log model for tracking user actions
 model AuditLog {
   id         String   @id @default(uuid())
-  userId     String
+  userId     String?
   actionType String
   entityType String
   entityId   String
   details    Json
   timestamp  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([timestamp])

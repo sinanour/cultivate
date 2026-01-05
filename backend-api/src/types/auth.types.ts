@@ -17,6 +17,12 @@ export interface TokenPayload {
 export interface AuthTokens {
     accessToken: string;
     refreshToken: string;
+    user: {
+        id: string;
+        email: string;
+        role: UserRole;
+        displayName: string | null;
+    };
 }
 
 export interface RefreshTokenPayload {

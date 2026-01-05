@@ -53,21 +53,39 @@ export class AuditLoggingMiddleware {
                 res.send = originalSend;
 
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    const userId = req.user?.userId || req.body.email || 'unknown';
-
                     void (async () => {
                         try {
-                            await repo.create({
-                                userId,
-                                actionType: eventType,
-                                entityType: 'AUTH',
-                                entityId: userId,
-                                details: {
-                                    eventType,
-                                    timestamp: new Date(),
-                                    ip: req.ip,
-                                },
-                            });
+                            let userId: string | undefined;
+
+                            // For LOGIN, extract userId from response body after successful authentication
+                            if (eventType === 'LOGIN') {
+                                try {
+                                    const responseData = typeof data === 'string' ? JSON.parse(data) : data;
+                                    userId = responseData?.data?.user?.id;
+                                } catch (parseError) {
+                                    console.warn('Failed to parse login response for audit logging:', parseError);
+                                }
+                            } else {
+                                // For LOGOUT and REFRESH, user is already authenticated
+                                userId = req.user?.userId;
+                            }
+
+                            // Only create audit log if we have a valid userId
+                            if (userId) {
+                                await repo.create({
+                                    userId,
+                                    actionType: eventType,
+                                    entityType: 'AUTH',
+                                    entityId: userId,
+                                    details: {
+                                        eventType,
+                                        timestamp: new Date(),
+                                        ip: req.ip,
+                                    },
+                                });
+                            } else {
+                                console.warn(`Unable to determine userId for ${eventType} audit log`);
+                            }
                         } catch (error) {
                             console.error('Failed to create audit log:', error);
                         }

@@ -422,9 +422,12 @@ The Backend API package provides the RESTful API service that implements all bus
 1. THE API SHALL log all authentication events (login, logout, token refresh)
 2. THE API SHALL log all role changes
 3. THE API SHALL log all entity modifications (create, update, delete)
-4. WHEN logging actions, THE API SHALL record user ID, action type, entity type, entity ID, and timestamp
+4. WHEN logging actions, THE API SHALL record user ID (when available), action type, entity type, entity ID, and timestamp
+4a. WHEN logging authentication events, THE API SHALL support nullable user ID for pre-authentication events (e.g., failed login attempts)
+4b. WHEN logging successful login events, THE API SHALL extract and record the authenticated user's ID from the response
 5. WHEN logging actions, THE API SHALL store additional details in JSON format
 6. THE API SHALL provide audit logs to administrators only
+7. WHEN a user ID cannot be determined, THE API SHALL create the audit log without a user ID rather than failing the request
 
 ### Requirement 13: Handle Errors Gracefully
 

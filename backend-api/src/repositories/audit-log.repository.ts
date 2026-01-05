@@ -1,7 +1,7 @@
 import { PrismaClient, AuditLog } from '@prisma/client';
 
 export interface CreateAuditLogData {
-    userId: string;
+    userId?: string;
     actionType: string;
     entityType: string;
     entityId: string;
