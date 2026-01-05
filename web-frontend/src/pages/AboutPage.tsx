@@ -48,11 +48,10 @@ export default function AboutPage() {
                 />
               </div>
               <Box variant="p" fontSize="body-m">
-                The Cultivate logo incorporates the themes of concentric circles as well as expanding 
+                The Cultivate logo incorporates themes of concentric circles as well as expanding 
                 nuclei. The fact that the circles are not perfectly concentric is a reflection of the 
-                organic nature of this growth. If you look at the three circles carefully, you will 
-                also see a representation of a person raising their arms in supplication of the 
-                Blessed Beauty.
+                organic nature of this growth. Careful examination of the three circles will reveal
+                a representation of a person raising their arms in supplication of the Blessed Beauty.
               </Box>
             </div>
           </Container>
