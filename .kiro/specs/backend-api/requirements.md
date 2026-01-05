@@ -19,6 +19,10 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
 - **Population**: A label or demographic grouping that can be assigned to participants for segmentation and analysis (e.g., Youth, Adults, Families, Seekers)
+- **Geographic_Authorization**: Access control rules that restrict user access to specific geographic areas
+- **Allow_List**: A set of geographic areas that a user is explicitly permitted to access
+- **Deny_List**: A set of geographic areas that a user is explicitly forbidden from accessing
+- **Authorized_Area**: A geographic area that a user has permission to access based on authorization rules
 
 ## Requirements
 
@@ -588,3 +592,103 @@ The Backend API package provides the RESTful API service that implements all bus
 30. THE API SHALL support both comma and semicolon as field delimiters in CSV files
 31. WHEN exporting data, THE API SHALL respect the global geographic area filter if provided via geographicAreaId query parameter
 32. WHEN exporting with a geographic area filter, THE API SHALL include only records associated with venues in the specified geographic area or its descendants
+
+### Requirement 24: Geographic Authorization
+
+**User Story:** As a system administrator, I want to control user access by geographic area with granular allow-listing and deny-listing rules, so that I can restrict users to specific regions and ensure data security across geographic boundaries.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a GET /api/v1/users/:id/geographic-authorizations endpoint that returns all geographic authorization rules for a user
+2. THE API SHALL provide a POST /api/v1/users/:id/geographic-authorizations endpoint that creates a new geographic authorization rule
+3. THE API SHALL provide a DELETE /api/v1/users/:id/geographic-authorizations/:authId endpoint that deletes a geographic authorization rule
+4. THE API SHALL support two authorization rule types: ALLOW and DENY
+5. WHEN creating a geographic authorization rule, THE API SHALL require user ID, geographic area ID, and rule type (ALLOW or DENY)
+6. WHEN creating a geographic authorization rule, THE API SHALL validate that the user and geographic area exist
+7. WHEN creating a geographic authorization rule, THE API SHALL prevent duplicate rules for the same user and geographic area combination
+8. THE API SHALL store geographic authorization rules in a UserGeographicAuthorization table with userId, geographicAreaId, ruleType, createdAt, and createdBy fields
+9. WHEN evaluating user access to a geographic area, THE API SHALL first check for DENY rules
+10. WHEN a DENY rule exists for a geographic area or any of its ancestors, THE API SHALL deny access regardless of ALLOW rules
+11. WHEN no DENY rules apply and an ALLOW rule exists for a geographic area, THE API SHALL grant access to that area and all its descendants
+12. WHEN an ALLOW rule exists for a geographic area, THE API SHALL grant read-only access to all ancestor areas
+13. WHEN a user has no geographic authorization rules, THE API SHALL grant access to all geographic areas (unrestricted access)
+14. WHEN a user has at least one geographic authorization rule, THE API SHALL restrict access to only the authorized areas
+15. THE API SHALL apply geographic authorization filtering to GET /api/v1/participants endpoint
+16. THE API SHALL apply geographic authorization filtering to GET /api/v1/activities endpoint
+17. THE API SHALL apply geographic authorization filtering to GET /api/v1/venues endpoint
+18. THE API SHALL apply geographic authorization filtering to GET /api/v1/geographic-areas endpoint
+19. THE API SHALL apply geographic authorization filtering to GET /api/analytics/engagement endpoint
+20. THE API SHALL apply geographic authorization filtering to GET /api/analytics/growth endpoint
+21. THE API SHALL apply geographic authorization filtering to GET /api/analytics/activity-lifecycle endpoint
+22. THE API SHALL apply geographic authorization filtering to all export endpoints
+23. WHEN a user requests a list endpoint without an explicit geographicAreaId parameter, THE API SHALL implicitly filter results to only authorized geographic areas
+24. WHEN a user requests a list endpoint with an explicit geographicAreaId parameter, THE API SHALL validate that the user is authorized to access that geographic area
+25. WHEN a user requests an unauthorized geographic area, THE API SHALL return 403 Forbidden with error code GEOGRAPHIC_AUTHORIZATION_DENIED
+26. WHEN a user attempts to create a geographic area, THE API SHALL validate that the parent area (if provided) is within the user's authorized areas
+27. WHEN a user attempts to create a top-level geographic area (no parent) and has geographic restrictions, THE API SHALL return 403 Forbidden
+28. WHEN a user attempts to create a venue, THE API SHALL validate that the venue's geographic area is within the user's authorized areas
+29. WHEN a user attempts to create an activity with a venue, THE API SHALL validate that the venue's geographic area is within the user's authorized areas
+30. WHEN a user attempts to update a venue's geographic area, THE API SHALL validate that the new geographic area is within the user's authorized areas
+31. THE API SHALL restrict geographic authorization management endpoints to ADMINISTRATOR role only
+32. WHEN a non-administrator attempts to access geographic authorization endpoints, THE API SHALL return 403 Forbidden
+33. THE API SHALL include the user's authorized geographic area IDs in the JWT token payload for efficient authorization checks
+34. WHEN generating a JWT token, THE API SHALL query the user's geographic authorization rules and include the authorized area IDs in the token
+35. WHEN validating a JWT token, THE API SHALL extract the authorized area IDs and use them for authorization filtering
+36. THE API SHALL provide a GET /api/v1/users/:id/authorized-areas endpoint that returns the complete list of geographic areas the user can access (including descendants of allowed areas and ancestors for read-only access)
+37. WHEN calculating authorized areas, THE API SHALL expand ALLOW rules to include all descendant areas
+38. WHEN calculating authorized areas, THE API SHALL include ancestor areas with read-only flag
+39. WHEN an area is an ancestor of any allowed area, THE API SHALL mark it with isAncestor=true even if that area also has FULL access from another ALLOW rule
+40. WHEN returning authorized areas, THE API SHALL ensure that any area serving as an ancestor for navigation context is always marked with isAncestor=true to distinguish it from areas that are directly allowed for filtering purposes
+41. THE API SHALL audit all geographic authorization rule changes in the audit log
+
+### Requirement 25: Geographic Authorization for Individual Resource Access
+
+**User Story:** As a system administrator, I want geographic authorization to be enforced on individual resource access (detail views, updates, deletes), so that users cannot bypass authorization by directly accessing resources via URL or UUID even when they are denied access to those geographic areas.
+
+#### Acceptance Criteria
+
+1. THE API SHALL enforce geographic authorization on GET /api/v1/participants/:id endpoint
+2. THE API SHALL enforce geographic authorization on GET /api/v1/activities/:id endpoint
+3. THE API SHALL enforce geographic authorization on GET /api/v1/venues/:id endpoint
+4. THE API SHALL enforce geographic authorization on GET /api/v1/geographic-areas/:id endpoint
+5. WHEN a user requests a participant by ID, THE API SHALL determine the participant's current home venue from their most recent address history record
+6. WHEN a user requests a participant by ID, THE API SHALL validate that the participant's current home venue's geographic area is within the user's authorized areas
+7. WHEN a user requests a participant by ID and the participant is not authorized, THE API SHALL return 403 Forbidden with error code GEOGRAPHIC_AUTHORIZATION_DENIED
+8. WHEN a user requests an activity by ID, THE API SHALL determine the activity's current venue from its most recent venue history record
+9. WHEN a user requests an activity by ID, THE API SHALL validate that the activity's current venue's geographic area is within the user's authorized areas
+10. WHEN a user requests an activity by ID and the activity is not authorized, THE API SHALL return 403 Forbidden with error code GEOGRAPHIC_AUTHORIZATION_DENIED
+11. WHEN a user requests a venue by ID, THE API SHALL validate that the venue's geographic area is within the user's authorized areas
+12. WHEN a user requests a venue by ID and the venue is not authorized, THE API SHALL return 403 Forbidden with error code GEOGRAPHIC_AUTHORIZATION_DENIED
+13. WHEN a user requests a geographic area by ID, THE API SHALL validate that the geographic area is within the user's authorized areas (including read-only access to ancestors)
+14. WHEN a user requests a geographic area by ID and the area is not authorized, THE API SHALL return 403 Forbidden with error code GEOGRAPHIC_AUTHORIZATION_DENIED
+15. THE API SHALL enforce geographic authorization on PUT /api/v1/participants/:id endpoint
+16. THE API SHALL enforce geographic authorization on PUT /api/v1/activities/:id endpoint
+17. THE API SHALL enforce geographic authorization on PUT /api/v1/venues/:id endpoint
+18. THE API SHALL enforce geographic authorization on PUT /api/v1/geographic-areas/:id endpoint
+19. THE API SHALL enforce geographic authorization on DELETE /api/v1/participants/:id endpoint
+20. THE API SHALL enforce geographic authorization on DELETE /api/v1/activities/:id endpoint
+21. THE API SHALL enforce geographic authorization on DELETE /api/v1/venues/:id endpoint
+22. THE API SHALL enforce geographic authorization on DELETE /api/v1/geographic-areas/:id endpoint
+23. WHEN a user attempts to update a participant and the participant is not in an authorized area, THE API SHALL return 403 Forbidden
+24. WHEN a user attempts to update an activity and the activity is not in an authorized area, THE API SHALL return 403 Forbidden
+25. WHEN a user attempts to update a venue and the venue is not in an authorized area, THE API SHALL return 403 Forbidden
+26. WHEN a user attempts to update a geographic area and the area is not authorized, THE API SHALL return 403 Forbidden
+27. WHEN a user attempts to delete a participant and the participant is not in an authorized area, THE API SHALL return 403 Forbidden
+28. WHEN a user attempts to delete an activity and the activity is not in an authorized area, THE API SHALL return 403 Forbidden
+29. WHEN a user attempts to delete a venue and the venue is not in an authorized area, THE API SHALL return 403 Forbidden
+30. WHEN a user attempts to delete a geographic area and the area is not authorized, THE API SHALL return 403 Forbidden
+31. THE API SHALL enforce geographic authorization on GET /api/v1/participants/:id/activities endpoint
+32. THE API SHALL enforce geographic authorization on GET /api/v1/participants/:id/address-history endpoint
+33. THE API SHALL enforce geographic authorization on GET /api/v1/participants/:id/populations endpoint
+34. THE API SHALL enforce geographic authorization on GET /api/v1/activities/:id/participants endpoint
+35. THE API SHALL enforce geographic authorization on GET /api/v1/activities/:id/venues endpoint
+36. THE API SHALL enforce geographic authorization on GET /api/v1/venues/:id/activities endpoint
+37. THE API SHALL enforce geographic authorization on GET /api/v1/venues/:id/participants endpoint
+38. THE API SHALL enforce geographic authorization on GET /api/v1/geographic-areas/:id/children endpoint
+39. THE API SHALL enforce geographic authorization on GET /api/v1/geographic-areas/:id/ancestors endpoint
+40. THE API SHALL enforce geographic authorization on GET /api/v1/geographic-areas/:id/venues endpoint
+41. THE API SHALL enforce geographic authorization on GET /api/v1/geographic-areas/:id/statistics endpoint
+42. WHEN a user has no geographic authorization rules (unrestricted access), THE API SHALL allow access to all resources
+43. WHEN a user has ADMINISTRATOR role, THE API SHALL bypass geographic authorization checks for administrative operations
+44. THE API SHALL apply geographic authorization consistently across all resource access patterns (direct access, nested resources, related entities)
+45. THE API SHALL log all geographic authorization denials in the audit log with user ID, resource type, resource ID, and attempted action

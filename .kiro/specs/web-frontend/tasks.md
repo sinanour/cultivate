@@ -523,11 +523,17 @@ This implementation plan covers the React-based web application built with TypeS
     - Provide View, Edit, and Delete actions per node based on permissions
     - Support optional pagination
     - Handle delete validation (REFERENCED_ENTITY error)
-    - _Requirements: 6B.1, 6B.4, 6B.9, 6B.10_
+    - When global filter is active, display filtered area, all descendants, AND all ancestors (never suppress ancestors)
+    - Visually indicate ancestor areas as read-only (e.g., with badge, icon, or muted styling)
+    - Ensure ancestors are always rendered to provide hierarchy context
+    - _Requirements: 6B.1, 6B.4, 6B.9, 6B.10, 6B.12, 6B.13, 6B.14_
 
   - [ ]* 9.2 Write property test for hierarchical display
     - **Property 50: Geographic Area Hierarchical Display**
-    - **Validates: Requirements 6B.1**
+    - **Property 59a: Geographic Area Ancestor Display in Tree View**
+    - **Property 59b: Geographic Area Ancestor Read-Only Indication**
+    - **Property 59c: Geographic Area Ancestor Non-Suppression**
+    - **Validates: Requirements 6B.1, 6B.12, 6B.13, 6B.14**
 
   - [x] 9.2 Create GeographicAreaFormPage component
     - Dedicated full-page form for create/edit (not a modal)
@@ -1370,6 +1376,8 @@ This implementation plan covers the React-based web application built with TypeS
     - Provide selectedGeographicAreaId (string | null)
     - Provide selectedGeographicArea (GeographicArea | null)
     - Provide availableAreas (GeographicAreaWithHierarchy[]) - list of areas for dropdown
+    - Provide authorizedAreaIds (Set<string>) - set of directly authorized area IDs
+    - Provide isAuthorizedArea(areaId: string) method to check direct authorization
     - Provide formatAreaOption(area) method to format display with type and hierarchy
     - Provide setGeographicAreaFilter(id: string | null) method
     - Provide clearFilter() method
@@ -1378,6 +1386,10 @@ This implementation plan covers the React-based web application built with TypeS
     - Implement localStorage persistence (key: 'globalGeographicAreaFilter')
     - Restore filter from localStorage on app initialization
     - URL parameter takes precedence over localStorage
+    - Validate filter selections against authorizedAreaIds
+    - Automatically revert to "Global" when unauthorized area is selected (via URL or localStorage)
+    - Fetch user's authorized areas from /users/:id/authorized-areas endpoint
+    - Extract directly authorized area IDs (accessLevel === 'FULL' and !isDescendant)
     - Fetch full geographic area details when filter is set
     - Fetch available areas based on current filter scope:
       - When filter is "Global": fetch all geographic areas
@@ -1385,7 +1397,7 @@ This implementation plan covers the React-based web application built with TypeS
     - For each area, fetch ancestor hierarchy using /geographic-areas/:id/ancestors endpoint
     - Build hierarchyPath string with format "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
     - Store areas with hierarchy information in availableAreas state
-    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17_
+    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.20, 25.21, 25.22_
 
   - [ ] 24.2 Create useGlobalGeographicFilter hook
     - Export custom hook to access GlobalGeographicFilterContext
@@ -1401,11 +1413,16 @@ This implementation plan covers the React-based web application built with TypeS
       - Display hierarchy path on second line below type (smaller, muted text)
       - Format: "NEIGHBOURHOOD\nCommunity A > City B > Province C"
     - Show current filter selection or "Global" when no filter active
+    - When displaying active filter, include the full ancestor hierarchy path in the filter indicator/breadcrumb
+    - Render all ancestor areas in breadcrumb as clickable links
+    - When user clicks unauthorized ancestor, clear filter (revert to "Global")
+    - Use isAuthorizedArea() from context to determine click behavior
     - Provide clear button (X icon) to remove filter
     - Display visual indicator (badge or highlighted text) of active filter
     - Position prominently in header for accessibility from all views
     - Use availableAreas from context (respects current filter scope)
-    - _Requirements: 25.1, 25.2, 25.3, 25.10, 25.11, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17_
+    - Never suppress ancestor areas from any display - they provide essential navigational context
+    - _Requirements: 25.1, 25.2, 25.3, 25.10, 25.11, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.18, 25.19, 25.20_
 
   - [ ] 24.4 Update ActivityList to apply global filter
     - Read selectedGeographicAreaId from GlobalGeographicFilterContext
@@ -1452,9 +1469,22 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 86: Global Filter Clear Functionality**
     - **Property 105: Global Filter Dropdown Hierarchical Display**
     - **Property 106: Global Filter Dropdown Scoped Options**
-    - **Validates: Requirements 24.4, 24.5, 24.6, 24.7, 24.8, 24.9, 24.11, 24.12, 24.13, 24.14, 24.15, 24.16, 24.17**
-    - **Property 86: Global Filter Clear Functionality**
-    - **Validates: Requirements 24.4, 24.5, 24.6, 24.7, 24.8, 24.9, 24.11**
+    - **Property 106a: Global Filter Breadcrumb Ancestor Display**
+    - **Property 106b: Global Filter Ancestor Non-Suppression**
+    - **Property 106c: Breadcrumb Ancestor Non-Clickability**
+    - **Property 106d: Unauthorized Filter Reversion**
+    - **Property 106e: Filter Authorization Validation**
+    - **Property 106f: Filter Clearing on 403 Authorization Error**
+    - **Validates: Requirements 25.1, 25.2, 25.3, 25.4, 25.5, 25.6, 25.7, 25.8, 25.9, 25.10, 25.11, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.18, 25.19, 25.20, 25.21, 25.22, 25.24, 25.25**
+
+  - [x] 24.10 Implement 403 authorization error handling for global filter
+    - Create geographic-filter-events.ts event emitter utility
+    - Update API client error interceptor to detect GEOGRAPHIC_AUTHORIZATION_DENIED errors
+    - When 403 with GEOGRAPHIC_AUTHORIZATION_DENIED is received and global filter is active, emit event via geographicFilterEvents
+    - Update GlobalGeographicFilterContext to subscribe to authorization error events
+    - When event received, call clearFilterState() to revert to "Global"
+    - Log warning message explaining filter was cleared due to authorization restrictions
+    - _Requirements: 25.24, 25.25_
 
 - [x] 25. Implement high-cardinality dropdown filtering
   - [x] 25.1 Create AsyncEntitySelect component
@@ -2048,3 +2078,81 @@ See `API_ALIGNMENT_SUMMARY.md` for detailed alignment documentation.
     - Test that detail page displays updated data without manual refresh
     - Test that form dirty state is cleared after successful save
     - **Validates: Requirements 2A.9, 2A.10, 2A.14, 4.5, 5.6, 6A.5, 6B.3**
+
+- [ ] 39. Implement geographic authorization management UI
+  - [ ] 39.1 Create GeographicAuthorizationService
+    - Implement getAuthorizationRules(userId) to fetch from /users/:id/geographic-authorizations
+    - Implement createAuthorizationRule(userId, geographicAreaId, ruleType) via POST
+    - Implement deleteAuthorizationRule(userId, authId) via DELETE
+    - Implement getAuthorizedAreas(userId) to fetch from /users/:id/authorized-areas
+    - _Requirements: 31.2, 31.6, 31.7, 31.12_
+
+  - [ ] 39.2 Create TypeScript types for geographic authorization
+    - Create UserGeographicAuthorization interface (id, userId, geographicAreaId, geographicArea, ruleType, createdAt, createdBy)
+    - Create AuthorizedArea interface (geographicAreaId, geographicArea, accessLevel, isDescendant, isAncestor)
+    - Create RuleType enum ('ALLOW' | 'DENY')
+    - Create AccessLevel enum ('FULL' | 'READ_ONLY' | 'DENIED')
+    - Add to types directory
+    - _Requirements: 31.5, 31.11, 31.13_
+
+  - [ ] 39.3 Create UserAuthorizationsPage component
+    - Create dedicated full page for managing authorization rules
+    - Accessible via route: /users/:userId/authorizations
+    - Display user email and role in page header using ContentLayout
+    - Display table of authorization rules using CloudScape Table
+    - Show geographic area name, rule type, and creation date columns
+    - Visually distinguish ALLOW rules (green checkmark icon) from DENY rules (red X icon)
+    - Provide "Add Rule" button in header actions
+    - Provide delete button for each rule
+    - Display effective access summary section with three subsections:
+      - Allowed Areas (full access) - list with descendant count
+      - Ancestor Areas (read-only) - list with read-only badge
+      - Denied Areas - list with denied badge
+    - Display explanatory Alert about authorization rules
+    - Display warning Alert when DENY rules override ALLOW rules
+    - Provide back button or breadcrumb navigation to /users
+    - Only render for ADMINISTRATOR role (redirect non-admins)
+    - _Requirements: 31.1, 31.2, 31.4, 31.5, 31.6, 31.7, 31.11, 31.12, 31.13, 31.14, 31.15, 31.16, 31.17, 31.18, 31.19, 31.20_
+
+  - [ ] 39.4 Create GeographicAuthorizationForm component
+    - Create modal form for adding authorization rules
+    - Use AsyncEntitySelect for geographic area selection
+    - Use CloudScape RadioGroup for rule type selection (ALLOW or DENY)
+    - Validate geographic area is selected
+    - Validate rule type is selected
+    - Display warning when creating DENY rules
+    - Handle duplicate rule errors gracefully
+    - Only accessible to ADMINISTRATOR role
+    - _Requirements: 31.6, 31.8, 31.9, 31.10, 31.15, 31.17_
+
+  - [ ] 39.5 Add route for UserAuthorizationsPage
+    - Add /users/:userId/authorizations route to React Router configuration
+    - Make route protected (require authentication)
+    - Add authorization check (require ADMINISTRATOR role)
+    - Redirect non-administrators to dashboard
+    - _Requirements: 31.1, 31.15, 31.16_
+
+  - [ ] 39.6 Update UserList component
+    - Change "Manage Authorizations" button to a link
+    - Use React Router Link or navigate to /users/:userId/authorizations
+    - Only show authorization link to ADMINISTRATOR role
+    - _Requirements: 31.3, 31.16_
+
+  - [ ]* 39.7 Write property tests for geographic authorization UI
+    - **Property 159: Authorization Rules Display**
+    - **Property 160: Authorization Rule Visual Distinction**
+    - **Property 161: Authorization Rule Creation**
+    - **Property 162: Duplicate Authorization Rule Prevention**
+    - **Property 163: Effective Access Summary Display**
+    - **Property 164: Authorization Management Admin Restriction**
+    - **Property 165: DENY Rule Override Warning**
+    - **Property 166: Authorization Explanatory Text**
+    - **Property 167: Back Navigation from Authorization Page**
+    - **Validates: Requirements 31.1, 31.2, 31.3, 31.4, 31.5, 31.6, 31.8, 31.10, 31.11, 31.12, 31.13, 31.14, 31.15, 31.16, 31.17, 31.18, 31.19, 31.20**
+
+- [ ] 40. Checkpoint - Verify geographic authorization UI
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test authorization rule creation and deletion
+  - Test effective access summary calculation
+  - Verify admin-only access restrictions
+  - Test visual distinction between ALLOW and DENY rules

@@ -5,6 +5,8 @@ import { ActivityTypeService } from '../../services/activity-type.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
 import { AuditLoggingMiddleware } from '../../middleware/audit-logging.middleware';
+import { createMockTokenPayload } from '../helpers/token-payload.helper';
+import { UserRole } from '@prisma/client';
 
 jest.mock('../../services/activity-type.service');
 
@@ -26,7 +28,7 @@ describe('ActivityTypeRoutes', () => {
 
         // Mock authenticate middleware
         mockAuthMiddleware.authenticate = jest.fn().mockReturnValue((req: any, _res: any, next: any) => {
-            req.user = { userId: 'user-1', email: 'test@example.com', role: 'EDITOR' };
+            req.user = createMockTokenPayload(UserRole.EDITOR);
             next();
         });
 

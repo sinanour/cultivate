@@ -1,38 +1,42 @@
 import { ActivityTypeService } from '../../services/activity-type.service';
 import { ActivityTypeRepository } from '../../repositories/activity-type.repository';
 import { ActivityCategoryRepository } from '../../repositories/activity-category.repository';
-
-jest.mock('../../repositories/activity-type.repository');
-jest.mock('../../repositories/activity-category.repository');
+import { createMockPrismaClient, MockPrismaClient } from '../utils/mock-prisma';
 
 describe('ActivityTypeService', () => {
     let service: ActivityTypeService;
-    let mockRepository: jest.Mocked<ActivityTypeRepository>;
-    let mockCategoryRepository: jest.Mocked<ActivityCategoryRepository>;
+    let mockPrisma: MockPrismaClient;
+    let mockRepository: ActivityTypeRepository;
+    let mockCategoryRepository: ActivityCategoryRepository;
 
     beforeEach(() => {
-        mockRepository = new ActivityTypeRepository(null as any) as jest.Mocked<ActivityTypeRepository>;
-        mockCategoryRepository = new ActivityCategoryRepository(null as any) as jest.Mocked<ActivityCategoryRepository>;
+        // Create a fresh mock Prisma client for each test
+        mockPrisma = createMockPrismaClient();
+
+        // Create repositories with the mocked Prisma client
+        mockRepository = new ActivityTypeRepository(mockPrisma);
+        mockCategoryRepository = new ActivityCategoryRepository(mockPrisma);
+
+        // Create service with mocked repositories
         service = new ActivityTypeService(mockRepository, mockCategoryRepository);
-        jest.clearAllMocks();
     });
 
     describe('getAllActivityTypes', () => {
         it('should return all activity types', async () => {
             const mockTypes = [
-                { id: '1', name: "Children's Class", createdAt: new Date(), updatedAt: new Date(), version: 1 },
-                { id: '2', name: 'Ruhi Book 1', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '1', name: "Children's Class", activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '2', name: 'Ruhi Book 1', activityCategoryId: 'cat-2', createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
-            mockRepository.findAll = jest.fn().mockResolvedValue(mockTypes);
+            mockPrisma.activityType.findMany.mockResolvedValue(mockTypes as any);
 
             const result = await service.getAllActivityTypes();
 
             expect(result).toEqual(mockTypes.map(t => ({ ...t, isPredefined: true })));
-            expect(mockRepository.findAll).toHaveBeenCalled();
+            expect(mockPrisma.activityType.findMany).toHaveBeenCalled();
         });
 
         it('should return empty array when no types exist', async () => {
-            mockRepository.findAll = jest.fn().mockResolvedValue([]);
+            mockPrisma.activityType.findMany.mockResolvedValue([]);
 
             const result = await service.getAllActivityTypes();
 
@@ -43,25 +47,33 @@ describe('ActivityTypeService', () => {
     describe('createActivityType', () => {
         it('should create activity type with valid data', async () => {
             const input = { name: 'Ruhi Book 1', activityCategoryId: 'cat-1' };
-            const mockType = { id: '1', ...input, createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false, activityCategory: { id: 'cat-1', name: 'Study Circles', isPredefined: true, version: 1, createdAt: new Date(), updatedAt: new Date() } };
+            const mockType = { id: '1', name: input.name, activityCategoryId: input.activityCategoryId, isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 };
+            const mockCategory = { id: 'cat-1', name: 'Study Circles', isPredefined: true, version: 1, createdAt: new Date(), updatedAt: new Date() };
 
-            mockRepository.findByName = jest.fn().mockResolvedValue(null);
-            mockCategoryRepository.findById = jest.fn().mockResolvedValue({ id: 'cat-1', name: 'Study Circles', isPredefined: true, version: 1, createdAt: new Date(), updatedAt: new Date() });
-            mockRepository.create = jest.fn().mockResolvedValue(mockType);
+            mockPrisma.activityType.findUnique.mockResolvedValue(null);
+            mockPrisma.activityCategory.findUnique.mockResolvedValue(mockCategory as any);
+            mockPrisma.activityType.create.mockResolvedValue({ ...mockType, activityCategory: mockCategory } as any);
 
             const result = await service.createActivityType(input);
 
-            expect(result).toEqual({ ...mockType, isPredefined: true });
-            expect(mockRepository.findByName).toHaveBeenCalledWith('Ruhi Book 1');
-            expect(mockCategoryRepository.findById).toHaveBeenCalledWith('cat-1');
-            expect(mockRepository.create).toHaveBeenCalledWith(input);
+            expect(result).toEqual({ ...mockType, activityCategory: mockCategory, isPredefined: true });
+            expect(mockPrisma.activityType.findUnique).toHaveBeenCalledWith({ where: { name: 'Ruhi Book 1' } });
+            expect(mockPrisma.activityCategory.findUnique).toHaveBeenCalledWith({ where: { id: 'cat-1' } });
+            expect(mockPrisma.activityType.create).toHaveBeenCalledWith({
+                data: {
+                    name: input.name,
+                    activityCategoryId: input.activityCategoryId,
+                    isPredefined: false
+                },
+                include: { activityCategory: true }
+            });
         });
 
         it('should throw error for duplicate name', async () => {
             const input = { name: 'Ruhi Book 1', activityCategoryId: 'cat-1' };
-            const existing = { id: '1', name: 'Ruhi Book 1', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id: '1', name: 'Ruhi Book 1', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
-            mockRepository.findByName = jest.fn().mockResolvedValue(existing);
+            mockPrisma.activityType.findUnique.mockResolvedValue(existing as any);
 
             await expect(service.createActivityType(input)).rejects.toThrow('already exists');
         });
@@ -75,8 +87,8 @@ describe('ActivityTypeService', () => {
         it('should throw error for non-existent category', async () => {
             const input = { name: 'New Type', activityCategoryId: 'invalid-cat' };
 
-            mockRepository.findByName = jest.fn().mockResolvedValue(null);
-            mockCategoryRepository.findById = jest.fn().mockResolvedValue(null);
+            mockPrisma.activityType.findUnique.mockResolvedValue(null);
+            mockPrisma.activityCategory.findUnique.mockResolvedValue(null);
 
             await expect(service.createActivityType(input)).rejects.toThrow('does not exist');
         });
@@ -86,21 +98,28 @@ describe('ActivityTypeService', () => {
         it('should update activity type with valid data', async () => {
             const id = '1';
             const input = { name: 'Updated Custom Type' };
-            const existing = { id, name: 'Custom Type', createdAt: new Date(), updatedAt: new Date(), version: 1 };
-            const updated = { ...existing, ...input };
+            const existing = { id, name: 'Custom Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
+            const updated = { ...existing, ...input, version: 2 };
 
-            mockRepository.findById = jest.fn().mockResolvedValue(existing);
-            mockRepository.findByName = jest.fn().mockResolvedValue(null);
-            mockRepository.update = jest.fn().mockResolvedValue(updated);
+            mockPrisma.activityType.findUnique.mockResolvedValueOnce(existing as any); // First call for findById
+            mockPrisma.activityType.findUnique.mockResolvedValueOnce(null); // Second call for findByName
+            mockPrisma.activityType.update.mockResolvedValue(updated as any);
 
             const result = await service.updateActivityType(id, input);
 
             expect(result).toEqual({ ...updated, isPredefined: false });
-            expect(mockRepository.update).toHaveBeenCalledWith(id, input);
+            expect(mockPrisma.activityType.update).toHaveBeenCalledWith({
+                where: { id },
+                data: {
+                    name: input.name,
+                    version: { increment: 1 }
+                },
+                include: { activityCategory: true }
+            });
         });
 
         it('should throw error for non-existent activity type', async () => {
-            mockRepository.findById = jest.fn().mockResolvedValue(null);
+            mockPrisma.activityType.findUnique.mockResolvedValue(null);
 
             await expect(service.updateActivityType('invalid-id', { name: 'Test' })).rejects.toThrow('not found');
         });
@@ -108,11 +127,11 @@ describe('ActivityTypeService', () => {
         it('should throw error for duplicate name', async () => {
             const id = '1';
             const input = { name: 'Ruhi Book 1' };
-            const existing = { id, name: 'Old Name', createdAt: new Date(), updatedAt: new Date() };
-            const duplicate = { id: '2', name: 'Ruhi Book 1', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Old Name', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
+            const duplicate = { id: '2', name: 'Ruhi Book 1', activityCategoryId: 'cat-2', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
 
-            mockRepository.findById = jest.fn().mockResolvedValue(existing);
-            mockRepository.findByName = jest.fn().mockResolvedValue(duplicate);
+            mockPrisma.activityType.findUnique.mockResolvedValueOnce(existing as any); // First call for findById
+            mockPrisma.activityType.findUnique.mockResolvedValueOnce(duplicate as any); // Second call for findByName
 
             await expect(service.updateActivityType(id, input)).rejects.toThrow('already exists');
         });
@@ -121,29 +140,29 @@ describe('ActivityTypeService', () => {
     describe('deleteActivityType', () => {
         it('should delete activity type when not referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Custom Type', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Custom Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
-            mockRepository.findById = jest.fn().mockResolvedValue(existing);
-            mockRepository.countReferences = jest.fn().mockResolvedValue(0);
-            mockRepository.delete = jest.fn().mockResolvedValue(undefined);
+            mockPrisma.activityType.findUnique.mockResolvedValue(existing as any);
+            mockPrisma.activity.count.mockResolvedValue(0);
+            mockPrisma.activityType.delete.mockResolvedValue(existing as any);
 
             await service.deleteActivityType(id);
 
-            expect(mockRepository.delete).toHaveBeenCalledWith(id);
+            expect(mockPrisma.activityType.delete).toHaveBeenCalledWith({ where: { id } });
         });
 
         it('should throw error for non-existent activity type', async () => {
-            mockRepository.findById = jest.fn().mockResolvedValue(null);
+            mockPrisma.activityType.findUnique.mockResolvedValue(null);
 
             await expect(service.deleteActivityType('invalid-id')).rejects.toThrow('not found');
         });
 
         it('should throw error when activity type is referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Custom Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date() };
+            const existing = { id, name: 'Custom Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
-            mockRepository.findById = jest.fn().mockResolvedValue(existing);
-            mockRepository.countReferences = jest.fn().mockResolvedValue(5);
+            mockPrisma.activityType.findUnique.mockResolvedValue(existing as any);
+            mockPrisma.activity.count.mockResolvedValue(5);
 
             await expect(service.deleteActivityType(id)).rejects.toThrow('reference');
         });

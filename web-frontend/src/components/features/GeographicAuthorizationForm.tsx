@@ -1,0 +1,149 @@
+import { useState } from 'react';
+import {
+  Modal,
+  Box,
+  SpaceBetween,
+  Header,
+  FormField,
+  RadioGroup,
+  Button,
+  Alert,
+} from '@cloudscape-design/components';
+import { useMutation } from '@tanstack/react-query';
+import { geographicAuthorizationService } from '../../services/api/geographic-authorization.service';
+import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
+import { GeographicAreaService } from '../../services/api/geographic-area.service';
+import { useNotification } from '../../hooks/useNotification';
+
+interface GeographicAuthorizationFormProps {
+  userId: string;
+  visible: boolean;
+  onDismiss: () => void;
+  onSuccess: () => void;
+}
+
+export function GeographicAuthorizationForm({
+  userId,
+  visible,
+  onDismiss,
+  onSuccess,
+}: GeographicAuthorizationFormProps) {
+  const [geographicAreaId, setGeographicAreaId] = useState<string>('');
+  const [ruleType, setRuleType] = useState<'ALLOW' | 'DENY'>('ALLOW');
+  const [validationError, setValidationError] = useState<string>('');
+  const { showError } = useNotification();
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      geographicAuthorizationService.createAuthorizationRule(userId, geographicAreaId, ruleType),
+    onSuccess: () => {
+      onSuccess();
+      handleReset();
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to create authorization rule';
+      if (message.includes('already exists')) {
+        setValidationError('An authorization rule already exists for this geographic area');
+      } else {
+        showError(message);
+      }
+    },
+  });
+
+  const handleSubmit = () => {
+    setValidationError('');
+
+    if (!geographicAreaId) {
+      setValidationError('Please select a geographic area');
+      return;
+    }
+
+    createMutation.mutate();
+  };
+
+  const handleReset = () => {
+    setGeographicAreaId('');
+    setRuleType('ALLOW');
+    setValidationError('');
+  };
+
+  const handleDismiss = () => {
+    handleReset();
+    onDismiss();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      onDismiss={handleDismiss}
+      header={<Header>Add Authorization Rule</Header>}
+      footer={
+        <Box float="right">
+          <SpaceBetween direction="horizontal" size="xs">
+            <Button variant="link" onClick={handleDismiss}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              loading={createMutation.isPending}
+              disabled={!geographicAreaId}
+            >
+              Add Rule
+            </Button>
+          </SpaceBetween>
+        </Box>
+      }
+    >
+      <SpaceBetween size="l">
+        {validationError && <Alert type="error">{validationError}</Alert>}
+
+        <FormField label="Geographic Area" description="Select the geographic area for this rule">
+          <AsyncEntitySelect
+            entityType="geographic-area"
+            value={geographicAreaId}
+            onChange={(id: string) => setGeographicAreaId(id)}
+            fetchFunction={async (params) => {
+              const areas = await GeographicAreaService.getGeographicAreas(
+                params.page,
+                params.limit,
+                params.geographicAreaId,
+                params.search
+              );
+              return { data: areas };
+            }}
+            formatOption={(area: any) => ({ label: `${area.name} (${area.areaType})`, value: area.id })}
+            placeholder="Select geographic area"
+          />
+        </FormField>
+
+        <FormField
+          label="Rule Type"
+          description="ALLOW grants access to the area and descendants. DENY blocks access."
+        >
+          <RadioGroup
+            value={ruleType}
+            onChange={({ detail }) => setRuleType(detail.value as 'ALLOW' | 'DENY')}
+            items={[
+              {
+                value: 'ALLOW',
+                label: 'ALLOW - Grant access to this area and all descendants',
+              },
+              {
+                value: 'DENY',
+                label: 'DENY - Block access to this area and all descendants',
+              },
+            ]}
+          />
+        </FormField>
+
+        {ruleType === 'DENY' && (
+          <Alert type="warning" header="DENY Rule Warning">
+            DENY rules take precedence over ALLOW rules. This will block access to the selected
+            area and all its descendants, even if there are ALLOW rules for those areas.
+          </Alert>
+        )}
+      </SpaceBetween>
+    </Modal>
+  );
+}

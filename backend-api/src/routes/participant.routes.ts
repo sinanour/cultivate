@@ -150,17 +150,61 @@ export class ParticipantRoutes {
         try {
             const page = req.query.page ? parseInt(req.query.page as string) : undefined;
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-            const geographicAreaId = req.query.geographicAreaId as string | undefined;
+            let geographicAreaId = req.query.geographicAreaId as string | undefined;
             const search = req.query.search as string | undefined;
 
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Apply implicit filtering if user has geographic restrictions and no explicit filter
+            if (!geographicAreaId && hasGeographicRestrictions && authorizedAreaIds.length > 0) {
+                // For implicit filtering, we need to pass all authorized areas
+                // Since the service expects a single ID, we'll need to handle this differently
+                // For now, let's pass the authorization info to the service
+            }
+
+            // Validate explicit geographic area access
+            if (geographicAreaId && hasGeographicRestrictions) {
+                // Check if user has access to the requested area
+                const hasAccess = authorizedAreaIds.includes(geographicAreaId);
+                if (!hasAccess) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                }
+            }
+
             if (page !== undefined || limit !== undefined) {
-                const result = await this.participantService.getAllParticipantsPaginated(page, limit, geographicAreaId, search);
+                const result = await this.participantService.getAllParticipantsPaginated(
+                    page,
+                    limit,
+                    geographicAreaId,
+                    search,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions
+                );
                 res.status(200).json({ success: true, ...result });
             } else {
-                const participants = await this.participantService.getAllParticipants(geographicAreaId, search);
+                const participants = await this.participantService.getAllParticipants(
+                    geographicAreaId,
+                    search,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions
+                );
                 res.status(200).json({ success: true, data: participants });
             }
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             if (error instanceof Error && error.message.includes('Page')) {
                 res.status(400).json({
                     code: 'VALIDATION_ERROR',
@@ -180,13 +224,23 @@ export class ParticipantRoutes {
     private async getById(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const participant = await this.participantService.getParticipantById(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const participant = await this.participantService.getParticipantById(id, userId, userRole);
             res.status(200).json({ success: true, data: participant });
         } catch (error) {
             if (error instanceof Error && error.message === 'Participant not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this participant',
                     details: {},
                 });
             }
@@ -201,13 +255,23 @@ export class ParticipantRoutes {
     private async getParticipantActivities(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const activities = await this.participantService.getParticipantActivities(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const activities = await this.participantService.getParticipantActivities(id, userId, userRole);
             res.status(200).json({ success: true, data: activities });
         } catch (error) {
             if (error instanceof Error && error.message === 'Participant not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this participant',
                     details: {},
                 });
             }
@@ -272,10 +336,25 @@ export class ParticipantRoutes {
     private async update(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const participant = await this.participantService.updateParticipant(id, req.body);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const participant = await this.participantService.updateParticipant(
+                id,
+                req.body,
+                userId,
+                userRole
+            );
             res.status(200).json({ success: true, data: participant });
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to update this participant',
+                        details: {},
+                    });
+                }
                 if (error.message === 'Participant not found') {
                     return res.status(404).json({
                         code: 'NOT_FOUND',
@@ -323,15 +402,27 @@ export class ParticipantRoutes {
     private async delete(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            await this.participantService.deleteParticipant(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            await this.participantService.deleteParticipant(id, userId, userRole);
             res.status(204).send();
         } catch (error) {
-            if (error instanceof Error && error.message === 'Participant not found') {
-                return res.status(404).json({
-                    code: 'NOT_FOUND',
-                    message: error.message,
-                    details: {},
-                });
+            if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to delete this participant',
+                        details: {},
+                    });
+                }
+                if (error.message === 'Participant not found') {
+                    return res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                }
             }
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
@@ -344,13 +435,23 @@ export class ParticipantRoutes {
     private async getAddressHistory(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const history = await this.participantService.getAddressHistory(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const history = await this.participantService.getAddressHistory(id, userId, userRole);
             res.status(200).json({ success: true, data: history });
         } catch (error) {
             if (error instanceof Error && error.message === 'Participant not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this participant',
                     details: {},
                 });
             }

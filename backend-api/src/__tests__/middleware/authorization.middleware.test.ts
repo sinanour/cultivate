@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
 import { AuthenticatedRequest } from '../../types/express.types';
 import { UserRole } from '@prisma/client';
+import { createMockTokenPayload } from '../helpers/token-payload.helper';
 
 describe('AuthorizationMiddleware', () => {
     let middleware: AuthorizationMiddleware;
@@ -27,7 +28,7 @@ describe('AuthorizationMiddleware', () => {
 
     describe('requireAuthenticated', () => {
         it('should allow authenticated users', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.READ_ONLY };
+            mockRequest.user = createMockTokenPayload(UserRole.READ_ONLY);
 
             const handler = middleware.requireAuthenticated();
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -48,7 +49,7 @@ describe('AuthorizationMiddleware', () => {
 
     describe('requireEditor', () => {
         it('should allow EDITOR role', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.EDITOR };
+            mockRequest.user = createMockTokenPayload(UserRole.EDITOR);
 
             const handler = middleware.requireEditor();
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -57,7 +58,7 @@ describe('AuthorizationMiddleware', () => {
         });
 
         it('should allow ADMINISTRATOR role', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.ADMINISTRATOR };
+            mockRequest.user = createMockTokenPayload(UserRole.ADMINISTRATOR);
 
             const handler = middleware.requireEditor();
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -66,7 +67,7 @@ describe('AuthorizationMiddleware', () => {
         });
 
         it('should reject READ_ONLY role', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.READ_ONLY };
+            mockRequest.user = createMockTokenPayload(UserRole.READ_ONLY);
 
             const handler = middleware.requireEditor();
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -88,7 +89,7 @@ describe('AuthorizationMiddleware', () => {
 
     describe('requireAdmin', () => {
         it('should allow ADMINISTRATOR role', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.ADMINISTRATOR };
+            mockRequest.user = createMockTokenPayload(UserRole.ADMINISTRATOR);
 
             const handler = middleware.requireAdmin();
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -97,7 +98,7 @@ describe('AuthorizationMiddleware', () => {
         });
 
         it('should reject EDITOR role', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.EDITOR };
+            mockRequest.user = createMockTokenPayload(UserRole.EDITOR);
 
             const handler = middleware.requireAdmin();
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -107,7 +108,7 @@ describe('AuthorizationMiddleware', () => {
         });
 
         it('should reject READ_ONLY role', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.READ_ONLY };
+            mockRequest.user = createMockTokenPayload(UserRole.READ_ONLY);
 
             const handler = middleware.requireAdmin();
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -129,7 +130,7 @@ describe('AuthorizationMiddleware', () => {
 
     describe('requirePermission', () => {
         it('should allow users with required permission', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.EDITOR };
+            mockRequest.user = createMockTokenPayload(UserRole.EDITOR);
 
             const handler = middleware.requirePermission('write');
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -138,7 +139,7 @@ describe('AuthorizationMiddleware', () => {
         });
 
         it('should reject users without required permission', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.READ_ONLY };
+            mockRequest.user = createMockTokenPayload(UserRole.READ_ONLY);
 
             const handler = middleware.requirePermission('write');
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -150,7 +151,7 @@ describe('AuthorizationMiddleware', () => {
 
     describe('requireRole', () => {
         it('should allow users with required role', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.EDITOR };
+            mockRequest.user = createMockTokenPayload(UserRole.EDITOR);
 
             const handler = middleware.requireRole(UserRole.EDITOR);
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -159,7 +160,7 @@ describe('AuthorizationMiddleware', () => {
         });
 
         it('should allow users with one of multiple required roles', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.EDITOR };
+            mockRequest.user = createMockTokenPayload(UserRole.EDITOR);
 
             const handler = middleware.requireRole([UserRole.ADMINISTRATOR, UserRole.EDITOR]);
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -168,7 +169,7 @@ describe('AuthorizationMiddleware', () => {
         });
 
         it('should reject users without required role', () => {
-            mockRequest.user = { userId: 'user-1', email: 'test@example.com', role: UserRole.READ_ONLY };
+            mockRequest.user = createMockTokenPayload(UserRole.READ_ONLY);
 
             const handler = middleware.requireRole(UserRole.ADMINISTRATOR);
             handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);

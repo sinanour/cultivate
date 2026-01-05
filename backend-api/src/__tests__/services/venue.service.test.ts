@@ -1,19 +1,23 @@
 import { VenueService } from '../../services/venue.service';
 import { VenueRepository } from '../../repositories/venue.repository';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
+import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 
 jest.mock('../../repositories/venue.repository');
 jest.mock('../../repositories/geographic-area.repository');
+jest.mock('../../services/geographic-authorization.service');
 
 describe('VenueService', () => {
     let service: VenueService;
     let mockVenueRepo: jest.Mocked<VenueRepository>;
     let mockGeoRepo: jest.Mocked<GeographicAreaRepository>;
+    let mockGeographicAuthService: jest.Mocked<GeographicAuthorizationService>;
 
     beforeEach(() => {
         mockVenueRepo = new VenueRepository(null as any) as jest.Mocked<VenueRepository>;
         mockGeoRepo = new GeographicAreaRepository(null as any) as jest.Mocked<GeographicAreaRepository>;
-        service = new VenueService(mockVenueRepo, mockGeoRepo);
+        mockGeographicAuthService = new GeographicAuthorizationService(null as any, null as any, null as any) as jest.Mocked<GeographicAuthorizationService>;
+        service = new VenueService(mockVenueRepo, mockGeoRepo, mockGeographicAuthService);
         jest.clearAllMocks();
     });
 

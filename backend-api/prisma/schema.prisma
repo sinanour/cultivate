@@ -12,13 +12,15 @@ datasource db {
 
 // User model for authentication and authorization
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  passwordHash String
-  role         UserRole
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  auditLogs    AuditLog[]
+  id                        String                       @id @default(uuid())
+  email                     String                       @unique
+  passwordHash              String
+  role                      UserRole
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+  auditLogs                 AuditLog[]
+  geographicAuthorizations  UserGeographicAuthorization[] @relation("UserAuthorizations")
+  createdAuthorizations     UserGeographicAuthorization[] @relation("AuthorizationCreator")
 
   @@map("users")
 }
@@ -27,6 +29,29 @@ enum UserRole {
   ADMINISTRATOR
   EDITOR
   READ_ONLY
+}
+
+// User Geographic Authorization model for granular geographic access control
+model UserGeographicAuthorization {
+  id               String         @id @default(uuid())
+  userId           String
+  geographicAreaId String
+  ruleType         AuthorizationRuleType
+  createdAt        DateTime       @default(now())
+  createdBy        String
+  user             User           @relation("UserAuthorizations", fields: [userId], references: [id], onDelete: Cascade)
+  geographicArea   GeographicArea @relation(fields: [geographicAreaId], references: [id])
+  creator          User           @relation("AuthorizationCreator", fields: [createdBy], references: [id])
+
+  @@unique([userId, geographicAreaId])
+  @@index([userId])
+  @@index([geographicAreaId])
+  @@map("user_geographic_authorizations")
+}
+
+enum AuthorizationRuleType {
+  ALLOW
+  DENY
 }
 
 // Activity Category model
@@ -99,16 +124,17 @@ model ParticipantPopulation {
 
 // Geographic Area model for hierarchical geographic regions
 model GeographicArea {
-  id                     String           @id @default(uuid())
-  name                   String
-  areaType               AreaType
-  parentGeographicAreaId String?
-  version                Int              @default(1)
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
-  parent                 GeographicArea?  @relation("GeographicAreaHierarchy", fields: [parentGeographicAreaId], references: [id])
-  children               GeographicArea[] @relation("GeographicAreaHierarchy")
-  venues                 Venue[]
+  id                        String                       @id @default(uuid())
+  name                      String
+  areaType                  AreaType
+  parentGeographicAreaId    String?
+  version                   Int                          @default(1)
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+  parent                    GeographicArea?              @relation("GeographicAreaHierarchy", fields: [parentGeographicAreaId], references: [id])
+  children                  GeographicArea[]             @relation("GeographicAreaHierarchy")
+  venues                    Venue[]
+  userGeographicAuthorizations UserGeographicAuthorization[]
 
   @@index([parentGeographicAreaId])
   @@map("geographic_areas")

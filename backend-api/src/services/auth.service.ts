@@ -8,6 +8,7 @@ import {
     RefreshTokenPayload,
     UserInfo,
 } from '../types/auth.types';
+import { GeographicAuthorizationService } from './geographic-authorization.service';
 
 export class AuthService {
     private readonly SALT_ROUNDS = 10;
@@ -15,7 +16,10 @@ export class AuthService {
     private readonly REFRESH_TOKEN_EXPIRY = process.env.JWT_REFRESH_TOKEN_EXPIRY || '7d';
     private readonly JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-    constructor(private userRepository: UserRepository) { }
+    constructor(
+        private userRepository: UserRepository,
+        private geographicAuthorizationService?: GeographicAuthorizationService
+    ) { }
 
     async hashPassword(password: string): Promise<string> {
         return bcrypt.hash(password, this.SALT_ROUNDS);
@@ -54,10 +58,25 @@ export class AuthService {
           throw new Error('Invalid credentials');
       }
 
+        // Get authorization info for JWT token
+        let authorizedAreaIds: string[] = [];
+        let readOnlyAreaIds: string[] = [];
+        let hasGeographicRestrictions = false;
+
+        if (this.geographicAuthorizationService) {
+            const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(user.id);
+            authorizedAreaIds = authInfo.authorizedAreaIds;
+            readOnlyAreaIds = authInfo.readOnlyAreaIds;
+            hasGeographicRestrictions = authInfo.hasGeographicRestrictions;
+        }
+
       const accessToken = this.generateAccessToken({
           userId: user.id,
           email: user.email,
           role: user.role,
+          authorizedAreaIds,
+          readOnlyAreaIds,
+          hasGeographicRestrictions,
       });
 
       const refreshToken = this.generateRefreshToken({
@@ -79,10 +98,25 @@ export class AuthService {
             throw new Error('User not found');
         }
 
+            // Get authorization info for JWT token
+            let authorizedAreaIds: string[] = [];
+            let readOnlyAreaIds: string[] = [];
+            let hasGeographicRestrictions = false;
+
+            if (this.geographicAuthorizationService) {
+                const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(user.id);
+                authorizedAreaIds = authInfo.authorizedAreaIds;
+                readOnlyAreaIds = authInfo.readOnlyAreaIds;
+                hasGeographicRestrictions = authInfo.hasGeographicRestrictions;
+            }
+
         const newAccessToken = this.generateAccessToken({
             userId: user.id,
             email: user.email,
             role: user.role,
+            authorizedAreaIds,
+            readOnlyAreaIds,
+            hasGeographicRestrictions,
         });
 
         const newRefreshToken = this.generateRefreshToken({

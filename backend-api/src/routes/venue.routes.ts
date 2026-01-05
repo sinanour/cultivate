@@ -118,14 +118,50 @@ export class VenueRoutes {
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
             const search = req.query.search as string | undefined;
 
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit geographic area access
+            if (geographicAreaId && hasGeographicRestrictions) {
+                const hasAccess = authorizedAreaIds.includes(geographicAreaId);
+                if (!hasAccess) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                }
+            }
+
             if (page !== undefined || limit !== undefined) {
-                const result = await this.venueService.getAllVenuesPaginated(page, limit, geographicAreaId, search);
+                const result = await this.venueService.getAllVenuesPaginated(
+                    page,
+                    limit,
+                    geographicAreaId,
+                    search,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions
+                );
                 res.status(200).json({ success: true, ...result });
             } else {
-                const venues = await this.venueService.getAllVenues(geographicAreaId, search);
+                const venues = await this.venueService.getAllVenues(
+                    geographicAreaId,
+                    search,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions
+                );
                 res.status(200).json({ success: true, data: venues });
             }
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             if (error instanceof Error && error.message.includes('Page')) {
                 res.status(400).json({
                     code: 'VALIDATION_ERROR',
@@ -145,13 +181,23 @@ export class VenueRoutes {
     private async getById(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const venue = await this.venueService.getVenueById(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const venue = await this.venueService.getVenueById(id, userId, userRole);
             res.status(200).json({ success: true, data: venue });
         } catch (error) {
             if (error instanceof Error && error.message === 'Venue not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this venue',
                     details: {},
                 });
             }
@@ -180,13 +226,23 @@ export class VenueRoutes {
     private async getActivities(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const activities = await this.venueService.getVenueActivities(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const activities = await this.venueService.getVenueActivities(id, userId, userRole);
             res.status(200).json({ success: true, data: activities });
         } catch (error) {
             if (error instanceof Error && error.message === 'Venue not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this venue',
                     details: {},
                 });
             }
@@ -201,13 +257,23 @@ export class VenueRoutes {
     private async getParticipants(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const participants = await this.venueService.getVenueParticipants(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const participants = await this.venueService.getVenueParticipants(id, userId, userRole);
             res.status(200).json({ success: true, data: participants });
         } catch (error) {
             if (error instanceof Error && error.message === 'Venue not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this venue',
                     details: {},
                 });
             }
@@ -221,10 +287,25 @@ export class VenueRoutes {
 
     private async create(req: AuthenticatedRequest, res: Response) {
         try {
-            const venue = await this.venueService.createVenue(req.body);
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            const venue = await this.venueService.createVenue(
+                req.body,
+                authorizedAreaIds,
+                hasGeographicRestrictions
+            );
             res.status(201).json({ success: true, data: venue });
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: error.message,
+                        details: {},
+                    });
+                }
                 if (error.message.includes('required') || error.message.includes('must be between')) {
                     return res.status(400).json({
                         code: 'VALIDATION_ERROR',
@@ -251,10 +332,25 @@ export class VenueRoutes {
     private async update(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const venue = await this.venueService.updateVenue(id, req.body);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const venue = await this.venueService.updateVenue(
+                id,
+                req.body,
+                userId,
+                userRole
+            );
             res.status(200).json({ success: true, data: venue });
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to update this venue',
+                        details: {},
+                    });
+                }
                 if (error.message === 'Venue not found') {
                     return res.status(404).json({
                         code: 'NOT_FOUND',
@@ -295,10 +391,20 @@ export class VenueRoutes {
     private async delete(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            await this.venueService.deleteVenue(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            await this.venueService.deleteVenue(id, userId, userRole);
             res.status(204).send();
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to delete this venue',
+                        details: {},
+                    });
+                }
                 if (error.message === 'Venue not found') {
                     return res.status(404).json({
                         code: 'NOT_FOUND',
@@ -325,13 +431,42 @@ export class VenueRoutes {
     private async exportCSV(req: AuthenticatedRequest, res: Response) {
         try {
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
-            const csv = await this.venueService.exportVenuesToCSV(geographicAreaId);
+
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit geographic area access
+            if (geographicAreaId && hasGeographicRestrictions) {
+                const hasAccess = authorizedAreaIds.includes(geographicAreaId);
+                if (!hasAccess) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                }
+            }
+
+            const csv = await this.venueService.exportVenuesToCSV(
+                geographicAreaId,
+                authorizedAreaIds,
+                hasGeographicRestrictions
+            );
             const filename = generateCSVFilename('venues');
 
             res.setHeader('Content-Type', 'text/csv; charset=utf-8');
             res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
             res.send(csv);
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while exporting venues',

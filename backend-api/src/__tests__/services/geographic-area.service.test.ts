@@ -1,17 +1,21 @@
 import { GeographicAreaService } from '../../services/geographic-area.service';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
+import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { PrismaClient, AreaType } from '@prisma/client';
 
 jest.mock('../../repositories/geographic-area.repository');
+jest.mock('../../services/geographic-authorization.service');
 jest.mock('@prisma/client');
 
 describe('GeographicAreaService', () => {
     let service: GeographicAreaService;
     let mockRepository: jest.Mocked<GeographicAreaRepository>;
+    let mockGeographicAuthService: jest.Mocked<GeographicAuthorizationService>;
     let mockPrisma: jest.Mocked<PrismaClient>;
 
     beforeEach(() => {
         mockRepository = new GeographicAreaRepository(null as any) as jest.Mocked<GeographicAreaRepository>;
+        mockGeographicAuthService = new GeographicAuthorizationService(null as any, null as any, null as any) as jest.Mocked<GeographicAuthorizationService>;
         mockPrisma = {
             venue: {
                 count: jest.fn(),
@@ -31,7 +35,7 @@ describe('GeographicAreaService', () => {
             },
         } as any;
 
-        service = new GeographicAreaService(mockRepository, mockPrisma);
+        service = new GeographicAreaService(mockRepository, mockPrisma, mockGeographicAuthService);
         jest.clearAllMocks();
     });
 

@@ -113,20 +113,54 @@ export class ActivityRoutes {
       );
   }
 
-    private async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
+    private async getAll(req: AuthenticatedRequest, res: Response) {
         try {
             const page = req.query.page ? parseInt(req.query.page as string) : undefined;
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
 
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit geographic area access
+            if (geographicAreaId && hasGeographicRestrictions) {
+                const hasAccess = authorizedAreaIds.includes(geographicAreaId);
+                if (!hasAccess) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                }
+            }
+
             if (page !== undefined || limit !== undefined) {
-                const result = await this.activityService.getAllActivitiesPaginated(page, limit, geographicAreaId);
+                const result = await this.activityService.getAllActivitiesPaginated(
+                    page,
+                    limit,
+                    geographicAreaId,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions
+                );
                 res.status(200).json({ success: true, ...result });
             } else {
-                const activities = await this.activityService.getAllActivities(geographicAreaId);
+                const activities = await this.activityService.getAllActivities(
+                    geographicAreaId,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions
+                );
                 res.status(200).json({ success: true, data: activities });
             }
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             if (error instanceof Error && error.message.includes('Page')) {
                 res.status(400).json({
                     code: 'VALIDATION_ERROR',
@@ -146,7 +180,10 @@ export class ActivityRoutes {
     private async getById(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const { id } = req.params;
-            const activity = await this.activityService.getActivityById(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const activity = await this.activityService.getActivityById(id, userId, userRole);
             res.status(200).json({ success: true, data: activity });
         } catch (error) {
             if (error instanceof Error && error.message === 'Activity not found') {
@@ -157,6 +194,14 @@ export class ActivityRoutes {
           });
           return;
           }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this activity',
+                    details: {},
+                });
+                return;
+            }
           res.status(500).json({
               code: 'INTERNAL_ERROR',
               message: 'An error occurred while fetching activity',
@@ -168,7 +213,10 @@ export class ActivityRoutes {
     private async getVenues(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const { id } = req.params;
-            const venues = await this.activityService.getActivityVenues(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const venues = await this.activityService.getActivityVenues(id, userId, userRole);
             res.status(200).json({ success: true, data: venues });
         } catch (error) {
             if (error instanceof Error && error.message === 'Activity not found') {
@@ -179,6 +227,14 @@ export class ActivityRoutes {
           });
           return;
           }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this activity',
+                    details: {},
+                });
+                return;
+            }
           res.status(500).json({
               code: 'INTERNAL_ERROR',
               message: 'An error occurred while fetching activity venues',
@@ -227,6 +283,9 @@ export class ActivityRoutes {
     private async update(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const { id } = req.params;
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
             const activityData: any = {
                 ...req.body,
                 startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
@@ -242,10 +301,23 @@ export class ActivityRoutes {
                 // If undefined, omit from activityData (already handled by spread)
             }
 
-            const activity = await this.activityService.updateActivity(id, activityData);
+            const activity = await this.activityService.updateActivity(
+                id,
+                activityData,
+                userId,
+                userRole
+            );
             res.status(200).json({ success: true, data: activity });
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to update this activity',
+                        details: {},
+                    });
+                    return;
+                }
                 if (error.message === 'Activity not found') {
             res.status(404).json({
                 code: 'NOT_FOUND',
@@ -290,10 +362,22 @@ export class ActivityRoutes {
     private async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const { id } = req.params;
-            await this.activityService.deleteActivity(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            await this.activityService.deleteActivity(id, userId, userRole);
             res.status(204).send();
         } catch (error) {
-            if (error instanceof Error && error.message === 'Activity not found') {
+            if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to delete this activity',
+                        details: {},
+                    });
+                    return;
+                }
+                if (error.message === 'Activity not found') {
           res.status(404).json({
               code: 'NOT_FOUND',
               message: error.message,
@@ -301,6 +385,7 @@ export class ActivityRoutes {
           });
           return;
           }
+            }
           res.status(500).json({
               code: 'INTERNAL_ERROR',
               message: 'An error occurred while deleting activity',
@@ -314,10 +399,29 @@ export class ActivityRoutes {
             const { id } = req.params;
             const { venueId, effectiveFrom } = req.body;
             const effectiveDate = effectiveFrom ? new Date(effectiveFrom) : null;
-            const association = await this.activityService.associateVenue(id, venueId, effectiveDate);
+
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            const association = await this.activityService.associateVenue(
+                id,
+                venueId,
+                effectiveDate,
+                authorizedAreaIds,
+                hasGeographicRestrictions
+            );
             res.status(201).json({ success: true, data: association });
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: error.message,
+                        details: {},
+                    });
+                    return;
+                }
                 if (error.message.includes('not found')) {
             res.status(404).json({
                 code: 'NOT_FOUND',
@@ -368,13 +472,42 @@ export class ActivityRoutes {
     private async exportCSV(req: AuthenticatedRequest, res: Response) {
         try {
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
-            const csv = await this.activityService.exportActivitiesToCSV(geographicAreaId);
+
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit geographic area access
+            if (geographicAreaId && hasGeographicRestrictions) {
+                const hasAccess = authorizedAreaIds.includes(geographicAreaId);
+                if (!hasAccess) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                }
+            }
+
+            const csv = await this.activityService.exportActivitiesToCSV(
+                geographicAreaId,
+                authorizedAreaIds,
+                hasGeographicRestrictions
+            );
             const filename = generateCSVFilename('activities');
 
             res.setHeader('Content-Type', 'text/csv; charset=utf-8');
             res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
             res.send(csv);
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while exporting activities',

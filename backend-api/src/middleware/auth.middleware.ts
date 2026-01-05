@@ -38,6 +38,14 @@ export class AuthMiddleware {
               try {
                   const payload = this.authService.validateAccessToken(token);
                   req.user = payload;
+
+                  // Extract authorization info from token payload
+                  req.authorizationInfo = {
+                      hasGeographicRestrictions: payload.hasGeographicRestrictions,
+                      authorizedAreaIds: payload.authorizedAreaIds,
+                      readOnlyAreaIds: payload.readOnlyAreaIds,
+                  };
+
                   next();
               } catch (error) {
                   return res.status(401).json({
@@ -74,6 +82,13 @@ export class AuthMiddleware {
               try {
                   const payload = this.authService.validateAccessToken(token);
                   req.user = payload;
+
+                  // Extract authorization info from token payload
+                  req.authorizationInfo = {
+                      hasGeographicRestrictions: payload.hasGeographicRestrictions,
+                      authorizedAreaIds: payload.authorizedAreaIds,
+                      readOnlyAreaIds: payload.readOnlyAreaIds,
+                  };
               } catch {
                   // Ignore invalid tokens for optional auth
               }

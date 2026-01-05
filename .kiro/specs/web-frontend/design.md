@@ -111,6 +111,9 @@ src/
 - Highlights current active section
 - Displays global geographic area filter selector in header utilities section
 - Shows current filter selection or "Global" when no filter is active
+- When displaying active filter, includes the full ancestor hierarchy path to provide geographic context
+- Renders all ancestor areas in breadcrumb as clickable links
+- When user clicks unauthorized ancestor, clears filter (reverts to "Global")
 - Provides dropdown with geographic areas formatted with hierarchical context:
   - Each option displays the geographic area name and type
   - Below the type, displays the full ancestor hierarchy path
@@ -122,6 +125,8 @@ src/
 - Shows visual indicator (badge or highlighted text) of active filter in header
 - Provides clear button (X icon) to remove filter and return to "Global" view
 - Positions filter selector prominently in header for accessibility from all views
+- Never suppresses ancestor areas from any display, as they provide essential navigational context
+- Validates filter selections against user's authorized areas, clearing filter for unauthorized areas
 
 **Navigation**
 - Renders navigation items based on user role
@@ -451,6 +456,8 @@ src/
 - Handles delete validation (prevents deletion if referenced)
 - Applies global geographic area filter from context when active
 - When filtered, displays the selected area, all its descendants, and all its ancestors (to maintain hierarchy context)
+- Visually indicates ancestor areas as read-only when displayed due to filtering (e.g., with a badge, icon, or muted styling)
+- Never suppresses or hides ancestor areas from the tree view, as they provide essential navigational context
 
 **GeographicAreaFormPage**
 - Dedicated full-page form for creating/editing geographic areas (not a modal)
@@ -735,11 +742,44 @@ src/
 - Renders user email as hyperlink in primary column (links to edit form)
 - Shows email and role
 - Provides edit action per row (no separate View button)
+- Provides "Manage Authorizations" link per row that navigates to /users/:userId/authorizations
 
 **UserForm**
 - Modal form for creating/editing users
 - Allows role assignment and modification
 - Only accessible to administrators
+
+**UserAuthorizationsPage**
+- Dedicated full page for managing user's geographic authorization rules
+- Accessible via route: /users/:userId/authorizations
+- Displays user email and role in page header for context
+- Shows table of all authorization rules for the user
+- Provides "Add Rule" button to create new authorization rules
+- Provides delete button for each authorization rule
+- Displays effective access summary section showing:
+  - Allowed areas (full access) with list of descendants
+  - Ancestor areas (read-only access) marked with read-only badge
+  - Denied areas marked with denied badge
+- Provides explanatory Alert describing authorization rules:
+  - "ALLOW rules grant access to the selected area and all its descendants"
+  - "ALLOW rules grant read-only access to ancestor areas for navigation context"
+  - "DENY rules take precedence over ALLOW rules"
+  - "Users with no rules have unrestricted access to all areas"
+- Displays warning Alert when DENY rules override existing ALLOW rules
+- Provides back button or breadcrumb navigation to User Administration page
+- Only accessible to ADMINISTRATOR role
+- Redirects non-administrators to dashboard
+
+**GeographicAuthorizationForm**
+- Modal form for creating authorization rules (opened from UserAuthorizationsPage)
+- Requires geographic area selection using AsyncEntitySelect dropdown
+- Requires rule type selection (ALLOW or DENY) using CloudScape RadioGroup
+- Validates geographic area is selected
+- Validates rule type is selected
+- Prevents duplicate rules for same user and geographic area
+- Displays preview of effective access changes before saving
+- Displays warning when creating DENY rules
+- Only accessible to ADMINISTRATOR role
 
 #### 10. About Page
 
@@ -833,11 +873,16 @@ src/
 - Provides `clearFilter()` - Resets filter to "Global" (null)
 - Provides `isLoading: boolean` - Indicates if geographic area details are being fetched
 - Provides `availableAreas: GeographicAreaWithHierarchy[]` - List of geographic areas available in the filter dropdown
+- Provides `authorizedAreaIds: Set<string>` - Set of geographic area IDs the user is directly authorized to access (FULL access, not descendants, not read-only ancestors)
+- Provides `isAuthorizedArea(areaId: string): boolean` - Checks if user has direct authorization for filtering
 - Provides `formatAreaOption(area: GeographicAreaWithHierarchy): string` - Formats area with type and hierarchy path for display
 - Synchronizes filter with URL query parameter (`?geographicArea=<id>`)
 - Persists filter to localStorage (key: `globalGeographicAreaFilter`)
 - Restores filter from localStorage on application initialization
 - URL parameter takes precedence over localStorage on initial load
+- Validates filter selections against user's authorized areas (excludes read-only ancestors)
+- Automatically clears filter and removes URL parameter when unauthorized area is selected
+- Prevents filtering by read-only ancestor areas to avoid incomplete analytics data
 - Fetches full geographic area details when filter is set for display in header
 - Fetches available areas based on current filter scope:
   - When filter is "Global": fetches all geographic areas
@@ -971,6 +1016,12 @@ src/
 - `createUser(data)`: Creates new user (admin only)
 - `updateUser(id, data)`: Updates user including role (admin only)
 
+**GeographicAuthorizationService** (Admin only)
+- `getAuthorizationRules(userId)`: Fetches all authorization rules for a user from `/users/:id/geographic-authorizations`
+- `createAuthorizationRule(userId, geographicAreaId, ruleType)`: Creates new authorization rule via POST `/users/:id/geographic-authorizations`
+- `deleteAuthorizationRule(userId, authId)`: Deletes authorization rule via DELETE `/users/:id/geographic-authorizations/:authId`
+- `getAuthorizedAreas(userId)`: Fetches effective authorized areas from `/users/:id/authorized-areas` (includes allowed areas, descendants, and ancestors with access level flags)
+
 #### Sync Service
 
 **SyncService**
@@ -1010,6 +1061,24 @@ interface User {
   role: 'ADMINISTRATOR' | 'EDITOR' | 'READ_ONLY';
   createdAt: string;
   updatedAt: string;
+}
+
+interface UserGeographicAuthorization {
+  id: string;
+  userId: string;
+  geographicAreaId: string;
+  geographicArea?: GeographicArea;
+  ruleType: 'ALLOW' | 'DENY';
+  createdAt: string;
+  createdBy: string;
+}
+
+interface AuthorizedArea {
+  geographicAreaId: string;
+  geographicArea: GeographicArea;
+  accessLevel: 'FULL' | 'READ_ONLY' | 'DENIED';
+  isDescendant?: boolean;  // True if access granted via ancestor ALLOW rule
+  isAncestor?: boolean;    // True if read-only access via descendant ALLOW rule
 }
 
 interface ActivityCategory {
@@ -2222,6 +2291,24 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 6B.11**
 
+### Property 59a: Geographic Area Ancestor Display in Tree View
+
+*For any* geographic area tree view with an active filter, the displayed areas should include the filtered area, all its descendants, and all its ancestors to maintain hierarchy context.
+
+**Validates: Requirements 6B.12**
+
+### Property 59b: Geographic Area Ancestor Read-Only Indication
+
+*For any* ancestor geographic area displayed in the tree view due to filtering, the UI should visually indicate that the ancestor area is read-only (e.g., with a badge, icon, or muted styling).
+
+**Validates: Requirements 6B.13**
+
+### Property 59c: Geographic Area Ancestor Non-Suppression
+
+*For any* geographic area tree view rendering with an active filter, ancestor areas should never be suppressed or hidden from the display.
+
+**Validates: Requirements 6B.14**
+
 ### Property 60: Map Mode Selector
 
 *For any* map view, a mode selector control should be available to switch between "Activities", "Participant Homes", and "Venues" modes.
@@ -2575,6 +2662,42 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* active global geographic area filter, the filter selector dropdown should display only the descendants (recursively) of the currently filtered area, and when the filter is "Global", all geographic areas should be displayed.
 
 **Validates: Requirements 25.16, 25.17**
+
+### Property 106a: Global Filter Breadcrumb Ancestor Display
+
+*For any* active global geographic area filter displayed in the header breadcrumb or filter indicator, the display should include the full ancestor hierarchy path to provide geographic context.
+
+**Validates: Requirements 25.18**
+
+### Property 106b: Global Filter Ancestor Non-Suppression
+
+*For any* global geographic area filter display (breadcrumb, filter indicator, or tree view), ancestor geographic areas should never be suppressed or hidden from the display.
+
+**Validates: Requirements 25.19**
+
+### Property 106c: Breadcrumb Ancestor Click Behavior
+
+*For any* ancestor area displayed in the breadcrumb that the user does not have direct authorization to access, clicking on that ancestor should clear the global geographic area filter (revert to "Global").
+
+**Validates: Requirements 25.20**
+
+### Property 106d: Unauthorized Filter URL Clearing
+
+*For any* URL navigation with a geographic area filter parameter that refers to an area the user is not directly authorized to access, the filter parameter should be cleared from the URL and the filter should revert to "Global".
+
+**Validates: Requirements 25.21**
+
+### Property 106e: Filter Authorization Validation
+
+*For any* geographic area filter selection, the system should validate that the selected area is within the user's directly authorized areas, and clear the filter if validation fails.
+
+**Validates: Requirements 25.22**
+
+### Property 106f: Filter Clearing on 403 Authorization Error
+
+*For any* API request that returns a 403 Forbidden error with code GEOGRAPHIC_AUTHORIZATION_DENIED while a global geographic area filter is active, the system should automatically clear the global filter, revert to "Global", and display a notification explaining the filter was cleared due to authorization restrictions.
+
+**Validates: Requirements 25.24, 25.25**
 
 ### Optional Field Clearing Properties
 
@@ -3362,6 +3485,44 @@ interface ImportError {
 **Property 158: Engagement Summary CSV empty table handling**
 *For any* Engagement Summary table with no data rows, the exported CSV should contain only the header row.
 **Validates: Requirements 30.18**
+
+### Geographic Authorization Properties
+
+**Property 159: Authorization rules display**
+*For any* user with geographic authorization rules, the User Administration page should display all rules with geographic area name, rule type, and creation date.
+**Validates: Requirements 31.2, 31.5**
+
+**Property 160: Authorization rule visual distinction**
+*For any* authorization rule displayed, ALLOW rules should be visually distinguished from DENY rules using color coding or icons (green checkmark for ALLOW, red X for DENY).
+**Validates: Requirements 31.11**
+
+**Property 161: Authorization rule creation**
+*For any* valid geographic area and rule type selection, creating an authorization rule should result in the rule being added to the user's authorization list.
+**Validates: Requirements 31.6, 31.8**
+
+**Property 162: Duplicate authorization rule prevention**
+*For any* user and geographic area combination with an existing rule, attempting to create a second rule should be prevented with an error message.
+**Validates: Requirements 31.10**
+
+**Property 163: Effective access summary display**
+*For any* user with authorization rules, the effective access summary should display allowed areas with descendants, ancestor areas marked as read-only, and denied areas.
+**Validates: Requirements 31.12, 31.13, 31.14**
+
+**Property 164: Authorization management admin restriction**
+*For any* non-administrator user viewing the User Administration page, geographic authorization management features should be hidden.
+**Validates: Requirements 31.15, 31.16**
+
+**Property 165: DENY rule override warning**
+*For any* DENY rule creation that overrides existing ALLOW rules, a warning should be displayed to the administrator.
+**Validates: Requirements 31.17**
+
+**Property 166: Authorization explanatory text**
+*For any* geographic authorization interface, explanatory text should be displayed describing how allow-listing and deny-listing rules work, including descendant and ancestor access behavior.
+**Validates: Requirements 31.18, 31.19**
+
+**Property 167: Authorization refresh after modification**
+*For any* authorization rule creation or deletion, the user list or detail view should refresh to reflect the changes.
+**Validates: Requirements 31.20**
 
 ## Testing Strategy
 

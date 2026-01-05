@@ -9,6 +9,9 @@ export interface TokenPayload {
     userId: string;
     email: string;
     role: UserRole;
+    authorizedAreaIds: string[];
+    readOnlyAreaIds: string[];
+    hasGeographicRestrictions: boolean;
 }
 
 export interface AuthTokens {

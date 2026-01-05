@@ -57,6 +57,23 @@ export class AnalyticsRoutes {
         try {
             const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, populationIds, groupBy, dateGranularity } = req.query;
 
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit geographic area access
+            if (geographicAreaId && hasGeographicRestrictions) {
+                const hasAccess = authorizedAreaIds.includes(geographicAreaId as string);
+                if (!hasAccess) {
+                    res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                    return;
+                }
+            }
+
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
@@ -69,9 +86,21 @@ export class AnalyticsRoutes {
                 dateGranularity: dateGranularity as any | undefined,
             };
 
-            const metrics = await this.analyticsService.getEngagementMetrics(filters);
+            const metrics = await this.analyticsService.getEngagementMetrics(
+                filters,
+                authorizedAreaIds,
+                hasGeographicRestrictions
+            );
             res.status(HttpStatus.OK).json({ success: true, data: metrics });
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             console.error('Error in getEngagement:', error);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 code: ErrorCode.INTERNAL_ERROR,
@@ -84,6 +113,23 @@ export class AnalyticsRoutes {
     private async getGrowth(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const { period, startDate, endDate, geographicAreaId, populationIds, groupBy } = req.query;
+
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit geographic area access
+            if (geographicAreaId && hasGeographicRestrictions) {
+                const hasAccess = authorizedAreaIds.includes(geographicAreaId as string);
+                if (!hasAccess) {
+                    res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                    return;
+                }
+            }
 
             // Parse groupBy parameter
             let groupByDimensions: GroupingDimension[] | undefined;
@@ -103,10 +149,20 @@ export class AnalyticsRoutes {
 
             const metrics = await this.analyticsService.getGrowthMetrics(
                 period as TimePeriod,
-                filters
+                filters,
+                authorizedAreaIds,
+                hasGeographicRestrictions
             );
             res.status(HttpStatus.OK).json({ success: true, data: metrics });
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             console.error('Error in getGrowth:', error);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 code: ErrorCode.INTERNAL_ERROR,
@@ -141,6 +197,24 @@ export class AnalyticsRoutes {
             // Query parameters have been validated and transformed by ValidationMiddleware
             const { startDate, endDate, groupBy, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds } = req.query;
 
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit geographic area access
+            if (geographicAreaIds && hasGeographicRestrictions) {
+                const requestedAreaIds = geographicAreaIds as string[];
+                const hasAccess = requestedAreaIds.every(areaId => authorizedAreaIds.includes(areaId));
+                if (!hasAccess) {
+                    res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access one or more of the requested geographic areas',
+                        details: {},
+                    });
+                    return;
+                }
+            }
+
             const data = await this.analyticsService.getActivityLifecycleEvents(
                 startDate ? new Date(startDate as string) : undefined,
                 endDate ? new Date(endDate as string) : undefined,
@@ -151,11 +225,21 @@ export class AnalyticsRoutes {
                     activityTypeIds: activityTypeIds as string[] | undefined,
                     venueIds: venueIds as string[] | undefined,
                     populationIds: populationIds as string[] | undefined,
-                }
+                },
+                authorizedAreaIds,
+                hasGeographicRestrictions
             );
 
             res.status(HttpStatus.OK).json({ success: true, data });
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             console.error('Error in getActivityLifecycle:', error);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 code: ErrorCode.INTERNAL_ERROR,

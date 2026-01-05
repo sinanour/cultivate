@@ -1,9 +1,11 @@
 import { GeographicArea, AreaType, PrismaClient } from '@prisma/client';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
+import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
 import { ImportResult } from '../types/csv.types';
 import { GeographicAreaImportSchema } from '../utils/validation.schemas';
+import { AppError } from '../types/errors.types';
 
 export interface CreateGeographicAreaInput {
     name: string;
@@ -28,16 +30,67 @@ export interface GeographicAreaStatistics {
 export class GeographicAreaService {
     constructor(
         private geographicAreaRepository: GeographicAreaRepository,
-        private prisma: PrismaClient
+        private prisma: PrismaClient,
+        private geographicAuthorizationService: GeographicAuthorizationService
     ) { }
 
-    async getAllGeographicAreas(geographicAreaId?: string, search?: string): Promise<GeographicArea[]> {
+    /**
+     * Determines the effective geographic area IDs to filter by, considering:
+     * 1. Explicit geographicAreaId parameter (if provided, validate authorization)
+     * 2. Implicit filtering based on user's authorized areas (if user has restrictions)
+     * 3. No filtering (if user has no restrictions and no explicit filter)
+     * 
+     * IMPORTANT: authorizedAreaIds already includes descendants and excludes DENY rules.
+     * Do NOT expand descendants again during implicit filtering.
+     */
+    private async getEffectiveGeographicAreaIds(
+        explicitGeographicAreaId: string | undefined,
+        authorizedAreaIds: string[],
+        hasGeographicRestrictions: boolean
+    ): Promise<string[] | undefined> {
+        // If explicit filter provided
+        if (explicitGeographicAreaId) {
+            // Validate user has access to this area
+            if (hasGeographicRestrictions && !authorizedAreaIds.includes(explicitGeographicAreaId)) {
+                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
+            }
+
+            // Expand to include descendants
+            const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
+            return [explicitGeographicAreaId, ...descendantIds];
+        }
+
+        // No explicit filter - apply implicit filtering if user has restrictions
+        if (hasGeographicRestrictions) {
+            // IMPORTANT: authorizedAreaIds already has descendants expanded and DENY rules applied
+            // Do NOT expand descendants again, as this would re-add denied areas
+            return authorizedAreaIds;
+        }
+
+        // No restrictions and no explicit filter - return undefined (no filtering)
+        return undefined;
+    }
+
+    async getAllGeographicAreas(
+        geographicAreaId?: string,
+        search?: string,
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false,
+        readOnlyAreaIds: string[] = []
+    ): Promise<GeographicArea[]> {
         // Build search filter
         const searchWhere = search ? {
             name: { contains: search, mode: 'insensitive' as const }
         } : {};
 
-        if (!geographicAreaId) {
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
+        if (!effectiveAreaIds) {
             // No geographic filter
             if (!search) {
                 // No filters at all, use repository
@@ -53,20 +106,20 @@ export class GeographicAreaService {
             });
         }
 
-        // Get the selected area
-        const selectedArea = await this.geographicAreaRepository.findById(geographicAreaId);
-        if (!selectedArea) {
-            throw new Error('Geographic area not found');
+        // When filtering by geographic area, include the selected area, its descendants, and ancestors
+        const selectedArea = geographicAreaId ? await this.geographicAreaRepository.findById(geographicAreaId) : null;
+
+        let allAreaIds: string[];
+        if (selectedArea) {
+            // Explicit filter: Get ancestors for context
+            const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
+            // Combine: selected area, descendants (from effectiveAreaIds), and ancestors
+            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestors.map(a => a.id)])];
+        } else {
+            // No explicit filter, but user has restrictions
+            // Include authorized areas + read-only ancestors for navigation context
+            allAreaIds = [...new Set([...effectiveAreaIds, ...readOnlyAreaIds])];
         }
-
-        // Get all descendant IDs
-        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-
-        // Get all ancestors
-        const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
-
-        // Combine: selected area, descendants, and ancestors
-        const allAreaIds = [geographicAreaId, ...descendantIds, ...ancestors.map(a => a.id)];
 
         // Fetch all areas with search filter
         const allAreas = await this.prisma.geographicArea.findMany({
@@ -83,7 +136,15 @@ export class GeographicAreaService {
         return allAreas;
     }
 
-    async getAllGeographicAreasPaginated(page?: number, limit?: number, geographicAreaId?: string, search?: string): Promise<PaginatedResponse<GeographicArea>> {
+    async getAllGeographicAreasPaginated(
+        page?: number,
+        limit?: number,
+        geographicAreaId?: string,
+        search?: string,
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false,
+        readOnlyAreaIds: string[] = []
+    ): Promise<PaginatedResponse<GeographicArea>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
         // Build search filter
@@ -91,25 +152,32 @@ export class GeographicAreaService {
             name: { contains: search, mode: 'insensitive' as const }
         } : {};
 
-        if (!geographicAreaId) {
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
+        if (!effectiveAreaIds) {
             const { data, total } = await this.geographicAreaRepository.findAllPaginated(validPage, validLimit, searchWhere);
             return PaginationHelper.createResponse(data, validPage, validLimit, total);
         }
 
-        // Get the selected area
-        const selectedArea = await this.geographicAreaRepository.findById(geographicAreaId);
-        if (!selectedArea) {
-            throw new Error('Geographic area not found');
+        // When filtering by geographic area, include the selected area, its descendants, and ancestors
+        const selectedArea = geographicAreaId ? await this.geographicAreaRepository.findById(geographicAreaId) : null;
+
+        let allAreaIds: string[];
+        if (selectedArea) {
+            // Explicit filter: Get ancestors for context
+            const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
+            // Combine: selected area, descendants (from effectiveAreaIds), and ancestors
+            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestors.map(a => a.id)])];
+        } else {
+            // No explicit filter, but user has restrictions
+            // Include authorized areas + read-only ancestors for navigation context
+            allAreaIds = [...new Set([...effectiveAreaIds, ...readOnlyAreaIds])];
         }
-
-        // Get all descendant IDs
-        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-
-        // Get all ancestors
-        const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
-
-        // Combine: selected area, descendants, and ancestors
-        const allAreaIds = [geographicAreaId, ...descendantIds, ...ancestors.map(a => a.id)];
 
         // Fetch all areas with search filter
         const allAreas = await this.prisma.geographicArea.findMany({
@@ -131,15 +199,48 @@ export class GeographicAreaService {
         return PaginationHelper.createResponse(paginatedAreas, validPage, validLimit, total);
     }
 
-    async getGeographicAreaById(id: string): Promise<GeographicArea> {
+    async getGeographicAreaById(id: string, userId?: string, userRole?: string): Promise<GeographicArea> {
         const area = await this.geographicAreaRepository.findById(id);
         if (!area) {
             throw new Error('Geographic area not found');
         }
+
+        // Enforce geographic authorization if userId is provided
+        if (userId) {
+            // Administrator bypass
+            if (userRole === 'ADMINISTRATOR') {
+                return area;
+            }
+
+            // Validate authorization (includes read-only access to ancestors)
+            const accessLevel = await this.geographicAuthorizationService.evaluateAccess(
+                userId,
+                id
+            );
+
+            if (accessLevel === AccessLevel.NONE) {
+                await this.geographicAuthorizationService.logAuthorizationDenial(
+                    userId,
+                    'GEOGRAPHIC_AREA',
+                    id,
+                    'GET'
+                );
+                throw new AppError(
+                    'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    'You do not have permission to access this geographic area',
+                    403
+                );
+            }
+        }
+
         return area;
     }
 
-    async createGeographicArea(data: CreateGeographicAreaInput): Promise<GeographicArea> {
+    async createGeographicArea(
+        data: CreateGeographicAreaInput,
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
+    ): Promise<GeographicArea> {
         if (!data.name || data.name.trim().length === 0) {
             throw new Error('Geographic area name is required');
         }
@@ -156,6 +257,17 @@ export class GeographicAreaService {
             if (!parentExists) {
                 throw new Error('Parent geographic area not found');
             }
+
+            // Validate user has access to parent area
+            if (hasGeographicRestrictions && !authorizedAreaIds.includes(data.parentGeographicAreaId)) {
+                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to create geographic areas under this parent area');
+            }
+        } else {
+            // Creating a top-level area (no parent)
+            // Users with geographic restrictions cannot create top-level areas
+            if (hasGeographicRestrictions) {
+                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to create top-level geographic areas');
+            }
         }
 
         return this.geographicAreaRepository.create(data);
@@ -163,8 +275,32 @@ export class GeographicAreaService {
 
     async updateGeographicArea(
         id: string,
-        data: UpdateGeographicAreaInput
+        data: UpdateGeographicAreaInput,
+        userId?: string,
+        userRole?: string
     ): Promise<GeographicArea> {
+        // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
+        // Note: For updates, we need FULL access, not just READ_ONLY
+        await this.getGeographicAreaById(id, userId, userRole);
+
+        // Additional check: For updates, READ_ONLY access is not sufficient
+        if (userId && userRole !== 'ADMINISTRATOR') {
+            const accessLevel = await this.geographicAuthorizationService.evaluateAccess(userId, id);
+            if (accessLevel !== AccessLevel.FULL) {
+                await this.geographicAuthorizationService.logAuthorizationDenial(
+                    userId,
+                    'GEOGRAPHIC_AREA',
+                    id,
+                    'PUT'
+                );
+                throw new AppError(
+                    'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    'You do not have permission to update this geographic area',
+                    403
+                );
+            }
+        }
+
         const existing = await this.geographicAreaRepository.findById(id);
         if (!existing) {
             throw new Error('Geographic area not found');
@@ -188,6 +324,21 @@ export class GeographicAreaService {
                     throw new Error('Parent geographic area not found');
                 }
 
+                // Validate user has access to the new parent area
+                if (userId) {
+                    const accessLevel = await this.geographicAuthorizationService.evaluateAccess(
+                        userId,
+                        parentId
+                    );
+                    if (accessLevel === AccessLevel.NONE) {
+                        throw new AppError(
+                            'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                            'You do not have permission to move this geographic area under the specified parent',
+                            403
+                        );
+                    }
+                }
+
                 // Prevent setting parent to itself
                 if (parentId === id) {
                     throw new Error('Geographic area cannot be its own parent');
@@ -200,6 +351,19 @@ export class GeographicAreaService {
                 );
                 if (isDescendant) {
                     throw new Error('Cannot create circular parent-child relationship');
+                }
+            } else if (parentId === null) {
+                // Clearing parent (making it a top-level area)
+                // Users with geographic restrictions cannot create top-level areas
+                if (userId && userRole !== 'ADMINISTRATOR') {
+                    const hasRestrictions = await this.geographicAuthorizationService.hasGeographicRestrictions(userId);
+                    if (hasRestrictions) {
+                        throw new AppError(
+                            'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                            'You do not have permission to make this a top-level geographic area',
+                            403
+                        );
+                    }
                 }
             }
 
@@ -217,7 +381,33 @@ export class GeographicAreaService {
         }
     }
 
-    async deleteGeographicArea(id: string): Promise<void> {
+    async deleteGeographicArea(
+        id: string,
+        userId?: string,
+        userRole?: string
+    ): Promise<void> {
+        // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
+        // Note: For deletes, we need FULL access, not just READ_ONLY
+        await this.getGeographicAreaById(id, userId, userRole);
+
+        // Additional check: For deletes, READ_ONLY access is not sufficient
+        if (userId && userRole !== 'ADMINISTRATOR') {
+            const accessLevel = await this.geographicAuthorizationService.evaluateAccess(userId, id);
+            if (accessLevel !== AccessLevel.FULL) {
+                await this.geographicAuthorizationService.logAuthorizationDenial(
+                    userId,
+                    'GEOGRAPHIC_AREA',
+                    id,
+                    'DELETE'
+                );
+                throw new AppError(
+                    'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    'You do not have permission to delete this geographic area',
+                    403
+                );
+            }
+        }
+
         const existing = await this.geographicAreaRepository.findById(id);
         if (!existing) {
             throw new Error('Geographic area not found');
@@ -242,52 +432,76 @@ export class GeographicAreaService {
         await this.geographicAreaRepository.delete(id);
     }
 
-    async getChildren(id: string): Promise<GeographicArea[]> {
-        const area = await this.geographicAreaRepository.findById(id);
-        if (!area) {
-            throw new Error('Geographic area not found');
+    async getChildren(id: string, userId?: string, userRole?: string): Promise<GeographicArea[]> {
+        // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
+        await this.getGeographicAreaById(id, userId, userRole);
+
+        const children = await this.geographicAreaRepository.findChildren(id);
+
+        // Filter out denied children if user has geographic restrictions
+        if (userId && userRole !== 'ADMINISTRATOR') {
+            const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
+
+            if (authInfo.hasGeographicRestrictions) {
+                // Only include children that are in the authorized list
+                return children.filter(child => authInfo.authorizedAreaIds.includes(child.id));
+            }
         }
 
-        return this.geographicAreaRepository.findChildren(id);
+        return children;
     }
 
-    async getAncestors(id: string): Promise<GeographicArea[]> {
-        const area = await this.geographicAreaRepository.findById(id);
-        if (!area) {
-            throw new Error('Geographic area not found');
-        }
+    async getAncestors(id: string, userId?: string, userRole?: string): Promise<GeographicArea[]> {
+        // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
+        await this.getGeographicAreaById(id, userId, userRole);
 
         return this.geographicAreaRepository.findAncestors(id);
     }
 
-    async getVenues(id: string) {
-        const area = await this.geographicAreaRepository.findById(id);
-        if (!area) {
-            throw new Error('Geographic area not found');
-        }
+    async getVenues(id: string, userId?: string, userRole?: string) {
+        // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
+        await this.getGeographicAreaById(id, userId, userRole);
 
         // Get all descendant IDs including the area itself
         const descendantIds = await this.geographicAreaRepository.findDescendants(id);
-        const areaIds = [id, ...descendantIds];
+        let areaIds = [id, ...descendantIds];
 
-        // Get all venues in this area and descendants (recursive)
+        // Filter out denied areas if user has geographic restrictions
+        if (userId && userRole !== 'ADMINISTRATOR') {
+            const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
+
+            if (authInfo.hasGeographicRestrictions) {
+                // Only include areas that are in the authorized list
+                areaIds = areaIds.filter(areaId => authInfo.authorizedAreaIds.includes(areaId));
+            }
+        }
+
+        // Get all venues in authorized areas only
         return this.prisma.venue.findMany({
             where: { geographicAreaId: { in: areaIds } },
             orderBy: { name: 'asc' },
         });
     }
 
-    async getStatistics(id: string): Promise<GeographicAreaStatistics> {
-        const area = await this.geographicAreaRepository.findById(id);
-        if (!area) {
-            throw new Error('Geographic area not found');
-        }
+    async getStatistics(id: string, userId?: string, userRole?: string): Promise<GeographicAreaStatistics> {
+        // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
+        await this.getGeographicAreaById(id, userId, userRole);
 
         // Get all descendant IDs including the area itself
         const descendantIds = await this.geographicAreaRepository.findDescendants(id);
-        const areaIds = [id, ...descendantIds];
+        let areaIds = [id, ...descendantIds];
 
-        // Get all venues in this area and descendants
+        // Filter out denied areas if user has geographic restrictions
+        if (userId && userRole !== 'ADMINISTRATOR') {
+            const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
+
+            if (authInfo.hasGeographicRestrictions) {
+                // Only include areas that are in the authorized list
+                areaIds = areaIds.filter(areaId => authInfo.authorizedAreaIds.includes(areaId));
+            }
+        }
+
+        // Get all venues in authorized areas only
         const venues = await this.prisma.venue.findMany({
             where: { geographicAreaId: { in: areaIds } },
             select: { id: true },

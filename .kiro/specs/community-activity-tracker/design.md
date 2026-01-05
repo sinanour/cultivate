@@ -1004,6 +1004,26 @@ CREATE INDEX idx_activity_participants_participant ON activity_participants(part
 
 **Validates: Requirements 7B.8**
 
+### Property 23: Geographic Authorization Enforcement
+
+*For any* user with geographic authorization rules, all API requests should be filtered to only return data from authorized geographic areas, and attempts to access unauthorized areas should be rejected with 403 Forbidden.
+
+**Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9**
+
+### Property 24: Geographic Authorization Deny Precedence
+
+*For any* user with both ALLOW and DENY rules for overlapping geographic areas, the DENY rule should take precedence and prevent access to the denied area and its descendants.
+
+**Validates: Requirements 8.3**
+
+### Property 25: Geographic Authorization Hierarchical Access
+
+*For any* user with an ALLOW rule for a geographic area, the user should have full access to that area and all descendants, and read-only access to all ancestors.
+
+**Validates: Requirements 8.4, 8.5**
+
+**Validates: Requirements 7B.8**
+
 
 ## Error Handling
 
@@ -1204,13 +1224,25 @@ Each package includes integration tests:
 **JWT Token Structure**:
 ```typescript
 interface JWTPayload {
-  sub: string;           // User ID
+  sub: string;                    // User ID
   email: string;
   systemRole: SystemRole;
-  iat: number;           // Issued at
-  exp: number;           // Expiration (24 hours)
+  authorizedAreaIds: string[];    // Geographic areas with full access
+  readOnlyAreaIds: string[];      // Geographic areas with read-only access
+  hasGeographicRestrictions: boolean;  // True if user has authorization rules
+  iat: number;                    // Issued at
+  exp: number;                    // Expiration (24 hours)
 }
 ```
+
+**Authorization Levels**:
+- **System Role Authorization**: ADMINISTRATOR, EDITOR, READ_ONLY roles control operation types
+- **Geographic Authorization**: Allow-listing and deny-listing control access to geographic areas
+  - DENY rules take precedence over ALLOW rules
+  - ALLOW rules grant access to area and all descendants
+  - ALLOW rules grant read-only access to ancestors
+  - Users with no geographic rules have unrestricted access
+  - Users with geographic rules are restricted to authorized areas only
 
 **Token Lifecycle**:
 1. User logs in with email/password

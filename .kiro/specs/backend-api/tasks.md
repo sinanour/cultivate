@@ -1176,3 +1176,296 @@ if (geographicAreaId) {
 - [ ] 32. Checkpoint - Verify audit logging is working
   - Ensure all tests pass, ask the user if questions arise.
   - Verify audit log table contains entries after creating/modifying records
+
+- [ ] 33. Implement geographic authorization system
+  - [ ] 33.1 Create Prisma migration for UserGeographicAuthorization table
+    - Add UserGeographicAuthorization model with userId, geographicAreaId, ruleType (ALLOW/DENY), createdAt, createdBy
+    - Add unique constraint on (userId, geographicAreaId)
+    - Add foreign key constraints to User and GeographicArea
+    - Add index on userId for efficient queries
+    - _Requirements: 24.8_
+
+  - [ ] 33.2 Create UserGeographicAuthorizationRepository
+    - Implement findByUserId(userId) to get all rules for a user
+    - Implement create(data) to create new authorization rule
+    - Implement delete(id) to remove authorization rule
+    - Implement findByUserAndArea(userId, geographicAreaId) to check for duplicates
+    - _Requirements: 24.1, 24.2, 24.3, 24.7_
+
+  - [ ] 33.3 Create GeographicAuthorizationService
+    - Implement getAuthorizationRules(userId) to retrieve all rules
+    - Implement createAuthorizationRule(userId, geographicAreaId, ruleType, createdBy) with validation
+    - Implement deleteAuthorizationRule(authId, userId) with admin check
+    - Implement evaluateAccess(userId, geographicAreaId) with deny-first logic
+    - Implement getAuthorizedAreas(userId) to calculate effective access (allowed areas + descendants + ancestors)
+    - Implement hasGeographicRestrictions(userId) to check if user has any rules
+    - Validate user and geographic area exist when creating rules
+    - Prevent duplicate rules for same user and area
+    - _Requirements: 24.5, 24.6, 24.7, 24.9, 24.10, 24.11, 24.12, 24.13, 24.14, 24.36, 24.37, 24.38_
+
+  - [ ] 33.3a Fix ancestor marking in getAuthorizedAreas
+    - Update getAuthorizedAreas() method to properly mark ancestors with isAncestor=true even when they have FULL access from another rule
+    - After processing all ALLOW rules, iterate through all allowed areas again
+    - For each allowed area, fetch its ancestors
+    - For each ancestor, if it exists in authorizedAreas map, set isAncestor=true (preserving existing accessLevel)
+    - This ensures ancestors are always marked for filtering purposes, even if they have FULL access
+    - _Requirements: 24.38, 24.39, 24.40_
+
+  - [ ] 33.4 Create geographic authorization routes
+    - GET /api/v1/users/:id/geographic-authorizations (admin only)
+    - POST /api/v1/users/:id/geographic-authorizations (admin only)
+    - DELETE /api/v1/users/:id/geographic-authorizations/:authId (admin only)
+    - GET /api/v1/users/:id/authorized-areas (admin only)
+    - Restrict all endpoints to ADMINISTRATOR role
+    - Return 403 for non-administrators
+    - _Requirements: 24.1, 24.2, 24.3, 24.31, 24.32, 24.36_
+
+  - [ ] 33.5 Create validation schemas
+    - Create GeographicAuthorizationCreateSchema (geographicAreaId UUID, ruleType enum ALLOW/DENY)
+    - Validate required fields
+    - _Requirements: 24.5_
+
+  - [ ]* 33.6 Write property tests for authorization rules
+    - **Property 155: Authorization Rule Creation**
+    - **Property 156: Duplicate Authorization Rule Prevention**
+    - **Property 157: Deny Rule Precedence**
+    - **Property 158: Descendant Access from Allow Rule**
+    - **Property 159: Ancestor Read-Only Access from Allow Rule**
+    - **Property 160: Unrestricted Access with No Rules**
+    - **Property 161: Restricted Access with Rules**
+    - **Property 171: Authorization Management Admin Restriction**
+    - **Validates: Requirements 24.2, 24.5, 24.6, 24.7, 24.9, 24.10, 24.11, 24.12, 24.13, 24.14, 24.31, 24.32**
+
+  - [ ] 33.7 Enhance JWT token payload with authorized area IDs
+    - Update AuthService.generateToken() to query user's authorization rules
+    - Calculate authorized area IDs (areas with full access + descendants)
+    - Calculate read-only area IDs (ancestors of allowed areas)
+    - Add authorizedAreaIds, readOnlyAreaIds, and hasGeographicRestrictions to JWT payload
+    - Update JWT token interface definition
+    - _Requirements: 24.33, 24.34, 24.35_
+
+  - [ ] 33.8 Update authentication middleware to extract authorization info
+    - Extract authorizedAreaIds, readOnlyAreaIds, and hasGeographicRestrictions from JWT
+    - Attach to request object for use in services
+    - _Requirements: 24.35_
+
+  - [ ] 33.9 Apply geographic authorization filtering to ParticipantService
+    - Update getParticipants() to apply implicit filtering when no geographicAreaId provided
+    - Validate explicit geographicAreaId against user's authorized areas
+    - Return 403 GEOGRAPHIC_AUTHORIZATION_DENIED if unauthorized
+    - _Requirements: 24.15, 24.23, 24.24, 24.25_
+
+  - [ ] 33.10 Apply geographic authorization filtering to ActivityService
+    - Update getActivities() to apply implicit filtering when no geographicAreaId provided
+    - Validate explicit geographicAreaId against user's authorized areas
+    - Return 403 GEOGRAPHIC_AUTHORIZATION_DENIED if unauthorized
+    - Validate venue authorization when creating activities
+    - _Requirements: 24.16, 24.23, 24.24, 24.25, 24.29_
+
+  - [ ] 33.11 Apply geographic authorization filtering to VenueService
+    - Update getVenues() to apply implicit filtering when no geographicAreaId provided
+    - Validate explicit geographicAreaId against user's authorized areas
+    - Return 403 GEOGRAPHIC_AUTHORIZATION_DENIED if unauthorized
+    - Validate geographic area authorization when creating venues
+    - Validate geographic area authorization when updating venue's geographicAreaId
+    - _Requirements: 24.17, 24.23, 24.24, 24.25, 24.28, 24.30_
+
+  - [ ] 33.12 Apply geographic authorization filtering to GeographicAreaService
+    - Update getGeographicAreas() to apply implicit filtering when no geographicAreaId provided
+    - Validate explicit geographicAreaId against user's authorized areas
+    - Return 403 GEOGRAPHIC_AUTHORIZATION_DENIED if unauthorized
+    - Validate parent area authorization when creating geographic areas
+    - Prevent creating top-level areas when user has geographic restrictions
+    - Return 403 CANNOT_CREATE_TOP_LEVEL_AREA if restricted user attempts to create top-level area
+    - _Requirements: 24.18, 24.23, 24.24, 24.25, 24.26, 24.27_
+
+  - [ ] 33.13 Apply geographic authorization filtering to AnalyticsService
+    - Update getEngagementMetrics() to apply implicit filtering based on authorized areas
+    - Update getGrowthMetrics() to apply implicit filtering based on authorized areas
+    - Update getActivityLifecycleEvents() to apply implicit filtering based on authorized areas
+    - Validate explicit geographicAreaId filters against user's authorized areas
+    - _Requirements: 24.19, 24.20, 24.21, 24.23, 24.24, 24.25_
+
+  - [ ] 33.14 Apply geographic authorization filtering to CSV export endpoints
+    - Update exportParticipants() to apply implicit filtering based on authorized areas
+    - Update exportVenues() to apply implicit filtering based on authorized areas
+    - Update exportActivities() to apply implicit filtering based on authorized areas
+    - Update exportGeographicAreas() to apply implicit filtering based on authorized areas
+    - _Requirements: 24.22, 24.23_
+
+  - [ ] 33.15 Add audit logging for authorization rule changes
+    - Log authorization rule creation with user ID, geographic area ID, and rule type
+    - Log authorization rule deletion with user ID, geographic area ID, and rule type
+    - Use existing audit logging middleware
+    - _Requirements: 24.39_
+
+  - [ ]* 33.16 Write property tests for authorization filtering
+    - **Property 162: Implicit Filtering on List Endpoints**
+    - **Property 163: Explicit Filter Authorization Validation**
+    - **Property 164: Venue Creation Authorization**
+    - **Property 165: Activity Creation Authorization**
+    - **Property 166: Geographic Area Creation Authorization**
+    - **Property 167: Top-Level Area Creation Restriction**
+    - **Property 168: Authorization Filtering on Analytics**
+    - **Property 169: Authorization Filtering on Exports**
+    - **Property 170: JWT Token Includes Authorized Areas**
+    - **Property 172: Authorization Rule Audit Logging**
+    - **Validates: Requirements 24.15, 24.16, 24.17, 24.18, 24.19, 24.20, 24.21, 24.22, 24.23, 24.24, 24.25, 24.26, 24.27, 24.28, 24.29, 24.30, 24.33, 24.34, 24.35, 24.39**
+
+  - [x] 33.17 Enforce geographic authorization on individual participant access
+    - Inject GeographicAuthorizationService into ParticipantService constructor
+    - Update ParticipantService.getParticipantById() to accept userId parameter
+    - Determine participant's current home venue from most recent address history record
+    - Call GeographicAuthorizationService.evaluateAccess() with userId and venue's geographicAreaId
+    - Return 403 GEOGRAPHIC_AUTHORIZATION_DENIED if access level is NONE
+    - Allow access if participant has no address history (not yet associated with any area)
+    - Update updateParticipant() to call getParticipantById() first for authorization check
+    - Update deleteParticipant() to call getParticipantById() first for authorization check
+    - Update route handlers to pass req.user.id to service methods
+    - _Requirements: 25.1, 25.5, 25.6, 25.7, 25.15, 25.19, 25.23, 25.27_
+
+  - [ ] 33.18 Enforce geographic authorization on individual activity access
+    - Inject GeographicAuthorizationService into ActivityService constructor
+    - Update ActivityService.getActivityById() to accept userId parameter
+    - Determine activity's current venue from most recent venue history record
+    - Call GeographicAuthorizationService.evaluateAccess() with userId and venue's geographicAreaId
+    - Return 403 GEOGRAPHIC_AUTHORIZATION_DENIED if access level is NONE
+    - Allow access if activity has no venue history (not yet associated with any area)
+    - Update updateActivity() to call getActivityById() first for authorization check
+    - Update deleteActivity() to call getActivityById() first for authorization check
+    - Update route handlers to pass req.user.id to service methods
+    - _Requirements: 25.2, 25.8, 25.9, 25.10, 25.16, 25.20, 25.24, 25.28_
+
+  - [ ] 33.19 Enforce geographic authorization on individual venue access
+    - Inject GeographicAuthorizationService into VenueService constructor
+    - Update VenueService.getVenueById() to accept userId parameter
+    - Call GeographicAuthorizationService.evaluateAccess() with userId and venue's geographicAreaId
+    - Return 403 GEOGRAPHIC_AUTHORIZATION_DENIED if access level is NONE
+    - Update updateVenue() to call getVenueById() first for authorization check
+    - Update deleteVenue() to call getVenueById() first for authorization check
+    - Update route handlers to pass req.user.id to service methods
+    - _Requirements: 25.3, 25.11, 25.12, 25.17, 25.21, 25.25, 25.29_
+
+  - [ ] 33.20 Enforce geographic authorization on individual geographic area access
+    - Inject GeographicAuthorizationService into GeographicAreaService constructor
+    - Update GeographicAreaService.getGeographicAreaById() to accept userId parameter
+    - Call GeographicAuthorizationService.evaluateAccess() with userId and the area ID
+    - Return 403 GEOGRAPHIC_AUTHORIZATION_DENIED if access level is NONE
+    - Allow read-only access to ancestor areas (AccessLevel.READ_ONLY is sufficient for GET)
+    - Update updateGeographicArea() to call getGeographicAreaById() first for authorization check (requires FULL access)
+    - Update deleteGeographicArea() to call getGeographicAreaById() first for authorization check (requires FULL access)
+    - Update route handlers to pass req.user.id to service methods
+    - _Requirements: 25.4, 25.13, 25.14, 25.18, 25.22, 25.26, 25.30_
+
+  - [ ] 33.21 Enforce geographic authorization on nested resource endpoints
+    - Update ParticipantService.getParticipantActivities() to call getParticipantById() first (validates parent participant authorization)
+    - Update ParticipantService.getAddressHistory() to call getParticipantById() first (validates parent participant authorization)
+    - Update ParticipantService.getParticipantPopulations() to call getParticipantById() first (validates parent participant authorization)
+    - Update ActivityService.getActivityParticipants() to call getActivityById() first (validates parent activity authorization)
+    - Update ActivityService.getActivityVenues() to call getActivityById() first (validates parent activity authorization)
+    - Update VenueService.getVenueActivities() to call getVenueById() first (validates parent venue authorization)
+    - Update VenueService.getVenueParticipants() to call getVenueById() first (validates parent venue authorization)
+    - Update GeographicAreaService.getChildren() to call getGeographicAreaById() first (validates parent area authorization)
+    - Update GeographicAreaService.getAncestors() to call getGeographicAreaById() first (validates parent area authorization)
+    - Update GeographicAreaService.getVenues() to call getGeographicAreaById() first (validates parent area authorization)
+    - Update GeographicAreaService.getStatistics() to call getGeographicAreaById() first (validates parent area authorization)
+    - Ensure all nested endpoint route handlers pass userId to service methods
+    - _Requirements: 25.31, 25.32, 25.33, 25.34, 25.35, 25.36, 25.37, 25.38, 25.39, 25.40, 25.41_
+
+  - [ ] 33.22 Implement administrator bypass for geographic authorization
+    - Update GeographicAuthorizationService.evaluateAccess() to accept optional userRole parameter
+    - Check if userRole is ADMINISTRATOR at the start of evaluateAccess()
+    - Return AccessLevel.FULL for administrators regardless of authorization rules
+    - Update all service methods to pass user role when calling evaluateAccess()
+    - Ensure bypass applies to all resource access operations
+    - _Requirements: 25.43_
+
+  - [ ] 33.23 Implement unrestricted user bypass
+    - Verify GeographicAuthorizationService.evaluateAccess() already returns FULL when no rules exist
+    - Ensure this bypass applies to all resource access operations
+    - Test that users with no authorization rules can access all resources
+    - _Requirements: 25.42_
+
+  - [ ] 33.24 Add audit logging for authorization denials
+    - Inject AuditService into GeographicAuthorizationService constructor
+    - Update evaluateAccess() to log when AccessLevel.NONE is returned
+    - Include user ID, resource type (geographic area), resource ID, and attempted action in audit log
+    - Update service methods to pass resource type context when calling evaluateAccess()
+    - _Requirements: 25.45_
+
+  - [ ]* 33.25 Write property tests for individual resource access authorization
+    - **Property 173: Participant Detail Access Authorization**
+    - **Property 174: Activity Detail Access Authorization**
+    - **Property 175: Venue Detail Access Authorization**
+    - **Property 176: Geographic Area Detail Access Authorization**
+    - **Property 177: Participant Update Authorization**
+    - **Property 178: Activity Update Authorization**
+    - **Property 179: Venue Update Authorization**
+    - **Property 180: Geographic Area Update Authorization**
+    - **Property 181: Participant Deletion Authorization**
+    - **Property 182: Activity Deletion Authorization**
+    - **Property 183: Venue Deletion Authorization**
+    - **Property 184: Geographic Area Deletion Authorization**
+    - **Property 185: Nested Resource Access Authorization**
+    - **Property 186: Unrestricted User Bypass**
+    - **Property 187: Administrator Authorization Bypass**
+    - **Property 188: Authorization Denial Audit Logging**
+    - **Property 189: Consistent Authorization Across Access Patterns**
+    - **Validates: Requirements 25.1, 25.2, 25.3, 25.4, 25.5, 25.6, 25.7, 25.8, 25.9, 25.10, 25.11, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.18, 25.19, 25.20, 25.21, 25.22, 25.23, 25.24, 25.25, 25.26, 25.27, 25.28, 25.29, 25.30, 25.31, 25.32, 25.33, 25.34, 25.35, 25.36, 25.37, 25.38, 25.39, 25.40, 25.41, 25.42, 25.43, 25.44, 25.45**
+
+- [ ] 34. Checkpoint - Verify geographic authorization system
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test authorization rules with ALLOW and DENY combinations
+  - Test implicit filtering on all list endpoints
+  - Test individual resource access authorization (GET, PUT, DELETE by ID)
+  - Test nested resource endpoint authorization
+  - Test create operation validation
+  - Test administrator bypass
+  - Test unrestricted user bypass
+  - Verify JWT token includes authorized area IDs
+  - Verify authorization denials are logged
+
+
+- [x] 35. Fix unit test database isolation
+  - [x] 35.1 Create mock Prisma client factory for unit tests
+    - Create a test utility that generates a fully mocked Prisma client
+    - Mock all Prisma model methods (findMany, findUnique, create, update, delete, etc.)
+    - Ensure mocked client returns empty results by default
+    - Provide helper functions to set up specific mock responses per test
+    - _Requirements: Testing best practices, test isolation_
+
+  - [x] 35.2 Update service unit tests to use mocked Prisma client
+    - Replace `new Repository(null as any)` pattern with properly mocked repositories
+    - Inject mocked Prisma client into repository constructors
+    - Ensure no real database connections are made during unit tests
+    - Verify tests run in complete isolation without side effects
+    - Update activity-type.service.test.ts to use mocked Prisma
+    - Update activity.service.test.ts to use mocked Prisma
+    - Update all other service test files to use mocked Prisma
+    - _Requirements: Testing best practices, test isolation_
+
+  - [x] 35.3 Add test database cleanup utilities
+    - Create beforeEach/afterEach hooks that reset mock state
+    - Ensure each test starts with a clean slate
+    - Document the proper pattern for writing isolated unit tests
+    - _Requirements: Testing best practices, test isolation_
+
+  - [x] 35.4 Separate integration tests from unit tests
+    - Move tests that require real database to integration test directory
+    - Keep unit tests purely in-memory with mocks
+    - Update Jest configuration to distinguish between unit and integration tests
+    - Add separate npm scripts for running unit vs integration tests
+    - _Requirements: Testing best practices, test organization_
+
+  - [x] 35.5 Write documentation for test patterns
+    - Document the difference between unit tests (mocked) and integration tests (real DB)
+    - Provide examples of proper mock setup for repositories and services
+    - Explain when to use unit tests vs integration tests
+    - Add guidelines for avoiding test side effects
+    - _Requirements: Testing best practices, documentation_
+
+- [x] 36. Checkpoint - Verify unit test isolation
+  - Run unit tests and confirm no database side effects
+  - Verify no test data persists in the database after test runs
+  - Ensure tests can run in any order without failures
+  - Confirm tests run faster without database I/O

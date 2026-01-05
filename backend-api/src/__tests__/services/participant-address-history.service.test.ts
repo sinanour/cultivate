@@ -2,13 +2,17 @@ import { ParticipantService } from '../../services/participant.service';
 import { ParticipantRepository } from '../../repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from '../../repositories/participant-address-history.repository';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
+import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { PrismaClient } from '@prisma/client';
+
+jest.mock('../../services/geographic-authorization.service');
 
 describe('ParticipantService - Address History', () => {
     let service: ParticipantService;
     let participantRepository: ParticipantRepository;
     let addressHistoryRepository: ParticipantAddressHistoryRepository;
     let geographicAreaRepository: GeographicAreaRepository;
+    let mockGeographicAuthService: jest.Mocked<GeographicAuthorizationService>;
     let prisma: PrismaClient;
     let assignmentRepository: any;
 
@@ -17,9 +21,9 @@ describe('ParticipantService - Address History', () => {
         participantRepository = new ParticipantRepository(prisma);
         addressHistoryRepository = new ParticipantAddressHistoryRepository(prisma);
         geographicAreaRepository = new GeographicAreaRepository(prisma);
-        geographicAreaRepository = new GeographicAreaRepository(prisma);
+        mockGeographicAuthService = new GeographicAuthorizationService(null as any, null as any, null as any) as jest.Mocked<GeographicAuthorizationService>;
         assignmentRepository = {} as any; // Mock assignment repository for tests
-        service = new ParticipantService(participantRepository, addressHistoryRepository, assignmentRepository, prisma, geographicAreaRepository);
+        service = new ParticipantService(participantRepository, addressHistoryRepository, assignmentRepository, prisma, geographicAreaRepository, mockGeographicAuthService);
     });
 
     describe('getAddressHistory', () => {

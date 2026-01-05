@@ -83,6 +83,20 @@ describe('ErrorHandler', () => {
             expect(message).toBe('You do not have permission to perform this action.');
         });
 
+        it('should return specific message for geographic authorization errors', () => {
+            const error = new Error('You do not have permission to access this geographic area');
+            const message = ErrorHandler.getUserFriendlyMessage(error);
+
+            expect(message).toBe('You do not have permission to access this geographic area');
+        });
+
+        it('should return specific message for GEOGRAPHIC_AUTHORIZATION_DENIED code', () => {
+            const error = new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: Access denied');
+            const message = ErrorHandler.getUserFriendlyMessage(error);
+
+            expect(message).toBe('GEOGRAPHIC_AUTHORIZATION_DENIED: Access denied');
+        });
+
         it('should return friendly message for 404 errors', () => {
             const error = new Error('404 Not Found');
             const message = ErrorHandler.getUserFriendlyMessage(error);

@@ -2,6 +2,8 @@ import { Response, NextFunction } from 'express';
 import { AuditLoggingMiddleware } from '../../middleware/audit-logging.middleware';
 import { AuditLogRepository } from '../../repositories/audit-log.repository';
 import { AuthenticatedRequest } from '../../types/express.types';
+import { createMockTokenPayload } from '../helpers/token-payload.helper';
+import { UserRole } from '@prisma/client';
 
 jest.mock('../../repositories/audit-log.repository');
 
@@ -21,7 +23,7 @@ describe('AuditLoggingMiddleware', () => {
             path: '/api/activities',
             body: { name: 'Test Activity' },
             params: { id: 'activity-1' },
-            user: { userId: 'user-1', email: 'test@example.com', role: 'EDITOR' },
+            user: createMockTokenPayload(UserRole.EDITOR),
             ip: '127.0.0.1',
         };
 
@@ -147,7 +149,7 @@ describe('AuditLoggingMiddleware', () => {
 
     describe('logRoleChange', () => {
         it('should log role changes', (done) => {
-            mockRequest.body = { role: 'ADMINISTRATOR', oldRole: 'EDITOR' };
+            mockRequest.body = { role: UserRole.ADMINISTRATOR, oldRole: UserRole.EDITOR };
             mockAuditRepo.create = jest.fn().mockResolvedValue({});
 
             const handler = middleware.logRoleChange();

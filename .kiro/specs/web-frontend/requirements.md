@@ -26,6 +26,10 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Engagement_Summary_Table**: A table on the Engagement Dashboard displaying aggregate and dimensional breakdown metrics for activities and participants
 - **Dirty_Form**: A form with unsaved changes that differ from the initial values
 - **Navigation_Guard**: A mechanism that intercepts navigation attempts to prevent accidental data loss from dirty forms
+- **Geographic_Authorization**: Access control rules that restrict user access to specific geographic areas
+- **Allow_List**: A set of geographic areas that a user is explicitly permitted to access
+- **Deny_List**: A set of geographic areas that a user is explicitly forbidden from accessing
+- **Authorized_Area**: A geographic area that a user has permission to access based on authorization rules
 
 ## Requirements
 
@@ -261,6 +265,9 @@ The Web Frontend package provides a responsive React-based web application that 
 9. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
 10. WHEN deleting a geographic area, THE Web_App SHALL display an error message explaining which entities reference it
 11. THE Web_App SHALL display the full hierarchy path for each geographic area
+12. WHEN the global geographic area filter is active, THE Web_App SHALL display the filtered area, all its descendants, AND all its ancestors in the tree view to maintain hierarchy context
+13. WHEN displaying ancestors of a filtered geographic area, THE Web_App SHALL visually indicate that ancestor areas are read-only (e.g., with a badge, icon, or muted styling)
+14. THE Web_App SHALL NOT suppress or hide ancestor geographic areas from the tree view when a filter is active, as ancestors provide essential navigational context
 
 ### Requirement 6C: Map View UI
 
@@ -759,6 +766,14 @@ The Web Frontend package provides a responsive React-based web application that 
 15. THE Web_App SHALL separate ancestor names in the hierarchy path with the right caret symbol " > "
 16. WHEN the global geographic area filter is active, THE Web_App SHALL display only the descendants (recursively) of the currently filtered geographic area in the filter selector dropdown
 17. WHEN the global geographic area filter is set to "Global" (no filter), THE Web_App SHALL display all geographic areas in the filter selector dropdown
+18. WHEN displaying the currently active filter in the header breadcrumb or filter indicator, THE Web_App SHALL include the full ancestor hierarchy path to provide geographic context
+19. THE Web_App SHALL NOT suppress or hide ancestor geographic areas from any display when showing filtered results, as ancestors provide essential navigational and contextual information
+20. WHEN a user clicks on an ancestor area in the breadcrumb that they do not have direct authorization to access, THE Web_App SHALL clear the global geographic area filter (revert to "Global")
+21. WHEN a user navigates to a URL with a geographic area filter parameter that refers to an area they are not directly authorized to access (including read-only ancestor areas), THE Web_App SHALL clear the filter parameter from the URL and revert to "Global" (no filter)
+22. THE Web_App SHALL validate that any geographic area filter selection is within the user's directly authorized areas (FULL access, not descendants, not read-only ancestors), and clear the filter if validation fails
+23. THE Web_App SHALL NOT allow users to apply geographic area filters to read-only ancestor areas, as this would result in incomplete analytics data
+24. WHEN an API request returns a 403 Forbidden error with code GEOGRAPHIC_AUTHORIZATION_DENIED while a global geographic area filter is active, THE Web_App SHALL automatically clear the global filter and revert to "Global" (no filter)
+25. WHEN clearing the filter due to a 403 authorization error, THE Web_App SHALL display a notification to the user explaining that the filter was cleared due to authorization restrictions
 
 ### Requirement 26: High-Cardinality Dropdown Filtering
 
@@ -881,3 +896,30 @@ The Web Frontend package provides a responsive React-based web application that 
 16. WHEN exporting the Engagement Summary table with grouping dimensions selected, THE Web_App SHALL preserve the grouping structure in the CSV export
 17. THE Web_App SHALL format dates in the CSV filename using ISO-8601 format (YYYY-MM-DD)
 18. THE Web_App SHALL handle empty Engagement Summary tables by exporting a CSV file with only the header row
+
+### Requirement 31: Geographic Authorization Management UI
+
+**User Story:** As a system administrator, I want to view and manage geographic authorization rules for users on a dedicated page, so that I can control which geographic areas each user can access with a full-featured interface.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide a dedicated page for managing geographic authorizations accessible via route /users/:userId/authorizations
+2. THE Web_App SHALL display all geographic authorization rules for the user in a table
+3. THE Web_App SHALL provide a button or link in the UserList to navigate to the authorization management page for each user
+4. THE Web_App SHALL display the user's email and role in the page header for context
+5. THE Web_App SHALL display authorization rules with geographic area name, rule type (ALLOW or DENY), and creation date
+6. THE Web_App SHALL provide an "Add Rule" button to create new authorization rules
+7. THE Web_App SHALL provide a delete button for each authorization rule
+8. WHEN creating an authorization rule, THE Web_App SHALL open a modal form with geographic area selection and rule type selection
+9. WHEN creating an authorization rule, THE Web_App SHALL validate that the geographic area exists
+10. WHEN creating an authorization rule, THE Web_App SHALL prevent duplicate rules for the same user and geographic area
+11. THE Web_App SHALL visually distinguish ALLOW rules from DENY rules using color coding or icons (e.g., green checkmark for ALLOW, red X for DENY)
+12. THE Web_App SHALL display a summary of the user's effective access showing which areas they can access
+13. WHEN displaying effective access, THE Web_App SHALL show allowed areas, their descendants, and ancestor areas (marked as read-only)
+14. WHEN displaying effective access, THE Web_App SHALL indicate which areas are denied
+15. THE Web_App SHALL restrict all geographic authorization management features to ADMINISTRATOR role only
+16. WHEN a non-administrator attempts to access the authorization management page, THE Web_App SHALL redirect to the dashboard or show an error
+17. THE Web_App SHALL display a warning when creating DENY rules that override existing ALLOW rules
+18. THE Web_App SHALL provide explanatory text describing how allow-listing and deny-listing rules work
+19. THE Web_App SHALL provide explanatory text describing that allow-listed areas grant access to descendants and read-only access to ancestors
+20. THE Web_App SHALL provide a back button or breadcrumb navigation to return to the User Administration page

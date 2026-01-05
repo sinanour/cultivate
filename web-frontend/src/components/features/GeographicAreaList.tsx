@@ -24,7 +24,7 @@ export function GeographicAreaList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
-  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+  const { selectedGeographicAreaId, authorizedAreaIds } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
@@ -49,6 +49,48 @@ export function GeographicAreaList() {
       setDeleteError(error.message || 'Failed to delete geographic area. It may be referenced by venues or child areas.');
     },
   });
+
+  // Helper function to check if an area is a descendant of another area
+  const isDescendantOf = (areaId: string, potentialAncestorId: string, areas: GeographicArea[]): boolean => {
+    const area = areas.find(a => a.id === areaId);
+    if (!area || !area.parentGeographicAreaId) {
+      return false;
+    }
+    
+    if (area.parentGeographicAreaId === potentialAncestorId) {
+      return true;
+    }
+    
+    // Recursively check parent
+    return isDescendantOf(area.parentGeographicAreaId, potentialAncestorId, areas);
+  };
+
+  // Helper function to check if an area is a read-only ancestor
+  // An area is a read-only ancestor if:
+  // 1. User has authorization restrictions (authorizedAreaIds is not empty)
+  // 2. The area is NOT in the user's directly authorized areas
+  // 3. The area IS displayed (meaning it's an ancestor of an authorized area)
+  const isReadOnlyAncestor = (areaId: string): boolean => {
+    // If no authorization restrictions, no areas are read-only
+    if (authorizedAreaIds.size === 0) {
+      return false;
+    }
+    
+    // If this area is directly authorized, it's not a read-only ancestor
+    if (authorizedAreaIds.has(areaId)) {
+      return false;
+    }
+    
+    // If we have a filter active, check if it's an ancestor of the filtered area
+    if (selectedGeographicAreaId) {
+      return areaId !== selectedGeographicAreaId && 
+             !isDescendantOf(areaId, selectedGeographicAreaId, geographicAreas);
+    }
+    
+    // No explicit filter, but user has restrictions
+    // This area is displayed but not in authorizedAreaIds, so it must be a read-only ancestor
+    return true;
+  };
 
   const treeData = buildGeographicAreaTree(geographicAreas);
 
@@ -146,10 +188,14 @@ export function GeographicAreaList() {
     const area = node.data;
     const hasChildren = node.children && node.children.length > 0;
     
+    // Determine if this area is a read-only ancestor
+    const isAncestor = isReadOnlyAncestor(area.id);
+    
     // Build action buttons - no View button
     const actionButtons = [];
     
-    if (canEdit()) {
+    // Only show edit/delete for non-ancestor areas
+    if (canEdit() && !isAncestor) {
       actionButtons.push(
         <Button
           key="edit"
@@ -164,7 +210,7 @@ export function GeographicAreaList() {
       );
     }
     
-    if (canDelete()) {
+    if (canDelete() && !isAncestor) {
       actionButtons.push(
         <Button
           key="delete"
@@ -187,6 +233,7 @@ export function GeographicAreaList() {
             cursor: hasChildren ? 'pointer' : 'default',
             transition: 'background-color 0.15s ease',
             padding: '8px 0',
+            opacity: isAncestor ? 0.7 : 1, // Muted styling for ancestors
           }}
           onMouseEnter={(e) => {
             if (hasChildren) {
@@ -208,14 +255,17 @@ export function GeographicAreaList() {
               {node.text}
             </Link>
             <Badge color={getAreaTypeBadgeColor(area.areaType)}>{area.areaType}</Badge>
+            {isAncestor && (
+              <Badge color="grey">Read-Only</Badge>
+            )}
           </SpaceBetween>
         </div>
       ),
-      actions: (
+      actions: actionButtons.length > 0 ? (
         <SpaceBetween direction="horizontal" size="xs">
           {actionButtons}
         </SpaceBetween>
-      ),
+      ) : undefined,
     };
   };
 

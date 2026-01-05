@@ -4,10 +4,12 @@ import { ActivityTypeRepository } from '../repositories/activity-type.repository
 import { ActivityVenueHistoryRepository } from '../repositories/activity-venue-history.repository';
 import { VenueRepository } from '../repositories/venue.repository';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
+import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
 import { ImportResult } from '../types/csv.types';
 import { ActivityImportSchema } from '../utils/validation.schemas';
+import { AppError } from '../types/errors.types';
 
 export interface CreateActivityInput {
   name: string;
@@ -35,8 +37,46 @@ export class ActivityService {
     private venueHistoryRepository: ActivityVenueHistoryRepository,
     private venueRepository: VenueRepository,
     private prisma: PrismaClient,
-    private geographicAreaRepository: GeographicAreaRepository
+    private geographicAreaRepository: GeographicAreaRepository,
+    private geographicAuthorizationService: GeographicAuthorizationService
   ) {}
+
+  /**
+   * Determines the effective geographic area IDs to filter by, considering:
+   * 1. Explicit geographicAreaId parameter (if provided, validate authorization)
+   * 2. Implicit filtering based on user's authorized areas (if user has restrictions)
+   * 3. No filtering (if user has no restrictions and no explicit filter)
+   * 
+   * IMPORTANT: authorizedAreaIds already includes descendants and excludes DENY rules.
+   * Do NOT expand descendants again during implicit filtering.
+   */
+  private async getEffectiveGeographicAreaIds(
+    explicitGeographicAreaId: string | undefined,
+    authorizedAreaIds: string[],
+    hasGeographicRestrictions: boolean
+  ): Promise<string[] | undefined> {
+    // If explicit filter provided
+    if (explicitGeographicAreaId) {
+      // Validate user has access to this area
+      if (hasGeographicRestrictions && !authorizedAreaIds.includes(explicitGeographicAreaId)) {
+        throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
+      }
+
+      // Expand to include descendants
+      const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
+      return [explicitGeographicAreaId, ...descendantIds];
+    }
+
+    // No explicit filter - apply implicit filtering if user has restrictions
+    if (hasGeographicRestrictions) {
+      // IMPORTANT: authorizedAreaIds already has descendants expanded and DENY rules applied
+      // Do NOT expand descendants again, as this would re-add denied areas
+      return authorizedAreaIds;
+    }
+
+    // No restrictions and no explicit filter - return undefined (no filtering)
+    return undefined;
+  }
 
   private addComputedFields(activity: Activity) {
     return {
@@ -45,15 +85,26 @@ export class ActivityService {
     };
   }
 
-  async getAllActivities(geographicAreaId?: string): Promise<Activity[]> {
-    if (!geographicAreaId) {
+  async getAllActivities(
+    geographicAreaId?: string,
+    authorizedAreaIds: string[] = [],
+    hasGeographicRestrictions: boolean = false
+  ): Promise<Activity[]> {
+    // Determine effective geographic area IDs
+    const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+      geographicAreaId,
+      authorizedAreaIds,
+      hasGeographicRestrictions
+    );
+
+    if (!effectiveAreaIds) {
+  // No geographic filter
       const activities = await this.activityRepository.findAll();
       return activities.map((a) => this.addComputedFields(a));
     }
 
-    // Get all descendant IDs including the area itself
-    const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-    const areaIds = [geographicAreaId, ...descendantIds];
+    // Use effective area IDs for filtering
+    const areaIds = effectiveAreaIds;
 
     // Get all activities with their most recent venue and activityType
     const allActivities = await this.prisma.activity.findMany({
@@ -86,18 +137,31 @@ export class ActivityService {
     return activities.map((a) => this.addComputedFields(a));
   }
 
-  async getAllActivitiesPaginated(page?: number, limit?: number, geographicAreaId?: string): Promise<PaginatedResponse<Activity>> {
+  async getAllActivitiesPaginated(
+    page?: number,
+    limit?: number,
+    geographicAreaId?: string,
+    authorizedAreaIds: string[] = [],
+    hasGeographicRestrictions: boolean = false
+  ): Promise<PaginatedResponse<Activity>> {
     const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
-    if (!geographicAreaId) {
+    // Determine effective geographic area IDs
+    const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+      geographicAreaId,
+      authorizedAreaIds,
+      hasGeographicRestrictions
+    );
+
+    if (!effectiveAreaIds) {
+    // No geographic filter
       const { data, total } = await this.activityRepository.findAllPaginated(validPage, validLimit);
       const activitiesWithComputed = data.map((a) => this.addComputedFields(a));
       return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);
     }
 
-    // Get all descendant IDs including the area itself
-    const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-    const areaIds = [geographicAreaId, ...descendantIds];
+    // Use effective area IDs for filtering
+    const areaIds = effectiveAreaIds;
 
     // Get all activities with their most recent venue and activityType
     const allActivities = await this.prisma.activity.findMany({
@@ -136,11 +200,53 @@ export class ActivityService {
     return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);
   }
 
-  async getActivityById(id: string): Promise<Activity> {
+  async getActivityById(id: string, userId?: string, userRole?: string): Promise<Activity> {
     const activity = await this.activityRepository.findById(id);
     if (!activity) {
       throw new Error('Activity not found');
     }
+
+    // Enforce geographic authorization if userId is provided
+    if (userId) {
+      // Administrator bypass
+      if (userRole === 'ADMINISTRATOR') {
+        return this.addComputedFields(activity);
+      }
+
+      // Determine activity's current venue from venue history
+      const currentVenue = await this.venueHistoryRepository.getCurrentVenue(id);
+
+      if (currentVenue) {
+        // Get the venue to access its geographic area
+        const venue = await this.prisma.venue.findUnique({
+          where: { id: currentVenue.venueId },
+        });
+
+        if (venue) {
+          // Validate authorization to access the venue's geographic area
+          const accessLevel = await this.geographicAuthorizationService.evaluateAccess(
+            userId,
+            venue.geographicAreaId
+          );
+
+          if (accessLevel === AccessLevel.NONE) {
+            await this.geographicAuthorizationService.logAuthorizationDenial(
+              userId,
+              'ACTIVITY',
+              id,
+              'GET'
+            );
+            throw new AppError(
+              'GEOGRAPHIC_AUTHORIZATION_DENIED',
+              'You do not have permission to access this activity',
+              403
+            );
+          }
+        }
+      }
+      // If no venue history, allow access (activity not yet associated with any area)
+    }
+
     return this.addComputedFields(activity);
   }
 
@@ -215,7 +321,15 @@ export class ActivityService {
     });
   }
 
-  async updateActivity(id: string, data: UpdateActivityInput): Promise<Activity> {
+  async updateActivity(
+    id: string,
+    data: UpdateActivityInput,
+    userId?: string,
+    userRole?: string
+  ): Promise<Activity> {
+    // Validate authorization by calling getActivityById (which enforces geographic authorization)
+    await this.getActivityById(id, userId, userRole);
+
     const existing = await this.activityRepository.findById(id);
     if (!existing) {
       throw new Error('Activity not found');
@@ -248,33 +362,37 @@ export class ActivityService {
     }
   }
 
-  async deleteActivity(id: string): Promise<void> {
-    const existing = await this.activityRepository.findById(id);
-    if (!existing) {
-      throw new Error('Activity not found');
-    }
+  async deleteActivity(
+    id: string,
+    userId?: string,
+    userRole?: string
+  ): Promise<void> {
+    // Validate authorization by calling getActivityById (which enforces geographic authorization)
+    await this.getActivityById(id, userId, userRole);
 
     await this.activityRepository.delete(id);
   }
 
-  async getActivityVenues(activityId: string) {
+  async associateVenue(
+    activityId: string,
+    venueId: string,
+    effectiveFrom?: Date | null,
+    authorizedAreaIds: string[] = [],
+    hasGeographicRestrictions: boolean = false
+  ) {
     const activity = await this.activityRepository.findById(activityId);
     if (!activity) {
       throw new Error('Activity not found');
     }
 
-    return this.venueHistoryRepository.findByActivityId(activityId);
-  }
-
-  async associateVenue(activityId: string, venueId: string, effectiveFrom?: Date | null) {
-    const activity = await this.activityRepository.findById(activityId);
-    if (!activity) {
-      throw new Error('Activity not found');
-    }
-
-    const venueExists = await this.venueRepository.exists(venueId);
-    if (!venueExists) {
+    const venue = await this.venueRepository.findById(venueId);
+    if (!venue) {
       throw new Error('Venue not found');
+    }
+
+    // Validate user has access to the venue's geographic area
+    if (hasGeographicRestrictions && !authorizedAreaIds.includes(venue.geographicAreaId)) {
+      throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to associate this venue with the activity');
     }
 
     // Use provided effectiveFrom, or null if not provided
@@ -322,9 +440,20 @@ export class ActivityService {
     await this.venueHistoryRepository.delete(venueHistoryId);
   }
 
-  async exportActivitiesToCSV(geographicAreaId?: string): Promise<string> {
+  async getActivityVenues(activityId: string, userId?: string, userRole?: string) {
+    // Validate authorization by calling getActivityById (which enforces geographic authorization)
+    await this.getActivityById(activityId, userId, userRole);
+
+    return this.venueHistoryRepository.findByActivityId(activityId);
+  }
+
+  async exportActivitiesToCSV(
+    geographicAreaId?: string,
+    authorizedAreaIds: string[] = [],
+    hasGeographicRestrictions: boolean = false
+  ): Promise<string> {
     // Get all activities (with geographic filter if provided)
-    const activities = await this.getAllActivities(geographicAreaId);
+    const activities = await this.getAllActivities(geographicAreaId, authorizedAreaIds, hasGeographicRestrictions);
 
     // Fetch activities with full details
     const activitiesWithDetails = await Promise.all(

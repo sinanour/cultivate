@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -11,11 +12,14 @@ import Alert from '@cloudscape-design/components/alert';
 import type { User } from '../../types';
 import { UserService } from '../../services/api/user.service';
 import { UserForm } from './UserForm';
+import { useAuth } from '../../hooks/useAuth';
 
 export function UserList() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [error, setError] = useState('');
+  const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -37,6 +41,10 @@ export function UserList() {
     setSelectedUser(null);
   };
 
+  const handleManageAuthorizations = (user: User) => {
+    navigate(`/users/${user.id}/authorizations`);
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'ADMINISTRATOR':
@@ -49,6 +57,8 @@ export function UserList() {
         return 'grey';
     }
   };
+
+  const isAdmin = currentUser?.role === 'ADMINISTRATOR';
 
   return (
     <SpaceBetween size="l">
@@ -89,12 +99,16 @@ export function UserList() {
             id: 'actions',
             header: 'Actions',
             cell: (item) => (
-              <Button
-                variant="inline-link"
-                onClick={() => handleEdit(item)}
-              >
-                Edit
-              </Button>
+              <SpaceBetween direction="horizontal" size="xs">
+                <Button variant="inline-link" onClick={() => handleEdit(item)}>
+                  Edit
+                </Button>
+                {isAdmin && (
+                  <Button variant="inline-link" onClick={() => handleManageAuthorizations(item)}>
+                    Manage Authorizations
+                  </Button>
+                )}
+              </SpaceBetween>
             ),
           },
         ]}

@@ -3,11 +3,13 @@ import { ParticipantRepository } from '../repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from '../repositories/participant-address-history.repository';
 import { AssignmentRepository } from '../repositories/assignment.repository';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
+import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
 import { PrismaClient } from '@prisma/client';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
 import { ImportResult } from '../types/csv.types';
 import { ParticipantImportSchema } from '../utils/validation.schemas';
+import { AppError } from '../types/errors.types';
 
 export interface CreateParticipantInput {
     name: string;
@@ -48,10 +50,48 @@ export class ParticipantService {
         private addressHistoryRepository: ParticipantAddressHistoryRepository,
         private assignmentRepository: AssignmentRepository,
         private prisma: PrismaClient,
-        private geographicAreaRepository: GeographicAreaRepository
+        private geographicAreaRepository: GeographicAreaRepository,
+        private geographicAuthorizationService: GeographicAuthorizationService
     ) { }
 
-    async getAllParticipants(geographicAreaId?: string, search?: string): Promise<Participant[]> {
+    /**
+     * Determines the effective geographic area IDs to filter by, considering:
+     * 1. Explicit geographicAreaId parameter (if provided, validate authorization)
+     * 2. Implicit filtering based on user's authorized areas (if user has restrictions)
+     * 3. No filtering (if user has no restrictions and no explicit filter)
+     * 
+     * IMPORTANT: authorizedAreaIds already includes descendants and excludes DENY rules.
+     * Do NOT expand descendants again during implicit filtering.
+     */
+    private async getEffectiveGeographicAreaIds(
+        explicitGeographicAreaId: string | undefined,
+        authorizedAreaIds: string[],
+        hasGeographicRestrictions: boolean
+    ): Promise<string[] | undefined> {
+        // If explicit filter provided
+        if (explicitGeographicAreaId) {
+            // Validate user has access to this area
+            if (hasGeographicRestrictions && !authorizedAreaIds.includes(explicitGeographicAreaId)) {
+                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
+            }
+
+            // Expand to include descendants
+            const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
+            return [explicitGeographicAreaId, ...descendantIds];
+        }
+
+        // No explicit filter - apply implicit filtering if user has restrictions
+        if (hasGeographicRestrictions) {
+            // IMPORTANT: authorizedAreaIds already has descendants expanded and DENY rules applied
+            // Do NOT expand descendants again, as this would re-add denied areas
+            return authorizedAreaIds;
+        }
+
+        // No restrictions and no explicit filter - return undefined (no filtering)
+        return undefined;
+    }
+
+    async getAllParticipants(geographicAreaId?: string, search?: string, authorizedAreaIds: string[] = [], hasGeographicRestrictions: boolean = false): Promise<Participant[]> {
         // Build search filter
         const searchWhere = search ? {
             OR: [
@@ -60,7 +100,14 @@ export class ParticipantService {
             ]
         } : {};
 
-        if (!geographicAreaId) {
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
+        if (!effectiveAreaIds) {
             // No geographic filter, just apply search if provided
             if (search) {
                 return this.participantRepository.search(search);
@@ -68,9 +115,8 @@ export class ParticipantService {
             return this.participantRepository.findAll();
         }
 
-        // Get all descendant IDs including the area itself
-        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-        const areaIds = [geographicAreaId, ...descendantIds];
+        // Use effective area IDs for filtering
+        const areaIds = effectiveAreaIds;
 
         // Get all participants with their most recent address
         const allParticipants = await this.prisma.participant.findMany({
@@ -95,7 +141,7 @@ export class ParticipantService {
         return filteredParticipants.map(({ addressHistory, ...participant }) => participant as Participant);
     }
 
-    async getAllParticipantsPaginated(page?: number, limit?: number, geographicAreaId?: string, search?: string): Promise<PaginatedResponse<Participant>> {
+    async getAllParticipantsPaginated(page?: number, limit?: number, geographicAreaId?: string, search?: string, authorizedAreaIds: string[] = [], hasGeographicRestrictions: boolean = false): Promise<PaginatedResponse<Participant>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
         // Build search filter
@@ -106,15 +152,21 @@ export class ParticipantService {
             ]
         } : {};
 
-        if (!geographicAreaId) {
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
+        if (!effectiveAreaIds) {
             // No geographic filter, just apply search if provided
             const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit, searchWhere);
             return PaginationHelper.createResponse(data, validPage, validLimit, total);
         }
 
-        // Get all descendant IDs including the area itself
-        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-        const areaIds = [geographicAreaId, ...descendantIds];
+        // Use effective area IDs for filtering
+        const areaIds = effectiveAreaIds;
 
         // Get all participants with their most recent address
         const allParticipants = await this.prisma.participant.findMany({
@@ -146,11 +198,55 @@ export class ParticipantService {
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 
-    async getParticipantById(id: string): Promise<Participant> {
+    async getParticipantById(id: string, userId?: string, userRole?: string): Promise<Participant> {
         const participant = await this.participantRepository.findById(id);
         if (!participant) {
             throw new Error('Participant not found');
         }
+
+        // Enforce geographic authorization if userId is provided
+        if (userId) {
+            // Administrator bypass
+            if (userRole === 'ADMINISTRATOR') {
+                return participant;
+            }
+
+            // Determine participant's current home venue from address history
+            const currentAddress = await this.addressHistoryRepository.getCurrentAddress(id);
+
+            if (currentAddress) {
+                // Get the venue to access its geographic area
+                const venue = await this.prisma.venue.findUnique({
+                    where: { id: currentAddress.venueId },
+                });
+
+                if (venue) {
+                    // Validate authorization to access the venue's geographic area
+                    const accessLevel = await this.geographicAuthorizationService.evaluateAccess(
+                        userId,
+                        venue.geographicAreaId
+                    );
+
+                    if (accessLevel === AccessLevel.NONE) {
+                        // Log authorization denial
+                        await this.geographicAuthorizationService.logAuthorizationDenial(
+                            userId,
+                            'PARTICIPANT',
+                            id,
+                            'GET'
+                        );
+
+                        throw new AppError(
+                            'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                            'You do not have permission to access this participant',
+                            403
+                        );
+                    }
+                }
+            }
+            // If no address history, allow access (participant not yet associated with any area)
+        }
+
         return participant;
     }
 
@@ -228,7 +324,10 @@ export class ParticipantService {
         });
     }
 
-    async updateParticipant(id: string, data: UpdateParticipantInput): Promise<Participant> {
+    async updateParticipant(id: string, data: UpdateParticipantInput, userId?: string, userRole?: string): Promise<Participant> {
+        // Validate authorization by calling getParticipantById (which enforces geographic authorization)
+        await this.getParticipantById(id, userId, userRole);
+
         const existing = await this.participantRepository.findById(id);
         if (!existing) {
             throw new Error('Participant not found');
@@ -265,6 +364,21 @@ export class ParticipantService {
                 });
                 if (!venueExists) {
                     throw new Error('Home venue not found');
+                }
+
+                // Validate user has access to the new venue's geographic area
+                if (userId) {
+                    const accessLevel = await this.geographicAuthorizationService.evaluateAccess(
+                        userId,
+                        venueExists.geographicAreaId
+                    );
+                    if (accessLevel === AccessLevel.NONE) {
+                        throw new AppError(
+                            'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                            'You do not have permission to assign this participant to the specified venue',
+                            403
+                        );
+                    }
                 }
             }
 
@@ -331,16 +445,17 @@ export class ParticipantService {
         }
     }
 
-    async deleteParticipant(id: string): Promise<void> {
-        const existing = await this.participantRepository.findById(id);
-        if (!existing) {
-            throw new Error('Participant not found');
-        }
+    async deleteParticipant(id: string, userId?: string, userRole?: string): Promise<void> {
+        // Validate authorization by calling getParticipantById (which enforces geographic authorization)
+        await this.getParticipantById(id, userId, userRole);
 
         await this.participantRepository.delete(id);
     }
 
-    async getAddressHistory(participantId: string) {
+    async getAddressHistory(participantId: string, userId?: string, userRole?: string) {
+        // Validate authorization by calling getParticipantById (which enforces geographic authorization)
+        await this.getParticipantById(participantId, userId, userRole);
+
         const participant = await this.participantRepository.findById(participantId);
         if (!participant) {
             throw new Error('Participant not found');
@@ -459,12 +574,9 @@ export class ParticipantService {
         await this.addressHistoryRepository.delete(historyId);
     }
 
-    async getParticipantActivities(participantId: string) {
-        // Validate participant exists
-        const participant = await this.participantRepository.findById(participantId);
-        if (!participant) {
-            throw new Error('Participant not found');
-        }
+    async getParticipantActivities(participantId: string, userId?: string, userRole?: string) {
+        // Validate authorization by calling getParticipantById (which enforces geographic authorization)
+        await this.getParticipantById(participantId, userId, userRole);
 
         // Get assignments with activity and role details
         return this.assignmentRepository.findByParticipantId(participantId);

@@ -25,6 +25,7 @@ const EngagementDashboardPage = lazy(() => import('../pages/EngagementDashboardP
 const GrowthDashboardPage = lazy(() => import('../pages/GrowthDashboardPage'));
 const GeographicAnalyticsDashboardPage = lazy(() => import('../pages/GeographicAnalyticsDashboardPage'));
 const UsersPage = lazy(() => import('../pages/UsersPage'));
+const UserAuthorizationsPage = lazy(() => import('../pages/UserAuthorizationsPage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 
 export const router = createBrowserRouter([
@@ -135,6 +136,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute requiredRole="ADMINISTRATOR">
             <UsersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'users/:userId/authorizations',
+        element: (
+          <ProtectedRoute requiredRole="ADMINISTRATOR">
+            <UserAuthorizationsPage />
           </ProtectedRoute>
         ),
       },

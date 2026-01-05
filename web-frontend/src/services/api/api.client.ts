@@ -1,5 +1,6 @@
 import { AuthService } from '../auth/auth.service';
 import type { APIError } from '../../types';
+import { geographicFilterEvents } from '../../utils/geographic-filter-events';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
 
@@ -44,6 +45,13 @@ export class ApiClient {
         // Handle errors
         if (!response.ok) {
             const error: APIError = body || { code: 'UNKNOWN_ERROR', message: 'Request failed' };
+
+            // Check for geographic authorization denial
+            if (response.status === 403 && error.code === 'GEOGRAPHIC_AUTHORIZATION_DENIED') {
+                // Emit event to clear global geographic filter
+                geographicFilterEvents.emit();
+            }
+
             const errorObj: any = new Error(error.message);
             errorObj.response = {
                 status: response.status,

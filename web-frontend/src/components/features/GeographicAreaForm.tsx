@@ -158,8 +158,9 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
       areaType: string;
       parentGeographicAreaId?: string;
     }) => GeographicAreaService.createGeographicArea(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['geographicAreas'] });
+    onSuccess: async () => {
+      // Invalidate all geographic area queries to ensure tree view updates
+      await queryClient.invalidateQueries({ queryKey: ['geographicAreas'] });
       onSuccess();
     },
     onError: (err: Error) => {

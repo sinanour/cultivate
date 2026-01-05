@@ -24,6 +24,10 @@ This document defines the overall system requirements and references detailed sp
 - **Infrastructure**: The AWS cloud resources that host the system
 - **Venue**: A physical location where activities occur, representing either a public building or private residence with an address
 - **Geographic_Area**: A hierarchical geographic region (neighbourhood, community, city, cluster, county, province, state, country, continent, hemisphere, world) used to organize venues and report statistics
+- **Geographic_Authorization**: Access control rules that restrict user access to specific geographic areas
+- **Allow_List**: A set of geographic areas that a user is explicitly permitted to access
+- **Deny_List**: A set of geographic areas that a user is explicitly forbidden from accessing
+- **Authorized_Area**: A geographic area that a user has permission to access based on authorization rules
 
 ## System Architecture
 
@@ -220,7 +224,27 @@ The Cultivate system is organized into five independent packages:
 
 **Implementation:** See Backend API specification (Requirement 6: Analyze Community Engagement).
 
-### Requirement 8: Shared Data Models
+### Requirement 8: Granular Geographic Authorization
+
+**User Story:** As a system administrator, I want to control user access by geographic area with allow-listing and deny-listing rules, so that I can restrict users to specific regions and prevent unauthorized access to sensitive geographic data.
+
+#### Acceptance Criteria
+
+1. THE System SHALL support allow-listing user access to one or more geographic areas
+2. THE System SHALL support deny-listing user access to one or more geographic areas
+3. WHEN both allow-list and deny-list rules exist for a user, THE System SHALL apply deny-list rules with precedence over allow-list rules
+4. WHEN a user is allow-listed to a specific geographic area, THE System SHALL grant access to that area and all its descendant areas
+5. WHEN a user is allow-listed to a specific geographic area, THE System SHALL grant read-only access to all ancestor areas of the allowed area
+6. WHEN a user's access is limited by geographic authorization rules, THE System SHALL prevent the user from creating new geographic areas outside of their explicitly allowed areas or their descendants
+7. WHEN a user's access is limited by geographic authorization rules, THE System SHALL prevent the user from creating top-level geographic areas without a parent
+8. THE System SHALL apply geographic authorization filtering to all API endpoints including list, detail, analytics, and export endpoints
+9. WHEN no explicit geographic area filter is provided in an API request, THE System SHALL implicitly filter results based on the user's authorized geographic areas
+10. THE System SHALL provide an interface for administrators to view and modify geographic authorization rules for users
+11. THE System SHALL restrict modification of geographic authorization rules to ADMINISTRATOR role only
+
+**Implementation:** See Backend API and Web Frontend specifications.
+
+### Requirement 9: Shared Data Models
 
 **User Story:** As a developer, I want consistent data models across all packages, so that data is interpreted consistently.
 

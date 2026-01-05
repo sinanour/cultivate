@@ -39,25 +39,32 @@ This implementation plan covers the complete Cultivate system, which consists of
     - Deploy to dev environment
     - Verify API endpoints are accessible
     - Generate OpenAPI specification
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+    - Implement geographic authorization system
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 8.10, 8.11_
 
   - [ ]* 4.2 Write property tests for API contract compliance
     - **Property 8: API Contract Compliance**
-    - **Validates: Requirements 7.2**
+    - **Property 23: Geographic Authorization Enforcement**
+    - **Property 24: Geographic Authorization Deny Precedence**
+    - **Property 25: Geographic Authorization Hierarchical Access**
+    - **Validates: Requirements 7.2, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9**
 
   - [ ] 4.2 Deploy to staging environment
     - Deploy API to staging
     - Run integration tests against staging
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+    - Test geographic authorization with various rule combinations
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 8.10, 8.11_
 
 - [ ] 5. Checkpoint - Verify backend API deployment
   - Ensure all tests pass, ask the user if questions arise.
+  - Verify geographic authorization filtering works correctly
 
 - [ ] 6. Implement Web Frontend package
   - [ ] 6.1 Complete all web frontend tasks
     - Follow web-frontend package tasks.md
     - Configure API endpoint for dev environment
     - Test offline functionality
+    - Implement geographic authorization management UI
     - Deploy to dev S3/CloudFront
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
@@ -259,6 +266,17 @@ This implementation plan covers the complete Cultivate system, which consists of
     - Verify encryption in transit (HTTPS)
     - Test secure credential storage (Keychain, EncryptedSharedPreferences)
     - _Requirements: 6.4_
+
+  - [ ] 16.4 Test geographic authorization security
+    - Test ALLOW and DENY rule combinations
+    - Verify deny-first precedence
+    - Test descendant access from ALLOW rules
+    - Test read-only ancestor access
+    - Test implicit filtering on all endpoints
+    - Test authorization validation on create operations
+    - Verify users cannot access unauthorized areas
+    - Test JWT token includes authorized area IDs
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9_
 
 - [ ] 17. User acceptance testing
   - [ ] 17.1 Test complete user workflows

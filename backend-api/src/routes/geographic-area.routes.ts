@@ -125,14 +125,53 @@ export class GeographicAreaRoutes {
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
             const search = req.query.search as string | undefined;
 
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const readOnlyAreaIds = req.user?.readOnlyAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit geographic area access
+            if (geographicAreaId && hasGeographicRestrictions) {
+                const hasAccess = authorizedAreaIds.includes(geographicAreaId);
+                if (!hasAccess) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                }
+            }
+
             if (page !== undefined || limit !== undefined) {
-                const result = await this.geographicAreaService.getAllGeographicAreasPaginated(page, limit, geographicAreaId, search);
+                const result = await this.geographicAreaService.getAllGeographicAreasPaginated(
+                    page,
+                    limit,
+                    geographicAreaId,
+                    search,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions,
+                    readOnlyAreaIds
+                );
                 res.status(200).json({ success: true, ...result });
             } else {
-                const areas = await this.geographicAreaService.getAllGeographicAreas(geographicAreaId, search);
+                const areas = await this.geographicAreaService.getAllGeographicAreas(
+                    geographicAreaId,
+                    search,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions,
+                    readOnlyAreaIds
+                );
                 res.status(200).json({ success: true, data: areas });
             }
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
             if (error instanceof Error && error.message.includes('Page')) {
                 res.status(400).json({
                     code: 'VALIDATION_ERROR',
@@ -152,13 +191,23 @@ export class GeographicAreaRoutes {
     private async getById(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const area = await this.geographicAreaService.getGeographicAreaById(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const area = await this.geographicAreaService.getGeographicAreaById(id, userId, userRole);
             res.status(200).json({ success: true, data: area });
         } catch (error) {
             if (error instanceof Error && error.message === 'Geographic area not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this geographic area',
                     details: {},
                 });
             }
@@ -173,13 +222,23 @@ export class GeographicAreaRoutes {
     private async getChildren(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const children = await this.geographicAreaService.getChildren(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const children = await this.geographicAreaService.getChildren(id, userId, userRole);
             res.status(200).json({ success: true, data: children });
         } catch (error) {
             if (error instanceof Error && error.message === 'Geographic area not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this geographic area',
                     details: {},
                 });
             }
@@ -194,13 +253,23 @@ export class GeographicAreaRoutes {
     private async getAncestors(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const ancestors = await this.geographicAreaService.getAncestors(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const ancestors = await this.geographicAreaService.getAncestors(id, userId, userRole);
             res.status(200).json({ success: true, data: ancestors });
         } catch (error) {
             if (error instanceof Error && error.message === 'Geographic area not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this geographic area',
                     details: {},
                 });
             }
@@ -215,13 +284,23 @@ export class GeographicAreaRoutes {
     private async getVenues(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const venues = await this.geographicAreaService.getVenues(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const venues = await this.geographicAreaService.getVenues(id, userId, userRole);
             res.status(200).json({ success: true, data: venues });
         } catch (error) {
             if (error instanceof Error && error.message === 'Geographic area not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this geographic area',
                     details: {},
                 });
             }
@@ -236,13 +315,23 @@ export class GeographicAreaRoutes {
     private async getStatistics(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const statistics = await this.geographicAreaService.getStatistics(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const statistics = await this.geographicAreaService.getStatistics(id, userId, userRole);
             res.status(200).json({ success: true, data: statistics });
         } catch (error) {
             if (error instanceof Error && error.message === 'Geographic area not found') {
                 return res.status(404).json({
                     code: 'NOT_FOUND',
                     message: error.message,
+                    details: {},
+                });
+            }
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: 'You do not have permission to access this geographic area',
                     details: {},
                 });
             }
@@ -256,10 +345,25 @@ export class GeographicAreaRoutes {
 
     private async create(req: AuthenticatedRequest, res: Response) {
         try {
-            const area = await this.geographicAreaService.createGeographicArea(req.body);
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            const area = await this.geographicAreaService.createGeographicArea(
+                req.body,
+                authorizedAreaIds,
+                hasGeographicRestrictions
+            );
             res.status(201).json({ success: true, data: area });
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: error.message,
+                        details: {},
+                    });
+                }
                 if (error.message.includes('required')) {
                     return res.status(400).json({
                         code: 'VALIDATION_ERROR',
@@ -286,10 +390,25 @@ export class GeographicAreaRoutes {
     private async update(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const area = await this.geographicAreaService.updateGeographicArea(id, req.body);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const area = await this.geographicAreaService.updateGeographicArea(
+                id,
+                req.body,
+                userId,
+                userRole
+            );
             res.status(200).json({ success: true, data: area });
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to update this geographic area',
+                        details: {},
+                    });
+                }
                 if (error.message === 'Geographic area not found') {
                     return res.status(404).json({
                         code: 'NOT_FOUND',
@@ -330,10 +449,24 @@ export class GeographicAreaRoutes {
     private async delete(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            await this.geographicAreaService.deleteGeographicArea(id);
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            await this.geographicAreaService.deleteGeographicArea(
+                id,
+                userId,
+                userRole
+            );
             res.status(204).send();
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    return res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to delete this geographic area',
+                        details: {},
+                    });
+                }
                 if (error.message === 'Geographic area not found') {
                     return res.status(404).json({
                         code: 'NOT_FOUND',

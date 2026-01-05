@@ -34,6 +34,7 @@ export function GeographicAreaFilterSelector() {
     setGeographicAreaFilter,
     clearFilter,
     isLoading,
+    isAuthorizedArea,
     formatAreaOption,
   } = useGlobalGeographicFilter();
 
@@ -90,6 +91,9 @@ export function GeographicAreaFilterSelector() {
       const reversedAncestors = [...areaWithHierarchy.ancestors].reverse();
       
       reversedAncestors.forEach((ancestor) => {
+        // All ancestors are clickable
+        // Authorized ancestors will set filter to that area
+        // Unauthorized ancestors will clear the filter (go to "Global")
         items.push({
           text: ancestor.name,
           href: `#${ancestor.id}`,
@@ -97,7 +101,7 @@ export function GeographicAreaFilterSelector() {
       });
     }
 
-    // Add current area as last item
+    // Add current area as last item (always clickable since it's the selected filter)
     items.push({
       text: selectedGeographicArea.name,
       href: `#${selectedGeographicArea.id}`,
@@ -109,7 +113,16 @@ export function GeographicAreaFilterSelector() {
   const handleBreadcrumbClick: BreadcrumbGroupProps['onFollow'] = (event) => {
     event.preventDefault();
     const areaId = event.detail.href.substring(1); // Remove the '#' prefix
-    setGeographicAreaFilter(areaId);
+    
+    if (!areaId) return;
+    
+    // If clicking on an authorized area, set filter to that area
+    // If clicking on an unauthorized ancestor, clear the filter (go to "Global")
+    if (isAuthorizedArea(areaId)) {
+      setGeographicAreaFilter(areaId);
+    } else {
+      clearFilter();
+    }
   };
 
   return (

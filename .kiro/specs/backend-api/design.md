@@ -100,6 +100,12 @@ GET    /api/v1/users                   -> List all users (admin only)
 POST   /api/v1/users                   -> Create user (admin only)
 PUT    /api/v1/users/:id               -> Update user (admin only)
 
+// Geographic Authorization Routes (Admin Only)
+GET    /api/v1/users/:id/geographic-authorizations -> List user's authorization rules (admin only)
+POST   /api/v1/users/:id/geographic-authorizations -> Create authorization rule (admin only)
+DELETE /api/v1/users/:id/geographic-authorizations/:authId -> Delete authorization rule (admin only)
+GET    /api/v1/users/:id/authorized-areas -> Get user's effective authorized areas (admin only)
+
 // Participant Routes
 GET    /api/v1/participants            -> List all participants (supports ?geographicAreaId=<id> and ?search=<text> filters)
 GET    /api/v1/participants/:id        -> Get participant by ID
@@ -187,8 +193,9 @@ Services implement business logic and coordinate operations:
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering)
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
-- **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables
-- **AuditService**: Logs user actions, stores audit records
+- **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload
+- **GeographicAuthorizationService**: Manages user geographic authorization rules (CRUD operations), evaluates user access to geographic areas (deny-first logic), calculates effective authorized areas (including descendants and ancestors), validates geographic restrictions for create operations, provides authorization filtering for all data access, enforces authorization on individual resource access (GET by ID, PUT, DELETE), validates authorization for nested resource endpoints, provides authorization bypass for administrators, logs all authorization denials
+- **AuditService**: Logs user actions, stores audit records, logs geographic authorization rule changes
 
 ### 3. Repository Layer
 
@@ -199,6 +206,7 @@ Repositories encapsulate Prisma database access:
 - **RoleRepository**: CRUD operations for roles
 - **PopulationRepository**: CRUD operations for populations, reference counting for deletion validation
 - **ParticipantPopulationRepository**: CRUD operations for participant-population associations, duplicate prevention
+- **UserGeographicAuthorizationRepository**: CRUD operations for geographic authorization rules, queries for user's authorization rules, calculates effective authorized areas with descendants and ancestors
 - **UserRepository**: CRUD operations for users, includes findAll, findByEmail, findById, create, and update methods
 - **ParticipantRepository**: CRUD operations and text-based search for participants (supports filtering by name/email and geographic area with pagination)
 - **ActivityRepository**: CRUD operations and queries for activities
@@ -469,6 +477,19 @@ The API uses Prisma to define the following database models:
 - role: Enum (ADMINISTRATOR, EDITOR, READ_ONLY)
 - createdAt: DateTime
 - updatedAt: DateTime
+- geographicAuthorizations: UserGeographicAuthorization[] (relation)
+
+**UserGeographicAuthorization**
+- id: UUID (primary key)
+- userId: UUID (foreign key)
+- geographicAreaId: UUID (foreign key)
+- ruleType: Enum (ALLOW, DENY)
+- createdAt: DateTime
+- createdBy: UUID (foreign key to User)
+- user: User (relation)
+- geographicArea: GeographicArea (relation)
+- creator: User (relation)
+- Unique constraint: (userId, geographicAreaId) to prevent duplicate rules
 
 **ActivityCategory**
 - id: UUID (primary key)
@@ -629,6 +650,11 @@ The API uses Prisma to define the following database models:
 - ActivityVenueHistory belongs to one Activity and one Venue (many-to-one for each)
 - ParticipantAddressHistory belongs to one Participant and one Venue (many-to-one for each)
 - User has many AuditLogs (one-to-many)
+- User has many UserGeographicAuthorization records (one-to-many)
+- UserGeographicAuthorization belongs to one User (many-to-one)
+- UserGeographicAuthorization belongs to one GeographicArea (many-to-one)
+- UserGeographicAuthorization has one creator User (many-to-one)
+- GeographicArea has many UserGeographicAuthorization records (one-to-many)
 
 ### Temporal Data and Null EffectiveFrom Handling
 
@@ -661,6 +687,261 @@ The API uses Prisma to define the following database models:
    - Database unique constraint on `(participantId, effectiveFrom)` prevents duplicate null values
    - Database unique constraint on `(activityId, effectiveFrom)` prevents duplicate null values
    - Application-level validation provides clear error messages when attempting to create duplicate null records
+
+### Geographic Authorization Architecture
+
+The system implements granular geographic authorization to control user access at the geographic area level:
+
+**Authorization Model:**
+- **Allow-listing**: Users can be granted access to specific geographic areas
+- **Deny-listing**: Users can be explicitly denied access to specific geographic areas
+- **Precedence**: DENY rules take precedence over ALLOW rules
+- **Hierarchical Access**: ALLOW rules grant access to the area and all descendants
+- **Ancestor Access**: ALLOW rules grant read-only access to all ancestor areas
+- **Default Behavior**: Users with no authorization rules have unrestricted access
+
+**Authorization Evaluation Logic:**
+
+```typescript
+function evaluateAccess(userId: string, geographicAreaId: string): AccessLevel {
+  const rules = getUserAuthorizationRules(userId);
+  
+  // No rules = unrestricted access
+  if (rules.length === 0) {
+    return AccessLevel.FULL;
+  }
+  
+  // Check for DENY rules first (including ancestors)
+  const ancestors = getAncestors(geographicAreaId);
+  for (const rule of rules.filter(r => r.ruleType === 'DENY')) {
+    if (rule.geographicAreaId === geographicAreaId || ancestors.includes(rule.geographicAreaId)) {
+      return AccessLevel.NONE;
+    }
+  }
+  
+  // Check for ALLOW rules
+  for (const rule of rules.filter(r => r.ruleType === 'ALLOW')) {
+    const descendants = getDescendants(rule.geographicAreaId);
+    const ancestors = getAncestors(rule.geographicAreaId);
+    
+    // Full access to allowed area and descendants
+    if (rule.geographicAreaId === geographicAreaId || descendants.includes(geographicAreaId)) {
+      return AccessLevel.FULL;
+    }
+    
+    // Read-only access to ancestors
+    if (ancestors.includes(geographicAreaId)) {
+      return AccessLevel.READ_ONLY;
+    }
+  }
+  
+  // No matching rules = no access
+  return AccessLevel.NONE;
+}
+```
+
+**JWT Token Enhancement:**
+
+The JWT token payload is enhanced to include authorized geographic area IDs for efficient authorization checks:
+
+```typescript
+interface JWTPayload {
+  sub: string;                    // User ID
+  email: string;
+  systemRole: SystemRole;
+  authorizedAreaIds: string[];    // IDs of areas user can access (full access)
+  readOnlyAreaIds: string[];      // IDs of ancestor areas (read-only access)
+  hasGeographicRestrictions: boolean;  // True if user has any authorization rules
+  iat: number;
+  exp: number;
+}
+```
+
+**Implicit Filtering:**
+
+When no explicit `geographicAreaId` parameter is provided in API requests, the system automatically filters results based on the user's authorized areas:
+
+```typescript
+async getParticipants(page?, limit?, geographicAreaId?, search?, userId?) {
+  // Determine effective geographic filter
+  let effectiveAreaIds: string[] | undefined;
+  
+  if (geographicAreaId) {
+    // Explicit filter provided - validate authorization
+    if (!isAuthorized(userId, geographicAreaId)) {
+      throw new ForbiddenError('GEOGRAPHIC_AUTHORIZATION_DENIED');
+    }
+    effectiveAreaIds = [geographicAreaId, ...getDescendants(geographicAreaId)];
+  } else {
+    // No explicit filter - apply implicit filtering based on authorization
+    const authInfo = getUserAuthorizationInfo(userId);
+    if (authInfo.hasGeographicRestrictions) {
+      effectiveAreaIds = authInfo.authorizedAreaIds;
+    }
+    // If no restrictions, effectiveAreaIds remains undefined (no filtering)
+  }
+  
+  // Apply geographic filter to query
+  return this.participantRepository.findMany({ 
+    geographicAreaIds: effectiveAreaIds,
+    search,
+    page,
+    limit
+  });
+}
+```
+
+**Create Operation Validation:**
+
+When users create entities associated with geographic areas, the system validates authorization:
+
+```typescript
+async createVenue(data: VenueCreateData, userId: string) {
+  // Validate user is authorized to create in this geographic area
+  const accessLevel = evaluateAccess(userId, data.geographicAreaId);
+  if (accessLevel !== AccessLevel.FULL) {
+    throw new ForbiddenError('GEOGRAPHIC_AUTHORIZATION_DENIED');
+  }
+  
+  return this.venueRepository.create(data);
+}
+
+async createGeographicArea(data: GeographicAreaCreateData, userId: string) {
+  const authInfo = getUserAuthorizationInfo(userId);
+  
+  // If user has geographic restrictions
+  if (authInfo.hasGeographicRestrictions) {
+    // Prevent creating top-level areas
+    if (!data.parentGeographicAreaId) {
+      throw new ForbiddenError('CANNOT_CREATE_TOP_LEVEL_AREA');
+    }
+    
+    // Validate parent is in authorized areas
+    const accessLevel = evaluateAccess(userId, data.parentGeographicAreaId);
+    if (accessLevel !== AccessLevel.FULL) {
+      throw new ForbiddenError('GEOGRAPHIC_AUTHORIZATION_DENIED');
+    }
+  }
+  
+  return this.geographicAreaRepository.create(data);
+}
+```
+
+**Individual Resource Access Authorization:**
+
+When users access individual resources by ID (detail views, updates, deletes), the system validates authorization:
+
+```typescript
+async getParticipantById(id: string, userId: string) {
+  // Fetch participant with current home venue
+  const participant = await this.participantRepository.findById(id);
+  if (!participant) {
+    throw new NotFoundError('Participant not found');
+  }
+  
+  // Determine current home venue from address history
+  const currentAddress = await this.getParticipantCurrentAddress(participant.id);
+  if (!currentAddress) {
+    // No address history - allow access (participant not yet associated with any area)
+    return participant;
+  }
+  
+  // Validate authorization to access the venue's geographic area
+  const accessLevel = evaluateAccess(userId, currentAddress.venue.geographicAreaId);
+  if (accessLevel === AccessLevel.NONE) {
+    throw new ForbiddenError('GEOGRAPHIC_AUTHORIZATION_DENIED');
+  }
+  
+  return participant;
+}
+
+async getActivityById(id: string, userId: string) {
+  // Fetch activity with current venue
+  const activity = await this.activityRepository.findById(id);
+  if (!activity) {
+    throw new NotFoundError('Activity not found');
+  }
+  
+  // Determine current venue from venue history
+  const currentVenue = await this.getActivityCurrentVenue(activity.id);
+  if (!currentVenue) {
+    // No venue history - allow access (activity not yet associated with any area)
+    return activity;
+  }
+  
+  // Validate authorization to access the venue's geographic area
+  const accessLevel = evaluateAccess(userId, currentVenue.geographicAreaId);
+  if (accessLevel === AccessLevel.NONE) {
+    throw new ForbiddenError('GEOGRAPHIC_AUTHORIZATION_DENIED');
+  }
+  
+  return activity;
+}
+
+async getVenueById(id: string, userId: string) {
+  // Fetch venue
+  const venue = await this.venueRepository.findById(id);
+  if (!venue) {
+    throw new NotFoundError('Venue not found');
+  }
+  
+  // Validate authorization to access the venue's geographic area
+  const accessLevel = evaluateAccess(userId, venue.geographicAreaId);
+  if (accessLevel === AccessLevel.NONE) {
+    throw new ForbiddenError('GEOGRAPHIC_AUTHORIZATION_DENIED');
+  }
+  
+  return venue;
+}
+
+async getGeographicAreaById(id: string, userId: string) {
+  // Fetch geographic area
+  const area = await this.geographicAreaRepository.findById(id);
+  if (!area) {
+    throw new NotFoundError('Geographic area not found');
+  }
+  
+  // Validate authorization (includes read-only access to ancestors)
+  const accessLevel = evaluateAccess(userId, id);
+  if (accessLevel === AccessLevel.NONE) {
+    throw new ForbiddenError('GEOGRAPHIC_AUTHORIZATION_DENIED');
+  }
+  
+  return area;
+}
+```
+
+**Update and Delete Authorization:**
+
+All update (PUT) and delete (DELETE) operations follow the same authorization pattern as GET operations - they first validate that the user has access to the resource's geographic area before allowing the operation.
+
+**Nested Resource Authorization:**
+
+Nested resource endpoints (e.g., `/participants/:id/activities`, `/venues/:id/participants`) enforce authorization on the parent resource:
+
+```typescript
+async getParticipantActivities(participantId: string, userId: string) {
+  // First validate access to the participant
+  await this.getParticipantById(participantId, userId);  // Throws 403 if not authorized
+  
+  // If authorized, return activities
+  return this.assignmentRepository.findByParticipant(participantId);
+}
+```
+
+**Administrator Bypass:**
+
+Users with ADMINISTRATOR role bypass geographic authorization checks for administrative operations, allowing them to manage all resources regardless of geographic restrictions.
+
+**Design Rationale:**
+- Storing authorized area IDs in JWT reduces database queries for every request
+- Deny-first evaluation provides clear security semantics
+- Hierarchical access (descendants + ancestors) aligns with geographic hierarchy model
+- Implicit filtering ensures users never see unauthorized data in lists
+- Individual resource authorization prevents URL-based bypass attacks
+- Read-only ancestor access enables navigation context without granting full access
+- Consistent authorization across all access patterns (lists, details, updates, deletes, nested resources)
+- Administrator bypass enables system management without geographic restrictions
 
 ### Referential Integrity
 
@@ -1615,6 +1896,150 @@ The API uses Prisma to define the following database models:
 *For any* invalid ISO 8601 datetime string provided for startDate or endDate, the API should return 400 Bad Request.
 **Validates: Requirements 6A.2, 6A.22**
 
+### Geographic Authorization Properties
+
+**Property 155: Authorization rule creation**
+*For any* valid user ID, geographic area ID, and rule type (ALLOW or DENY), creating an authorization rule via POST should result in the rule being retrievable via GET.
+**Validates: Requirements 24.2, 24.5, 24.6**
+
+**Property 156: Duplicate authorization rule prevention**
+*For any* user and geographic area combination, attempting to create a second authorization rule should be rejected with a 400 error.
+**Validates: Requirements 24.7**
+
+**Property 157: Deny rule precedence**
+*For any* user with both ALLOW and DENY rules for overlapping geographic areas, the DENY rule should take precedence and deny access.
+**Validates: Requirements 24.9, 24.10**
+
+**Property 158: Descendant access from allow rule**
+*For any* user with an ALLOW rule for a geographic area, the user should have full access to that area and all its descendant areas.
+**Validates: Requirements 24.11, 24.37**
+
+**Property 159: Ancestor read-only access from allow rule**
+*For any* user with an ALLOW rule for a geographic area, the user should have read-only access to all ancestor areas.
+**Validates: Requirements 24.12, 24.38**
+
+**Property 160: Unrestricted access with no rules**
+*For any* user with no geographic authorization rules, the user should have access to all geographic areas.
+**Validates: Requirements 24.13**
+
+**Property 161: Restricted access with rules**
+*For any* user with at least one geographic authorization rule, the user should only have access to explicitly authorized areas (and their descendants/ancestors).
+**Validates: Requirements 24.14**
+
+**Property 162: Implicit filtering on list endpoints**
+*For any* list endpoint request without an explicit geographicAreaId parameter from a user with geographic restrictions, the API should implicitly filter results to only authorized geographic areas.
+**Validates: Requirements 24.23**
+
+**Property 163: Explicit filter authorization validation**
+*For any* list endpoint request with an explicit geographicAreaId parameter, the API should validate that the user is authorized to access that geographic area and return 403 if not.
+**Validates: Requirements 24.24, 24.25**
+
+**Property 164: Venue creation authorization**
+*For any* venue creation request, the API should validate that the user is authorized to access the venue's geographic area and return 403 if not.
+**Validates: Requirements 24.28**
+
+**Property 165: Activity creation authorization**
+*For any* activity creation request with a venue, the API should validate that the user is authorized to access the venue's geographic area and return 403 if not.
+**Validates: Requirements 24.29**
+
+**Property 166: Geographic area creation authorization**
+*For any* geographic area creation request from a user with geographic restrictions, the API should validate that the parent area is within authorized areas and return 403 if not.
+**Validates: Requirements 24.26**
+
+**Property 167: Top-level area creation restriction**
+*For any* geographic area creation request without a parent from a user with geographic restrictions, the API should return 403 Forbidden.
+**Validates: Requirements 24.27**
+
+**Property 168: Authorization filtering on analytics**
+*For any* analytics endpoint request from a user with geographic restrictions, the API should filter results to only include data from authorized geographic areas.
+**Validates: Requirements 24.19, 24.20, 24.21**
+
+**Property 169: Authorization filtering on exports**
+*For any* export endpoint request from a user with geographic restrictions, the API should export only data from authorized geographic areas.
+**Validates: Requirements 24.22**
+
+**Property 170: JWT token includes authorized areas**
+*For any* JWT token generated for a user with geographic authorization rules, the token payload should include the authorized area IDs.
+**Validates: Requirements 24.33, 24.34, 24.35**
+
+**Property 171: Authorization management admin restriction**
+*For any* geographic authorization management endpoint request from a non-administrator, the API should return 403 Forbidden.
+**Validates: Requirements 24.31, 24.32**
+
+**Property 172: Authorization rule audit logging**
+*For any* geographic authorization rule creation or deletion, an audit log entry should be created.
+**Validates: Requirements 24.39**
+
+### Individual Resource Access Authorization Properties
+
+**Property 173: Participant detail access authorization**
+*For any* GET /api/v1/participants/:id request, the API should determine the participant's current home venue from their most recent address history record, validate that the venue's geographic area is within the user's authorized areas, and return 403 Forbidden with GEOGRAPHIC_AUTHORIZATION_DENIED if not authorized.
+**Validates: Requirements 25.1, 25.5, 25.6, 25.7**
+
+**Property 174: Activity detail access authorization**
+*For any* GET /api/v1/activities/:id request, the API should determine the activity's current venue from its most recent venue history record, validate that the venue's geographic area is within the user's authorized areas, and return 403 Forbidden with GEOGRAPHIC_AUTHORIZATION_DENIED if not authorized.
+**Validates: Requirements 25.2, 25.8, 25.9, 25.10**
+
+**Property 175: Venue detail access authorization**
+*For any* GET /api/v1/venues/:id request, the API should validate that the venue's geographic area is within the user's authorized areas and return 403 Forbidden with GEOGRAPHIC_AUTHORIZATION_DENIED if not authorized.
+**Validates: Requirements 25.3, 25.11, 25.12**
+
+**Property 176: Geographic area detail access authorization**
+*For any* GET /api/v1/geographic-areas/:id request, the API should validate that the geographic area is within the user's authorized areas (including read-only access to ancestors) and return 403 Forbidden with GEOGRAPHIC_AUTHORIZATION_DENIED if not authorized.
+**Validates: Requirements 25.4, 25.13, 25.14**
+
+**Property 177: Participant update authorization**
+*For any* PUT /api/v1/participants/:id request, the API should validate that the participant's current home venue's geographic area is within the user's authorized areas and return 403 Forbidden if not authorized.
+**Validates: Requirements 25.15, 25.23**
+
+**Property 178: Activity update authorization**
+*For any* PUT /api/v1/activities/:id request, the API should validate that the activity's current venue's geographic area is within the user's authorized areas and return 403 Forbidden if not authorized.
+**Validates: Requirements 25.16, 25.24**
+
+**Property 179: Venue update authorization**
+*For any* PUT /api/v1/venues/:id request, the API should validate that the venue's geographic area is within the user's authorized areas and return 403 Forbidden if not authorized.
+**Validates: Requirements 25.17, 25.25**
+
+**Property 180: Geographic area update authorization**
+*For any* PUT /api/v1/geographic-areas/:id request, the API should validate that the geographic area is within the user's authorized areas and return 403 Forbidden if not authorized.
+**Validates: Requirements 25.18, 25.26**
+
+**Property 181: Participant deletion authorization**
+*For any* DELETE /api/v1/participants/:id request, the API should validate that the participant's current home venue's geographic area is within the user's authorized areas and return 403 Forbidden if not authorized.
+**Validates: Requirements 25.19, 25.27**
+
+**Property 182: Activity deletion authorization**
+*For any* DELETE /api/v1/activities/:id request, the API should validate that the activity's current venue's geographic area is within the user's authorized areas and return 403 Forbidden if not authorized.
+**Validates: Requirements 25.20, 25.28**
+
+**Property 183: Venue deletion authorization**
+*For any* DELETE /api/v1/venues/:id request, the API should validate that the venue's geographic area is within the user's authorized areas and return 403 Forbidden if not authorized.
+**Validates: Requirements 25.21, 25.29**
+
+**Property 184: Geographic area deletion authorization**
+*For any* DELETE /api/v1/geographic-areas/:id request, the API should validate that the geographic area is within the user's authorized areas and return 403 Forbidden if not authorized.
+**Validates: Requirements 25.22, 25.30**
+
+**Property 185: Nested resource access authorization**
+*For any* nested resource endpoint (participants/:id/activities, activities/:id/participants, venues/:id/activities, etc.), the API should enforce geographic authorization on the parent resource before returning nested data.
+**Validates: Requirements 25.31, 25.32, 25.33, 25.34, 25.35, 25.36, 25.37, 25.38, 25.39, 25.40, 25.41**
+
+**Property 186: Unrestricted user bypass**
+*For any* user with no geographic authorization rules, all individual resource access requests should be allowed without geographic authorization checks.
+**Validates: Requirements 25.42**
+
+**Property 187: Administrator authorization bypass**
+*For any* user with ADMINISTRATOR role, all individual resource access requests should bypass geographic authorization checks for administrative operations.
+**Validates: Requirements 25.43**
+
+**Property 188: Authorization denial audit logging**
+*For any* geographic authorization denial on individual resource access, an audit log entry should be created with user ID, resource type, resource ID, and attempted action.
+**Validates: Requirements 25.45**
+
+**Property 189: Consistent authorization across access patterns**
+*For any* resource accessible through multiple endpoints (direct access, nested resources, related entities), geographic authorization should be applied consistently across all access patterns.
+**Validates: Requirements 25.44**
+
 ## Error Handling
 
 ### Error Response Format
@@ -1633,9 +2058,13 @@ All errors follow a consistent format:
 
 - **400 Bad Request**: Validation errors, invalid input, business rule violations
 - **401 Unauthorized**: Missing or invalid JWT token, expired token
-- **403 Forbidden**: Insufficient permissions for the requested operation
+- **403 Forbidden**: Insufficient permissions for the requested operation, geographic authorization denied
 - **404 Not Found**: Resource does not exist
 - **500 Internal Server Error**: Unexpected errors, database failures
+
+**Error Codes:**
+- `GEOGRAPHIC_AUTHORIZATION_DENIED`: User lacks authorization to access the requested geographic area
+- `CANNOT_CREATE_TOP_LEVEL_AREA`: User with geographic restrictions cannot create top-level geographic areas
 
 ### Error Handling Strategy
 

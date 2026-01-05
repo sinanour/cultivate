@@ -66,6 +66,9 @@ export class ErrorHandler {
             if (error.message.includes('401') || error.message.includes('Unauthorized')) {
                 return 'Your session has expired. Please log in again.';
             }
+            if (error.message.includes('geographic area') || error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                return error.message; // Use the specific message from the backend
+            }
             if (error.message.includes('403') || error.message.includes('Forbidden')) {
                 return 'You do not have permission to perform this action.';
             }

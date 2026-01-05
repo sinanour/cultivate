@@ -4,6 +4,8 @@ import { SyncRoutes } from '../../routes/sync.routes';
 import { SyncService } from '../../services/sync.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
+import { createMockTokenPayload } from '../helpers/token-payload.helper';
+import { UserRole } from '@prisma/client';
 
 jest.mock('../../services/sync.service');
 
@@ -22,7 +24,7 @@ describe('SyncRoutes', () => {
         mockAuthzMiddleware = new AuthorizationMiddleware() as jest.Mocked<AuthorizationMiddleware>;
 
         mockAuthMiddleware.authenticate = jest.fn().mockReturnValue((req: any, _res: any, next: any) => {
-            req.user = { userId: 'user-1', email: 'test@example.com', role: 'EDITOR' };
+            req.user = createMockTokenPayload(UserRole.EDITOR);
             next();
         });
 

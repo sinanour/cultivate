@@ -5,6 +5,8 @@ import { RoleService } from '../../services/role.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
 import { AuditLoggingMiddleware } from '../../middleware/audit-logging.middleware';
+import { createMockTokenPayload } from '../helpers/token-payload.helper';
+import { UserRole } from '@prisma/client';
 
 jest.mock('../../services/role.service');
 
@@ -25,7 +27,7 @@ describe('RoleRoutes', () => {
         mockAuditMiddleware = new AuditLoggingMiddleware(null as any) as jest.Mocked<AuditLoggingMiddleware>;
 
         mockAuthMiddleware.authenticate = jest.fn().mockReturnValue((req: any, _res: any, next: any) => {
-            req.user = { userId: 'user-1', email: 'test@example.com', role: 'EDITOR' };
+            req.user = createMockTokenPayload(UserRole.EDITOR);
             next();
         });
 

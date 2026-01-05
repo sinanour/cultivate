@@ -18,6 +18,7 @@ import { ActivityRepository } from './repositories/activity.repository';
 import { ActivityVenueHistoryRepository } from './repositories/activity-venue-history.repository';
 import { AssignmentRepository } from './repositories/assignment.repository';
 import { AuditLogRepository } from './repositories/audit-log.repository';
+import { UserGeographicAuthorizationRepository } from './repositories/user-geographic-authorization.repository';
 import { AuthService } from './services/auth.service';
 import { UserService } from './services/user.service';
 import { ActivityCategoryService } from './services/activity-category.service';
@@ -32,6 +33,7 @@ import { AssignmentService } from './services/assignment.service';
 import { AnalyticsService } from './services/analytics.service';
 import { SyncService } from './services/sync.service';
 import { GeocodingService } from './services/geocoding.service';
+import { GeographicAuthorizationService } from './services/geographic-authorization.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
@@ -55,6 +57,7 @@ import { AssignmentRoutes } from './routes/assignment.routes';
 import { AnalyticsRoutes } from './routes/analytics.routes';
 import { SyncRoutes } from './routes/sync.routes';
 import { GeocodingRoutes } from './routes/geocoding.routes';
+import { GeographicAuthorizationRoutes } from './routes/geographic-authorization.routes';
 
 // Load environment variables
 dotenv.config();
@@ -80,9 +83,16 @@ const activityRepository = new ActivityRepository(prisma);
 const activityVenueHistoryRepository = new ActivityVenueHistoryRepository(prisma);
 const assignmentRepository = new AssignmentRepository(prisma);
 const auditLogRepository = new AuditLogRepository(prisma);
+const userGeographicAuthorizationRepository = new UserGeographicAuthorizationRepository(prisma);
 
 // Initialize services
-const authService = new AuthService(userRepository);
+const geographicAuthorizationService = new GeographicAuthorizationService(
+  userGeographicAuthorizationRepository,
+  geographicAreaRepository,
+  userRepository,
+  auditLogRepository
+);
+const authService = new AuthService(userRepository, geographicAuthorizationService);
 const userService = new UserService(userRepository);
 const activityCategoryService = new ActivityCategoryService(activityCategoryRepository);
 const activityTypeService = new ActivityTypeService(activityTypeRepository, activityCategoryRepository);
@@ -97,17 +107,19 @@ const participantService = new ParticipantService(
   addressHistoryRepository,
   assignmentRepository,
   prisma,
-  geographicAreaRepository
+  geographicAreaRepository,
+  geographicAuthorizationService
 );
-const geographicAreaService = new GeographicAreaService(geographicAreaRepository, prisma);
-const venueService = new VenueService(venueRepository, geographicAreaRepository);
+const geographicAreaService = new GeographicAreaService(geographicAreaRepository, prisma, geographicAuthorizationService);
+const venueService = new VenueService(venueRepository, geographicAreaRepository, geographicAuthorizationService);
 const activityService = new ActivityService(
   activityRepository,
   activityTypeRepository,
   activityVenueHistoryRepository,
   venueRepository,
   prisma,
-  geographicAreaRepository
+  geographicAreaRepository,
+  geographicAuthorizationService
 );
 const assignmentService = new AssignmentService(
   assignmentRepository,
@@ -127,6 +139,11 @@ const auditLoggingMiddleware = new AuditLoggingMiddleware(auditLogRepository);
 // Initialize routes
 const authRoutes = new AuthRoutes(authService, authMiddleware, auditLoggingMiddleware);
 const userRoutes = new UserRoutes(userService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
+const geographicAuthorizationRoutes = new GeographicAuthorizationRoutes(
+  geographicAuthorizationService,
+  authMiddleware,
+  authorizationMiddleware
+);
 const activityCategoryRoutes = new ActivityCategoryRoutes(
   activityCategoryService,
   authMiddleware,
@@ -196,6 +213,7 @@ app.get('/api/v1/docs/openapi.json', (_req, res) => {
 // API Routes (v1)
 app.use('/api/v1/auth', authRateLimiter, authRoutes.getRouter());
 app.use('/api/v1/users', smartRateLimiter, userRoutes.getRouter());
+app.use('/api/v1/users', smartRateLimiter, geographicAuthorizationRoutes.router);
 app.use('/api/v1/activity-categories', smartRateLimiter, activityCategoryRoutes.getRouter());
 app.use('/api/v1/activity-types', smartRateLimiter, activityTypeRoutes.getRouter());
 app.use('/api/v1/roles', smartRateLimiter, roleRoutes.getRouter());

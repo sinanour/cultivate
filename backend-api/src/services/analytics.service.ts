@@ -134,7 +134,48 @@ export class AnalyticsService {
         private geographicAreaRepository: GeographicAreaRepository
     ) { }
 
-    async getEngagementMetrics(filters: AnalyticsFilters = {}): Promise<EngagementMetrics> {
+    /**
+     * Determines the effective geographic area IDs to filter by, considering:
+     * 1. Explicit geographicAreaId parameter (if provided, validate authorization)
+     * 2. Implicit filtering based on user's authorized areas (if user has restrictions)
+     * 3. No filtering (if user has no restrictions and no explicit filter)
+     * 
+     * IMPORTANT: authorizedAreaIds already includes descendants and excludes DENY rules.
+     * Do NOT expand descendants again during implicit filtering.
+     */
+    private async getEffectiveGeographicAreaIds(
+        explicitGeographicAreaId: string | undefined,
+        authorizedAreaIds: string[],
+        hasGeographicRestrictions: boolean
+    ): Promise<string[] | undefined> {
+        // If explicit filter provided
+        if (explicitGeographicAreaId) {
+            // Validate user has access to this area
+            if (hasGeographicRestrictions && !authorizedAreaIds.includes(explicitGeographicAreaId)) {
+                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
+            }
+
+            // Expand to include descendants
+            const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
+            return [explicitGeographicAreaId, ...descendantIds];
+        }
+
+        // No explicit filter - apply implicit filtering if user has restrictions
+        if (hasGeographicRestrictions) {
+            // IMPORTANT: authorizedAreaIds already has descendants expanded and DENY rules applied
+            // Do NOT expand descendants again, as this would re-add denied areas
+            return authorizedAreaIds;
+        }
+
+        // No restrictions and no explicit filter - return undefined (no filtering)
+        return undefined;
+    }
+
+    async getEngagementMetrics(
+        filters: AnalyticsFilters = {},
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
+    ): Promise<EngagementMetrics> {
         const { startDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, populationIds, groupBy } = filters;
 
         // Default endDate to now if startDate is provided but endDate is not
@@ -142,13 +183,25 @@ export class AnalyticsService {
 
         // If groupBy dimensions are specified, return grouped results
         if (groupBy && groupBy.length > 0) {
-            return this.getGroupedEngagementMetrics({ ...filters, endDate });
+            return this.getGroupedEngagementMetrics({ ...filters, endDate }, authorizedAreaIds, hasGeographicRestrictions);
         }
+
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
 
         // Get venue IDs if geographic or venue filter is provided
         let venueIds: string[] | undefined;
-        if (geographicAreaId) {
-            venueIds = await this.getVenueIdsForArea(geographicAreaId);
+        if (effectiveAreaIds) {
+            // Use effective area IDs to get venues
+            const venues = await this.prisma.venue.findMany({
+                where: { geographicAreaId: { in: effectiveAreaIds } },
+                select: { id: true },
+            });
+            venueIds = venues.map((v) => v.id);
         } else if (venueId) {
             venueIds = [venueId];
         }
@@ -625,23 +678,27 @@ export class AnalyticsService {
         };
     }
 
-    private async getGroupedEngagementMetrics(filters: AnalyticsFilters): Promise<EngagementMetrics> {
+    private async getGroupedEngagementMetrics(
+        filters: AnalyticsFilters,
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
+    ): Promise<EngagementMetrics> {
         const { groupBy } = filters;
 
         if (!groupBy || groupBy.length === 0) {
             // No grouping, return ungrouped metrics
             const ungroupedFilters = { ...filters };
             delete ungroupedFilters.groupBy;
-            return this.getEngagementMetrics(ungroupedFilters);
+            return this.getEngagementMetrics(ungroupedFilters, authorizedAreaIds, hasGeographicRestrictions);
         }
 
         // Get base metrics without grouping
         const baseFilters = { ...filters };
         delete baseFilters.groupBy;
-        const baseMetrics = await this.getEngagementMetrics(baseFilters);
+        const baseMetrics = await this.getEngagementMetrics(baseFilters, authorizedAreaIds, hasGeographicRestrictions);
 
         // Query database to find actual dimension combinations that exist in the data (SQL GROUP BY style)
-        const actualCombinations = await this.queryActualDimensionCombinations(filters, groupBy);
+        const actualCombinations = await this.queryActualDimensionCombinations(filters, groupBy, authorizedAreaIds, hasGeographicRestrictions);
 
         // Calculate metrics for each actual combination
         const groupedResults: GroupedMetrics[] = [];
@@ -652,7 +709,7 @@ export class AnalyticsService {
             };
             delete combinationFilters.groupBy;
 
-            const metrics = await this.getEngagementMetrics(combinationFilters);
+            const metrics = await this.getEngagementMetrics(combinationFilters, authorizedAreaIds, hasGeographicRestrictions);
 
             // Only include results that have actual data
             if (metrics.totalActivities > 0 || metrics.totalParticipants > 0) {
@@ -672,14 +729,27 @@ export class AnalyticsService {
 
     private async queryActualDimensionCombinations(
         filters: AnalyticsFilters,
-        dimensions: GroupingDimension[]
+        dimensions: GroupingDimension[],
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
     ): Promise<Array<{ dimensions: Record<string, string>; filters: Partial<AnalyticsFilters> }>> {
         // Build base activity filter from existing filters
         const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, venueId } = filters;
 
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
         let venueIds: string[] | undefined;
-        if (geographicAreaId) {
-            venueIds = await this.getVenueIdsForArea(geographicAreaId);
+        if (effectiveAreaIds) {
+            const venues = await this.prisma.venue.findMany({
+                where: { geographicAreaId: { in: effectiveAreaIds } },
+                select: { id: true },
+            });
+            venueIds = venues.map((v) => v.id);
         } else if (venueId) {
             venueIds = [venueId];
         }
@@ -863,14 +933,27 @@ export class AnalyticsService {
 
     async getGrowthMetrics(
         timePeriod: TimePeriod,
-        filters: AnalyticsFilters = {}
+        filters: AnalyticsFilters = {},
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
     ): Promise<GrowthMetrics> {
         const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, populationIds, groupBy } = filters;
 
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
         // Get venue IDs if geographic filter is provided
         let venueIds: string[] | undefined;
-        if (geographicAreaId) {
-            venueIds = await this.getVenueIdsForArea(geographicAreaId);
+        if (effectiveAreaIds) {
+            const venues = await this.prisma.venue.findMany({
+                where: { geographicAreaId: { in: effectiveAreaIds } },
+                select: { id: true },
+            });
+            venueIds = venues.map((v) => v.id);
         }
 
         // Determine date range - if no dates provided, query all history
@@ -1097,17 +1180,54 @@ export class AnalyticsService {
             activityTypeIds?: string[];
             venueIds?: string[];
             populationIds?: string[];
-        } = {}
+        } = {},
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
     ): Promise<ActivityLifecycleData[]> {
         const { geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds } = filters;
 
+        // Determine effective geographic area IDs
+        let effectiveGeographicAreaIds: string[] | undefined;
+        if (geographicAreaIds && geographicAreaIds.length > 0) {
+            // Validate each provided geographic area
+            for (const areaId of geographicAreaIds) {
+                const effectiveIds = await this.getEffectiveGeographicAreaIds(
+                    areaId,
+                    authorizedAreaIds,
+                    hasGeographicRestrictions
+                );
+                if (!effectiveIds) {
+                    // No restrictions, use the provided area
+                    if (!effectiveGeographicAreaIds) effectiveGeographicAreaIds = [];
+                    effectiveGeographicAreaIds.push(areaId);
+                } else {
+                    // Add effective IDs
+                    if (!effectiveGeographicAreaIds) effectiveGeographicAreaIds = [];
+                    effectiveGeographicAreaIds.push(...effectiveIds);
+                }
+            }
+            // Remove duplicates
+            if (effectiveGeographicAreaIds) {
+                effectiveGeographicAreaIds = [...new Set(effectiveGeographicAreaIds)];
+            }
+        } else if (hasGeographicRestrictions) {
+            // No explicit geographic filter, but user has restrictions - apply implicit filtering
+            const effectiveIds = await this.getEffectiveGeographicAreaIds(
+                undefined,
+                authorizedAreaIds,
+                hasGeographicRestrictions
+            );
+            effectiveGeographicAreaIds = effectiveIds;
+        }
+
         // Get venue IDs if geographic filter is provided
         let effectiveVenueIds: string[] | undefined = venueIds;
-        if (geographicAreaIds && geographicAreaIds.length > 0) {
-            const venueIdsForAreas = await Promise.all(
-                geographicAreaIds.map(areaId => this.getVenueIdsForArea(areaId))
-            );
-            effectiveVenueIds = venueIdsForAreas.flat();
+        if (effectiveGeographicAreaIds && effectiveGeographicAreaIds.length > 0) {
+            const venues = await this.prisma.venue.findMany({
+                where: { geographicAreaId: { in: effectiveGeographicAreaIds } },
+                select: { id: true },
+            });
+            effectiveVenueIds = venues.map((v) => v.id);
 
             // If geographic filter is specified but no venues exist in those areas,
             // return empty result immediately

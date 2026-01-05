@@ -4,6 +4,8 @@ import { AnalyticsRoutes } from '../../routes/analytics.routes';
 import { AnalyticsService } from '../../services/analytics.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
+import { createMockTokenPayload } from '../helpers/token-payload.helper';
+import { UserRole } from '@prisma/client';
 
 jest.mock('../../services/analytics.service');
 
@@ -22,7 +24,7 @@ describe('AnalyticsRoutes', () => {
         mockAuthzMiddleware = new AuthorizationMiddleware() as jest.Mocked<AuthorizationMiddleware>;
 
         mockAuthMiddleware.authenticate = jest.fn().mockReturnValue((req: any, _res: any, next: any) => {
-            req.user = { userId: 'user-1', email: 'test@example.com', role: 'EDITOR' };
+            req.user = createMockTokenPayload(UserRole.EDITOR);
             next();
         });
 

@@ -1,10 +1,12 @@
 import { Venue, VenueType } from '@prisma/client';
 import { VenueRepository } from '../repositories/venue.repository';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
+import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
 import { PaginatedResponse, PaginationHelper } from '../utils/pagination';
 import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
 import { ImportResult } from '../types/csv.types';
 import { VenueImportSchema } from '../utils/validation.schemas';
+import { AppError } from '../types/errors.types';
 
 export interface CreateVenueInput {
     name: string;
@@ -28,10 +30,53 @@ export interface UpdateVenueInput {
 export class VenueService {
     constructor(
         private venueRepository: VenueRepository,
-        private geographicAreaRepository: GeographicAreaRepository
+        private geographicAreaRepository: GeographicAreaRepository,
+        private geographicAuthorizationService: GeographicAuthorizationService
     ) { }
 
-    async getAllVenues(geographicAreaId?: string, search?: string): Promise<Venue[]> {
+    /**
+     * Determines the effective geographic area IDs to filter by, considering:
+     * 1. Explicit geographicAreaId parameter (if provided, validate authorization)
+     * 2. Implicit filtering based on user's authorized areas (if user has restrictions)
+     * 3. No filtering (if user has no restrictions and no explicit filter)
+     * 
+     * IMPORTANT: authorizedAreaIds already includes descendants and excludes DENY rules.
+     * Do NOT expand descendants again during implicit filtering.
+     */
+    private async getEffectiveGeographicAreaIds(
+        explicitGeographicAreaId: string | undefined,
+        authorizedAreaIds: string[],
+        hasGeographicRestrictions: boolean
+    ): Promise<string[] | undefined> {
+        // If explicit filter provided
+        if (explicitGeographicAreaId) {
+            // Validate user has access to this area
+            if (hasGeographicRestrictions && !authorizedAreaIds.includes(explicitGeographicAreaId)) {
+                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
+            }
+
+            // Expand to include descendants
+            const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
+            return [explicitGeographicAreaId, ...descendantIds];
+        }
+
+        // No explicit filter - apply implicit filtering if user has restrictions
+        if (hasGeographicRestrictions) {
+            // IMPORTANT: authorizedAreaIds already has descendants expanded and DENY rules applied
+            // Do NOT expand descendants again, as this would re-add denied areas
+            return authorizedAreaIds;
+        }
+
+        // No restrictions and no explicit filter - return undefined (no filtering)
+        return undefined;
+    }
+
+    async getAllVenues(
+        geographicAreaId?: string,
+        search?: string,
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
+    ): Promise<Venue[]> {
         // Build search filter
         const searchWhere = search ? {
             OR: [
@@ -40,7 +85,14 @@ export class VenueService {
             ]
         } : {};
 
-        if (!geographicAreaId) {
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
+        if (!effectiveAreaIds) {
             // No geographic filter, just apply search if provided
             if (search) {
                 return this.venueRepository.search(search);
@@ -48,15 +100,18 @@ export class VenueService {
             return this.venueRepository.findAll();
         }
 
-        // Get all descendant IDs including the area itself
-        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-        const areaIds = [geographicAreaId, ...descendantIds];
-
         // Filter venues by geographic area and search
-        return this.venueRepository.findByGeographicAreaIds(areaIds, searchWhere);
+        return this.venueRepository.findByGeographicAreaIds(effectiveAreaIds, searchWhere);
     }
 
-    async getAllVenuesPaginated(page?: number, limit?: number, geographicAreaId?: string, search?: string): Promise<PaginatedResponse<Venue>> {
+    async getAllVenuesPaginated(
+        page?: number,
+        limit?: number,
+        geographicAreaId?: string,
+        search?: string,
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
+    ): Promise<PaginatedResponse<Venue>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
         // Build search filter
@@ -67,26 +122,58 @@ export class VenueService {
             ]
         } : {};
 
-        if (!geographicAreaId) {
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
+        if (!effectiveAreaIds) {
             // No geographic filter, just apply search if provided
             const { data, total } = await this.venueRepository.findAllPaginated(validPage, validLimit, searchWhere);
             return PaginationHelper.createResponse(data, validPage, validLimit, total);
         }
 
-        // Get all descendant IDs including the area itself
-        const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-        const areaIds = [geographicAreaId, ...descendantIds];
-
         // Filter venues by geographic area with pagination and search
-        const { data, total } = await this.venueRepository.findByGeographicAreaIdsPaginated(areaIds, validPage, validLimit, searchWhere);
+        const { data, total } = await this.venueRepository.findByGeographicAreaIdsPaginated(effectiveAreaIds, validPage, validLimit, searchWhere);
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 
-    async getVenueById(id: string): Promise<Venue> {
+    async getVenueById(id: string, userId?: string, userRole?: string): Promise<Venue> {
         const venue = await this.venueRepository.findById(id);
         if (!venue) {
             throw new Error('Venue not found');
         }
+
+        // Enforce geographic authorization if userId is provided
+        if (userId) {
+            // Administrator bypass
+            if (userRole === 'ADMINISTRATOR') {
+                return venue;
+            }
+
+            // Validate authorization to access the venue's geographic area
+            const accessLevel = await this.geographicAuthorizationService.evaluateAccess(
+                userId,
+                venue.geographicAreaId
+            );
+
+            if (accessLevel === AccessLevel.NONE) {
+                await this.geographicAuthorizationService.logAuthorizationDenial(
+                    userId,
+                    'VENUE',
+                    id,
+                    'GET'
+                );
+                throw new AppError(
+                    'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    'You do not have permission to access this venue',
+                    403
+                );
+            }
+        }
+
         return venue;
     }
 
@@ -97,7 +184,11 @@ export class VenueService {
         return this.venueRepository.search(query);
     }
 
-    async createVenue(data: CreateVenueInput): Promise<Venue> {
+    async createVenue(
+        data: CreateVenueInput,
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
+    ): Promise<Venue> {
         if (!data.name || data.name.trim().length === 0) {
             throw new Error('Venue name is required');
         }
@@ -116,6 +207,11 @@ export class VenueService {
             throw new Error('Geographic area not found');
         }
 
+        // Validate user has access to this geographic area
+        if (hasGeographicRestrictions && !authorizedAreaIds.includes(data.geographicAreaId)) {
+            throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to create venues in this geographic area');
+        }
+
         // Validate latitude range if provided
         if (data.latitude !== undefined && (data.latitude < -90 || data.latitude > 90)) {
             throw new Error('Latitude must be between -90 and 90');
@@ -129,7 +225,15 @@ export class VenueService {
         return this.venueRepository.create(data);
     }
 
-    async updateVenue(id: string, data: UpdateVenueInput): Promise<Venue> {
+    async updateVenue(
+        id: string,
+        data: UpdateVenueInput,
+        userId?: string,
+        userRole?: string
+    ): Promise<Venue> {
+        // Validate authorization by calling getVenueById (which enforces geographic authorization)
+        await this.getVenueById(id, userId, userRole);
+
         const existing = await this.venueRepository.findById(id);
         if (!existing) {
             throw new Error('Venue not found');
@@ -140,6 +244,21 @@ export class VenueService {
             const areaExists = await this.geographicAreaRepository.exists(data.geographicAreaId);
             if (!areaExists) {
                 throw new Error('Geographic area not found');
+            }
+
+            // Validate user has access to the new geographic area
+            if (userId) {
+                const accessLevel = await this.geographicAuthorizationService.evaluateAccess(
+                    userId,
+                    data.geographicAreaId
+                );
+                if (accessLevel === AccessLevel.NONE) {
+                    throw new AppError(
+                        'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        'You do not have permission to move this venue to the specified geographic area',
+                        403
+                    );
+                }
             }
         }
 
@@ -163,7 +282,14 @@ export class VenueService {
         }
     }
 
-    async deleteVenue(id: string): Promise<void> {
+    async deleteVenue(
+        id: string,
+        userId?: string,
+        userRole?: string
+    ): Promise<void> {
+        // Validate authorization by calling getVenueById (which enforces geographic authorization)
+        await this.getVenueById(id, userId, userRole);
+
         const existing = await this.venueRepository.findById(id);
         if (!existing) {
             throw new Error('Venue not found');
@@ -184,27 +310,27 @@ export class VenueService {
         await this.venueRepository.delete(id);
     }
 
-    async getVenueActivities(venueId: string) {
-        const venue = await this.venueRepository.findById(venueId);
-        if (!venue) {
-            throw new Error('Venue not found');
-        }
+    async getVenueActivities(venueId: string, userId?: string, userRole?: string) {
+        // Validate authorization by calling getVenueById (which enforces geographic authorization)
+        await this.getVenueById(venueId, userId, userRole);
 
         return this.venueRepository.findActivities(venueId);
     }
 
-    async getVenueParticipants(venueId: string) {
-        const venue = await this.venueRepository.findById(venueId);
-        if (!venue) {
-            throw new Error('Venue not found');
-        }
+    async getVenueParticipants(venueId: string, userId?: string, userRole?: string) {
+        // Validate authorization by calling getVenueById (which enforces geographic authorization)
+        await this.getVenueById(venueId, userId, userRole);
 
         return this.venueRepository.findParticipants(venueId);
     }
 
-    async exportVenuesToCSV(geographicAreaId?: string): Promise<string> {
+    async exportVenuesToCSV(
+        geographicAreaId?: string,
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false
+    ): Promise<string> {
         // Get all venues (with geographic filter if provided)
-        const venues = await this.getAllVenues(geographicAreaId);
+        const venues = await this.getAllVenues(geographicAreaId, undefined, authorizedAreaIds, hasGeographicRestrictions);
 
         // Fetch venues with geographic area included
         const venuesWithArea = await Promise.all(
