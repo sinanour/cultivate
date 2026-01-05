@@ -22,7 +22,7 @@ describe('AuthService', () => {
             };
             const mockAccessToken = `header.${btoa(JSON.stringify(payload))}.signature`;
 
-            const mockResponse = {
+            const mockLoginResponse = {
                 success: true,
                 data: {
                     accessToken: mockAccessToken,
@@ -30,10 +30,28 @@ describe('AuthService', () => {
                 },
             };
 
-            (global.fetch as any).mockResolvedValueOnce({
-                ok: true,
-                json: async () => mockResponse,
-            });
+            const mockUserResponse = {
+                success: true,
+                data: {
+                    id: '1',
+                    displayName: 'Test User',
+                    email: 'test@example.com',
+                    role: 'EDITOR',
+                    createdAt: '2024-01-01T00:00:00Z',
+                    updatedAt: '2024-01-01T00:00:00Z',
+                },
+            };
+
+            // Mock both login and /auth/me endpoints
+            (global.fetch as any)
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockLoginResponse,
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockUserResponse,
+                });
 
             const result = await AuthService.login({
                 email: 'test@example.com',
@@ -41,6 +59,7 @@ describe('AuthService', () => {
             });
 
             expect(result.user.id).toBe('1');
+            expect(result.user.displayName).toBe('Test User');
             expect(result.user.email).toBe('test@example.com');
             expect(result.user.role).toBe('EDITOR');
             expect(result.tokens.accessToken).toBe(mockAccessToken);
@@ -52,6 +71,9 @@ describe('AuthService', () => {
 
             const storedUser = localStorage.getItem('authUser');
             expect(storedUser).toBeTruthy();
+
+            const parsedUser = JSON.parse(storedUser!);
+            expect(parsedUser.displayName).toBe('Test User');
         });
 
         it('should throw error on failed login', async () => {

@@ -349,6 +349,8 @@ The Backend API package provides the RESTful API service that implements all bus
 2. THE API SHALL provide a POST /api/auth/logout endpoint that invalidates tokens
 3. THE API SHALL provide a POST /api/auth/refresh endpoint that refreshes access tokens
 4. THE API SHALL provide a GET /api/auth/me endpoint that returns current user information
+4a. WHEN a client requests GET /api/auth/me, THE API SHALL return a user object containing id, displayName (nullable), email, role, createdAt, and updatedAt fields
+4b. THE API SHALL NOT return the passwordHash field in the /api/auth/me response
 5. WHEN authenticating, THE API SHALL validate email and password
 6. WHEN authenticating, THE API SHALL return a JWT access token and refresh token
 7. WHEN authenticating, THE API SHALL hash passwords using bcrypt
@@ -376,7 +378,7 @@ The Backend API package provides the RESTful API service that implements all bus
 
 ### Requirement 11A: Manage Users
 
-**User Story:** As an administrator, I want to manage user accounts via API, so that I can control system access and assign appropriate roles.
+**User Story:** As an administrator, I want to manage user accounts and their geographic authorizations via API, so that I can control system access, assign appropriate roles, and define geographic boundaries in a unified interface.
 
 #### Acceptance Criteria
 
@@ -386,16 +388,30 @@ The Backend API package provides the RESTful API service that implements all bus
 4. THE API SHALL restrict all user management endpoints to ADMINISTRATOR role only
 5. WHEN a non-administrator attempts to access user management endpoints, THE API SHALL return 403 Forbidden
 6. WHEN creating a user, THE API SHALL validate that email and password are provided
+6a. WHEN creating a user, THE API SHALL accept an optional display name field
 7. WHEN creating a user, THE API SHALL validate that email is unique
 8. WHEN creating a user, THE API SHALL validate that password is at least 8 characters
 9. WHEN creating a user, THE API SHALL hash the password using bcrypt before storing
 10. WHEN creating a user, THE API SHALL require a role selection (ADMINISTRATOR, EDITOR, or READ_ONLY)
-11. WHEN updating a user, THE API SHALL allow changing email, password, and role
-12. WHEN updating a user with a new password, THE API SHALL hash the password using bcrypt
-13. WHEN updating a user without providing a password, THE API SHALL preserve the existing password
-14. WHEN updating a user's email, THE API SHALL validate that the new email is unique
-15. THE API SHALL return user objects with id, email, role, createdAt, and updatedAt fields
-16. THE API SHALL NOT return password hashes in any API response
+11. WHEN creating a user, THE API SHALL accept an optional array of geographic authorization rules
+12. WHEN creating a user with authorization rules, THE API SHALL create the user and all authorization rules in a single atomic transaction
+13. WHEN updating a user, THE API SHALL allow changing display name, email, password, and role
+14. WHEN updating a user with a new password, THE API SHALL hash the password using bcrypt
+15. WHEN updating a user without providing a password, THE API SHALL preserve the existing password
+16. WHEN updating a user's email, THE API SHALL validate that the new email is unique
+17. THE API SHALL return user objects with id, displayName (nullable), email, role, createdAt, and updatedAt fields
+18. THE API SHALL NOT return password hashes in any API response
+19. THE API SHALL provide a GET /api/v1/users/:id/geographic-authorizations endpoint that returns all geographic authorization rules for a user
+20. THE API SHALL provide a POST /api/v1/users/:id/geographic-authorizations endpoint that creates a new geographic authorization rule
+21. THE API SHALL provide a DELETE /api/v1/users/:id/geographic-authorizations/:authId endpoint that deletes a geographic authorization rule
+22. THE API SHALL provide a GET /api/v1/users/:id/authorized-areas endpoint that returns the user's effective authorized areas
+23. WHEN creating an authorization rule, THE API SHALL validate that the user and geographic area exist
+24. WHEN creating an authorization rule, THE API SHALL prevent duplicate rules for the same user and geographic area
+25. THE API SHALL support ALLOW and DENY rule types for geographic authorization
+26. THE API SHALL apply deny-first logic when evaluating geographic authorization (DENY rules take precedence over ALLOW rules)
+27. THE API SHALL grant access to descendants when an ALLOW rule is applied to a geographic area
+28. THE API SHALL grant read-only access to ancestors when an ALLOW rule is applied to a geographic area
+29. THE API SHALL audit all geographic authorization rule changes in the audit log
 
 ### Requirement 12: Audit User Actions
 

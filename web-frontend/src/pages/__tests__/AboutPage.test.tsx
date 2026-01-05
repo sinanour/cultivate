@@ -44,7 +44,7 @@ describe('AboutPage', () => {
 
   it('should display the logo description', () => {
     render(<AboutPage />);
-    const description = screen.getByText(/The Cultivate logo incorporates the themes of concentric circles/i);
+    const description = screen.getByText(/The Cultivate logo incorporates themes of concentric circles/i);
     expect(description).toBeInTheDocument();
     expect(description).toHaveTextContent(/representation of a person raising their arms in supplication of the Blessed Beauty/i);
   });

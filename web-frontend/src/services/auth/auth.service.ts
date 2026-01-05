@@ -25,19 +25,11 @@ export class AuthService {
         // Extract tokens from the response wrapper { success: true, data: { accessToken, refreshToken } }
         const tokens = loginData.data;
 
-        // Decode the access token to get user info
-        const payload = JSON.parse(atob(tokens.accessToken.split('.')[1]));
-        const user: User = {
-            id: payload.userId,
-            email: payload.email,
-            role: payload.role,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-
-        // Store tokens and user
+        // Store tokens first
         this.storeTokens(tokens.accessToken, tokens.refreshToken);
-        this.storeUser(user);
+
+        // Fetch complete user info from /auth/me endpoint to get displayName and other fields
+        const user = await this.fetchCurrentUser();
 
         return {
             user,
@@ -104,8 +96,13 @@ export class AuthService {
         }
 
         const userData = await response.json();
-        // Extract user from response wrapper { success: true, data: { id, email, role, ... } }
-        return userData.data;
+        // Extract user from response wrapper { success: true, data: { id, displayName, email, role, ... } }
+        const user = userData.data;
+
+        // Store the complete user object including displayName
+        this.storeUser(user);
+
+        return user;
     }
 
     static getCurrentUser(): User | null {

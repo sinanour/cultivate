@@ -249,48 +249,62 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 167: Multiple Population Membership Support**
     - **Validates: Requirements 2A.7, 2A.8, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13**
 
-- [x] 6A. Implement user management (admin only)
-  - [x] 6A.1 Update user repository
-    - Add findAll() method to list all users
-    - Add update() method for flexible user updates
-    - _Requirements: 11A.1, 11A.11_
+- [ ] 6A. Implement unified user management with embedded authorization (admin only)
+  - [ ] 6A.1 Create Prisma migration for displayName field
+    - Add displayName String field to User model (optional, nullable)
+    - Update seed script to include displayName for root administrator (optional)
+    - _Requirements: 11A.6a, 11A.17_
 
-  - [x] 6A.2 Create user service
-    - Implement getAllUsers() - returns users without password hashes
-    - Implement createUser() - validates email, password (min 8 chars), role; hashes password with bcrypt
-    - Implement updateUser() - allows updating email, password, role; validates email uniqueness; hashes new passwords
+  - [ ] 6A.2 Update user repository
+    - Add findAll() method to list all users
+    - Add findById(id) method to get single user
+    - Add update() method for flexible user updates
+    - Include displayName in all queries
+    - _Requirements: 11A.1, 11A.13, 11A.17_
+
+  - [x] 6A.3 Update user service
+    - Update getAllUsers() to return users with displayName field (nullable, without password hashes)
+    - Add getUser(id) method to fetch single user
+    - Update createUser() to accept optional displayName, validate email, password (min 8 chars), role; hash password with bcrypt
+    - Add support for optional authorizationRules array in createUser()
+    - When authorizationRules provided, create user and all rules in single atomic transaction using Prisma transaction
+    - Update updateUser() to allow updating displayName (nullable), email, password, role; validate email uniqueness; hash new passwords
     - Validate email uniqueness on create and update
     - Exclude password hashes from all responses
-    - _Requirements: 11A.1, 11A.2, 11A.3, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16_
+    - _Requirements: 11A.1, 11A.2, 11A.3, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16, 11A.17, 11A.18_
 
-  - [x] 6A.3 Create user routes
-    - GET /api/v1/users (admin only)
-    - POST /api/v1/users (admin only)
-    - PUT /api/v1/users/:id (admin only)
+  - [ ] 6A.4 Update user routes
+    - Update GET /api/v1/users to return displayName field (admin only)
+    - Add GET /api/v1/users/:id to fetch single user (admin only)
+    - Update POST /api/v1/users to accept displayName and optional authorizationRules array (admin only)
+    - Update PUT /api/v1/users/:id to accept displayName (admin only)
     - Restrict all endpoints to ADMINISTRATOR role using requireAdmin() middleware
     - Return 403 Forbidden for non-administrators
-    - _Requirements: 11A.1, 11A.2, 11A.3, 11A.4, 11A.5_
+    - _Requirements: 11A.1, 11A.2, 11A.3, 11A.4, 11A.5, 11A.6, 11A.13, 11A.17_
 
-  - [x] 6A.4 Add validation schemas
-    - Create UserCreateSchema (email, password min 8 chars, role enum)
-    - Create UserUpdateSchema (optional email, password, role)
-    - _Requirements: 11A.6, 11A.7, 11A.8, 11A.10_
+  - [ ] 6A.5 Update validation schemas
+    - Update UserCreateSchema to accept optional displayName (min 1 char if provided, max 200 chars)
+    - Add optional authorizationRules array to UserCreateSchema with geographicAreaId and ruleType fields
+    - Update UserUpdateSchema to include optional nullable displayName
+    - _Requirements: 11A.6a, 11A.11, 11A.13_
 
-  - [x] 6A.5 Register user routes in main app
-    - Import UserService and UserRoutes
-    - Instantiate userService with userRepository
-    - Instantiate userRoutes with userService, authMiddleware, authorizationMiddleware
-    - Register routes at /api/v1/users with smartRateLimiter
-    - _Requirements: 11A.1, 11A.2, 11A.3_
+  - [ ] 6A.6 Update OpenAPI documentation
+    - Document displayName field in User schema
+    - Document authorizationRules array in POST /users request body
+    - Document GET /users/:id endpoint
+    - Update examples to include displayName
+    - _Requirements: 11A.6, 11A.11, 11A.13, 11A.17_
 
-  - [ ]* 6A.6 Write property tests for user management
-    - **Property 68a: User List Retrieval**
-    - **Property 68b: User Creation Validation**
+  - [ ]* 6A.7 Write property tests for unified user management
+    - **Property 68a: User List Retrieval** (with displayName)
+    - **Property 68b: User Creation Validation** (with displayName)
+    - **Property 68b_auth: User Creation with Authorization Rules**
     - **Property 68c: User Email Uniqueness**
-    - **Property 68d: User Update Flexibility**
+    - **Property 68d: User Update Flexibility** (with displayName)
     - **Property 68e: User Management Administrator Restriction**
     - **Property 68f: Password Hash Exclusion**
-    - **Validates: Requirements 11A.1, 11A.2, 11A.4, 11A.5, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16**
+    - **Property 68g: Display Name Optional Acceptance**
+    - **Validates: Requirements 11A.1, 11A.2, 11A.4, 11A.5, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16, 11A.17, 11A.18**
 
 - [x] 7. Implement participant management
   - [x] 7.1 Create participant repository

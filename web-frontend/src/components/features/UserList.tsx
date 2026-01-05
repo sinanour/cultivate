@@ -7,18 +7,13 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import Badge from '@cloudscape-design/components/badge';
-import Modal from '@cloudscape-design/components/modal';
+import Link from '@cloudscape-design/components/link';
 import Alert from '@cloudscape-design/components/alert';
 import type { User } from '../../types';
 import { UserService } from '../../services/api/user.service';
-import { UserForm } from './UserForm';
-import { useAuth } from '../../hooks/useAuth';
 
 export function UserList() {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [error, setError] = useState('');
-  const { user: currentUser } = useAuth();
   const navigate = useNavigate();
 
   const { data: users = [], isLoading } = useQuery({
@@ -26,23 +21,12 @@ export function UserList() {
     queryFn: () => UserService.getUsers(),
   });
 
-  const handleEdit = (user: User) => {
-    setSelectedUser(user);
-    setIsFormOpen(true);
-  };
-
   const handleCreate = () => {
-    setSelectedUser(null);
-    setIsFormOpen(true);
+    navigate('/users/new');
   };
 
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedUser(null);
-  };
-
-  const handleManageAuthorizations = (user: User) => {
-    navigate(`/users/${user.id}/authorizations`);
+  const handleEdit = (user: User) => {
+    navigate(`/users/${user.id}/edit`);
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -58,7 +42,9 @@ export function UserList() {
     }
   };
 
-  const isAdmin = currentUser?.role === 'ADMINISTRATOR';
+  const getDisplayName = (user: User) => {
+    return user.displayName || user.email;
+  };
 
   return (
     <SpaceBetween size="l">
@@ -74,16 +60,19 @@ export function UserList() {
       <Table
         columnDefinitions={[
           {
+            id: 'displayName',
+            header: 'Name',
+            cell: (item) => (
+              <Link onFollow={() => handleEdit(item)}>
+                {getDisplayName(item)}
+              </Link>
+            ),
+            sortingField: 'displayName',
+          },
+          {
             id: 'email',
             header: 'Email',
-            cell: (item) => (
-              <Button
-                variant="inline-link"
-                onClick={() => handleEdit(item)}
-              >
-                {item.email}
-              </Button>
-            ),
+            cell: (item) => item.email,
             sortingField: 'email',
           },
           {
@@ -99,16 +88,9 @@ export function UserList() {
             id: 'actions',
             header: 'Actions',
             cell: (item) => (
-              <SpaceBetween direction="horizontal" size="xs">
-                <Button variant="inline-link" onClick={() => handleEdit(item)}>
-                  Edit
-                </Button>
-                {isAdmin && (
-                  <Button variant="inline-link" onClick={() => handleManageAuthorizations(item)}>
-                    Manage Authorizations
-                  </Button>
-                )}
-              </SpaceBetween>
+              <Button variant="inline-link" onClick={() => handleEdit(item)}>
+                Edit
+              </Button>
             ),
           },
         ]}
@@ -138,20 +120,6 @@ export function UserList() {
           </Header>
         }
       />
-      <Modal
-        visible={isFormOpen}
-        onDismiss={handleFormClose}
-        size="medium"
-        header={selectedUser ? 'Edit User' : 'Create User'}
-      >
-        {isFormOpen && (
-          <UserForm
-            user={selectedUser}
-            onSuccess={handleFormClose}
-            onCancel={handleFormClose}
-          />
-        )}
-      </Modal>
     </SpaceBetween>
   );
 }

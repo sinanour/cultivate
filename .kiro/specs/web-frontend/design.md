@@ -739,23 +739,24 @@ src/
 
 **UserList**
 - Displays table of all users (admin only)
-- Renders user email as hyperlink in primary column (links to edit form)
-- Shows email and role
+- Renders user display name (or email if displayName is null) as hyperlink in primary column (links to /users/:id/edit)
+- Shows display name (or email), email, and role
 - Provides edit action per row (no separate View button)
-- Provides "Manage Authorizations" link per row that navigates to /users/:userId/authorizations
+- Does NOT provide a separate "Manage Authorizations" action
 
-**UserForm**
-- Modal form for creating/editing users
-- Allows role assignment and modification
-- Only accessible to administrators
-
-**UserAuthorizationsPage**
-- Dedicated full page for managing user's geographic authorization rules
-- Accessible via route: /users/:userId/authorizations
-- Displays user email and role in page header for context
-- Shows table of all authorization rules for the user
-- Provides "Add Rule" button to create new authorization rules
-- Provides delete button for each authorization rule
+**UserFormPage**
+- Dedicated full-page form for creating/editing users (not a modal)
+- Accessible via routes: /users/new (create) and /users/:id/edit (edit)
+- Validates email and password (create only) are required
+- Allows optional display name field
+- Validates email format and uniqueness
+- Validates password is at least 8 characters (create only)
+- Allows role assignment and modification using CloudScape Select
+- Displays inline validation errors
+- Includes embedded geographic authorization management section within the form
+- Displays all geographic authorization rules for the user in a table within the form
+- Provides "Add Rule" button within the form to create new authorization rules
+- Provides delete button for each authorization rule within the form
 - Displays effective access summary section showing:
   - Allowed areas (full access) with list of descendants
   - Ancestor areas (read-only access) marked with read-only badge
@@ -765,13 +766,16 @@ src/
   - "ALLOW rules grant read-only access to ancestor areas for navigation context"
   - "DENY rules take precedence over ALLOW rules"
   - "Users with no rules have unrestricted access to all areas"
-- Displays warning Alert when DENY rules override existing ALLOW rules
-- Provides back button or breadcrumb navigation to User Administration page
-- Only accessible to ADMINISTRATOR role
-- Redirects non-administrators to dashboard
+- Displays warning Alert when creating DENY rules that override existing ALLOW rules
+- When creating a new user, allows adding geographic authorization rules before the user is persisted to the backend
+- When creating a new user with authorization rules, persists the user and all authorization rules in a single atomic operation
+- Implements navigation guard using React Router's useBlocker to detect dirty form state
+- When user attempts to navigate away with unsaved changes, displays confirmation dialog
+- Allows vertical scrolling to accommodate user fields and embedded authorization management
+- Only accessible to administrators
 
 **GeographicAuthorizationForm**
-- Modal form for creating authorization rules (opened from UserAuthorizationsPage)
+- Modal form for creating authorization rules (opened from UserFormPage)
 - Requires geographic area selection using AsyncEntitySelect dropdown
 - Requires rule type selection (ALLOW or DENY) using CloudScape RadioGroup
 - Validates geographic area is selected
@@ -1012,9 +1016,12 @@ src/
   - When populationIds provided: includes only activities with at least one participant in specified populations
 
 **UserService** (Admin only)
-- `getUsers()`: Fetches all users (admin only)
-- `createUser(data)`: Creates new user (admin only)
-- `updateUser(id, data)`: Updates user including role (admin only)
+- `getUsers()`: Fetches all users from `/users` (admin only)
+- `getUser(id)`: Fetches single user from `/users/:id` (admin only)
+- `createUser(data)`: Creates new user with optional authorization rules via POST `/users` (admin only)
+  - Accepts: displayName, email, password, role, authorizationRules (optional array)
+  - When authorizationRules provided, creates user and rules in single atomic operation
+- `updateUser(id, data)`: Updates user including displayName, email, password, and role via PUT `/users/:id` (admin only)
 
 **GeographicAuthorizationService** (Admin only)
 - `getAuthorizationRules(userId)`: Fetches all authorization rules for a user from `/users/:id/geographic-authorizations`
@@ -1057,6 +1064,7 @@ src/
 ```typescript
 interface User {
   id: string;
+  displayName?: string;  // Optional - falls back to email if not provided
   email: string;
   role: 'ADMINISTRATOR' | 'EDITOR' | 'READ_ONLY';
   createdAt: string;

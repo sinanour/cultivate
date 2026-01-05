@@ -88,7 +88,7 @@ export default function DashboardPage() {
     <ContentLayout
       header={
         <Header variant="h1">
-          Welcome, {user?.email || 'User'}
+          Welcome, {user?.displayName || user?.email || 'User'}
         </Header>
       }
     >

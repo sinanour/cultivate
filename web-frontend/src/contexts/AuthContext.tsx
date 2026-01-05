@@ -34,9 +34,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (AuthService.isTokenExpired(storedTokens.accessToken)) {
         // Try to refresh token
         AuthService.refreshToken()
-          .then((newTokens) => {
+          .then(async (newTokens) => {
             setTokens(newTokens);
-            setUser(storedUser);
+            // Fetch fresh user data to ensure displayName is current
+            try {
+              const freshUser = await AuthService.fetchCurrentUser();
+              setUser(freshUser);
+            } catch {
+              // If fetch fails, use stored user
+              setUser(storedUser);
+            }
           })
           .catch(() => {
             // Refresh failed, clear everything

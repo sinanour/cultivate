@@ -118,7 +118,7 @@ export function AppLayout() {
             },
             {
               type: 'menu-dropdown',
-              text: user?.email || 'User',
+              text: user?.displayName || user?.email || 'User',
               description: user?.role,
               iconName: 'user-profile',
               items: [

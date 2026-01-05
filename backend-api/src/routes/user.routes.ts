@@ -29,6 +29,14 @@ export class UserRoutes {
       this.getAll.bind(this)
     );
 
+    this.router.get(
+      '/:id',
+      this.authMiddleware.authenticate(),
+      this.authorizationMiddleware.requireAdmin(),
+      ValidationMiddleware.validateParams(UuidParamSchema),
+      this.getById.bind(this)
+    );
+
     this.router.post(
       '/',
       this.authMiddleware.authenticate(),
@@ -63,9 +71,30 @@ export class UserRoutes {
     }
   }
 
+  private async getById(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const user = await this.userService.getUserById(id);
+      res.status(200).json({ success: true, data: user });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'User not found') {
+        return res.status(404).json({
+          code: 'NOT_FOUND',
+          message: error.message,
+          details: {},
+        });
+      }
+      res.status(500).json({
+        code: 'INTERNAL_ERROR',
+        message: 'An error occurred while fetching user',
+        details: {},
+      });
+    }
+  }
+
   private async create(req: AuthenticatedRequest, res: Response) {
     try {
-      const user = await this.userService.createUser(req.body);
+      const user = await this.userService.createUser(req.body, req.user!.userId);
       res.status(201).json({ success: true, data: user });
     } catch (error) {
       if (error instanceof Error) {

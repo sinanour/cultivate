@@ -26,6 +26,7 @@ export interface RefreshTokenPayload {
 
 export interface UserInfo {
     id: string;
+    displayName?: string | null;
     email: string;
     role: UserRole;
     createdAt: Date;

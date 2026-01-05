@@ -21,7 +21,7 @@ export class UserRepository {
     });
   }
 
-  async create(data: { email: string; passwordHash: string; role: UserRole }): Promise<User> {
+  async create(data: { displayName?: string | null; email: string; passwordHash: string; role: UserRole }): Promise<User> {
     return this.prisma.user.create({
       data,
     });
@@ -29,7 +29,7 @@ export class UserRepository {
 
   async update(
     id: string,
-    data: { email?: string; passwordHash?: string; role?: UserRole }
+    data: { displayName?: string | null; email?: string; passwordHash?: string; role?: UserRole }
   ): Promise<User> {
     return this.prisma.user.update({
       where: { id },

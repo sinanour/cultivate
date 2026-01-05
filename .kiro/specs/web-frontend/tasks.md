@@ -1201,12 +1201,74 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 43: Success Message Display**
     - **Validates: Requirements 17.1, 17.2, 17.3, 17.4, 17.5**
 
-- [x] 19. Implement user management (admin only)
-  - [x] 19.1 Create UserList and UserForm components
+- [ ] 19. Implement unified user management with embedded authorization (admin only)
+  - [ ] 19.1 Create UserList component
     - Display table of all users (admin only)
-    - Allow role assignment and modification
+    - Render user displayName (or email if displayName is null) as hyperlink in primary column (links to /users/:id/edit)
+    - Show displayName (or email), email, and role columns
+    - Provide edit action per row (no separate View button)
+    - Do NOT provide "Manage Authorizations" action
     - Hide from non-administrators
-    - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6_
+    - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.33_
+
+  - [ ] 19.2 Create UserFormPage component
+    - Dedicated full-page form for create/edit (not a modal)
+    - Accessible via routes: /users/new and /users/:id/edit
+    - Display displayName (optional), email, password (create only), and role fields
+    - Allow displayName to be optional
+    - When displayName is not provided, use email as display identifier in UI
+    - Validate email is required and properly formatted
+    - Validate password is required and at least 8 characters (create only)
+    - Validate role is selected
+    - Allow role assignment and modification using CloudScape Select
+    - Display inline validation errors
+    - Embed geographic authorization management section within the form
+    - Display all geographic authorization rules for the user in a table within the form
+    - Provide "Add Rule" button within the form to create new authorization rules
+    - Provide delete button for each authorization rule within the form
+    - Display effective access summary section showing allowed areas, ancestors (read-only), and denied areas
+    - Provide explanatory Alert describing authorization rules
+    - Display warning Alert when creating DENY rules that override existing ALLOW rules
+    - When creating a new user, allow adding geographic authorization rules before persistence
+    - When creating a new user with authorization rules, persist user and all rules in single atomic operation
+    - Implement navigation guard using useFormNavigationGuard hook
+    - Display confirmation dialog when user attempts to navigate away with unsaved changes
+    - Allow vertical scrolling to accommodate user fields and embedded authorization management
+    - Only accessible to administrators
+    - _Requirements: 18.6, 18.7, 18.8, 18.9, 18.10, 18.11, 18.12, 18.13, 18.14, 18.15, 18.16, 18.17, 18.18, 18.19, 18.20, 18.21, 18.22, 18.23, 18.24, 18.25, 18.26, 18.27, 18.28, 18.29, 18.30, 18.31, 18.32, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
+
+  - [ ] 19.3 Update GeographicAuthorizationForm component
+    - Update to be opened from UserFormPage (not UserAuthorizationsPage)
+    - Keep existing functionality: geographic area selection, rule type selection, validation
+    - _Requirements: 18.19, 18.20, 18.21_
+
+  - [ ] 19.4 Update UserService
+    - Add getUser(id) method to fetch single user
+    - Update createUser() to accept displayName, email, password, role, and optional authorizationRules array
+    - When authorizationRules provided, send to backend in single request for atomic creation
+    - Update updateUser() to accept displayName, email, password, and role
+    - _Requirements: 18.6, 18.7, 18.10, 18.11, 18.12, 18.13, 18.14, 18.29, 18.30_
+
+  - [ ] 19.5 Update router configuration
+    - Add /users/new route for user creation page
+    - Add /users/:id/edit route for user edit page
+    - Remove /users/:userId/authorizations route (no longer needed)
+    - Protect routes with admin-only authorization
+    - _Requirements: 18.6, 18.7, 2A.5_
+
+  - [ ] 19.6 Remove UserAuthorizationsPage component
+    - Delete UserAuthorizationsPage.tsx file
+    - Remove route definition
+    - Update any imports or references
+    - _Requirements: 18.6, 18.7_
+
+  - [ ]* 19.7 Write property tests for unified user management
+    - **Property 172: User Form Page Display**
+    - **Property 173: User Display Name Validation**
+    - **Property 174: User Authorization Rules Embedding**
+    - **Property 175: Atomic User Creation with Authorization Rules**
+    - **Property 176: User Form Navigation Guard**
+    - **Validates: Requirements 18.6, 18.7, 18.8, 18.9, 18.10, 18.11, 18.12, 18.13, 18.14, 18.15, 18.29, 18.30, 18.31, 18.32**
 
 - [x] 19A. Implement About page
   - [x] 19A.1 Create AboutPage component

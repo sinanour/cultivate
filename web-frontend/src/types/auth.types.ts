@@ -2,6 +2,7 @@ export type UserRole = 'ADMINISTRATOR' | 'EDITOR' | 'READ_ONLY';
 
 export interface User {
     id: string;
+    displayName?: string;
     email: string;
     role: UserRole;
     createdAt: string;

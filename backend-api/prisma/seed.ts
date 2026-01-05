@@ -26,6 +26,7 @@ async function main() {
                 role: 'ADMINISTRATOR',
             },
             create: {
+                displayName: 'Root Administrator',
                 email: rootAdminEmail,
                 passwordHash,
                 role: 'ADMINISTRATOR',

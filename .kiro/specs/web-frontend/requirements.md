@@ -191,7 +191,7 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 2A: Form Presentation Pattern for Major Entities
 
-**User Story:** As a mobile user, I want to edit participants, activities, venues, and geographic areas on dedicated pages rather than in modal dialogs, so that I can scroll through large forms comfortably and have a better mobile experience.
+**User Story:** As a mobile user, I want to edit participants, activities, venues, geographic areas, and users on dedicated pages rather than in modal dialogs, so that I can scroll through large forms comfortably and have a better mobile experience.
 
 #### Acceptance Criteria
 
@@ -199,17 +199,18 @@ The Web Frontend package provides a responsive React-based web application that 
 2. THE Web_App SHALL NOT use modal dialogs for creating or editing activities
 3. THE Web_App SHALL NOT use modal dialogs for creating or editing venues
 4. THE Web_App SHALL NOT use modal dialogs for creating or editing geographic areas
-5. THE Web_App SHALL use dedicated pages with full-page forms for creating and editing participants, activities, venues, and geographic areas
-6. THE Web_App SHALL allow vertical scrolling on form pages to accommodate large forms with many fields and embedded sections
-7. THE Web_App MAY use modal dialogs for creating or editing simple configuration entities (activity categories, activity types, participant roles) that have few fields
-8. THE Web_App MAY use modal dialogs for creating or editing child records (address history, venue history, assignments) when embedded within parent entity forms
-9. WHEN a user navigates away from a form page with unsaved changes, THE Web_App SHALL detect the dirty form state
-10. WHEN a user attempts to navigate away from a dirty form, THE Web_App SHALL display a confirmation dialog asking if they want to discard their changes
-11. WHEN a user confirms they want to discard changes, THE Web_App SHALL allow navigation to proceed
-12. WHEN a user cancels the discard confirmation, THE Web_App SHALL remain on the form page and preserve all form data
-13. THE Web_App SHALL track form dirty state by comparing current form values to initial values
-14. THE Web_App SHALL clear dirty state after successful form submission
-15. THE Web_App SHALL implement navigation guards using React Router's useBlocker or similar mechanism to intercept navigation attempts
+5. THE Web_App SHALL NOT use modal dialogs for creating or editing users
+6. THE Web_App SHALL use dedicated pages with full-page forms for creating and editing participants, activities, venues, geographic areas, and users
+7. THE Web_App SHALL allow vertical scrolling on form pages to accommodate large forms with many fields and embedded sections
+8. THE Web_App MAY use modal dialogs for creating or editing simple configuration entities (activity categories, activity types, participant roles, populations) that have few fields
+9. THE Web_App MAY use modal dialogs for creating or editing child records (address history, venue history, assignments, authorization rules) when embedded within parent entity forms
+10. WHEN a user navigates away from a form page with unsaved changes, THE Web_App SHALL detect the dirty form state
+11. WHEN a user attempts to navigate away from a dirty form, THE Web_App SHALL display a confirmation dialog asking if they want to discard their changes
+12. WHEN a user confirms they want to discard changes, THE Web_App SHALL allow navigation to proceed
+13. WHEN a user cancels the discard confirmation, THE Web_App SHALL remain on the form page and preserve all form data
+14. THE Web_App SHALL track form dirty state by comparing current form values to initial values
+15. THE Web_App SHALL clear dirty state after successful form submission
+16. THE Web_App SHALL implement navigation guards using React Router's useBlocker or similar mechanism to intercept navigation attempts
 
 ### Requirement 6: Activity-Participant Assignment UI
 
@@ -499,6 +500,8 @@ The Web Frontend package provides a responsive React-based web application that 
 12. AFTER the login form fades out, THE Web_App SHALL display the icon-no-bg.svg image centered on the screen at 256x256 pixels
 13. THE icon image SHALL animate its stroke from nothing to completely drawn over the course of 2000 milliseconds
 14. AFTER the icon stroke animation completes, THE Web_App SHALL navigate to the appropriate destination page
+15. WHEN fetching current user information via GET /api/v1/auth/me, THE Web_App SHALL receive a user object containing id, displayName (nullable), email, role, createdAt, and updatedAt fields
+16. THE Web_App SHALL store the complete user object including displayName in application state for use throughout the application
 
 ### Requirement 9: Authorization UI
 
@@ -564,12 +567,13 @@ The Web Frontend package provides a responsive React-based web application that 
 3. THE Web_App SHALL preserve navigation state when moving between sections
 4. THE Web_App SHALL provide a user menu with logout option
 5. THE Web_App SHALL display the current user's name and role
-6. THE Web_App SHALL provide quick links on the main dashboard page for accessing key sections
-7. WHEN displaying quick links on the main dashboard, THE Web_App SHALL hide the User Administration quick link from users who do not have ADMINISTRATOR role
-8. WHEN a user has ADMINISTRATOR role, THE Web_App SHALL display the User Administration quick link on the main dashboard
-9. THE Web_App SHALL make the application header (including both the navigation header and the geographic area filter header) sticky to the top of the viewport
-10. WHEN a user scrolls vertically through page content, THE Web_App SHALL keep the header visible at the top of the screen at all times
-11. THE Web_App SHALL ensure the sticky header does not obscure page content by adjusting the content area's top padding or margin appropriately
+6. WHEN displaying the current user's name, THE Web_App SHALL use the displayName field if provided, otherwise fall back to the email address
+7. THE Web_App SHALL provide quick links on the main dashboard page for accessing key sections
+8. WHEN displaying quick links on the main dashboard, THE Web_App SHALL hide the User Administration quick link from users who do not have ADMINISTRATOR role
+9. WHEN a user has ADMINISTRATOR role, THE Web_App SHALL display the User Administration quick link on the main dashboard
+10. THE Web_App SHALL make the application header (including both the navigation header and the geographic area filter header) sticky to the top of the viewport
+11. WHEN a user scrolls vertically through page content, THE Web_App SHALL keep the header visible at the top of the screen at all times
+12. THE Web_App SHALL ensure the sticky header does not obscure page content by adjusting the content area's top padding or margin appropriately
 
 ### Requirement 14: About Page
 
@@ -625,16 +629,44 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 18: User Management (Admin Only)
 
-**User Story:** As an administrator, I want to manage users in the web interface, so that I can control system access.
+**User Story:** As an administrator, I want to manage users and their geographic authorizations in a unified interface, so that I can control system access and geographic boundaries in one place.
 
 #### Acceptance Criteria
 
 1. THE Web_App SHALL provide a user management section for administrators only
-2. THE Web_App SHALL display a list of all users
-3. THE Web_App SHALL provide a form to create new users
-4. THE Web_App SHALL provide a form to edit existing users
-5. THE Web_App SHALL allow administrators to assign and modify user roles
-6. THE Web_App SHALL hide user management from non-administrators
+2. THE Web_App SHALL display a list of all users with display name, email, and role
+3. THE Web_App SHALL render user display name as a hyperlink in the primary column (links to edit page)
+4. THE Web_App SHALL provide an edit action button for each user that navigates to the user edit page
+5. THE Web_App SHALL NOT provide a separate "Manage Authorizations" action in the user list
+6. THE Web_App SHALL provide a dedicated page to create new users accessible via route /users/new
+7. THE Web_App SHALL provide a dedicated page to edit existing users accessible via route /users/:id/edit
+8. THE Web_App SHALL NOT use modal dialogs for creating or editing users
+9. THE Web_App SHALL allow vertical scrolling on user form pages to accommodate user fields and embedded authorization management
+10. THE Web_App SHALL display user display name (optional), email, and role fields in the user form
+11. THE Web_App SHALL allow display name to be optional
+12. THE Web_App SHALL validate that user email is provided and properly formatted
+13. THE Web_App SHALL validate that user role is selected
+14. WHEN display name is not provided, THE Web_App SHALL use the email as the display identifier in lists and headers
+14. THE Web_App SHALL allow administrators to assign and modify user roles in the user form
+15. THE Web_App SHALL embed geographic authorization management within the user form page (both create and edit modes)
+16. THE Web_App SHALL display all geographic authorization rules for the user in a table within the user form
+17. THE Web_App SHALL provide an "Add Rule" button within the user form to create new authorization rules
+18. THE Web_App SHALL provide a delete button for each authorization rule within the user form
+19. WHEN creating an authorization rule, THE Web_App SHALL open a modal form with geographic area selection and rule type selection
+20. WHEN creating an authorization rule, THE Web_App SHALL validate that the geographic area exists
+21. WHEN creating an authorization rule, THE Web_App SHALL prevent duplicate rules for the same user and geographic area
+22. THE Web_App SHALL visually distinguish ALLOW rules from DENY rules using color coding or icons (e.g., green checkmark for ALLOW, red X for DENY)
+23. THE Web_App SHALL display a summary of the user's effective access showing which areas they can access within the user form
+24. WHEN displaying effective access, THE Web_App SHALL show allowed areas, their descendants, and ancestor areas (marked as read-only)
+25. WHEN displaying effective access, THE Web_App SHALL indicate which areas are denied
+26. THE Web_App SHALL display a warning when creating DENY rules that override existing ALLOW rules
+27. THE Web_App SHALL provide explanatory text describing how allow-listing and deny-listing rules work
+28. THE Web_App SHALL provide explanatory text describing that allow-listed areas grant access to descendants and read-only access to ancestors
+29. WHEN creating a new user, THE Web_App SHALL allow adding geographic authorization rules before the user is persisted to the backend
+30. WHEN creating a new user with authorization rules, THE Web_App SHALL persist the user and all authorization rules in a single atomic operation
+31. THE Web_App SHALL implement navigation guard using React Router's useBlocker to detect dirty form state
+32. WHEN a user attempts to navigate away from the user form with unsaved changes, THE Web_App SHALL display a confirmation dialog
+33. THE Web_App SHALL hide user management from non-administrators
 
 ### Requirement 19: Optimistic Locking and Conflict Resolution
 

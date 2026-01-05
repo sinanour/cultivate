@@ -74,6 +74,9 @@ describe('AuthContext', () => {
       email: 'test@example.com',
       name: 'Test User',
       role: 'EDITOR' as const,
+      displayName: 'Test User',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
     };
     const oldTokens = {
       accessToken: 'expired-token',
@@ -88,6 +91,7 @@ describe('AuthContext', () => {
     vi.spyOn(AuthService, 'getCurrentUser').mockReturnValue(mockUser);
     vi.spyOn(AuthService, 'isTokenExpired').mockReturnValue(true);
     vi.spyOn(AuthService, 'refreshToken').mockResolvedValue(newTokens);
+    vi.spyOn(AuthService, 'fetchCurrentUser').mockResolvedValue(mockUser);
 
     render(
       <AuthProvider>
@@ -100,6 +104,7 @@ describe('AuthContext', () => {
     });
 
     expect(AuthService.refreshToken).toHaveBeenCalled();
+    expect(AuthService.fetchCurrentUser).toHaveBeenCalled();
   });
 
   it('should logout on failed token refresh', async () => {

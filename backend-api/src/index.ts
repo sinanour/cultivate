@@ -93,7 +93,7 @@ const geographicAuthorizationService = new GeographicAuthorizationService(
   auditLogRepository
 );
 const authService = new AuthService(userRepository, geographicAuthorizationService);
-const userService = new UserService(userRepository);
+const userService = new UserService(userRepository, userGeographicAuthorizationRepository, prisma);
 const activityCategoryService = new ActivityCategoryService(activityCategoryRepository);
 const activityTypeService = new ActivityTypeService(activityTypeRepository, activityCategoryRepository);
 const roleService = new RoleService(roleRepository);

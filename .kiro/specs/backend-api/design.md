@@ -97,7 +97,8 @@ DELETE /api/v1/participants/:id/populations/:populationId -> Remove participant 
 
 // User Routes (Admin Only)
 GET    /api/v1/users                   -> List all users (admin only)
-POST   /api/v1/users                   -> Create user (admin only)
+GET    /api/v1/users/:id               -> Get user by ID (admin only)
+POST   /api/v1/users                   -> Create user with optional authorization rules (admin only)
 PUT    /api/v1/users/:id               -> Update user (admin only)
 
 // Geographic Authorization Routes (Admin Only)
@@ -185,7 +186,7 @@ Services implement business logic and coordinate operations:
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, validates activity category references, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
 - **PopulationService**: Manages population CRUD operations (admin only for create/update/delete), validates uniqueness, prevents deletion of referenced populations, manages participant-population associations (many-to-many), validates participant and population existence, prevents duplicate associations
-- **UserService**: Manages user CRUD operations (admin only), validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates
+- **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction
 - **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
@@ -330,6 +331,22 @@ LoginSchema = {
   password: string (required, min 8 chars)
 }
 
+// User Schemas (Admin Only)
+UserCreateSchema = {
+  displayName: string (optional, min 1 char, max 200 chars),
+  email: string (required, valid email, unique),
+  password: string (required, min 8 chars),
+  role: enum (required, ADMINISTRATOR | EDITOR | READ_ONLY),
+  authorizationRules: array (optional, array of { geographicAreaId: UUID, ruleType: ALLOW | DENY })
+}
+
+UserUpdateSchema = {
+  displayName: string (optional, nullable, min 1 char if provided, max 200 chars),
+  email: string (optional, valid email, unique),
+  password: string (optional, min 8 chars),
+  role: enum (optional, ADMINISTRATOR | EDITOR | READ_ONLY)
+}
+
 // Activity Lifecycle Query Schema
 ActivityLifecycleQuerySchema = {
   startDate: string (optional, ISO 8601 datetime format),
@@ -472,6 +489,7 @@ The API uses Prisma to define the following database models:
 
 **User**
 - id: UUID (primary key)
+- displayName: String (optional, nullable)
 - email: String (unique)
 - passwordHash: String
 - role: Enum (ADMINISTRATOR, EDITOR, READ_ONLY)
@@ -1319,20 +1337,24 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 ### User Management Properties
 
 **Property 68a: User list retrieval**
-*For any* GET /api/v1/users request from an administrator, the API should return all users without password hashes.
-**Validates: Requirements 11A.1, 11A.15, 11A.16**
+*For any* GET /api/v1/users request from an administrator, the API should return all users with displayName, email, and role fields without password hashes.
+**Validates: Requirements 11A.1, 11A.17, 11A.18**
 
 **Property 68b: User creation validation**
-*For any* POST /api/v1/users request with valid email, password (minimum 8 characters), and role, the API should create a new user with hashed password.
+*For any* POST /api/v1/users request with valid displayName, email, password (minimum 8 characters), and role, the API should create a new user with hashed password.
 **Validates: Requirements 11A.2, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10**
+
+**Property 68b_auth: User creation with authorization rules**
+*For any* POST /api/v1/users request with valid user data and an array of authorization rules, the API should create the user and all authorization rules in a single atomic transaction.
+**Validates: Requirements 11A.11, 11A.12**
 
 **Property 68c: User email uniqueness**
 *For any* attempt to create or update a user with an email that already exists for a different user, the API should return a DUPLICATE_EMAIL error.
-**Validates: Requirements 11A.7, 11A.14**
+**Validates: Requirements 11A.7, 11A.16**
 
 **Property 68d: User update flexibility**
-*For any* PUT /api/v1/users/:id request, the API should allow updating email, password, and role independently, with password being optional.
-**Validates: Requirements 11A.11, 11A.12, 11A.13**
+*For any* PUT /api/v1/users/:id request, the API should allow updating displayName, email, password, and role independently, with password being optional.
+**Validates: Requirements 11A.13, 11A.14, 11A.15**
 
 **Property 68e: User management administrator restriction**
 *For any* user management endpoint request from a non-administrator, the API should return 403 Forbidden.
@@ -1340,7 +1362,11 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 
 **Property 68f: Password hash exclusion**
 *For any* user object returned by the API, the password hash field should not be included in the response.
-**Validates: Requirements 11A.16**
+**Validates: Requirements 11A.18**
+
+**Property 68g: Display name optional acceptance**
+*For any* POST /api/v1/users request with or without a displayName, the API should accept it and persist the provided value (or null if not provided).
+**Validates: Requirements 11A.6a**
 
 ### Audit Logging Properties
 

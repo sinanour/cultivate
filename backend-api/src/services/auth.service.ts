@@ -140,6 +140,7 @@ export class AuthService {
 
       return {
           id: user.id,
+          displayName: user.displayName,
           email: user.email,
           role: user.role,
           createdAt: user.createdAt,

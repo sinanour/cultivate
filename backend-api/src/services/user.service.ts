@@ -1,21 +1,36 @@
-import { User, UserRole } from '@prisma/client';
+import { User, UserRole, AuthorizationRuleType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { UserRepository } from '../repositories/user.repository';
+import { UserGeographicAuthorizationRepository } from '../repositories/user-geographic-authorization.repository';
+import { PrismaClient } from '@prisma/client';
+
+interface AuthorizationRuleInput {
+  geographicAreaId: string;
+  ruleType: AuthorizationRuleType;
+}
 
 interface CreateUserData {
+  displayName?: string;
   email: string;
   password: string;
   role: UserRole;
+  authorizationRules?: AuthorizationRuleInput[];
 }
 
 interface UpdateUserData {
+  displayName?: string | null;
   email?: string;
   password?: string;
   role?: UserRole;
 }
 
 export class UserService {
-  constructor(private userRepository: UserRepository) {}
+  constructor(
+    private userRepository: UserRepository,
+    // @ts-expect-error - Reserved for future authorization rule management
+    private authorizationRepository: UserGeographicAuthorizationRepository,
+    private prisma: PrismaClient
+  ) { }
 
   async getAllUsers(): Promise<Omit<User, 'passwordHash'>[]> {
     const users = await this.userRepository.findAll();
@@ -32,7 +47,7 @@ export class UserService {
     return userWithoutPassword;
   }
 
-  async createUser(data: CreateUserData): Promise<Omit<User, 'passwordHash'>> {
+  async createUser(data: CreateUserData, createdBy: string): Promise<Omit<User, 'passwordHash'>> {
     // Validate required fields
     if (!data.email || data.email.trim().length === 0) {
       throw new Error('Email is required');
@@ -59,8 +74,39 @@ export class UserService {
     // Hash password
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    // Create user
+    // If authorization rules provided, create user and rules in a transaction
+    if (data.authorizationRules && data.authorizationRules.length > 0) {
+      const result = await this.prisma.$transaction(async (tx) => {
+        // Create user
+        const created = await tx.user.create({
+          data: {
+            displayName: data.displayName?.trim() || null,
+            email: data.email.trim(),
+            passwordHash,
+            role: data.role,
+          },
+        });
+
+        // Create authorization rules
+        await tx.userGeographicAuthorization.createMany({
+          data: data.authorizationRules!.map(rule => ({
+            userId: created.id,
+            geographicAreaId: rule.geographicAreaId,
+            ruleType: rule.ruleType,
+            createdBy,
+          })),
+        });
+
+        return created;
+      });
+
+      const { passwordHash: _, ...userWithoutPassword } = result;
+      return userWithoutPassword;
+    }
+
+    // Create user without authorization rules
     const created = await this.userRepository.create({
+      displayName: data.displayName?.trim() || null,
       email: data.email.trim(),
       passwordHash,
       role: data.role,
@@ -76,7 +122,12 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    const updateData: { email?: string; passwordHash?: string; role?: UserRole } = {};
+    const updateData: { displayName?: string | null; email?: string; passwordHash?: string; role?: UserRole } = {};
+
+    // Update displayName if provided (including null to clear)
+    if ('displayName' in data) {
+      updateData.displayName = data.displayName?.trim() || null;
+    }
 
     // Validate and update email if provided
     if (data.email !== undefined) {
