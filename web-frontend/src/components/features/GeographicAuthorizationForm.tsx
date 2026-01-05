@@ -19,7 +19,8 @@ interface GeographicAuthorizationFormProps {
   userId: string;
   visible: boolean;
   onDismiss: () => void;
-  onSuccess: () => void;
+  onSuccess: (geographicAreaId: string, ruleType: 'ALLOW' | 'DENY') => void;
+  localMode?: boolean; // If true, don't persist to API, just call onSuccess with data
 }
 
 export function GeographicAuthorizationForm({
@@ -27,6 +28,7 @@ export function GeographicAuthorizationForm({
   visible,
   onDismiss,
   onSuccess,
+  localMode = false,
 }: GeographicAuthorizationFormProps) {
   const [geographicAreaId, setGeographicAreaId] = useState<string>('');
   const [ruleType, setRuleType] = useState<'ALLOW' | 'DENY'>('ALLOW');
@@ -37,7 +39,7 @@ export function GeographicAuthorizationForm({
     mutationFn: () =>
       geographicAuthorizationService.createAuthorizationRule(userId, geographicAreaId, ruleType),
     onSuccess: () => {
-      onSuccess();
+      onSuccess(geographicAreaId, ruleType);
       handleReset();
     },
     onError: (error: any) => {
@@ -58,7 +60,14 @@ export function GeographicAuthorizationForm({
       return;
     }
 
-    createMutation.mutate();
+    if (localMode) {
+      // Local mode: just call onSuccess with the data, don't persist to API
+      onSuccess(geographicAreaId, ruleType);
+      handleReset();
+    } else {
+      // API mode: persist to API
+      createMutation.mutate();
+    }
   };
 
   const handleReset = () => {
@@ -86,7 +95,7 @@ export function GeographicAuthorizationForm({
             <Button
               variant="primary"
               onClick={handleSubmit}
-              loading={createMutation.isPending}
+              loading={!localMode && createMutation.isPending}
               disabled={!geographicAreaId}
             >
               Add Rule

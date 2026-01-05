@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBlocker } from 'react-router-dom';
 import Form from '@cloudscape-design/components/form';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
@@ -14,6 +15,7 @@ import Badge from '@cloudscape-design/components/badge';
 import Box from '@cloudscape-design/components/box';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
+import Modal from '@cloudscape-design/components/modal';
 import type { User, UserRole } from '../../types';
 import { UserService } from '../../services/api/user.service';
 import { geographicAuthorizationService } from '../../services/api/geographic-authorization.service';
@@ -31,6 +33,19 @@ interface AuthorizationRuleInput {
   ruleType: 'ALLOW' | 'DENY';
 }
 
+interface AuthorizationRuleWithMetadata extends AuthorizationRuleInput {
+  id: string;
+  geographicArea?: {
+    id: string;
+    name: string;
+    areaType: string;
+  };
+  createdAt: string;
+  userId: string;
+  createdBy: string;
+  isPending?: boolean; // Flag for rules not yet persisted
+}
+
 export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFormWithAuthorizationProps) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useNotification();
@@ -38,12 +53,31 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('READ_ONLY');
-  const [authorizationRules, setAuthorizationRules] = useState<AuthorizationRuleInput[]>([]);
+  
+  // Local state for authorization rules (both new users and pending changes for existing users)
+  const [localAuthRules, setLocalAuthRules] = useState<AuthorizationRuleWithMetadata[]>([]);
+  const [deletedRuleIds, setDeletedRuleIds] = useState<string[]>([]); // Track rules to delete on submit
   
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
   const [showAddAuthForm, setShowAddAuthForm] = useState(false);
+
+  // Track initial values for dirty state detection
+  const [initialFormState, setInitialFormState] = useState<{
+    displayName: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    ruleIds: string[]; // Track initial rule IDs for dirty detection
+  } | null>(null);
+
+  // Track if we should bypass navigation guard (set when submitting)
+  const [bypassNavigationGuard, setBypassNavigationGuard] = useState(false);
+
+  // Navigation guard confirmation state
+  const [showNavigationConfirmation, setShowNavigationConfirmation] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
   const isEditMode = !!user;
 
@@ -54,31 +88,121 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
     enabled: isEditMode,
   });
 
-  // Fetch effective authorized areas for display
+  // Initialize local rules from fetched rules when they load
+  useEffect(() => {
+    if (isEditMode && existingRules.length > 0 && localAuthRules.length === 0) {
+      setLocalAuthRules(existingRules);
+    }
+  }, [isEditMode, existingRules, localAuthRules.length]);
+
+  // Fetch effective authorized areas for display (not used for dirty detection, just display)
   const { data: authorizedAreas = [] } = useQuery({
     queryKey: ['authorizedAreas', user?.id],
     queryFn: () => geographicAuthorizationService.getAuthorizedAreas(user!.id),
     enabled: isEditMode,
   });
 
+  // Check if form is dirty
+  const isDirty = useMemo(() => {
+    if (!initialFormState) return false;
+    
+    // Bypass guard if we're in the process of submitting
+    if (bypassNavigationGuard) return false;
+    
+    // Check if rules have changed
+    const currentRuleIds = localAuthRules.map(r => r.id).sort();
+    const initialRuleIds = [...initialFormState.ruleIds].sort();
+    const rulesChanged = 
+      currentRuleIds.length !== initialRuleIds.length ||
+      currentRuleIds.some((id, i) => id !== initialRuleIds[i]) ||
+      deletedRuleIds.length > 0;
+    
+    // Compare current state with initial state
+    return (
+      displayName !== initialFormState.displayName ||
+      email !== initialFormState.email ||
+      password !== initialFormState.password ||
+      role !== initialFormState.role ||
+      rulesChanged
+    );
+  }, [displayName, email, password, role, localAuthRules, deletedRuleIds, initialFormState, bypassNavigationGuard]);
+
+  // Navigation blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Show confirmation dialog when navigation is blocked
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setShowNavigationConfirmation(true);
+      setPendingNavigation(() => blocker.proceed);
+    }
+  }, [blocker.state, blocker.proceed]);
+
+  const handleConfirmNavigation = () => {
+    setShowNavigationConfirmation(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationConfirmation(false);
+    setPendingNavigation(null);
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  };
+
+  const handleCancelClick = () => {
+    // If form is dirty, the blocker will intercept and show confirmation
+    // If form is clean, just navigate away
+    onCancel();
+  };
+
   // Update form state when user prop changes
   useEffect(() => {
+    // Reset bypass flag when switching modes or when user data loads
+    setBypassNavigationGuard(false);
+    
     if (user) {
-      setDisplayName(user.displayName || '');
-      setEmail(user.email || '');
-      setRole(user.role || 'READ_ONLY');
+      const values = {
+        displayName: user.displayName || '',
+        email: user.email || '',
+        password: '',
+        role: user.role || 'READ_ONLY',
+        ruleIds: existingRules.map(r => r.id),
+      };
+      setDisplayName(values.displayName);
+      setEmail(values.email);
+      setRole(values.role);
       setPassword('');
+      setLocalAuthRules(existingRules);
+      setDeletedRuleIds([]);
+      setInitialFormState(values);
     } else {
-      setDisplayName('');
-      setEmail('');
-      setPassword('');
-      setRole('READ_ONLY');
-      setAuthorizationRules([]);
+      const emptyValues = {
+        displayName: '',
+        email: '',
+        password: '',
+        role: 'READ_ONLY' as UserRole,
+        ruleIds: [],
+      };
+      setDisplayName(emptyValues.displayName);
+      setEmail(emptyValues.email);
+      setPassword(emptyValues.password);
+      setRole(emptyValues.role);
+      setLocalAuthRules([]);
+      setDeletedRuleIds([]);
+      setInitialFormState(emptyValues);
     }
     setEmailError('');
     setPasswordError('');
     setError('');
-  }, [user]);
+  }, [user, existingRules]);
 
   const roleOptions = [
     { label: 'Administrator', value: 'ADMINISTRATOR' },
@@ -95,6 +219,9 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
       authorizationRules?: AuthorizationRuleInput[];
     }) => UserService.createUser(data),
     onSuccess: () => {
+      // Set flag to bypass navigation guard
+      setBypassNavigationGuard(true);
+      
       queryClient.invalidateQueries({ queryKey: ['users'] });
       showSuccess('User created successfully');
       onSuccess();
@@ -106,41 +233,51 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: {
+    mutationFn: async (data: {
       id: string;
       displayName?: string | null;
       email?: string;
       password?: string;
       role?: UserRole;
-    }) =>
-      UserService.updateUser(data.id, {
+    }) => {
+      // First update the user
+      await UserService.updateUser(data.id, {
         displayName: data.displayName,
         email: data.email,
         password: data.password,
         role: data.role,
-      }),
+      });
+
+      // Then apply authorization rule changes
+      // Delete rules that were marked for deletion
+      for (const ruleId of deletedRuleIds) {
+        await geographicAuthorizationService.deleteAuthorizationRule(user!.id, ruleId);
+      }
+
+      // Add new rules (those with isPending flag)
+      const newRules = localAuthRules.filter(r => r.isPending);
+      for (const rule of newRules) {
+        await geographicAuthorizationService.createAuthorizationRule(
+          user!.id,
+          rule.geographicAreaId,
+          rule.ruleType
+        );
+      }
+    },
     onSuccess: () => {
+      // Set flag to bypass navigation guard
+      setBypassNavigationGuard(true);
+      
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['user', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['geographicAuthorizations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['authorizedAreas', user?.id] });
       showSuccess('User updated successfully');
       onSuccess();
     },
     onError: (err: Error) => {
       setError(err.message || 'Failed to update user');
       showError(err.message || 'Failed to update user');
-    },
-  });
-
-  const deleteRuleMutation = useMutation({
-    mutationFn: (authId: string) =>
-      geographicAuthorizationService.deleteAuthorizationRule(user!.id, authId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['geographicAuthorizations', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['authorizedAreas', user?.id] });
-      showSuccess('Authorization rule deleted successfully');
-    },
-    onError: (err: Error) => {
-      showError(err.message || 'Failed to delete authorization rule');
     },
   });
 
@@ -190,6 +327,9 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
       return;
     }
 
+    // Set flag to bypass navigation guard during submission
+    setBypassNavigationGuard(true);
+
     if (user) {
       const updateData: {
         id: string;
@@ -210,35 +350,54 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
       
       updateMutation.mutate(updateData);
     } else {
+      // For new users, convert local rules to the format expected by API
+      const rulesToCreate = localAuthRules.map(r => ({
+        geographicAreaId: r.geographicAreaId,
+        ruleType: r.ruleType,
+      }));
+      
       createMutation.mutate({
         displayName: displayName.trim() || undefined,
         email: email.trim(),
         password,
         role,
-        authorizationRules: authorizationRules.length > 0 ? authorizationRules : undefined,
+        authorizationRules: rulesToCreate.length > 0 ? rulesToCreate : undefined,
       });
     }
   };
 
-  const handleAddAuthRule = () => {
-    if (isEditMode) {
-      // For existing users, the rule is created via API in GeographicAuthorizationForm
-      // Just refresh the queries
-      queryClient.invalidateQueries({ queryKey: ['geographicAuthorizations', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['authorizedAreas', user?.id] });
-      showSuccess('Authorization rule added successfully');
-    }
+  const handleAddAuthRule = (geographicAreaId: string, ruleType: 'ALLOW' | 'DENY') => {
+    // Add rule to local state (not persisted until form submit)
+    const newRule: AuthorizationRuleWithMetadata = {
+      id: `pending-${Date.now()}`, // Temporary ID
+      geographicAreaId,
+      ruleType,
+      geographicArea: {
+        id: geographicAreaId,
+        name: 'Loading...', // Will be populated by query
+        areaType: 'NEIGHBOURHOOD',
+      },
+      createdAt: new Date().toISOString(),
+      userId: user?.id || '',
+      createdBy: '',
+      isPending: true,
+    };
+    
+    setLocalAuthRules([...localAuthRules, newRule]);
     setShowAddAuthForm(false);
   };
 
-  const handleDeleteRule = (authId: string) => {
+  const handleDeleteRule = (ruleId: string) => {
     if (window.confirm('Are you sure you want to delete this authorization rule?')) {
-      if (isEditMode) {
-        deleteRuleMutation.mutate(authId);
+      const rule = localAuthRules.find(r => r.id === ruleId);
+      
+      if (rule?.isPending) {
+        // Remove pending rule from local state
+        setLocalAuthRules(localAuthRules.filter(r => r.id !== ruleId));
       } else {
-        // Remove from local state for new users
-        const index = parseInt(authId);
-        setAuthorizationRules(authorizationRules.filter((_, i) => i !== index));
+        // Mark existing rule for deletion (will be deleted on submit)
+        setDeletedRuleIds([...deletedRuleIds, ruleId]);
+        setLocalAuthRules(localAuthRules.filter(r => r.id !== ruleId));
       }
     }
   };
@@ -249,14 +408,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
   const deniedAreas = authorizedAreas.filter((a) => a.accessLevel === 'NONE');
 
   // Check for DENY rules that override ALLOW rules
-  const displayRules = isEditMode ? existingRules : authorizationRules.map((rule, i) => ({
-    id: i.toString(),
-    ...rule,
-    geographicArea: { id: '', name: 'Area', areaType: 'NEIGHBOURHOOD' }, // Placeholder for new users
-    createdAt: new Date().toISOString(),
-    userId: '',
-    createdBy: '',
-  }));
+  const displayRules = localAuthRules;
   
   const denyRules = displayRules.filter((r) => r.ruleType === 'DENY');
   const allowRules = displayRules.filter((r) => r.ruleType === 'ALLOW');
@@ -269,7 +421,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
       <Form
         actions={
           <SpaceBetween direction="horizontal" size="xs">
-            <Button variant="link" onClick={onCancel} disabled={isSubmitting}>
+            <Button variant="link" onClick={handleCancelClick} disabled={isSubmitting} formAction="none">
               Cancel
             </Button>
             <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
@@ -373,12 +525,13 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
                 actions={
                   <Button 
                     onClick={() => setShowAddAuthForm(true)} 
-                    disabled={isSubmitting || !isEditMode}
+                    disabled={!isEditMode}
+                    formAction="none"
                   >
                     Add Rule
                   </Button>
                 }
-                description={!isEditMode ? 'Save the user first to add authorization rules' : undefined}
+                description={!isEditMode ? 'Save the user first to add authorization rules' : 'Changes will be saved when you click Update'}
               >
                 Geographic Authorization Rules
               </Header>
@@ -394,7 +547,12 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
                   {
                     id: 'geographicArea',
                     header: 'Geographic Area',
-                    cell: (item) => item.geographicArea?.name || item.geographicAreaId,
+                    cell: (item) => (
+                      <SpaceBetween direction="horizontal" size="xs">
+                        <span>{item.geographicArea?.name || item.geographicAreaId}</span>
+                        {item.isPending && <Badge color="blue">Pending</Badge>}
+                      </SpaceBetween>
+                    ),
                   },
                   {
                     id: 'areaType',
@@ -414,7 +572,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
                   {
                     id: 'createdAt',
                     header: 'Created',
-                    cell: (item) => new Date(item.createdAt).toLocaleDateString(),
+                    cell: (item) => item.isPending ? 'Not saved' : new Date(item.createdAt).toLocaleDateString(),
                   },
                   {
                     id: 'actions',
@@ -424,8 +582,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
                         variant="icon"
                         iconName="remove"
                         onClick={() => handleDeleteRule(item.id)}
-                        loading={deleteRuleMutation.isPending}
-                        disabled={isSubmitting}
+                        formAction="none"
                       />
                     ),
                   },
@@ -536,8 +693,32 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
         userId={user?.id || ''}
         visible={showAddAuthForm}
         onDismiss={() => setShowAddAuthForm(false)}
-        onSuccess={handleAddAuthRule}
+        onSuccess={(geographicAreaId, ruleType) => {
+          handleAddAuthRule(geographicAreaId, ruleType);
+        }}
+        localMode={true}
       />
+
+      {/* Navigation Confirmation Modal */}
+      <Modal
+        visible={showNavigationConfirmation}
+        onDismiss={handleCancelNavigation}
+        header="Unsaved Changes"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={handleCancelNavigation}>
+                Stay on Page
+              </Button>
+              <Button variant="primary" onClick={handleConfirmNavigation}>
+                Discard Changes
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
+      </Modal>
     </form>
   );
 }
