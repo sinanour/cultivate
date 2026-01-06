@@ -16,9 +16,11 @@ import Box from '@cloudscape-design/components/box';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Modal from '@cloudscape-design/components/modal';
+import Popover from '@cloudscape-design/components/popover';
 import type { User, UserRole } from '../../types';
 import { UserService } from '../../services/api/user.service';
 import { geographicAuthorizationService } from '../../services/api/geographic-authorization.service';
+import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeographicAuthorizationForm } from './GeographicAuthorizationForm';
 import { useNotification } from '../../hooks/useNotification';
 
@@ -202,7 +204,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
     setEmailError('');
     setPasswordError('');
     setError('');
-  }, [user, existingRules]);
+  }, [user?.id, existingRules.length]); // Only depend on user ID and rules length, not the entire arrays
 
   const roleOptions = [
     { label: 'Administrator', value: 'ADMINISTRATOR' },
@@ -366,25 +368,33 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
     }
   };
 
-  const handleAddAuthRule = (geographicAreaId: string, ruleType: 'ALLOW' | 'DENY') => {
-    // Add rule to local state (not persisted until form submit)
-    const newRule: AuthorizationRuleWithMetadata = {
-      id: `pending-${Date.now()}`, // Temporary ID
-      geographicAreaId,
-      ruleType,
-      geographicArea: {
-        id: geographicAreaId,
-        name: 'Loading...', // Will be populated by query
-        areaType: 'NEIGHBOURHOOD',
-      },
-      createdAt: new Date().toISOString(),
-      userId: user?.id || '',
-      createdBy: '',
-      isPending: true,
-    };
-    
-    setLocalAuthRules([...localAuthRules, newRule]);
-    setShowAddAuthForm(false);
+  const handleAddAuthRule = async (geographicAreaId: string, ruleType: 'ALLOW' | 'DENY') => {
+    // Fetch the geographic area details to display the name
+    try {
+      const geographicArea = await GeographicAreaService.getGeographicArea(geographicAreaId);
+      
+      // Add rule to local state (not persisted until form submit)
+      const newRule: AuthorizationRuleWithMetadata = {
+        id: `pending-${Date.now()}`, // Temporary ID
+        geographicAreaId,
+        ruleType,
+        geographicArea: {
+          id: geographicArea.id,
+          name: geographicArea.name,
+          areaType: geographicArea.areaType,
+        },
+        createdAt: new Date().toISOString(),
+        userId: user?.id || '',
+        createdBy: '',
+        isPending: true,
+      };
+      
+      setLocalAuthRules([...localAuthRules, newRule]);
+      setShowAddAuthForm(false);
+    } catch (error) {
+      showError('Failed to fetch geographic area details');
+      console.error('Error fetching geographic area:', error);
+    }
   };
 
   const handleDeleteRule = (ruleId: string) => {
@@ -488,27 +498,6 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
             </SpaceBetween>
           </Container>
 
-          {/* Explanatory Text */}
-          <Alert type="info" header="How Geographic Authorization Works">
-            <SpaceBetween size="xs">
-              <Box>
-                <strong>ALLOW rules</strong> grant access to the selected area and all its
-                descendants (child areas).
-              </Box>
-              <Box>
-                <strong>ALLOW rules</strong> also grant read-only access to ancestor areas for
-                navigation context.
-              </Box>
-              <Box>
-                <strong>DENY rules</strong> take precedence over ALLOW rules and block access to
-                the area and all descendants.
-              </Box>
-              <Box>
-                Users with <strong>no rules</strong> have unrestricted access to all areas.
-              </Box>
-            </SpaceBetween>
-          </Alert>
-
           {/* Warning for conflicting rules */}
           {hasConflictingRules && (
             <Alert type="warning" header="Conflicting Rules Detected">
@@ -518,91 +507,118 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
           )}
 
           {/* Authorization Rules Table */}
-          <Container
+          <Table
             header={
               <Header
                 variant="h2"
                 actions={
                   <Button 
                     onClick={() => setShowAddAuthForm(true)} 
-                    disabled={!isEditMode}
+                    disabled={isSubmitting}
                     formAction="none"
                   >
                     Add Rule
                   </Button>
                 }
-                description={!isEditMode ? 'Save the user first to add authorization rules' : 'Changes will be saved when you click Update'}
+                description={isEditMode ? 'Changes will be saved when you click Update' : 'Rules will be created when you click Create'}
               >
-                Geographic Authorization Rules
+                <SpaceBetween direction="horizontal" size="xs" alignItems="center">
+                  <span>Geographic Authorization Rules</span>
+                  <Popover
+                    dismissButton={false}
+                    position="right"
+                    size="large"
+                    triggerType="custom"
+                    content={
+                      <SpaceBetween size="xs">
+                        <Box>
+                          <strong>ALLOW rules</strong> grant access to the selected area and all its
+                          descendants (child areas).
+                        </Box>
+                        <Box>
+                          <strong>ALLOW rules</strong> also grant read-only access to ancestor areas for
+                          navigation context.
+                        </Box>
+                        <Box>
+                          <strong>DENY rules</strong> take precedence over ALLOW rules and block access to
+                          the area and all descendants.
+                        </Box>
+                        <Box>
+                          Users with <strong>no rules</strong> have unrestricted access to all areas.
+                        </Box>
+                      </SpaceBetween>
+                    }
+                  >
+                    <Button
+                      variant="inline-icon"
+                      iconName="status-info"
+                      ariaLabel="How Geographic Authorization Works"
+                      formAction="none"
+                    />
+                  </Popover>
+                </SpaceBetween>
               </Header>
             }
-          >
-            {rulesLoading ? (
-              <Box textAlign="center" padding="l">
-                <StatusIndicator type="loading">Loading authorization rules...</StatusIndicator>
-              </Box>
-            ) : (
-              <Table
-                columnDefinitions={[
-                  {
-                    id: 'geographicArea',
-                    header: 'Geographic Area',
-                    cell: (item) => (
-                      <SpaceBetween direction="horizontal" size="xs">
-                        <span>{item.geographicArea?.name || item.geographicAreaId}</span>
-                        {item.isPending && <Badge color="blue">Pending</Badge>}
-                      </SpaceBetween>
-                    ),
-                  },
-                  {
-                    id: 'areaType',
-                    header: 'Area Type',
-                    cell: (item) => item.geographicArea?.areaType || '-',
-                  },
-                  {
-                    id: 'ruleType',
-                    header: 'Rule Type',
-                    cell: (item) =>
-                      item.ruleType === 'ALLOW' ? (
-                        <StatusIndicator type="success">ALLOW</StatusIndicator>
-                      ) : (
-                        <StatusIndicator type="error">DENY</StatusIndicator>
-                      ),
-                  },
-                  {
-                    id: 'createdAt',
-                    header: 'Created',
-                    cell: (item) => item.isPending ? 'Not saved' : new Date(item.createdAt).toLocaleDateString(),
-                  },
-                  {
-                    id: 'actions',
-                    header: 'Actions',
-                    cell: (item) => (
-                      <Button
-                        variant="icon"
-                        iconName="remove"
-                        onClick={() => handleDeleteRule(item.id)}
-                        formAction="none"
-                      />
-                    ),
-                  },
-                ]}
-                items={displayRules}
-                empty={
-                  <Box textAlign="center" color="inherit">
-                    <SpaceBetween size="xs">
-                      <Box variant="p" color="inherit">
-                        No authorization rules
-                      </Box>
-                      <Box variant="small" color="text-body-secondary">
-                        This user has unrestricted access to all geographic areas
-                      </Box>
-                    </SpaceBetween>
+            loading={rulesLoading}
+            loadingText="Loading authorization rules..."
+            columnDefinitions={[
+              {
+                id: 'geographicArea',
+                header: 'Geographic Area',
+                cell: (item) => (
+                  <SpaceBetween direction="horizontal" size="xs">
+                    <span>{item.geographicArea?.name || item.geographicAreaId}</span>
+                    {item.isPending && <Badge color="blue">Pending</Badge>}
+                  </SpaceBetween>
+                ),
+              },
+              {
+                id: 'areaType',
+                header: 'Area Type',
+                cell: (item) => item.geographicArea?.areaType || '-',
+              },
+              {
+                id: 'ruleType',
+                header: 'Rule Type',
+                cell: (item) =>
+                  item.ruleType === 'ALLOW' ? (
+                    <StatusIndicator type="success">ALLOW</StatusIndicator>
+                  ) : (
+                    <StatusIndicator type="error">DENY</StatusIndicator>
+                  ),
+              },
+              {
+                id: 'createdAt',
+                header: 'Created',
+                cell: (item) => item.isPending ? 'Not saved' : new Date(item.createdAt).toLocaleDateString(),
+              },
+              {
+                id: 'actions',
+                header: 'Actions',
+                cell: (item) => (
+                  <Button
+                    variant="icon"
+                    iconName="remove"
+                    onClick={() => handleDeleteRule(item.id)}
+                    formAction="none"
+                  />
+                ),
+              },
+            ]}
+            items={displayRules}
+            empty={
+              <Box textAlign="center" color="inherit">
+                <SpaceBetween size="xs">
+                  <Box variant="p" color="inherit">
+                    No authorization rules
                   </Box>
-                }
-              />
-            )}
-          </Container>
+                  <Box variant="small" color="text-body-secondary">
+                    This user has unrestricted access to all geographic areas
+                  </Box>
+                </SpaceBetween>
+              </Box>
+            }
+          />
 
           {/* Effective Access Summary - only show for existing users */}
           {isEditMode && authorizedAreas.length > 0 && (
@@ -619,15 +635,14 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
                     </Box>
                   ) : (
                     fullAccessAreas.slice(0, 10).map((area) => (
-                      <Box key={area.geographicAreaId}>
+                      <SpaceBetween key={area.geographicAreaId} direction="horizontal" size="xs">
                         <Badge color="green">{area.geographicAreaName}</Badge>
-                        {' '}
                         {area.isDescendant && (
-                          <Box variant="small" color="text-body-secondary" display="inline">
+                          <Box variant="small" color="text-body-secondary">
                             (via parent)
                           </Box>
                         )}
-                      </Box>
+                      </SpaceBetween>
                     ))
                   )}
                   {fullAccessAreas.length > 10 && (
@@ -646,13 +661,12 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
                     </Box>
                   ) : (
                     readOnlyAreas.slice(0, 10).map((area) => (
-                      <Box key={area.geographicAreaId}>
+                      <SpaceBetween key={area.geographicAreaId} direction="horizontal" size="xs">
                         <Badge color="blue">{area.geographicAreaName}</Badge>
-                        {' '}
-                        <Box variant="small" color="text-body-secondary" display="inline">
+                        <Box variant="small" color="text-body-secondary">
                           (ancestor)
                         </Box>
-                      </Box>
+                      </SpaceBetween>
                     ))
                   )}
                   {readOnlyAreas.length > 10 && (

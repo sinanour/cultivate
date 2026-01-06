@@ -30,6 +30,8 @@ import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
 import { formatDate } from '../../utils/date.utils';
 import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
+import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ActivityFormProps {
   activity: Activity | null;
@@ -46,6 +48,7 @@ const STATUS_OPTIONS = [
 
 export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [activityTypeId, setActivityTypeId] = useState('');
   const [status, setStatus] = useState<Activity['status']>('PLANNED');
@@ -65,6 +68,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const [newVenueId, setNewVenueId] = useState('');
   const [newVenueEffectiveFrom, setNewVenueEffectiveFrom] = useState('');
   const [venueFormErrors, setVenueFormErrors] = useState<{ venue?: string; effectiveFrom?: string; duplicate?: string }>({});
+  const [isRefreshingVenues, setIsRefreshingVenues] = useState(false);
 
   // Participant assignment state
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -73,6 +77,42 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const [newRoleId, setNewRoleId] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [assignmentFormErrors, setAssignmentFormErrors] = useState<{ participant?: string; role?: string; duplicate?: string }>({});
+  const [isRefreshingParticipants, setIsRefreshingParticipants] = useState(false);
+  const [isRefreshingRoles, setIsRefreshingRoles] = useState(false);
+
+  const canAddVenue = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
+  const canAddParticipant = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
+  const canAddRole = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
+
+  const handleRefreshVenues = async () => {
+    setIsRefreshingVenues(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['venues'] });
+      await queryClient.refetchQueries({ queryKey: ['venues'] });
+    } finally {
+      setIsRefreshingVenues(false);
+    }
+  };
+
+  const handleRefreshParticipants = async () => {
+    setIsRefreshingParticipants(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['participants'] });
+      await queryClient.refetchQueries({ queryKey: ['participants'] });
+    } finally {
+      setIsRefreshingParticipants(false);
+    }
+  };
+
+  const handleRefreshRoles = async () => {
+    setIsRefreshingRoles(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['participantRoles'] });
+      await queryClient.refetchQueries({ queryKey: ['participantRoles'] });
+    } finally {
+      setIsRefreshingRoles(false);
+    }
+  };
 
   // Track initial values for dirty state detection
   const [initialFormState, setInitialFormState] = useState<{
@@ -759,35 +799,24 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
             )}
 
             {/* Embedded Venue History Management */}
-            <Container
-              header={
-                <Header
-                  variant="h3"
-                  actions={
-                    <Button
-                      onClick={(e) => handleAddVenue(e)}
-                      disabled={isSubmitting}
-                      iconName="add-plus"
+            <SpaceBetween size="m">
+              {showVenueForm && (
+                <Container>
+                  <SpaceBetween size="m">
+                    {venueFormErrors.duplicate && (
+                      <Alert type="error">{venueFormErrors.duplicate}</Alert>
+                    )}
+                    <FormField
+                      label="Venue"
+                      errorText={venueFormErrors.venue}
+                      description="Select the venue for this activity"
                     >
-                      Add Venue
-                    </Button>
-                  }
-                >
-                  Venue Associations
-                </Header>
-              }
-            >
-              <SpaceBetween size="m">
-                {showVenueForm && (
-                  <Container>
-                    <SpaceBetween size="m">
-                      {venueFormErrors.duplicate && (
-                        <Alert type="error">{venueFormErrors.duplicate}</Alert>
-                      )}
-                      <FormField
-                        label="Venue"
-                        errorText={venueFormErrors.venue}
-                        description="Select the venue for this activity"
+                      <EntitySelectorWithActions
+                        onRefresh={handleRefreshVenues}
+                        addEntityUrl="/venues/new"
+                        canAdd={canAddVenue}
+                        isRefreshing={isRefreshingVenues}
+                        entityTypeName="venue"
                       >
                         <AsyncEntitySelect
                           value={newVenueId}
@@ -814,121 +843,118 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                           invalid={!!venueFormErrors.venue}
                           ariaLabel="Select venue"
                         />
-                      </FormField>
-                      <FormField
-                        label="Effective Start Date"
-                        errorText={venueFormErrors.effectiveFrom}
-                        description={
-                          startDate
-                            ? `The date when this venue association became effective (leave empty to use activity start date: ${startDate})`
-                            : "The date when this venue association became effective (leave empty for activity start date)"
-                        }
-                      >
-                        <DatePicker
-                          value={newVenueEffectiveFrom}
-                          onChange={({ detail }) => {
-                            setNewVenueEffectiveFrom(detail.value);
-                            setVenueFormErrors({ ...venueFormErrors, effectiveFrom: undefined, duplicate: undefined });
-                          }}
-                          placeholder="YYYY-MM-DD (optional)"
-                        />
-                      </FormField>
-                      <SpaceBetween direction="horizontal" size="xs">
-                        <Button onClick={(e) => handleCancelVenueForm(e)}>Cancel</Button>
-                        <Button variant="primary" onClick={(e) => handleSaveVenue(e)}>
-                          Add
-                        </Button>
-                      </SpaceBetween>
+                      </EntitySelectorWithActions>
+                    </FormField>
+                    <FormField
+                      label="Effective Start Date"
+                      errorText={venueFormErrors.effectiveFrom}
+                      description={
+                        startDate
+                          ? `The date when this venue association became effective (leave empty to use activity start date: ${startDate})`
+                          : "The date when this venue association became effective (leave empty for activity start date)"
+                      }
+                    >
+                      <DatePicker
+                        value={newVenueEffectiveFrom}
+                        onChange={({ detail }) => {
+                          setNewVenueEffectiveFrom(detail.value);
+                          setVenueFormErrors({ ...venueFormErrors, effectiveFrom: undefined, duplicate: undefined });
+                        }}
+                        placeholder="YYYY-MM-DD (optional)"
+                      />
+                    </FormField>
+                    <SpaceBetween direction="horizontal" size="xs">
+                      <Button onClick={(e) => handleCancelVenueForm(e)}>Cancel</Button>
+                      <Button variant="primary" onClick={(e) => handleSaveVenue(e)}>
+                        Add
+                      </Button>
                     </SpaceBetween>
-                  </Container>
-                )}
+                  </SpaceBetween>
+                </Container>
+              )}
 
-                {sortedVenueHistory.length > 0 ? (
-                  <Table<ActivityVenueHistory>
-                    columnDefinitions={[
-                      {
-                        id: 'venue',
-                        header: 'Venue',
-                        cell: (item) => item.venue?.name || 'Unknown',
-                      },
-                      {
-                        id: 'effectiveFrom',
-                        header: 'Effective From',
-                        cell: (item) => item.effectiveFrom ? formatDate(item.effectiveFrom) : (
-                          <SpaceBetween direction="horizontal" size="xs">
-                            <Badge color="blue">Since Activity Start</Badge>
-                            {startDate && (
-                              <Box variant="small" color="text-body-secondary">
-                                ({startDate})
-                              </Box>
-                            )}
-                          </SpaceBetween>
-                        ),
-                      },
-                      {
-                        id: 'actions',
-                        header: 'Actions',
-                        cell: (item) => (
-                          <Button
-                            variant="inline-icon"
-                            iconName="remove"
-                            onClick={(e) => handleDeleteVenue(item.id, e)}
-                            disabled={isSubmitting}
-                          />
-                        ),
-                      },
-                    ]}
-                    items={sortedVenueHistory}
-                    variant="embedded"
-                    empty={
-                      <Box textAlign="center" color="inherit">
-                        <b>No venue associations</b>
-                        <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-                          Add venue associations to track where this activity takes place.
-                        </Box>
-                      </Box>
+              <Table<ActivityVenueHistory>
+                header={
+                  <Header
+                    variant="h3"
+                    actions={
+                      <Button
+                        onClick={(e) => handleAddVenue(e)}
+                        disabled={isSubmitting}
+                        iconName="add-plus"
+                      >
+                        Add Venue
+                      </Button>
                     }
-                  />
-                ) : (
+                  >
+                    Venue Associations
+                  </Header>
+                }
+                columnDefinitions={[
+                  {
+                    id: 'venue',
+                    header: 'Venue',
+                    cell: (item) => item.venue?.name || 'Unknown',
+                  },
+                  {
+                    id: 'effectiveFrom',
+                    header: 'Effective From',
+                    cell: (item) => item.effectiveFrom ? formatDate(item.effectiveFrom) : (
+                      <SpaceBetween direction="horizontal" size="xs">
+                        <Badge color="blue">Since Activity Start</Badge>
+                        {startDate && (
+                          <Box variant="small" color="text-body-secondary">
+                            ({startDate})
+                          </Box>
+                        )}
+                      </SpaceBetween>
+                    ),
+                  },
+                  {
+                    id: 'actions',
+                    header: 'Actions',
+                    cell: (item) => (
+                      <Button
+                        variant="inline-icon"
+                        iconName="remove"
+                        onClick={(e) => handleDeleteVenue(item.id, e)}
+                        disabled={isSubmitting}
+                      />
+                    ),
+                  },
+                ]}
+                items={sortedVenueHistory}
+                variant="embedded"
+                empty={
                   <Box textAlign="center" color="inherit">
+                    <b>No venue associations</b>
                     <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-                      No venue associations yet. Click "Add Venue" to add one.
+                      Add venue associations to track where this activity takes place.
                     </Box>
                   </Box>
-                )}
-              </SpaceBetween>
-            </Container>
+                }
+              />
+            </SpaceBetween>
 
             {/* Embedded Participant Assignment Management */}
-            <Container
-              header={
-                <Header
-                  variant="h3"
-                  actions={
-                    <Button
-                      onClick={(e) => handleAddAssignment(e)}
-                      disabled={isSubmitting}
-                      iconName="add-plus"
+            <SpaceBetween size="m">
+              {showAssignmentForm && (
+                <Container>
+                  <SpaceBetween size="m">
+                    {assignmentFormErrors.duplicate && (
+                      <Alert type="error">{assignmentFormErrors.duplicate}</Alert>
+                    )}
+                    <FormField
+                      label="Participant"
+                      errorText={assignmentFormErrors.participant}
+                      description="Select the participant to assign"
                     >
-                      Assign Participant
-                    </Button>
-                  }
-                >
-                  Participant Assignments
-                </Header>
-              }
-            >
-              <SpaceBetween size="m">
-                {showAssignmentForm && (
-                  <Container>
-                    <SpaceBetween size="m">
-                      {assignmentFormErrors.duplicate && (
-                        <Alert type="error">{assignmentFormErrors.duplicate}</Alert>
-                      )}
-                      <FormField
-                        label="Participant"
-                        errorText={assignmentFormErrors.participant}
-                        description="Select the participant to assign"
+                      <EntitySelectorWithActions
+                        onRefresh={handleRefreshParticipants}
+                        addEntityUrl="/participants/new"
+                        canAdd={canAddParticipant}
+                        isRefreshing={isRefreshingParticipants}
+                        entityTypeName="participant"
                       >
                         <AsyncEntitySelect
                           value={newParticipantId}
@@ -955,11 +981,19 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                           invalid={!!assignmentFormErrors.participant}
                           ariaLabel="Select participant"
                         />
-                      </FormField>
-                      <FormField
-                        label="Role"
-                        errorText={assignmentFormErrors.role}
-                        description="Select the role for this participant"
+                      </EntitySelectorWithActions>
+                    </FormField>
+                    <FormField
+                      label="Role"
+                      errorText={assignmentFormErrors.role}
+                      description="Select the role for this participant"
+                    >
+                      <EntitySelectorWithActions
+                        onRefresh={handleRefreshRoles}
+                        addEntityUrl="/configuration"
+                        canAdd={canAddRole}
+                        isRefreshing={isRefreshingRoles}
+                        entityTypeName="role"
                       >
                         <Select
                           selectedOption={roleOptions.find((o) => o.value === newRoleId) || null}
@@ -971,83 +1005,91 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                           placeholder="Select a role"
                           empty="No roles available"
                         />
-                      </FormField>
-                      <FormField
-                        label="Notes"
-                        description="Optional notes about this assignment"
-                      >
-                        <Textarea
-                          value={newNotes}
-                          onChange={({ detail }) => setNewNotes(detail.value)}
-                          placeholder="Enter any notes"
-                          rows={3}
-                        />
-                      </FormField>
-                      <SpaceBetween direction="horizontal" size="xs">
-                        <Button onClick={(e) => handleCancelAssignmentForm(e)}>Cancel</Button>
-                        <Button variant="primary" onClick={(e) => handleSaveAssignment(e)}>
-                          Add
-                        </Button>
-                      </SpaceBetween>
+                      </EntitySelectorWithActions>
+                    </FormField>
+                    <FormField
+                      label="Notes"
+                      description="Optional notes about this assignment"
+                    >
+                      <Textarea
+                        value={newNotes}
+                        onChange={({ detail }) => setNewNotes(detail.value)}
+                        placeholder="Enter any notes"
+                        rows={3}
+                      />
+                    </FormField>
+                    <SpaceBetween direction="horizontal" size="xs">
+                      <Button onClick={(e) => handleCancelAssignmentForm(e)}>Cancel</Button>
+                      <Button variant="primary" onClick={(e) => handleSaveAssignment(e)}>
+                        Add
+                      </Button>
                     </SpaceBetween>
-                  </Container>
-                )}
+                  </SpaceBetween>
+                </Container>
+              )}
 
-                {assignments.length > 0 ? (
-                  <Table<Assignment>
-                    columnDefinitions={[
-                      {
-                        id: 'participant',
-                        header: 'Participant',
-                        cell: (item) => item.participant ? (
-                          <Link href={`/participants/${item.participantId}`}>
-                            {item.participant.name}
-                          </Link>
-                        ) : 'Unknown',
-                      },
-                      {
-                        id: 'role',
-                        header: 'Role',
-                        cell: (item) => item.role?.name || 'Unknown',
-                      },
-                      {
-                        id: 'notes',
-                        header: 'Notes',
-                        cell: (item) => item.notes || '-',
-                      },
-                      {
-                        id: 'actions',
-                        header: 'Actions',
-                        cell: (item) => (
-                          <Button
-                            variant="inline-icon"
-                            iconName="remove"
-                            onClick={(e) => handleDeleteAssignment(item.id, item.participantId, e)}
-                            disabled={isSubmitting}
-                          />
-                        ),
-                      },
-                    ]}
-                    items={assignments}
-                    variant="embedded"
-                    empty={
-                      <Box textAlign="center" color="inherit">
-                        <b>No participant assignments</b>
-                        <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-                          Assign participants to track who is involved in this activity.
-                        </Box>
-                      </Box>
+              <Table<Assignment>
+                header={
+                  <Header
+                    variant="h3"
+                    actions={
+                      <Button
+                        onClick={(e) => handleAddAssignment(e)}
+                        disabled={isSubmitting}
+                        iconName="add-plus"
+                      >
+                        Assign Participant
+                      </Button>
                     }
-                  />
-                ) : (
+                  >
+                    Participant Assignments
+                  </Header>
+                }
+                columnDefinitions={[
+                  {
+                    id: 'participant',
+                    header: 'Participant',
+                    cell: (item) => item.participant ? (
+                      <Link href={`/participants/${item.participantId}`}>
+                        {item.participant.name}
+                      </Link>
+                    ) : 'Unknown',
+                  },
+                  {
+                    id: 'role',
+                    header: 'Role',
+                    cell: (item) => item.role?.name || 'Unknown',
+                  },
+                  {
+                    id: 'notes',
+                    header: 'Notes',
+                    cell: (item) => item.notes || '-',
+                  },
+                  {
+                    id: 'actions',
+                    header: 'Actions',
+                    cell: (item) => (
+                      <Button
+                        variant="inline-icon"
+                        iconName="remove"
+                        onClick={(e) => handleDeleteAssignment(item.id, item.participantId, e)}
+                        disabled={isSubmitting}
+                      />
+                    ),
+                  },
+                ]}
+                items={assignments}
+                variant="embedded"
+                empty={
                   <Box textAlign="center" color="inherit">
+                    <b>No participant assignments</b>
                     <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-                      No participant assignments yet. Click "Assign Participant" to add one.
+                      Assign participants to track who is involved in this activity.
                     </Box>
                   </Box>
-                )}
-              </SpaceBetween>
-            </Container>
+                }
+              />
+            </SpaceBetween>
           </SpaceBetween>
         </Form>
       </form>

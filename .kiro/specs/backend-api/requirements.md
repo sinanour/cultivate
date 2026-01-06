@@ -385,6 +385,9 @@ The Backend API package provides the RESTful API service that implements all bus
 1. THE API SHALL provide a GET /api/v1/users endpoint that returns all users
 2. THE API SHALL provide a POST /api/v1/users endpoint that creates a new user
 3. THE API SHALL provide a PUT /api/v1/users/:id endpoint that updates an existing user
+3a. THE API SHALL provide a DELETE /api/v1/users/:id endpoint that deletes an existing user
+3b. WHEN deleting a user, THE API SHALL also delete all associated geographic authorization rules
+3c. WHEN deleting a user, THE API SHALL prevent deletion of the last administrator user
 4. THE API SHALL restrict all user management endpoints to ADMINISTRATOR role only
 5. WHEN a non-administrator attempts to access user management endpoints, THE API SHALL return 403 Forbidden
 6. WHEN creating a user, THE API SHALL validate that email and password are provided

@@ -244,7 +244,7 @@ export function GeographicAreaList() {
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          <SpaceBetween direction="horizontal" size="s">
+          <SpaceBetween direction="horizontal" size="xs">
             <Link
               href={`/geographic-areas/${area.id}`}
               onFollow={(e) => {

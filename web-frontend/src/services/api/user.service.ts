@@ -37,4 +37,8 @@ export class UserService {
     static async updateUser(id: string, data: UpdateUserData): Promise<User> {
         return ApiClient.put<User>(`/users/${id}`, data);
     }
+
+    static async deleteUser(id: string): Promise<void> {
+        return ApiClient.delete<void>(`/users/${id}`);
+    }
 }

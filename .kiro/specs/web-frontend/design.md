@@ -246,6 +246,8 @@ src/
 
 **ParticipantDetail**
 - Shows participant information in detail view
+- Renders participant email address as a clickable mailto link using CloudScape Link component
+- Renders participant phone number as a clickable tel link using CloudScape Link component
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
 - Displays delete button in header section next to edit button
 - Positions edit button as right-most action in header (before Back button)
@@ -393,7 +395,7 @@ src/
 - Dedicated full-page form for creating/editing venues (not a modal)
 - Accessible via routes: /venues/new (create) and /venues/:id/edit (edit)
 - Validates name, address, and geographic area are required
-- Provides dropdown for geographic area selection
+- Uses Geographic_Area_Selector component for geographic area selection
 - Supports optional latitude, longitude, and venue type fields
 - Provides clear buttons (X icons) next to optional coordinate and venue type fields to remove previously entered values
 - When clear button is clicked for coordinates, sets both latitude and longitude to null and removes map pin
@@ -408,9 +410,15 @@ src/
 - Displays inline validation errors
 - Handles delete validation (prevents deletion if referenced)
 - Displays interactive map view component positioned to the right of the form
+- Displays "Drop Pin" button in map view header (right-justified)
+- When "Drop Pin" button is clicked, places pin at current center point of map viewport
+- When pin is placed via "Drop Pin" button, updates latitude/longitude fields with center point coordinates
+- When pin is placed via "Drop Pin" button, zooms map to street-level (zoom 15-17)
 - Renders draggable pin on map when coordinates are populated
 - Sets map zoom to reasonable level (e.g., zoom level 15) when coordinates are first populated
 - Updates latitude/longitude input fields when pin is dragged to new position
+- When user right-clicks on map, moves pin to clicked location
+- When pin is repositioned via right-click, updates latitude/longitude input fields
 - Updates map pin position when latitude/longitude fields are manually edited
 - Maintains two-way synchronization between coordinate inputs and map pin at all times
 - Preserves user-adjusted zoom level during coordinate updates (only adjusts center point, not zoom)
@@ -464,7 +472,7 @@ src/
 - Accessible via routes: /geographic-areas/new (create) and /geographic-areas/:id/edit (edit)
 - Validates name and area type are required
 - Provides dropdown for area type selection (NEIGHBOURHOOD, COMMUNITY, CITY, etc.)
-- Provides dropdown for parent geographic area selection
+- Uses Geographic_Area_Selector component for parent geographic area selection
 - Prevents circular parent-child relationships
 - Displays inline validation errors
 - Implements navigation guard using React Router's useBlocker to detect dirty form state
@@ -776,7 +784,7 @@ src/
 
 **GeographicAuthorizationForm**
 - Modal form for creating authorization rules (opened from UserFormPage)
-- Requires geographic area selection using AsyncEntitySelect dropdown
+- Uses Geographic_Area_Selector component for geographic area selection
 - Requires rule type selection (ALLOW or DENY) using CloudScape RadioGroup
 - Validates geographic area is selected
 - Validates rule type is selected
@@ -802,6 +810,48 @@ src/
 - Includes navigation link in the application menu
 
 #### 14. Common Components
+
+**Geographic_Area_Selector**
+- Reusable dropdown component for selecting geographic areas with hierarchical context display
+- Uses CloudScape Select component as foundation
+- Displays custom option labels with area name and area type badge
+- Renders option label using Box component with display="block" variant="div"
+- First Box displays area name
+- Second Box displays area type Badge with color from getAreaTypeBadgeColor() utility
+- Uses Select's description property to display full ancestor hierarchy path
+- Formats hierarchy path as "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
+- Displays "No parent areas" when area has no ancestors
+- Implements async lazy-loading of geographic areas from backend
+- Loads first page of results (50 items) when dropdown opens
+- Supports text-based filtering using CloudScape's filteringType="auto" (client-side filtering)
+- Displays loading indicator using statusType="loading" while fetching
+- Supports pagination for large result sets
+- Accepts optional props to filter results by parent area or other criteria
+- Handles empty states when no results match search
+- Handles error states gracefully
+- Provides accessible keyboard navigation
+- Decoupled from any parent component (not tied to BreadcrumbGroup or global filter)
+- Accepts standard form control props: value, onChange, disabled, error, placeholder, inlineLabelText
+- Supports empty/unselected state with configurable placeholder text
+- Does NOT artificially insert "Global" or "All Areas" option
+- Uses expandToViewport property for dropdown expansion beyond container
+- Provides renderHighlightedAriaLive callback for screen reader support
+- Uses selectedAriaLabel property for accessibility
+- Usable in both modal forms and full-page forms
+
+**Implementation Details:**
+- Accepts props: value (selected area ID), onChange (callback), options (GeographicAreaWithHierarchy[]), loading, disabled, error, placeholder, inlineLabelText
+- Transforms GeographicAreaWithHierarchy objects into Select options with custom labelContent
+- Uses React useMemo to optimize option rendering
+- Integrates with existing geographic area utilities (getAreaTypeBadgeColor)
+- Can be wrapped with additional UI elements (e.g., BreadcrumbGroup for global filter)
+
+**Usage Examples:**
+- Global geographic area filter in AppLayout header
+- Venue form geographic area selection
+- Geographic area form parent selection
+- Geographic authorization form area selection
+- Any other form requiring geographic area selection
 
 **AsyncEntitySelect**
 - Reusable dropdown component for high-cardinality entity selection (venues, participants, geographic areas)
@@ -865,6 +915,49 @@ src/
 - Ignores changes to non-user-editable fields (timestamps, IDs)
 - Integrates with CloudScape Modal for confirmation dialog
 
+**EntitySelectorWithActions**
+- Reusable wrapper component that adds refresh and add action buttons to entity reference selectors
+- Wraps any entity selector component (Geographic_Area_Selector, AsyncEntitySelect, or standard Select)
+- Displays refresh button (CloudScape refresh icon) and add button (CloudScape add-plus icon) adjacent to the selector
+- Uses CloudScape ButtonGroup or SpaceBetween to position buttons to the right of the selector
+- When refresh button is clicked:
+  - Triggers callback to reload entity options from backend
+  - Displays loading indicator on button during reload operation
+  - Restores button to normal state after reload completes
+  - Maintains currently selected value if it still exists in refreshed list
+- When add button is clicked:
+  - Opens entity creation page in new browser tab using target="_blank"
+  - Preserves current form context in original tab
+  - Allows user to return to original tab and click refresh to see newly-added entity
+- Disables add button when user lacks permission to create the referenced entity type
+- Always enables refresh button regardless of user permissions
+- Provides accessible keyboard navigation for action buttons
+- Includes appropriate ARIA labels for screen readers
+
+**Implementation Details:**
+- Accepts props: 
+  - children (entity selector component to wrap)
+  - onRefresh (callback to reload options)
+  - addEntityUrl (URL for entity creation page)
+  - canAdd (boolean indicating if user has create permission)
+  - isRefreshing (boolean indicating refresh in progress)
+  - entityTypeName (string for accessibility labels, e.g., "geographic area", "venue")
+- Renders selector component as child with action buttons positioned adjacent
+- Uses CloudScape Button components with iconName="refresh" and iconName="add-plus"
+- Implements loading state management for refresh operation
+- Opens add URL in new tab using window.open() or Link with target="_blank"
+
+**Usage Examples:**
+- Wraps Geographic_Area_Selector in VenueForm
+- Wraps AsyncEntitySelect for venues in ParticipantForm address history
+- Wraps AsyncEntitySelect for venues in ActivityForm venue history
+- Wraps Select for activity categories in ActivityTypeForm
+- Wraps AsyncEntitySelect for participants in ActivityForm assignments
+- Wraps Select for roles in ActivityForm assignments
+- Wraps Select for populations in ParticipantForm
+- Wraps Geographic_Area_Selector in GeographicAreaForm parent selection
+- Wraps Geographic_Area_Selector in GeographicAuthorizationForm
+
 ### Service Layer
 
 #### React Contexts
@@ -876,10 +969,10 @@ src/
 - Provides `setGeographicAreaFilter(id: string | null)` - Updates filter selection
 - Provides `clearFilter()` - Resets filter to "Global" (null)
 - Provides `isLoading: boolean` - Indicates if geographic area details are being fetched
-- Provides `availableAreas: GeographicAreaWithHierarchy[]` - List of geographic areas available in the filter dropdown
+- Provides `availableAreas: GeographicAreaWithHierarchy[]` - List of geographic areas for the Geographic_Area_Selector component
 - Provides `authorizedAreaIds: Set<string>` - Set of geographic area IDs the user is directly authorized to access (FULL access, not descendants, not read-only ancestors)
 - Provides `isAuthorizedArea(areaId: string): boolean` - Checks if user has direct authorization for filtering
-- Provides `formatAreaOption(area: GeographicAreaWithHierarchy): string` - Formats area with type and hierarchy path for display
+- Provides `formatAreaOption(area: GeographicAreaWithHierarchy): { label: string; description: string }` - Formats area for Geographic_Area_Selector display
 - Synchronizes filter with URL query parameter (`?geographicArea=<id>`)
 - Persists filter to localStorage (key: `globalGeographicAreaFilter`)
 - Restores filter from localStorage on application initialization
@@ -892,7 +985,7 @@ src/
   - When filter is "Global": fetches all geographic areas
   - When filter is active: fetches only descendants of the filtered area
 - Fetches ancestor hierarchy for each area to build hierarchy path display
-- Formats dropdown options with area type and ancestor path (e.g., "NEIGHBOURHOOD\nCommunity A > City B > Province C")
+- Formats options for Geographic_Area_Selector with label (area name) and description (hierarchy path)
 
 #### API Service
 
@@ -1554,6 +1647,18 @@ All entities support optimistic locking via the `version` field. When updating a
 *For any* participant, the detail view should display the participant's information and all activities they are assigned to.
 
 **Validates: Requirements 4.10**
+
+### Property 10a: Participant Email Mailto Link
+
+*For any* participant with an email address, the detail view should render the email as a clickable mailto link.
+
+**Validates: Requirements 4.12a**
+
+### Property 10b: Participant Phone Tel Link
+
+*For any* participant with a phone number, the detail view should render the phone number as a clickable tel link.
+
+**Validates: Requirements 4.12b**
 
 ### Property 11: Address History Display Order
 
@@ -3531,6 +3636,42 @@ interface ImportError {
 **Property 167: Authorization refresh after modification**
 *For any* authorization rule creation or deletion, the user list or detail view should refresh to reflect the changes.
 **Validates: Requirements 31.20**
+
+### Property 182: Entity Selector Refresh Button Presence
+
+*For any* entity reference selector in a form (geographic area, venue, activity category, participant, role, population), a refresh button with the refresh icon should be displayed adjacent to the selector.
+
+**Validates: Requirements 17A.1, 17A.2, 17A.17**
+
+### Property 183: Entity Selector Add Button Presence
+
+*For any* entity reference selector in a form (geographic area, venue, activity category, participant, role, population), an add button with the add-plus icon should be displayed adjacent to the selector.
+
+**Validates: Requirements 17A.1, 17A.3, 17A.17**
+
+### Property 184: Refresh Button Reloads Options
+
+*For any* entity reference selector, when the refresh button is clicked, the selector options should be reloaded from the backend and the currently selected value should be preserved if it still exists.
+
+**Validates: Requirements 17A.4, 17A.23**
+
+### Property 185: Add Button Opens New Tab
+
+*For any* entity reference selector, when the add button is clicked, the entity creation page should open in a new browser tab without affecting the current form context.
+
+**Validates: Requirements 17A.5, 17A.6, 17A.7**
+
+### Property 186: Add Button Permission-Based Disabling
+
+*For any* entity reference selector, the add button should be disabled when the user does not have permission to create the referenced entity type, while the refresh button should always be enabled.
+
+**Validates: Requirements 17A.19, 17A.20**
+
+### Property 187: Refresh Button Loading Indicator
+
+*For any* entity reference selector, when the refresh button is clicked, a loading indicator should be displayed on the button during the reload operation and restored to normal state after completion.
+
+**Validates: Requirements 17A.21, 17A.22**
 
 ## Testing Strategy
 

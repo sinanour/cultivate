@@ -24,8 +24,10 @@ import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
 import { formatDate } from '../../utils/date.utils';
 import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
+import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { PopulationMembershipManager } from '../participants/PopulationMembershipManager';
 import { ParticipantPopulationService } from '../../services/api/population.service';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ParticipantFormProps {
   participant: Participant | null;
@@ -35,6 +37,7 @@ interface ParticipantFormProps {
 
 export function ParticipantForm({ participant, onSuccess, onCancel }: ParticipantFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -57,9 +60,22 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const [newAddressVenueId, setNewAddressVenueId] = useState('');
   const [newAddressEffectiveFrom, setNewAddressEffectiveFrom] = useState('');
   const [addressFormErrors, setAddressFormErrors] = useState<{ venue?: string; effectiveFrom?: string; duplicate?: string }>({});
+  const [isRefreshingVenues, setIsRefreshingVenues] = useState(false);
 
   // Population state
   const [populationIds, setPopulationIds] = useState<string[]>([]);
+
+  const canAddVenue = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
+
+  const handleRefreshVenues = async () => {
+    setIsRefreshingVenues(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['venues'] });
+      await queryClient.refetchQueries({ queryKey: ['venues'] });
+    } finally {
+      setIsRefreshingVenues(false);
+    }
+  };
 
   // Track initial values for dirty state detection
   const [initialFormState, setInitialFormState] = useState<{
@@ -592,7 +608,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
         setError(err.message || 'Failed to update participant');
       }
     } else {
-      // For new participants, create participant first, then create address history records
+      // For new participants, create participant first, then create address history records and population associations
       try {
         const created = await ParticipantService.createParticipant(data);
         
@@ -605,8 +621,21 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
           });
         }
         
+        // Create population associations if any were selected
+        for (const popId of populationIds) {
+          try {
+            await ParticipantPopulationService.addParticipantToPopulation(created.id, popId);
+          } catch (err: any) {
+            // Ignore duplicate errors (population already added)
+            if (err.response?.data?.code !== 'DUPLICATE_ASSOCIATION') {
+              throw err;
+            }
+          }
+        }
+        
         queryClient.invalidateQueries({ queryKey: ['participants'] });
         queryClient.invalidateQueries({ queryKey: ['participantAddressHistory'] });
+        queryClient.invalidateQueries({ queryKey: ['participantPopulations', created.id] });
         onSuccess();
       } catch (err: any) {
         setBypassNavigationGuard(false);
@@ -727,35 +756,24 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
             </FormField>
 
             {/* Embedded Address History Management */}
-            <Container
-              header={
-                <Header
-                  variant="h3"
-                  actions={
-                    <Button
-                      onClick={(e) => handleAddAddress(e)}
-                      disabled={isSubmitting}
-                      iconName="add-plus"
+            <SpaceBetween size="m">
+              {showAddressForm && (
+                <Container>
+                  <SpaceBetween size="m">
+                    {addressFormErrors.duplicate && (
+                      <Alert type="error">{addressFormErrors.duplicate}</Alert>
+                    )}
+                    <FormField
+                      label="Venue"
+                      errorText={addressFormErrors.venue}
+                      description="Select the venue for this address"
                     >
-                      Add Address
-                    </Button>
-                  }
-                >
-                  Address History
-                </Header>
-              }
-            >
-              <SpaceBetween size="m">
-                {showAddressForm && (
-                  <Container>
-                    <SpaceBetween size="m">
-                      {addressFormErrors.duplicate && (
-                        <Alert type="error">{addressFormErrors.duplicate}</Alert>
-                      )}
-                      <FormField
-                        label="Venue"
-                        errorText={addressFormErrors.venue}
-                        description="Select the venue for this address"
+                      <EntitySelectorWithActions
+                        onRefresh={handleRefreshVenues}
+                        addEntityUrl="/venues/new"
+                        canAdd={canAddVenue}
+                        isRefreshing={isRefreshingVenues}
+                        entityTypeName="venue"
                       >
                         <AsyncEntitySelect
                           value={newAddressVenueId}
@@ -782,97 +800,105 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                           invalid={!!addressFormErrors.venue}
                           ariaLabel="Select venue"
                         />
-                      </FormField>
-                      <FormField
-                        label="Effective Start Date"
-                        errorText={addressFormErrors.effectiveFrom}
-                        description="The date when this address became effective (leave empty for initial address)"
-                      >
-                        <DatePicker
-                          value={newAddressEffectiveFrom}
-                          onChange={({ detail }) => {
-                            setNewAddressEffectiveFrom(detail.value);
-                            setAddressFormErrors({ ...addressFormErrors, effectiveFrom: undefined, duplicate: undefined });
-                          }}
-                          placeholder="YYYY-MM-DD (optional)"
-                        />
-                      </FormField>
-                      <SpaceBetween direction="horizontal" size="xs">
-                        <Button onClick={(e) => handleCancelAddressForm(e)}>Cancel</Button>
-                        <Button variant="primary" onClick={(e) => handleSaveAddress(e)}>
-                          {editingAddress ? 'Update' : 'Add'}
-                        </Button>
-                      </SpaceBetween>
+                      </EntitySelectorWithActions>
+                    </FormField>
+                    <FormField
+                      label="Effective Start Date"
+                      errorText={addressFormErrors.effectiveFrom}
+                      description="The date when this address became effective (leave empty for initial address)"
+                    >
+                      <DatePicker
+                        value={newAddressEffectiveFrom}
+                        onChange={({ detail }) => {
+                          setNewAddressEffectiveFrom(detail.value);
+                          setAddressFormErrors({ ...addressFormErrors, effectiveFrom: undefined, duplicate: undefined });
+                        }}
+                        placeholder="YYYY-MM-DD (optional)"
+                      />
+                    </FormField>
+                    <SpaceBetween direction="horizontal" size="xs">
+                      <Button onClick={(e) => handleCancelAddressForm(e)}>Cancel</Button>
+                      <Button variant="primary" onClick={(e) => handleSaveAddress(e)}>
+                        {editingAddress ? 'Update' : 'Add'}
+                      </Button>
                     </SpaceBetween>
-                  </Container>
-                )}
+                  </SpaceBetween>
+                </Container>
+              )}
 
-                {sortedAddressHistory.length > 0 ? (
-                  <Table<ParticipantAddressHistory>
-                    columnDefinitions={[
-                      {
-                        id: 'venue',
-                        header: 'Venue',
-                        cell: (item) => item.venue?.name || 'Unknown',
-                      },
-                      {
-                        id: 'effectiveFrom',
-                        header: 'Effective From',
-                        cell: (item) => item.effectiveFrom ? formatDate(item.effectiveFrom) : (
-                          <Badge color="blue">Initial Address</Badge>
-                        ),
-                      },
-                      {
-                        id: 'actions',
-                        header: 'Actions',
-                        cell: (item) => (
-                          <SpaceBetween direction="horizontal" size="xs">
-                            {participant && (
-                              <Button
-                                variant="inline-icon"
-                                iconName="edit"
-                                onClick={(e) => handleEditAddress(item, e)}
-                                disabled={isSubmitting}
-                              />
-                            )}
-                            <Button
-                              variant="inline-icon"
-                              iconName="remove"
-                              onClick={(e) => {
-                                e?.preventDefault();
-                                e?.stopPropagation();
-                                if (participant) {
-                                  handleDeleteAddress(item.id, e);
-                                } else {
-                                  setAddressHistory(prev => prev.filter(a => a.id !== item.id));
-                                }
-                              }}
-                              disabled={isSubmitting}
-                            />
-                          </SpaceBetween>
-                        ),
-                      },
-                    ]}
-                    items={sortedAddressHistory}
-                    variant="embedded"
-                    empty={
-                      <Box textAlign="center" color="inherit">
-                        <b>No address history</b>
-                        <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-                          Add address history records to track where this participant has lived.
-                        </Box>
-                      </Box>
+              <Table<ParticipantAddressHistory>
+                header={
+                  <Header
+                    variant="h3"
+                    actions={
+                      <Button
+                        onClick={(e) => handleAddAddress(e)}
+                        disabled={isSubmitting}
+                        iconName="add-plus"
+                      >
+                        Add Address
+                      </Button>
                     }
-                  />
-                ) : (
+                  >
+                    Address History
+                  </Header>
+                }
+                columnDefinitions={[
+                  {
+                    id: 'venue',
+                    header: 'Venue',
+                    cell: (item) => item.venue?.name || 'Unknown',
+                  },
+                  {
+                    id: 'effectiveFrom',
+                    header: 'Effective From',
+                    cell: (item) => item.effectiveFrom ? formatDate(item.effectiveFrom) : (
+                      <Badge color="blue">Initial Address</Badge>
+                    ),
+                  },
+                  {
+                    id: 'actions',
+                    header: 'Actions',
+                    cell: (item) => (
+                      <SpaceBetween direction="horizontal" size="xs">
+                        {participant && (
+                          <Button
+                            variant="inline-icon"
+                            iconName="edit"
+                            onClick={(e) => handleEditAddress(item, e)}
+                            disabled={isSubmitting}
+                          />
+                        )}
+                        <Button
+                          variant="inline-icon"
+                          iconName="remove"
+                          onClick={(e) => {
+                            e?.preventDefault();
+                            e?.stopPropagation();
+                            if (participant) {
+                              handleDeleteAddress(item.id, e);
+                            } else {
+                              setAddressHistory(prev => prev.filter(a => a.id !== item.id));
+                            }
+                          }}
+                          disabled={isSubmitting}
+                        />
+                      </SpaceBetween>
+                    ),
+                  },
+                ]}
+                items={sortedAddressHistory}
+                variant="embedded"
+                empty={
                   <Box textAlign="center" color="inherit">
+                    <b>No address history</b>
                     <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-                      No address history records yet. Click "Add Address" to add one.
+                      Add address history records to track where this participant has lived.
                     </Box>
                   </Box>
-                )}
-              </SpaceBetween>
-            </Container>
+                }
+              />
+            </SpaceBetween>
 
             {/* Embedded Population Membership Management */}
             <PopulationMembershipManager 

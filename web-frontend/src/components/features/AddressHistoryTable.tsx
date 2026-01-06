@@ -43,16 +43,14 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
           id: 'venue',
           header: 'Venue',
           cell: (item: ParticipantAddressHistory) => (
-            <Box>
+            <SpaceBetween direction="horizontal" size="xs">
               <Link href={`/venues/${item.venueId}`}>
                 {item.venue?.name || 'Unknown Venue'}
               </Link>
               {sortedHistory.indexOf(item) === 0 && (
-                <Box margin={{ left: 'xs' }} display="inline-block">
-                  <Badge color="green">Current</Badge>
-                </Box>
+                <Badge color="green">Current</Badge>
               )}
-            </Box>
+            </SpaceBetween>
           ),
           sortingField: 'venue.name',
         },

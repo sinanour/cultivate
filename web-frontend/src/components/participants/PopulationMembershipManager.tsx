@@ -4,8 +4,10 @@ import {
   Multiselect,
   type MultiselectProps,
 } from '@cloudscape-design/components';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PopulationService, ParticipantPopulationService } from '../../services/api/population.service';
+import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
+import { useAuth } from '../../hooks/useAuth';
 
 interface PopulationMembershipManagerProps {
   participantId: string | null; // null when creating new participant
@@ -22,8 +24,23 @@ export function PopulationMembershipManager({
   onInitialLoad,
   disabled = false,
 }: PopulationMembershipManagerProps) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedOptions, setSelectedOptions] = useState<MultiselectProps.Options>([]);
   const hasInitialized = useRef(false);
+  const [isRefreshingPopulations, setIsRefreshingPopulations] = useState(false);
+
+  const canAddPopulation = user?.role === 'ADMINISTRATOR';
+
+  const handleRefreshPopulations = async () => {
+    setIsRefreshingPopulations(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['populations'] });
+      await queryClient.refetchQueries({ queryKey: ['populations'] });
+    } finally {
+      setIsRefreshingPopulations(false);
+    }
+  };
 
   // Fetch all available populations
   const { data: allPopulations = [] } = useQuery({
@@ -87,17 +104,25 @@ export function PopulationMembershipManager({
   return (
     <FormField
       label="Populations"
-      description={!participantId ? "Save the participant first to manage population memberships." : undefined}
+      description="Select one or more populations for this participant"
     >
-      <Multiselect
-        selectedOptions={selectedOptions}
-        onChange={handleChange}
-        options={allOptions}
-        placeholder="Select populations"
-        disabled={disabled || !participantId}
-        filteringType="auto"
-        tokenLimit={3}
-      />
+      <EntitySelectorWithActions
+        onRefresh={handleRefreshPopulations}
+        addEntityUrl="/configuration"
+        canAdd={canAddPopulation}
+        isRefreshing={isRefreshingPopulations}
+        entityTypeName="population"
+      >
+        <Multiselect
+          selectedOptions={selectedOptions}
+          onChange={handleChange}
+          options={allOptions}
+          placeholder="Select populations"
+          disabled={disabled}
+          filteringType="auto"
+          tokenLimit={3}
+        />
+      </EntitySelectorWithActions>
     </FormField>
   );
 }

@@ -11,6 +11,8 @@ import type { ActivityType } from '../../types';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { activityCategoryService } from '../../services/api/activity-category.service';
 import { VersionConflictModal } from '../common/VersionConflictModal';
+import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
+import { useAuth } from '../../hooks/useAuth';
 import {
     isVersionConflict,
     extractVersionConflictInfo,
@@ -26,6 +28,7 @@ interface ActivityTypeFormProps {
 
 export function ActivityTypeForm({ activityType, onSuccess, onCancel }: ActivityTypeFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [activityCategoryId, setActivityCategoryId] = useState('');
   const [nameError, setNameError] = useState('');
@@ -33,12 +36,24 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
   const [error, setError] = useState('');
   const [conflictInfo, setConflictInfo] = useState<VersionConflictInfo | null>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
+  const [isRefreshingCategories, setIsRefreshingCategories] = useState(false);
+
+  const canAddCategory = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
 
   // Fetch activity categories for dropdown
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [], refetch: refetchCategories } = useQuery({
     queryKey: ['activityCategories'],
     queryFn: () => activityCategoryService.getActivityCategories(),
   });
+
+  const handleRefreshCategories = async () => {
+    setIsRefreshingCategories(true);
+    try {
+      await refetchCategories();
+    } finally {
+      setIsRefreshingCategories(false);
+    }
+  };
 
   // Update form state when activityType prop changes
   useEffect(() => {
@@ -186,17 +201,25 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
               />
             </FormField>
             <FormField label="Activity Category" errorText={categoryError}>
-              <Select
-                selectedOption={selectedCategory}
-                onChange={({ detail }) => {
-                  setActivityCategoryId(detail.selectedOption.value || '');
-                  if (categoryError) validateCategory(detail.selectedOption.value || '');
-                }}
-                options={categoryOptions}
-                placeholder="Select activity category"
-                disabled={isLoading}
-                empty="No categories available"
-              />
+              <EntitySelectorWithActions
+                onRefresh={handleRefreshCategories}
+                addEntityUrl="/configuration"
+                canAdd={canAddCategory}
+                isRefreshing={isRefreshingCategories}
+                entityTypeName="activity category"
+              >
+                <Select
+                  selectedOption={selectedCategory}
+                  onChange={({ detail }) => {
+                    setActivityCategoryId(detail.selectedOption.value || '');
+                    if (categoryError) validateCategory(detail.selectedOption.value || '');
+                  }}
+                  options={categoryOptions}
+                  placeholder="Select activity category"
+                  disabled={isLoading}
+                  empty="No categories available"
+                />
+              </EntitySelectorWithActions>
             </FormField>
           </SpaceBetween>
         </Form>

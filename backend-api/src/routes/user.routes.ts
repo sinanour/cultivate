@@ -56,6 +56,15 @@ export class UserRoutes {
       this.auditLoggingMiddleware.logRoleChange(),
       this.update.bind(this)
     );
+
+    this.router.delete(
+      '/:id',
+      this.authMiddleware.authenticate(),
+      this.authorizationMiddleware.requireAdmin(),
+      ValidationMiddleware.validateParams(UuidParamSchema),
+      this.auditLoggingMiddleware.logEntityModification('USER'),
+      this.delete.bind(this)
+    );
   }
 
   private async getAll(_req: AuthenticatedRequest, res: Response) {
@@ -153,6 +162,36 @@ export class UserRoutes {
       res.status(500).json({
         code: 'INTERNAL_ERROR',
         message: 'An error occurred while updating user',
+        details: {},
+      });
+    }
+  }
+
+  private async delete(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      await this.userService.deleteUser(id);
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'User not found') {
+          return res.status(404).json({
+            code: 'NOT_FOUND',
+            message: error.message,
+            details: {},
+          });
+        }
+        if (error.message.includes('Cannot delete the last administrator')) {
+          return res.status(400).json({
+            code: 'LAST_ADMINISTRATOR',
+            message: error.message,
+            details: {},
+          });
+        }
+      }
+      res.status(500).json({
+        code: 'INTERNAL_ERROR',
+        message: 'An error occurred while deleting user',
         details: {},
       });
     }

@@ -8,9 +8,12 @@ import {
   DatePicker,
   Alert,
 } from '@cloudscape-design/components';
+import { useQueryClient } from '@tanstack/react-query';
 import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
+import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { VenueService } from '../../services/api/venue.service';
 import { formatDate } from '../../utils/date.utils';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ActivityVenueHistoryFormProps {
   visible: boolean;
@@ -29,10 +32,25 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
   activityStartDate,
   loading = false,
 }) => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [venueId, setVenueId] = useState<string>('');
   const [effectiveFrom, setEffectiveFrom] = useState<string>('');
   const [errors, setErrors] = useState<{ venue?: string; effectiveFrom?: string; duplicate?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+  const [isRefreshingVenues, setIsRefreshingVenues] = useState(false);
+
+  const canAddVenue = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
+
+  const handleRefreshVenues = async () => {
+    setIsRefreshingVenues(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['venues'] });
+      await queryClient.refetchQueries({ queryKey: ['venues'] });
+    } finally {
+      setIsRefreshingVenues(false);
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -127,32 +145,40 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
           errorText={errors.venue}
           description="Select the venue for this activity"
         >
-          <AsyncEntitySelect
-            value={venueId}
-            onChange={(value) => {
-              setVenueId(value);
-              setErrors({ ...errors, venue: undefined, duplicate: undefined });
-            }}
-            entityType="venue"
-            fetchFunction={async (params) => {
-              const data = await VenueService.getVenues(
-                params.page,
-                params.limit,
-                params.geographicAreaId,
-                params.search
-              );
-              return { data };
-            }}
-            formatOption={(v) => ({
-              value: v.id,
-              label: v.name,
-              description: v.address,
-            })}
-            placeholder="Search for a venue"
-            disabled={loading}
-            invalid={!!errors.venue}
-            ariaLabel="Select venue"
-          />
+          <EntitySelectorWithActions
+            onRefresh={handleRefreshVenues}
+            addEntityUrl="/venues/new"
+            canAdd={canAddVenue}
+            isRefreshing={isRefreshingVenues}
+            entityTypeName="venue"
+          >
+            <AsyncEntitySelect
+              value={venueId}
+              onChange={(value) => {
+                setVenueId(value);
+                setErrors({ ...errors, venue: undefined, duplicate: undefined });
+              }}
+              entityType="venue"
+              fetchFunction={async (params) => {
+                const data = await VenueService.getVenues(
+                  params.page,
+                  params.limit,
+                  params.geographicAreaId,
+                  params.search
+                );
+                return { data };
+              }}
+              formatOption={(v) => ({
+                value: v.id,
+                label: v.name,
+                description: v.address,
+              })}
+              placeholder="Search for a venue"
+              disabled={loading}
+              invalid={!!errors.venue}
+              ariaLabel="Select venue"
+            />
+          </EntitySelectorWithActions>
         </FormField>
 
         <FormField

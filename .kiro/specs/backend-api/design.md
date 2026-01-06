@@ -100,6 +100,7 @@ GET    /api/v1/users                   -> List all users (admin only)
 GET    /api/v1/users/:id               -> Get user by ID (admin only)
 POST   /api/v1/users                   -> Create user with optional authorization rules (admin only)
 PUT    /api/v1/users/:id               -> Update user (admin only)
+DELETE /api/v1/users/:id               -> Delete user (admin only)
 
 // Geographic Authorization Routes (Admin Only)
 GET    /api/v1/users/:id/geographic-authorizations -> List user's authorization rules (admin only)
@@ -186,7 +187,7 @@ Services implement business logic and coordinate operations:
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, validates activity category references, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
 - **PopulationService**: Manages population CRUD operations (admin only for create/update/delete), validates uniqueness, prevents deletion of referenced populations, manages participant-population associations (many-to-many), validates participant and population existence, prevents duplicate associations
-- **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction
+- **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction, handles user deletion with cascade deletion of associated geographic authorization rules, prevents deletion of the last administrator user
 - **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
@@ -1367,6 +1368,14 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Property 68g: Display name optional acceptance**
 *For any* POST /api/v1/users request with or without a displayName, the API should accept it and persist the provided value (or null if not provided).
 **Validates: Requirements 11A.6a**
+
+**Property 68h: User deletion with cascade**
+*For any* DELETE /api/v1/users/:id request, the API should delete the user and all associated geographic authorization rules in a single atomic transaction.
+**Validates: Requirements 11A.3a, 11A.3b**
+
+**Property 68i: Last administrator deletion prevention**
+*For any* DELETE /api/v1/users/:id request where the user is the last administrator in the system, the API should reject the deletion with a 400 error.
+**Validates: Requirements 11A.3c**
 
 ### Audit Logging Properties
 

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import type { LatLngExpression } from 'leaflet';
 import L from 'leaflet';
+import { Button, Header } from '@cloudscape-design/components';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icon in Leaflet with Vite
@@ -26,8 +27,17 @@ interface VenueFormMapViewProps {
 /**
  * MapUpdater component to handle map centering and zoom when coordinates change
  * Preserves user-adjusted zoom level after initial setup
+ * Also handles right-click events to reposition pin
  */
-function MapUpdater({ latitude, longitude }: { latitude: number | null; longitude: number | null }) {
+function MapUpdater({
+  latitude,
+  longitude,
+  onCoordinatesChange,
+}: {
+  latitude: number | null;
+  longitude: number | null;
+  onCoordinatesChange: (lat: number, lng: number) => void;
+}) {
   const map = useMap();
   const userAdjustedZoomRef = useRef(false);
   const initialZoomSetRef = useRef(false);
@@ -45,6 +55,14 @@ function MapUpdater({ latitude, longitude }: { latitude: number | null; longitud
       map.off('zoomend', handleZoomEnd);
     };
   }, [map]);
+
+  // Handle right-click events to reposition pin
+  useMapEvents({
+    contextmenu: (e) => {
+      const { lat, lng } = e.latlng;
+      onCoordinatesChange(lat, lng);
+    },
+  });
 
   useEffect(() => {
     if (latitude !== null && longitude !== null) {
@@ -108,16 +126,22 @@ function DraggableMarker({
  * Provides two-way synchronization between coordinate inputs and map pin position.
  * 
  * Features:
+ * - Displays "Drop Pin" button in map header (right-justified)
+ * - When "Drop Pin" clicked, places pin at map's current center point
+ * - When pin placed via "Drop Pin", updates coordinates and zooms to street-level
  * - Renders draggable marker when coordinates are provided
  * - Sets map zoom to level 15 when coordinates are first populated
  * - Tracks whether user has manually adjusted zoom level
  * - Centers map on marker when coordinates change (without resetting zoom if user-adjusted)
  * - Preserves user-adjusted zoom level during coordinate updates
  * - Handles marker drag events to extract new coordinates
+ * - Handles right-click events to reposition pin
  * - Provides callback to update parent form state with new coordinates
  * - Handles empty coordinate state (no marker displayed)
  */
 export function VenueFormMapView({ latitude, longitude, onCoordinatesChange }: VenueFormMapViewProps) {
+  const mapRef = useRef<L.Map | null>(null);
+
   // Default center (world view) when no coordinates provided
   const defaultCenter: LatLngExpression = [0, 0];
   const defaultZoom = 2;
@@ -133,23 +157,51 @@ export function VenueFormMapView({ latitude, longitude, onCoordinatesChange }: V
     onCoordinatesChange(lat, lng);
   };
 
+  const handleDropPin = () => {
+    if (mapRef.current) {
+      const center = mapRef.current.getCenter();
+      onCoordinatesChange(center.lat, center.lng);
+      // Zoom to street level after dropping pin
+      mapRef.current.setView(center, 16, { animate: true });
+    }
+  };
+
   return (
-    <div style={{ height: '400px', width: '100%', borderRadius: '8px', overflow: 'hidden' }}>
-      <MapContainer
-        center={center}
-        zoom={zoom}
-        style={{ height: '100%', width: '100%' }}
-        scrollWheelZoom={true}
+    <>
+      <Header
+        variant="h3"
+        actions={
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              handleDropPin();
+            }}
+            iconName="add-plus"
+          >
+            Drop Pin
+          </Button>
+        }
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {hasCoordinates && (
-          <DraggableMarker position={[latitude, longitude]} onDragEnd={handleMarkerDragEnd} />
-        )}
-        <MapUpdater latitude={latitude} longitude={longitude} />
-      </MapContainer>
-    </div>
+        Map Preview
+      </Header>
+      <div style={{ height: '400px', width: '100%', borderRadius: '8px', overflow: 'hidden', marginTop: '8px' }}>
+        <MapContainer
+          center={center}
+          zoom={zoom}
+          style={{ height: '100%', width: '100%' }}
+          scrollWheelZoom={true}
+          ref={mapRef}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {hasCoordinates && (
+            <DraggableMarker position={[latitude, longitude]} onDragEnd={handleMarkerDragEnd} />
+          )}
+          <MapUpdater latitude={latitude} longitude={longitude} onCoordinatesChange={onCoordinatesChange} />
+        </MapContainer>
+      </div>
+    </>
   );
 }

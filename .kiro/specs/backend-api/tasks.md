@@ -273,14 +273,25 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Exclude password hashes from all responses
     - _Requirements: 11A.1, 11A.2, 11A.3, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16, 11A.17, 11A.18_
 
-  - [ ] 6A.4 Update user routes
+  - [x] 6A.4 Update user routes
     - Update GET /api/v1/users to return displayName field (admin only)
     - Add GET /api/v1/users/:id to fetch single user (admin only)
     - Update POST /api/v1/users to accept displayName and optional authorizationRules array (admin only)
     - Update PUT /api/v1/users/:id to accept displayName (admin only)
+    - Add DELETE /api/v1/users/:id to delete user (admin only)
     - Restrict all endpoints to ADMINISTRATOR role using requireAdmin() middleware
     - Return 403 Forbidden for non-administrators
-    - _Requirements: 11A.1, 11A.2, 11A.3, 11A.4, 11A.5, 11A.6, 11A.13, 11A.17_
+    - _Requirements: 11A.1, 11A.2, 11A.3, 11A.3a, 11A.4, 11A.5, 11A.6, 11A.13, 11A.17_
+
+  - [ ] 6A.4a Implement user deletion service method
+    - Add deleteUser(id) method to UserService
+    - Validate user exists before deletion
+    - Check if user is the last administrator (count administrators)
+    - Prevent deletion if user is the last administrator (throw error)
+    - Delete all associated geographic authorization rules in transaction
+    - Delete user record
+    - Return success
+    - _Requirements: 11A.3a, 11A.3b, 11A.3c_
 
   - [ ] 6A.5 Update validation schemas
     - Update UserCreateSchema to accept optional displayName (min 1 char if provided, max 200 chars)
@@ -304,7 +315,9 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 68e: User Management Administrator Restriction**
     - **Property 68f: Password Hash Exclusion**
     - **Property 68g: Display Name Optional Acceptance**
-    - **Validates: Requirements 11A.1, 11A.2, 11A.4, 11A.5, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16, 11A.17, 11A.18**
+    - **Property 68h: User Deletion with Cascade**
+    - **Property 68i: Last Administrator Deletion Prevention**
+    - **Validates: Requirements 11A.1, 11A.2, 11A.3a, 11A.3b, 11A.3c, 11A.4, 11A.5, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16, 11A.17, 11A.18**
 
 - [x] 7. Implement participant management
   - [x] 7.1 Create participant repository

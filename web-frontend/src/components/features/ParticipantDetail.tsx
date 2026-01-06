@@ -213,11 +213,27 @@ export function ParticipantDetail() {
         <ColumnLayout columns={2} variant="text-grid">
           <div>
             <Box variant="awsui-key-label">Email</Box>
-            <div>{participant.email || '-'}</div>
+            <div>
+              {participant.email ? (
+                <Link href={`mailto:${participant.email}`} external>
+                  {participant.email}
+                </Link>
+              ) : (
+                '-'
+              )}
+            </div>
           </div>
           <div>
             <Box variant="awsui-key-label">Phone</Box>
-            <div>{participant.phone || '-'}</div>
+            <div>
+              {participant.phone ? (
+                <Link href={`tel:${participant.phone}`} external>
+                  {participant.phone}
+                </Link>
+              ) : (
+                '-'
+              )}
+            </div>
           </div>
           {participant.nickname && (
             <div>

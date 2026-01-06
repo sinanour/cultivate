@@ -15,7 +15,6 @@ interface GlobalGeographicFilterContextType {
   clearFilter: () => void;
   isLoading: boolean;
   isAuthorizedArea: (areaId: string) => boolean;
-  formatAreaOption: (area: GeographicAreaWithHierarchy) => { label: string; description: string };
 }
 
 export const GlobalGeographicFilterContext = createContext<GlobalGeographicFilterContextType | undefined>(undefined);
@@ -247,13 +246,6 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     fetchAvailableAreas();
   }, [selectedGeographicAreaId]);
 
-  const formatAreaOption = (area: GeographicAreaWithHierarchy) => {
-    return {
-      label: area.name,
-      description: area.hierarchyPath || 'No parent areas',
-    };
-  };
-
   const setGeographicAreaFilter = (id: string | null) => {
     // Validate authorization before setting filter
     if (id && !isAuthorizedArea(id)) {
@@ -309,7 +301,6 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
         clearFilter,
         isLoading,
         isAuthorizedArea,
-        formatAreaOption,
       }}
     >
       {children}

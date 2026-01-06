@@ -30,6 +30,7 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Allow_List**: A set of geographic areas that a user is explicitly permitted to access
 - **Deny_List**: A set of geographic areas that a user is explicitly forbidden from accessing
 - **Authorized_Area**: A geographic area that a user has permission to access based on authorization rules
+- **Geographic_Area_Selector**: A specialized reusable dropdown component for selecting geographic areas that displays hierarchical context, area type badges, and supports async lazy-loading for optimal performance with large datasets
 
 ## Requirements
 
@@ -131,6 +132,8 @@ The Web Frontend package provides a responsive React-based web application that 
 10. WHEN dateOfBirth is provided, THE Web_App SHALL validate that it is a valid date in the past
 11. WHEN dateOfRegistration is provided, THE Web_App SHALL validate that it is a valid date
 12. THE Web_App SHALL display a detail view showing participant information and their activities
+12a. WHEN displaying a participant's email address on the detail view, THE Web_App SHALL render it as a clickable mailto link
+12b. WHEN displaying a participant's phone number on the detail view, THE Web_App SHALL render it as a clickable tel link
 11. THE Web_App SHALL display a table of the participant's home address history in reverse chronological order
 12. THE Web_App SHALL provide an interface to add new address history records with venue and effective start date
 13. THE Web_App SHALL provide an interface to edit existing address history records
@@ -243,6 +246,7 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL provide a dedicated page to edit existing venues
 6. THE Web_App SHALL provide a delete button for venues
 7. THE Web_App SHALL validate that venue name, address, and geographic area are provided
+7a. THE Web_App SHALL use the Geographic_Area_Selector component for geographic area selection in venue forms
 8. THE Web_App SHALL allow optional fields for latitude, longitude, and venue type
 9. THE Web_App SHALL display a detail view showing venue information, associated activities, and participants using it as their current home address
 9a. WHEN displaying participants on a venue detail page, THE Web_App SHALL only show participants whose most recent address history record is at this venue
@@ -260,7 +264,7 @@ The Web Frontend package provides a responsive React-based web application that 
 3. THE Web_App SHALL provide a dedicated page to edit existing geographic areas
 4. THE Web_App SHALL provide a delete button for geographic areas
 5. THE Web_App SHALL validate that geographic area name and type are provided
-6. THE Web_App SHALL allow selection of a parent geographic area
+6. THE Web_App SHALL use the Geographic_Area_Selector component for parent geographic area selection
 7. THE Web_App SHALL prevent circular parent-child relationships
 8. THE Web_App SHALL display a detail view showing geographic area information, child areas, and associated venues from the area and all descendant areas (recursive aggregation)
 9. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
@@ -269,6 +273,46 @@ The Web Frontend package provides a responsive React-based web application that 
 12. WHEN the global geographic area filter is active, THE Web_App SHALL display the filtered area, all its descendants, AND all its ancestors in the tree view to maintain hierarchy context
 13. WHEN displaying ancestors of a filtered geographic area, THE Web_App SHALL visually indicate that ancestor areas are read-only (e.g., with a badge, icon, or muted styling)
 14. THE Web_App SHALL NOT suppress or hide ancestor geographic areas from the tree view when a filter is active, as ancestors provide essential navigational context
+
+### Requirement 6B1: Reusable Geographic Area Selector Component
+
+**User Story:** As a user, I want a consistent, high-quality geographic area selection experience throughout the application, so that I can easily find and select the correct geographic area regardless of where I am in the interface.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide a reusable Geographic_Area_Selector component that can be used anywhere geographic area selection is needed
+2. THE Geographic_Area_Selector SHALL use CloudScape Select component as its foundation
+3. THE Geographic_Area_Selector SHALL display each geographic area option with a custom label layout showing the area name and area type badge
+4. THE Geographic_Area_Selector SHALL render the option label using a Box component with display="block" variant="div"
+5. THE Geographic_Area_Selector SHALL display the area name in the first Box element
+6. THE Geographic_Area_Selector SHALL display the area type badge in a second Box element using CloudScape Badge component with color determined by getAreaTypeBadgeColor() utility
+7. THE Geographic_Area_Selector SHALL use the Select component's description property to display the full ancestor hierarchy path
+8. THE Geographic_Area_Selector SHALL format the hierarchy path as "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
+9. WHEN an area has no parent areas, THE Geographic_Area_Selector SHALL display "No parent areas" as the description
+10. THE Geographic_Area_Selector SHALL implement async lazy-loading of geographic areas from the backend
+11. THE Geographic_Area_Selector SHALL load the first page of results (50 items) when the dropdown is opened
+12. THE Geographic_Area_Selector SHALL support text-based filtering using CloudScape Select's filteringType="auto" property
+13. THE Geographic_Area_Selector SHALL display a loading indicator using statusType="loading" while fetching results
+14. THE Geographic_Area_Selector SHALL support pagination for large result sets
+15. THE Geographic_Area_Selector SHALL accept optional props to filter results by parent geographic area or other criteria
+16. THE Geographic_Area_Selector SHALL handle empty states when no results match the search
+17. THE Geographic_Area_Selector SHALL handle error states gracefully
+18. THE Geographic_Area_Selector SHALL provide accessible keyboard navigation
+19. THE Geographic_Area_Selector SHALL be decoupled from any specific parent component (not tied to BreadcrumbGroup or global filter)
+20. THE Geographic_Area_Selector SHALL accept standard form control props (value, onChange, disabled, error, placeholder, inlineLabelText, etc.)
+21. THE Geographic_Area_Selector SHALL support an empty/unselected state with configurable placeholder text
+22. THE Geographic_Area_Selector SHALL NOT artificially insert a "Global" or "All Areas" option into the dropdown options list
+23. WHEN no geographic area is selected, THE Geographic_Area_Selector SHALL display the placeholder text (e.g., "Select a geographic area")
+24. THE Geographic_Area_Selector SHALL use expandToViewport property to allow dropdown to expand beyond container boundaries
+25. THE Geographic_Area_Selector SHALL provide renderHighlightedAriaLive callback for screen reader support
+26. THE Geographic_Area_Selector SHALL use selectedAriaLabel property for accessibility
+27. THE Geographic_Area_Selector SHALL be usable in both modal forms and full-page forms
+28. THE Web_App SHALL use the Geographic_Area_Selector component in all forms and interfaces where geographic area selection is required
+29. THE Web_App SHALL use the Geographic_Area_Selector component in the global geographic area filter (decoupled from BreadcrumbGroup)
+30. THE Web_App SHALL use the Geographic_Area_Selector component in VenueForm for geographic area selection
+31. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAreaForm for parent geographic area selection
+32. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAuthorizationForm for geographic area selection
+33. THE Web_App SHALL use the Geographic_Area_Selector component in any other forms or interfaces that require geographic area selection
 
 ### Requirement 6C: Map View UI
 
@@ -627,6 +671,36 @@ The Web Frontend package provides a responsive React-based web application that 
 4. THE Web_App SHALL provide progress indicators for long operations
 5. THE Web_App SHALL display success messages after successful operations
 
+### Requirement 17A: Entity Reference Refresh and Add Actions
+
+**User Story:** As a user filling out a form, I want to refresh entity reference dropdowns and quickly add new entities without losing my current form context, so that I can efficiently complete forms even when referenced entities don't exist yet.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide refresh and add action buttons next to all entity reference selectors in forms
+2. THE refresh button SHALL use the CloudScape refresh icon
+3. THE add button SHALL use the CloudScape add-plus icon
+4. WHEN a user clicks the refresh button, THE Web_App SHALL reload the options for that entity selector from the backend
+5. WHEN a user clicks the add button, THE Web_App SHALL open the entity creation page in a new browser tab
+6. THE add button SHALL use target="_blank" to preserve the current form context in the original tab
+7. AFTER a user adds a new entity in the new tab, THE user SHALL be able to return to the original tab and click refresh to see the newly-added entity
+8. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in VenueForm
+9. THE Web_App SHALL provide refresh and add buttons for the Venue selector in ParticipantForm address history section
+10. THE Web_App SHALL provide refresh and add buttons for the Venue selector in ActivityForm venue history section
+11. THE Web_App SHALL provide refresh and add buttons for the Activity Category selector in ActivityTypeForm
+12. THE Web_App SHALL provide refresh and add buttons for the Participant selector in ActivityForm participant assignments section
+13. THE Web_App SHALL provide refresh and add buttons for the Role selector in ActivityForm participant assignments section
+14. THE Web_App SHALL provide refresh and add buttons for the Population selector in ParticipantForm population membership section
+15. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in GeographicAreaForm parent selection
+16. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in GeographicAuthorizationForm
+17. THE Web_App SHALL position the refresh and add buttons adjacent to the entity selector (typically to the right)
+18. THE Web_App SHALL use CloudScape ButtonGroup or similar layout to group the refresh and add buttons together
+19. THE Web_App SHALL disable the add button when the user does not have permission to create the referenced entity type
+20. THE Web_App SHALL always enable the refresh button regardless of user permissions
+21. WHEN the refresh button is clicked, THE Web_App SHALL display a loading indicator on the button during the reload operation
+22. WHEN the refresh operation completes, THE Web_App SHALL restore the button to its normal state
+23. THE Web_App SHALL maintain the currently selected value in the selector after a refresh operation (if it still exists in the refreshed list)
+
 ### Requirement 18: User Management (Admin Only)
 
 **User Story:** As an administrator, I want to manage users and their geographic authorizations in a unified interface, so that I can control system access and geographic boundaries in one place.
@@ -652,7 +726,7 @@ The Web Frontend package provides a responsive React-based web application that 
 16. THE Web_App SHALL display all geographic authorization rules for the user in a table within the user form
 17. THE Web_App SHALL provide an "Add Rule" button within the user form to create new authorization rules
 18. THE Web_App SHALL provide a delete button for each authorization rule within the user form
-19. WHEN creating an authorization rule, THE Web_App SHALL open a modal form with geographic area selection and rule type selection
+19. WHEN creating an authorization rule, THE Web_App SHALL open a modal form with geographic area selection using the Geographic_Area_Selector component and rule type selection
 20. WHEN creating an authorization rule, THE Web_App SHALL validate that the geographic area exists
 21. WHEN creating an authorization rule, THE Web_App SHALL prevent duplicate rules for the same user and geographic area
 22. THE Web_App SHALL visually distinguish ALLOW rules from DENY rules using color coding or icons (e.g., green checkmark for ALLOW, red X for DENY)
@@ -723,13 +797,19 @@ The Web Frontend package provides a responsive React-based web application that 
 9. THE Web_App SHALL respect Nominatim usage policy by including appropriate User-Agent header and rate limiting
 10. WHEN offline, THE Web_App SHALL disable the geocode button and display a message that geocoding requires connectivity
 11. WHEN creating or editing a venue, THE Web_App SHALL display an interactive map view component positioned to the right of the form
-12. WHEN latitude and longitude coordinates are populated, THE Web_App SHALL render a pin on the map at those coordinates
-13. WHEN coordinates are populated, THE Web_App SHALL set the map zoom level to a reasonable level for viewing the venue location
-14. THE Web_App SHALL provide a graphical interface on the map to drag and reposition the pin
-15. WHEN the pin is repositioned on the map, THE Web_App SHALL update the latitude and longitude input fields with the new coordinates
-16. WHEN the latitude or longitude input fields are manually edited, THE Web_App SHALL update the pin position on the map
-17. THE Web_App SHALL maintain two-way synchronization between the coordinate input fields and the map pin position at all times
-18. WHEN the user manually adjusts the map zoom level, THE Web_App SHALL preserve that zoom level during subsequent coordinate updates and only adjust the map center point
+12. THE Web_App SHALL display a "Drop Pin" button in the map view header, right-justified
+13. WHEN the "Drop Pin" button is clicked, THE Web_App SHALL place the pin at the current center point of the map's viewport
+14. WHEN the pin is placed via the "Drop Pin" button, THE Web_App SHALL update the latitude and longitude input fields with the coordinates of the map's center point
+15. WHEN the pin is placed via the "Drop Pin" button, THE Web_App SHALL zoom the map to street-level zoom (approximately zoom level 15-17) to show the location clearly
+16. WHEN latitude and longitude coordinates are populated, THE Web_App SHALL render a pin on the map at those coordinates
+17. WHEN coordinates are populated, THE Web_App SHALL set the map zoom level to a reasonable level for viewing the venue location
+20. THE Web_App SHALL provide a graphical interface on the map to drag and reposition the pin
+21. WHEN the pin is repositioned on the map via dragging, THE Web_App SHALL update the latitude and longitude input fields with the new coordinates
+22. WHEN the user right-clicks on the map, THE Web_App SHALL move the pin to the clicked location
+23. WHEN the pin is repositioned via right-click, THE Web_App SHALL update the latitude and longitude input fields with the new coordinates
+24. WHEN the latitude or longitude input fields are manually edited, THE Web_App SHALL update the pin position on the map
+25. THE Web_App SHALL maintain two-way synchronization between the coordinate input fields and the map pin position at all times
+26. WHEN the user manually adjusts the map zoom level, THE Web_App SHALL preserve that zoom level during subsequent coordinate updates and only adjust the map center point
 
 ### Requirement 23: Hyperlinked Primary Columns in Tables
 
@@ -781,7 +861,7 @@ The Web Frontend package provides a responsive React-based web application that 
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL display a geographic area filter selector in the application header component
+1. THE Web_App SHALL display a geographic area filter selector in the application header component using the Geographic_Area_Selector component
 2. THE Web_App SHALL position the geographic area filter in the header so it is accessible from all views
 3. THE Web_App SHALL default the geographic area filter to an empty state displayed as "Global" (no filter applied)
 4. WHEN a geographic area is selected in the global filter, THE Web_App SHALL apply the filter recursively to include the selected area and all descendant areas
@@ -792,8 +872,8 @@ The Web Frontend package provides a responsive React-based web application that 
 9. WHEN a user returns to the application, THE Web_App SHALL restore the last-selected geographic area filter from localStorage
 10. THE Web_App SHALL provide a visual indicator in the header showing the currently active geographic area filter
 11. THE Web_App SHALL provide a way to clear the global filter and return to "Global" (all areas) view
-12. WHEN displaying geographic areas in the filter selector dropdown, THE Web_App SHALL show the geographic area type for each item
-13. WHEN displaying geographic areas in the filter selector dropdown, THE Web_App SHALL show the full ancestor hierarchy path below the geographic area type
+12. THE Geographic_Area_Selector in the global filter SHALL display each geographic area with its type and full ancestor hierarchy path
+13. THE Geographic_Area_Selector in the global filter SHALL format options with area type on the first line and hierarchy path on the second line
 14. THE Web_App SHALL format the ancestor hierarchy path with the closest ancestor on the left and the most distant (top-level) ancestor on the right
 15. THE Web_App SHALL separate ancestor names in the hierarchy path with the right caret symbol " > "
 16. WHEN the global geographic area filter is active, THE Web_App SHALL display only the descendants (recursively) of the currently filtered geographic area in the filter selector dropdown

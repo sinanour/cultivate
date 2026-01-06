@@ -151,69 +151,73 @@ export function GeographicAuthorizationManager({
           )}
 
           {/* Authorization Rules Table */}
-          <Container header={<Header actions={<Button onClick={() => setShowAddForm(true)} disabled={rulesLoading}>Add Rule</Button>}>Authorization Rules</Header>}>
-            {rulesLoading ? (
-              <Box textAlign="center" padding="l">
-                <StatusIndicator type="loading">Loading authorization rules...</StatusIndicator>
-              </Box>
-            ) : (
-              <Table
-                loading={false}
-                items={rules}
-                columnDefinitions={[
-                {
-                  id: 'geographicArea',
-                  header: 'Geographic Area',
-                  cell: (item) => item.geographicArea?.name || item.geographicAreaId,
-                },
-                {
-                  id: 'areaType',
-                  header: 'Area Type',
-                  cell: (item) => item.geographicArea?.areaType || '-',
-                },
-                {
-                  id: 'ruleType',
-                  header: 'Rule Type',
-                  cell: (item) =>
-                    item.ruleType === 'ALLOW' ? (
-                      <StatusIndicator type="success">ALLOW</StatusIndicator>
-                    ) : (
-                      <StatusIndicator type="error">DENY</StatusIndicator>
-                    ),
-                },
-                {
-                  id: 'createdAt',
-                  header: 'Created',
-                  cell: (item) => new Date(item.createdAt).toLocaleDateString(),
-                },
-                {
-                  id: 'actions',
-                  header: 'Actions',
-                  cell: (item) => (
-                    <Button
-                      variant="icon"
-                      iconName="remove"
-                      onClick={() => handleDelete(item.id)}
-                      loading={deleteMutation.isPending}
-                    />
+          <Table
+            header={
+              <Header 
+                actions={
+                  <Button onClick={() => setShowAddForm(true)} disabled={rulesLoading}>
+                    Add Rule
+                  </Button>
+                }
+              >
+                Authorization Rules
+              </Header>
+            }
+            loading={rulesLoading}
+            loadingText="Loading authorization rules..."
+            items={rules}
+            columnDefinitions={[
+              {
+                id: 'geographicArea',
+                header: 'Geographic Area',
+                cell: (item) => item.geographicArea?.name || item.geographicAreaId,
+              },
+              {
+                id: 'areaType',
+                header: 'Area Type',
+                cell: (item) => item.geographicArea?.areaType || '-',
+              },
+              {
+                id: 'ruleType',
+                header: 'Rule Type',
+                cell: (item) =>
+                  item.ruleType === 'ALLOW' ? (
+                    <StatusIndicator type="success">ALLOW</StatusIndicator>
+                  ) : (
+                    <StatusIndicator type="error">DENY</StatusIndicator>
                   ),
-                },
-              ]}
-              empty={
-                <Box textAlign="center" color="inherit">
-                  <SpaceBetween size="xs">
-                    <Box variant="p" color="inherit">
-                      No authorization rules
-                    </Box>
-                    <Box variant="small" color="text-body-secondary">
-                      This user has unrestricted access to all geographic areas
-                    </Box>
-                  </SpaceBetween>
-                </Box>
-              }
-            />
-            )}
-          </Container>
+              },
+              {
+                id: 'createdAt',
+                header: 'Created',
+                cell: (item) => new Date(item.createdAt).toLocaleDateString(),
+              },
+              {
+                id: 'actions',
+                header: 'Actions',
+                cell: (item) => (
+                  <Button
+                    variant="icon"
+                    iconName="remove"
+                    onClick={() => handleDelete(item.id)}
+                    loading={deleteMutation.isPending}
+                  />
+                ),
+              },
+            ]}
+            empty={
+              <Box textAlign="center" color="inherit">
+                <SpaceBetween size="xs">
+                  <Box variant="p" color="inherit">
+                    No authorization rules
+                  </Box>
+                  <Box variant="small" color="text-body-secondary">
+                    This user has unrestricted access to all geographic areas
+                  </Box>
+                </SpaceBetween>
+              </Box>
+            }
+          />
 
           {/* Effective Access Summary */}
           <Container header={<Header>Effective Access Summary</Header>}>
@@ -229,15 +233,14 @@ export function GeographicAuthorizationManager({
                   </Box>
                 ) : (
                   fullAccessAreas.slice(0, 10).map((area) => (
-                    <Box key={area.geographicAreaId}>
+                    <SpaceBetween key={area.geographicAreaId} direction="horizontal" size="xs">
                       <Badge color="green">{area.geographicAreaName}</Badge>
-                      {' '}
                       {area.isDescendant && (
-                        <Box variant="small" color="text-body-secondary" display="inline">
+                        <Box variant="small" color="text-body-secondary">
                           (via parent)
                         </Box>
                       )}
-                    </Box>
+                    </SpaceBetween>
                   ))
                 )}
                 {fullAccessAreas.length > 10 && (
@@ -256,13 +259,12 @@ export function GeographicAuthorizationManager({
                   </Box>
                 ) : (
                   readOnlyAreas.slice(0, 10).map((area) => (
-                    <Box key={area.geographicAreaId}>
+                    <SpaceBetween key={area.geographicAreaId} direction="horizontal" size="xs">
                       <Badge color="blue">{area.geographicAreaName}</Badge>
-                      {' '}
-                      <Box variant="small" color="text-body-secondary" display="inline">
+                      <Box variant="small" color="text-body-secondary">
                         (ancestor)
                       </Box>
-                    </Box>
+                    </SpaceBetween>
                   ))
                 )}
                 {readOnlyAreas.length > 10 && (

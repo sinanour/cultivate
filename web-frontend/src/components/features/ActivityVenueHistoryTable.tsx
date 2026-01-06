@@ -5,6 +5,7 @@ import {
   Button,
   Badge,
   Link,
+  SpaceBetween,
 } from '@cloudscape-design/components';
 import { formatDate } from '../../utils/date.utils';
 
@@ -58,16 +59,14 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
           id: 'venue',
           header: 'Venue',
           cell: (item: ActivityVenueHistoryRecord) => (
-            <Box>
+            <SpaceBetween direction="horizontal" size="xs">
               <Link href={`/venues/${item.venueId}`}>
                 {item.venue?.name || 'Unknown Venue'}
               </Link>
               {sortedHistory.indexOf(item) === 0 && (
-                <Box margin={{ left: 'xs' }} display="inline-block">
-                  <Badge color="green">Current</Badge>
-                </Box>
+                <Badge color="green">Current</Badge>
               )}
-            </Box>
+            </SpaceBetween>
           ),
           sortingField: 'venue.name',
         },
@@ -81,14 +80,14 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
           header: 'Effective From',
           cell: (item: ActivityVenueHistoryRecord) => 
             item.effectiveFrom ? formatDate(item.effectiveFrom) : (
-              <Box>
+              <SpaceBetween direction="horizontal" size="xs">
                 <Badge color="blue">Since Activity Start</Badge>
                 {activityStartDate && (
-                  <Box variant="small" color="text-body-secondary" margin={{ top: 'xxxs' }}>
+                  <Box variant="small" color="text-body-secondary">
                     ({formatDate(activityStartDate)})
                   </Box>
                 )}
-              </Box>
+              </SpaceBetween>
             ),
           sortingField: 'effectiveFrom',
         },

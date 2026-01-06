@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useBlocker } from 'react-router-dom';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -12,8 +12,7 @@ import Modal from '@cloudscape-design/components/modal';
 import Box from '@cloudscape-design/components/box';
 import Grid from '@cloudscape-design/components/grid';
 import Container from '@cloudscape-design/components/container';
-import Header from '@cloudscape-design/components/header';
-import type { Venue, GeocodingResult } from '../../types';
+import type { Venue, GeocodingResult, GeographicAreaWithHierarchy } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeocodingService } from '../../services/geocoding.service';
@@ -21,7 +20,9 @@ import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
 import { getEntityVersion } from '../../utils/version-conflict.utils';
 import { VenueFormMapView } from './VenueFormMapView';
-import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
+import { GeographicAreaSelector } from '../common/GeographicAreaSelector';
+import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
+import { useAuth } from '../../hooks/useAuth';
 
 interface VenueFormProps {
   venue: Venue | null;
@@ -31,6 +32,7 @@ interface VenueFormProps {
 
 export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [geographicAreaId, setGeographicAreaId] = useState('');
@@ -50,6 +52,9 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
   const [showResultsDialog, setShowResultsDialog] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Geographic area refresh state
+  const [isRefreshingAreas, setIsRefreshingAreas] = useState(false);
 
   // Track initial values for dirty state detection
   const [initialFormState, setInitialFormState] = useState<{
@@ -188,6 +193,54 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
     queryKey: ['venues'],
     onDiscard: onCancel,
   });
+
+  // Fetch geographic areas with hierarchy for the selector
+  const { data: geographicAreas = [], isLoading: isLoadingAreas, refetch: refetchAreas } = useQuery({
+    queryKey: ['geographicAreas', 'withHierarchy'],
+    queryFn: async () => {
+      const areas = await GeographicAreaService.getGeographicAreas();
+      
+      // Fetch ancestors for each area to build hierarchy
+      const areasWithHierarchy = await Promise.all(
+        areas.map(async (area) => {
+          try {
+            const ancestors = await GeographicAreaService.getAncestors(area.id);
+            const hierarchyPath = ancestors.length > 0
+              ? ancestors.map(a => a.name).join(' > ')
+              : '';
+            
+            return {
+              ...area,
+              ancestors,
+              hierarchyPath,
+            } as GeographicAreaWithHierarchy;
+          } catch (error) {
+            console.error(`Failed to fetch ancestors for area ${area.id}:`, error);
+            return {
+              ...area,
+              ancestors: [],
+              hierarchyPath: '',
+            } as GeographicAreaWithHierarchy;
+          }
+        })
+      );
+      
+      return areasWithHierarchy;
+    },
+  });
+
+  // Handler for refreshing geographic areas
+  const handleRefreshAreas = async () => {
+    setIsRefreshingAreas(true);
+    try {
+      await refetchAreas();
+    } finally {
+      setIsRefreshingAreas(false);
+    }
+  };
+
+  // Check if user can add geographic areas
+  const canAddGeographicArea = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
 
   const venueTypeOptions = [
     { label: 'Not specified', value: '' },
@@ -466,32 +519,26 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
                   />
                 </FormField>
                 <FormField label="Geographic Area" errorText={geographicAreaError} constraintText="Required">
-                  <AsyncEntitySelect
-                    value={geographicAreaId}
-                    onChange={(value) => {
-                      setGeographicAreaId(value);
-                      if (geographicAreaError) validateGeographicArea(value);
-                    }}
-                    entityType="geographic-area"
-                    fetchFunction={async (params) => {
-                      const data = await GeographicAreaService.getGeographicAreas(
-                        params.page,
-                        params.limit,
-                        params.geographicAreaId,
-                        params.search
-                      );
-                      return { data };
-                    }}
-                    formatOption={(area) => ({
-                      value: area.id,
-                      label: area.name,
-                      description: area.areaType,
-                    })}
-                    placeholder="Search for a geographic area"
-                    disabled={isSubmitting}
-                    invalid={!!geographicAreaError}
-                    ariaLabel="Select geographic area"
-                  />
+                  <EntitySelectorWithActions
+                    onRefresh={handleRefreshAreas}
+                    addEntityUrl="/geographic-areas/new"
+                    canAdd={canAddGeographicArea}
+                    isRefreshing={isRefreshingAreas}
+                    entityTypeName="geographic area"
+                  >
+                    <GeographicAreaSelector
+                      value={geographicAreaId}
+                      onChange={(value) => {
+                        setGeographicAreaId(value || '');
+                        if (geographicAreaError) validateGeographicArea(value || '');
+                      }}
+                      options={geographicAreas}
+                      loading={isLoadingAreas}
+                      disabled={isSubmitting}
+                      error={geographicAreaError}
+                      placeholder="Select a geographic area"
+                    />
+                  </EntitySelectorWithActions>
                 </FormField>
                 <FormField 
                   label="Coordinates" 
@@ -549,13 +596,7 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
               </SpaceBetween>
 
               {/* Right column: Map view */}
-              <Container
-                header={
-                  <Header variant="h3">
-                    Map Preview
-                  </Header>
-                }
-              >
+              <Container>
                 <VenueFormMapView
                   latitude={mapLatitude}
                   longitude={mapLongitude}
@@ -563,8 +604,8 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
                 />
                 <Box margin={{ top: 's' }} variant="small" color="text-body-secondary">
                   {mapLatitude !== null && mapLongitude !== null
-                    ? 'Drag the marker to adjust the location'
-                    : 'Enter coordinates or geocode the address to see the location on the map'}
+                    ? 'Drag the marker or right-click to adjust the location'
+                    : 'Enter coordinates, geocode the address, or use "Drop Pin" to set the location on the map'}
                 </Box>
               </Container>
             </Grid>

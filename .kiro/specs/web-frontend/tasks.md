@@ -322,15 +322,19 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [x] 7.3 Create ParticipantDetail component
     - Show participant information
+    - Render email address as clickable mailto link using CloudScape Link component
+    - Render phone number as clickable tel link using CloudScape Link component
     - List all activities with roles
     - Display address history table in reverse chronological order
     - Add primary edit button that navigates to /participants/:id/edit
     - Add delete button with confirmation dialog
-    - _Requirements: 4.10, 4.11, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
+    - _Requirements: 4.10, 4.12a, 4.12b, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
   - [ ]* 7.5 Write property test for participant detail view
     - **Property 10: Participant Detail View Completeness**
-    - **Validates: Requirements 4.10**
+    - **Property 10a: Participant Email Mailto Link**
+    - **Property 10b: Participant Phone Tel Link**
+    - **Validates: Requirements 4.10, 4.12a, 4.12b**
 
   - [x] 7.4 Create AddressHistoryTable component
     - Display address history in reverse chronological order by effective start date
@@ -463,15 +467,22 @@ This implementation plan covers the React-based web application built with TypeS
     - [x] 8.5.2 Create VenueFormMapView component
       - Create reusable map component for venue form using Leaflet
       - Display map positioned to the right of form fields
+      - Display "Drop Pin" button in map header (right-justified) using CloudScape Button
+      - When "Drop Pin" button clicked, place pin at map's current center point
+      - When pin placed via "Drop Pin", update parent form coordinates with center point
+      - When pin placed via "Drop Pin", zoom map to street-level (zoom 15-17)
       - Render draggable marker when coordinates are provided
       - Set map zoom to level 15 when coordinates are first populated
       - Track whether user has manually adjusted zoom level
       - Handle marker drag events to extract new coordinates
+      - Handle right-click events on map to reposition pin
+      - When right-click detected, move pin to clicked location
+      - When pin repositioned via right-click, update parent form coordinates
       - Provide callback to update parent form state with new coordinates
       - Center map on marker when coordinates change (without resetting zoom if user-adjusted)
       - Preserve user-adjusted zoom level during coordinate updates
       - Handle empty coordinate state (no marker displayed)
-      - _Requirements: 22.11, 22.12, 22.13, 22.14, 22.18_
+      - _Requirements: 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18, 22.19, 22.20, 22.21, 22.22, 22.23, 22.24, 22.26_
 
     - [x] 8.5.3 Update VenueFormPage component with geocoding and map
       - Add "Geocode Address" button next to latitude/longitude fields
@@ -486,10 +497,12 @@ This implementation plan covers the React-based web application built with TypeS
       - Position map view to the right of form fields using grid or flex layout
       - Pass latitude/longitude state to map component
       - Update latitude/longitude state when map pin is dragged
+      - Update latitude/longitude state when "Drop Pin" button is clicked (uses map center)
+      - Update latitude/longitude state when user right-clicks on map
       - Update map pin when latitude/longitude inputs are manually edited
       - Maintain two-way synchronization between inputs and map
       - Preserve user-adjusted zoom level during coordinate updates
-      - _Requirements: 22.2, 22.4, 22.5, 22.6, 22.7, 22.8, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18_
+      - _Requirements: 22.2, 22.4, 22.5, 22.6, 22.7, 22.8, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18, 22.19, 22.20, 22.21, 22.22, 22.23, 22.24, 22.25, 22.26_
 
     - [ ]* 8.5.4 Write property tests for geocoding and map interaction
       - **Property 69: Geocoding Request Success**
@@ -503,10 +516,15 @@ This implementation plan covers the React-based web application built with TypeS
       - **Property 88: Map Pin Rendering**
       - **Property 89: Map Zoom Level**
       - **Property 90: Pin Drag Updates Coordinates**
+      - **Property 90a: Drop Pin Button Places Pin at Center**
+      - **Property 90b: Drop Pin Updates Coordinates**
+      - **Property 90c: Drop Pin Zooms to Street Level**
+      - **Property 90d: Right-Click Repositions Pin**
+      - **Property 90e: Right-Click Updates Coordinates**
       - **Property 91: Coordinate Input Updates Pin**
       - **Property 92: Two-Way Coordinate Synchronization**
       - **Property 93: Zoom Level Preservation**
-      - **Validates: Requirements 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18**
+      - **Validates: Requirements 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18, 22.19, 22.20, 22.21, 22.22, 22.23, 22.24, 22.25, 22.26**
 
 - [x] 9. Implement geographic area management UI
   - [x] 9.1 Create GeographicAreaList component
@@ -1432,6 +1450,43 @@ This implementation plan covers the React-based web application built with TypeS
     - Test that failed deletion displays error message
     - **Validates: Requirements 24A.1, 24A.2, 24A.3, 24A.4, 24A.5, 24A.6, 24A.7, 24A.8, 24A.9, 24A.10**
 
+- [ ] 23B. Create reusable Geographic_Area_Selector component
+  - [ ] 23B.1 Extract Geographic_Area_Selector from GeographicAreaFilterSelector
+    - Create new file: web-frontend/src/components/common/GeographicAreaSelector.tsx
+    - Extract the Select portion from GeographicAreaFilterSelector.tsx
+    - Create component that accepts props: value, onChange, options (GeographicAreaWithHierarchy[]), loading, disabled, error, placeholder, inlineLabelText
+    - Implement custom option rendering using Box components for layout
+    - First Box displays area name
+    - Second Box displays area type Badge with color from getAreaTypeBadgeColor()
+    - Use Select's description property for hierarchy path display
+    - Format hierarchy path as "Ancestor1 > Ancestor2 > Ancestor3" or "No parent areas"
+    - Configure Select with filteringType="auto" for client-side filtering
+    - Configure Select with expandToViewport property
+    - Configure Select with statusType based on loading prop
+    - Add renderHighlightedAriaLive callback for screen reader support
+    - Add selectedAriaLabel="Selected" for accessibility
+    - Support empty/unselected state with placeholder text
+    - Do NOT inject "Global" or "All Areas" option
+    - Use React useMemo to optimize option transformation
+    - _Requirements: 6B1.1, 6B1.2, 6B1.3, 6B1.4, 6B1.5, 6B1.6, 6B1.7, 6B1.8, 6B1.9, 6B1.15, 6B1.16, 6B1.17, 6B1.18, 6B1.19, 6B1.20, 6B1.21, 6B1.22, 6B1.24, 6B1.25, 6B1.26_
+
+  - [ ] 23B.2 Refactor GeographicAreaFilterSelector to use Geographic_Area_Selector
+    - Import Geographic_Area_Selector component
+    - Replace inline Select with Geographic_Area_Selector
+    - Pass availableAreas, selectedGeographicAreaId, setGeographicAreaFilter, isLoading as props
+    - Keep BreadcrumbGroup and clear button logic in GeographicAreaFilterSelector
+    - Maintain existing wrapper layout (flex container with gap)
+    - Ensure "Global" display is handled by wrapper, not by Geographic_Area_Selector
+    - _Requirements: 6B1.15, 6B1.19, 6B1.22, 6B1.29_
+
+  - [ ]* 23B.3 Write property tests for Geographic_Area_Selector
+    - **Property 177: Geographic Area Selector Option Layout**
+    - **Property 178: Geographic Area Selector Hierarchy Path Display**
+    - **Property 179: Geographic Area Selector Empty State**
+    - **Property 180: Geographic Area Selector No Global Option**
+    - **Property 181: Geographic Area Selector Accessibility**
+    - **Validates: Requirements 6B1.3, 6B1.4, 6B1.5, 6B1.6, 6B1.7, 6B1.8, 6B1.9, 6B1.17, 6B1.18, 6B1.19, 6B1.22, 6B1.24, 6B1.25, 6B1.26_
+
 - [x] 24. Implement global persistent geographic area filter
   - [x] 24.1 Create GlobalGeographicFilterContext
     - Create React context for global geographic area filter state
@@ -1579,15 +1634,17 @@ This implementation plan covers the React-based web application built with TypeS
     - Configure for participant entity type
     - _Requirements: 26.2_
 
-  - [x] 25.5 Update VenueForm to use AsyncEntitySelect
-    - Replace geographic area dropdown with AsyncEntitySelect
-    - Configure for geographic area entity type
-    - _Requirements: 26.3_
+  - [ ] 25.5 Update VenueForm to use Geographic_Area_Selector
+    - Replace geographic area dropdown with Geographic_Area_Selector
+    - Configure with appropriate props (value, onChange, options, placeholder)
+    - Fetch geographic areas with hierarchy information
+    - _Requirements: 6B1.23, 6B1.30, 6A.7a_
 
-  - [x] 25.6 Update GeographicAreaForm to use AsyncEntitySelect
-    - Replace parent geographic area dropdown with AsyncEntitySelect
-    - Configure for geographic area entity type
-    - _Requirements: 26.3_
+  - [ ] 25.6 Update GeographicAreaForm to use Geographic_Area_Selector
+    - Replace parent geographic area dropdown with Geographic_Area_Selector
+    - Configure with appropriate props (value, onChange, options, placeholder)
+    - Fetch geographic areas with hierarchy information
+    - _Requirements: 6B1.24, 6B1.31, 6B.6_
 
   - [x] 25.7 Update AddressHistoryForm to use AsyncEntitySelect
     - Replace venue dropdown with AsyncEntitySelect
@@ -1613,6 +1670,104 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 97: Dropdown Loading Indicator**
     - **Property 98: Dropdown Combined Filtering**
     - **Validates: Requirements 26.4, 26.5, 26.6, 26.7**
+
+- [x] 25A. Implement entity selector refresh and add actions
+  - [x] 25A.1 Create EntitySelectorWithActions component
+    - Create new file: web-frontend/src/components/common/EntitySelectorWithActions.tsx
+    - Create wrapper component that accepts entity selector as children
+    - Accept props: children, onRefresh, addEntityUrl, canAdd, isRefreshing, entityTypeName
+    - Display refresh button using CloudScape Button with iconName="refresh"
+    - Display add button using CloudScape Button with iconName="add-plus"
+    - Position buttons adjacent to selector (typically to the right) using SpaceBetween or ButtonGroup
+    - When refresh button clicked, call onRefresh callback
+    - Display loading indicator on refresh button when isRefreshing is true
+    - When add button clicked, open addEntityUrl in new tab using window.open(url, '_blank')
+    - Disable add button when canAdd is false
+    - Always enable refresh button regardless of permissions
+    - Add ARIA labels for accessibility (e.g., "Refresh {entityTypeName} list", "Add new {entityTypeName}")
+    - Ensure keyboard navigation works for both buttons
+    - _Requirements: 17A.1, 17A.2, 17A.3, 17A.4, 17A.5, 17A.6, 17A.17, 17A.18, 17A.19, 17A.20, 17A.21, 17A.22_
+
+  - [x] 25A.2 Update VenueFormPage to use EntitySelectorWithActions
+    - Wrap Geographic_Area_Selector with EntitySelectorWithActions
+    - Implement onRefresh callback to reload geographic areas
+    - Set addEntityUrl to "/geographic-areas/new"
+    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.8, 17A.17_
+
+  - [x] 25A.3 Update ParticipantFormPage address history to use EntitySelectorWithActions
+    - Wrap venue AsyncEntitySelect in AddressHistoryForm with EntitySelectorWithActions
+    - Implement onRefresh callback to reload venues
+    - Set addEntityUrl to "/venues/new"
+    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.9, 17A.17_
+
+  - [x] 25A.4 Update ActivityFormPage venue history to use EntitySelectorWithActions
+    - Wrap venue AsyncEntitySelect in ActivityVenueHistoryForm with EntitySelectorWithActions
+    - Implement onRefresh callback to reload venues
+    - Set addEntityUrl to "/venues/new"
+    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.10, 17A.17_
+
+  - [x] 25A.5 Update ActivityTypeForm to use EntitySelectorWithActions
+    - Wrap activity category Select with EntitySelectorWithActions
+    - Implement onRefresh callback to reload activity categories
+    - Set addEntityUrl to "/configuration" (opens configuration page where categories can be added)
+    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.11, 17A.17_
+
+  - [x] 25A.6 Update ActivityFormPage assignments to use EntitySelectorWithActions
+    - Wrap participant AsyncEntitySelect in AssignmentForm with EntitySelectorWithActions
+    - Implement onRefresh callback to reload participants
+    - Set addEntityUrl to "/participants/new"
+    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.12, 17A.17_
+
+  - [x] 25A.7 Update ActivityFormPage assignments role selector to use EntitySelectorWithActions
+    - Wrap role Select in AssignmentForm with EntitySelectorWithActions
+    - Implement onRefresh callback to reload roles
+    - Set addEntityUrl to "/configuration" (opens configuration page where roles can be added)
+    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.13, 17A.17_
+
+  - [x] 25A.8 Update ParticipantFormPage population selector to use EntitySelectorWithActions
+    - Wrap population Select in PopulationMembershipManager with EntitySelectorWithActions
+    - Implement onRefresh callback to reload populations
+    - Set addEntityUrl to "/configuration" (opens configuration page where populations can be added)
+    - Set canAdd to true only for ADMINISTRATOR role
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.14, 17A.17_
+
+  - [x] 25A.9 Update GeographicAreaFormPage to use EntitySelectorWithActions
+    - Wrap parent Geographic_Area_Selector with EntitySelectorWithActions
+    - Implement onRefresh callback to reload geographic areas
+    - Set addEntityUrl to "/geographic-areas/new"
+    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.15, 17A.17_
+
+  - [x] 25A.10 Update GeographicAuthorizationForm to use EntitySelectorWithActions
+    - Wrap Geographic_Area_Selector with EntitySelectorWithActions
+    - Implement onRefresh callback to reload geographic areas
+    - Set addEntityUrl to "/geographic-areas/new"
+    - Set canAdd based on user role (ADMINISTRATOR only for this context)
+    - Track isRefreshing state during reload
+    - _Requirements: 17A.16, 17A.17_
+
+  - [ ]* 25A.11 Write property tests for EntitySelectorWithActions
+    - **Property 182: Entity Selector Refresh Button Presence**
+    - **Property 183: Entity Selector Add Button Presence**
+    - **Property 184: Refresh Button Reloads Options**
+    - **Property 185: Add Button Opens New Tab**
+    - **Property 186: Add Button Permission-Based Disabling**
+    - **Property 187: Refresh Button Loading Indicator**
+    - **Validates: Requirements 17A.1, 17A.2, 17A.3, 17A.4, 17A.5, 17A.6, 17A.7, 17A.17, 17A.18, 17A.19, 17A.20, 17A.21, 17A.22, 17A.23**
 
 - [ ] 26. Enhance Participant entity with additional optional fields
   - [ ] 26.1 Update ParticipantForm component
@@ -2178,7 +2333,7 @@ See `API_ALIGNMENT_SUMMARY.md` for detailed alignment documentation.
 
   - [ ] 39.4 Create GeographicAuthorizationForm component
     - Create modal form for adding authorization rules
-    - Use AsyncEntitySelect for geographic area selection
+    - Use Geographic_Area_Selector component for geographic area selection
     - Use CloudScape RadioGroup for rule type selection (ALLOW or DENY)
     - Validate geographic area is selected
     - Validate rule type is selected

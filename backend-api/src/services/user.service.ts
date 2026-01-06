@@ -161,4 +161,35 @@ export class UserService {
     const { passwordHash: _, ...userWithoutPassword } = updated;
     return userWithoutPassword;
   }
+
+  async deleteUser(id: string): Promise<void> {
+    // Validate user exists
+    const user = await this.userRepository.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if this is the last administrator
+    if (user.role === UserRole.ADMINISTRATOR) {
+      const allUsers = await this.userRepository.findAll();
+      const adminCount = allUsers.filter(u => u.role === UserRole.ADMINISTRATOR).length;
+
+      if (adminCount <= 1) {
+        throw new Error('Cannot delete the last administrator user');
+      }
+    }
+
+    // Delete user and all associated authorization rules in a transaction
+    await this.prisma.$transaction(async (tx) => {
+      // Delete all geographic authorization rules for this user
+      await tx.userGeographicAuthorization.deleteMany({
+        where: { userId: id },
+      });
+
+      // Delete the user
+      await tx.user.delete({
+        where: { id },
+      });
+    });
+  }
 }
