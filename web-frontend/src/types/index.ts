@@ -156,6 +156,8 @@ export interface ActivityCategoryBreakdown {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
+    participationAtStart: number;
+    participationAtEnd: number;
 }
 
 export interface ActivityTypeBreakdown {
@@ -170,6 +172,8 @@ export interface ActivityTypeBreakdown {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
+    participationAtStart: number;
+    participationAtEnd: number;
 }
 
 export interface RoleDistribution {
@@ -183,6 +187,7 @@ export interface GeographicBreakdown {
     geographicAreaName: string;
     activityCount: number;
     participantCount: number;
+    participationCount: number;
     hasChildren: boolean;
 }
 
@@ -203,9 +208,14 @@ export interface EngagementMetrics {
     participantsAtStart: number;
     participantsAtEnd: number;
 
+    // Temporal participation counts (non-unique)
+    participationAtStart: number;
+    participationAtEnd: number;
+
     // Aggregate counts
     totalActivities: number;
     totalParticipants: number;
+    totalParticipation: number;
 
     // Breakdown by activity category
     activitiesByCategory: ActivityCategoryBreakdown[];
@@ -230,6 +240,7 @@ export interface EngagementMetrics {
         activityTypeId?: string;
         venueId?: string;
         geographicAreaId?: string;
+        populationIds?: string[];
         startDate?: string;
         endDate?: string;
     };
@@ -245,6 +256,7 @@ export interface GrowthPeriodData {
     date: string;
     uniqueParticipants: number;
     uniqueActivities: number;
+    totalParticipation: number;
 }
 
 export interface GeographicAnalytics {

@@ -520,12 +520,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Calculate activities at start and end of date range
     - Calculate activities started, completed, and cancelled within date range
     - Calculate participants at start and end of date range
+    - Calculate total participation (non-unique participant-activity associations) at start and end of date range
     - Provide aggregate counts and breakdowns by activity category and activity type
     - Support multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity)
     - Support flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates)
     - Apply multiple filters using AND logic
     - Calculate role distribution within filtered and grouped results
-    - Implement growth metrics calculation with unique participant and activity counts per period (snapshots, not cumulative)
+    - Implement growth metrics calculation with unique participant counts, unique activity counts, and total participation counts per period (snapshots, not cumulative)
     - Support optional grouping by activity type or category for growth metrics
     - Implement geographic breakdown calculation
     - Support date range filtering
@@ -533,7 +534,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Support population filtering (include only participants in specified populations, include only activities with at least one participant in specified populations)
     - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest date for participants
     - Correctly identify current venue/address when effectiveFrom is null
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19a, 6.19b, 6.19c, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.9a, 7.9b, 7.9c, 7.10, 7.11, 7.12, 7.13_
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19a, 6.19b, 6.19c, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 7.1, 7.2, 7.3, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.8, 7.9, 7.9a, 7.9b, 7.9c, 7.10, 7.11, 7.12, 7.13, 7.14a_
 
   - [ ]* 13.2 Write property tests for analytics calculations
     - **Property 20: Activities at Start of Date Range Counting**
@@ -549,6 +550,11 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 29: Aggregate Participant Counts**
     - **Property 29A: Participant Counts by Category Breakdown**
     - **Property 30: Participant Counts by Type Breakdown**
+    - **Property 30A: Participation at Start of Date Range Counting**
+    - **Property 30B: Participation at End of Date Range Counting**
+    - **Property 30C: Aggregate Participation Counts**
+    - **Property 30D: Participation Counts by Category Breakdown**
+    - **Property 30E: Participation Counts by Type Breakdown**
     - **Property 31: Multi-Dimensional Grouping Support**
     - **Property 31A: Activity Category Point Filter**
     - **Property 32: Activity Type Point Filter**
@@ -562,12 +568,14 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 40: Time Period Grouping**
     - **Property 41: Unique Participant Counting Per Period**
     - **Property 42: Unique Activity Counting Per Period**
+    - **Property 42A: Total Participation Counting Per Period**
     - **Property 43: Chronological Ordering**
     - **Property 44: Percentage Change Calculation**
     - **Property 45: Optional Grouping by Activity Type**
     - **Property 46: Optional Grouping by Activity Category**
     - **Property 47: Aggregate Growth Without Grouping**
-    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.2, 7.4, 7.5, 7.6, 7.7, 7.10, 7.11, 7.12, 7.13**
+    - **Property 47_participation: Time-Series Participation Data Inclusion**
+    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.2, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.10, 7.11, 7.12, 7.13, 7.14a**
 
   - [x] 13.3 Create analytics routes
     - GET /api/analytics/engagement

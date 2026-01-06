@@ -23,6 +23,8 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
 - **Configuration_View**: A unified interface for managing activity categories, activity types, participant roles, and populations
 - **Population**: A label or demographic grouping that can be assigned to participants for segmentation and analysis (e.g., Youth, Adults, Families, Seekers)
+- **Participation**: The total count (non-unique) of all participant-activity associations, where the same participant involved in multiple activities contributes multiple counts
+- **Unique_Participant_Count**: The count of distinct participants involved in activities, where the same participant involved in multiple activities contributes only one count
 - **Engagement_Summary_Table**: A table on the Engagement Dashboard displaying aggregate and dimensional breakdown metrics for activities and participants
 - **Dirty_Form**: A form with unsaved changes that differ from the initial values
 - **Navigation_Guard**: A mechanism that intercepts navigation attempts to prevent accidental data loss from dirty forms
@@ -369,12 +371,21 @@ The Web Frontend package provides a responsive React-based web application that 
 6. THE Web_App SHALL display activities cancelled within the selected date range
 7. THE Web_App SHALL display participants at the start of the selected date range
 8. THE Web_App SHALL display participants at the end of the selected date range
+8a. THE Web_App SHALL display total participation (non-unique participant-activity associations) at the start of the selected date range
+8b. THE Web_App SHALL display total participation (non-unique participant-activity associations) at the end of the selected date range
+8c. THE Web_App SHALL provide an info icon next to the "Participant Growth" box on the Growth Dashboard
+8d. WHEN the info icon next to the Participant Growth box is clicked, THE Web_App SHALL display a popover explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once."
+8e. THE Web_App SHALL provide an info icon next to the "Participation Growth" box on the Growth Dashboard
+8f. WHEN the info icon next to the Participation Growth box is clicked, THE Web_App SHALL display a popover explaining "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
 9. THE Web_App SHALL display all activity counts in aggregate across all activity categories and types
 10. THE Web_App SHALL display all activity counts broken down by activity category
 11. THE Web_App SHALL display all activity counts broken down by activity type
 12. THE Web_App SHALL display all participant counts in aggregate across all activity categories and types
 13. THE Web_App SHALL display all participant counts broken down by activity category
 14. THE Web_App SHALL display all participant counts broken down by activity type
+14a. THE Web_App SHALL display all participation counts (non-unique) in aggregate across all activity categories and types
+14b. THE Web_App SHALL display all participation counts (non-unique) broken down by activity category
+14c. THE Web_App SHALL display all participation counts (non-unique) broken down by activity type
 15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity category, activity type, venue, geographic area, and population
 16. THE Web_App SHALL provide filter controls for activity category (point filter)
 17. THE Web_App SHALL provide filter controls for activity type (point filter)
@@ -385,14 +396,16 @@ The Web Frontend package provides a responsive React-based web application that 
 19c. WHEN a population filter is applied, THE Web_App SHALL include only activities that have at least one participant belonging to at least one of the specified populations
 20. THE Web_App SHALL provide filter controls for date range (range filter with start and end dates)
 21. THE Web_App SHALL render an "Engagement Summary" table that displays aggregate metrics and dimensional breakdowns
-22. THE Web_App SHALL render the first row of the Engagement Summary table with the label "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end) in subsequent columns
+21a. THE Web_App SHALL provide an info icon next to the "Engagement Summary" table header
+21b. WHEN the info icon next to the Engagement Summary header is clicked, THE Web_App SHALL display a popover explaining both metrics: "Participant Count: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once. Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
+22. THE Web_App SHALL render the first row of the Engagement Summary table with the label "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end) in subsequent columns
 23. WHEN multiple grouping dimensions are selected, THE Web_App SHALL leave subsequent dimension cells blank in the first row (Total row)
 24. WHEN grouping dimensions are selected, THE Web_App SHALL render additional rows below the Total row showing dimensional breakdowns where breakdown dimension columns appear first followed by metric aggregation columns
 25. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity category names as hyperlinks to the Activity Configuration page at /configuration
 26. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity type names as hyperlinks to the Activity Configuration page at /configuration
 27. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render venue names as hyperlinks to their respective detail views at /venues/:id
 28. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render geographic area names as hyperlinks to their respective detail views at /geographic-areas/:id
-29. THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end) in its own column in the Engagement Summary table
+29. THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end, participation at start, participation at end) in its own column in the Engagement Summary table
 30. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
 31. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
 32. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
@@ -416,18 +429,25 @@ The Web Frontend package provides a responsive React-based web application that 
 39. THE Web_App SHALL provide a growth analytics dashboard
 40. THE Web_App SHALL display a separate time-series chart showing unique participant counts for each time period
 41. THE Web_App SHALL display a separate time-series chart showing unique activity counts for each time period
+41a. THE Web_App SHALL display a separate time-series chart showing total participation (non-unique participant-activity associations) for each time period
+41b. THE Web_App SHALL provide an info icon next to the "Unique Participants Over Time" chart title
+41c. WHEN the info icon next to the Unique Participants chart is clicked, THE Web_App SHALL display a popover explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once."
+41d. THE Web_App SHALL provide an info icon next to the "Total Participation Over Time" chart title
+41e. WHEN the info icon next to the Total Participation chart is clicked, THE Web_App SHALL display a popover explaining "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
 42. THE Web_App SHALL provide time period selection (day, week, month, year)
-43. THE Web_App SHALL display each time period as a snapshot of unique participants and activities engaged at that point in time (not cumulative counts)
+43. THE Web_App SHALL display each time period as a snapshot of unique participants, unique activities, and total participation engaged at that point in time (not cumulative counts)
 44. THE Web_App SHALL provide a segmented control to view growth metrics with three options: "All", "Activity Type", and "Activity Category"
 45. THE Segmented_Control SHALL default to "All" as the selected option
-46. WHEN "All" is selected in the segmented control, THE Web_App SHALL display a single aggregate time-series line for total unique participants and a single aggregate time-series line for total unique activities across all activity types and categories in both charts
-46a. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participation and activity growth numbers representing totals across all activity types and categories
-46b. WHEN "Activity Type" or "Activity Category" is selected in the segmented control, THE Web_App SHALL NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
-47. WHEN "Activity Type" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in both charts, one line for each activity type showing unique participants and unique activities for that type
-48. WHEN "Activity Category" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in both charts, one line for each activity category showing unique participants and unique activities for that category
-49. WHEN displaying multiple lines for activity types or categories, THE Web_App SHALL use a consistent color scheme across both the Unique Participants chart and the Unique Activities chart, so that the same activity type or category has the same color on both charts
-50. THE Web_App SHALL display a legend on both charts showing the color mapping for each activity type or category when multiple lines are displayed
-51. WHEN the view mode changes between "All", "Activity Type", and "Activity Category", THE Growth_Dashboard SHALL update both charts without requiring a page refresh
+46. WHEN "All" is selected in the segmented control, THE Web_App SHALL display a single aggregate time-series line for total unique participants, a single aggregate time-series line for total unique activities, and a single aggregate time-series line for total participation across all activity types and categories in all three charts
+46a. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participation growth numbers (percentage change) representing totals across all activity types and categories
+46b. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall activity growth numbers (percentage change) representing totals across all activity types and categories
+46c. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participant growth numbers (percentage change) representing totals across all activity types and categories
+46d. WHEN "Activity Type" or "Activity Category" is selected in the segmented control, THE Web_App SHALL NOT display overall growth numbers, showing only the grouped breakdown data
+47. WHEN "Activity Type" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each activity type showing unique participants, unique activities, and total participation for that type
+48. WHEN "Activity Category" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each activity category showing unique participants, unique activities, and total participation for that category
+49. WHEN displaying multiple lines for activity types or categories, THE Web_App SHALL use a consistent color scheme across all three charts (Unique Participants, Unique Activities, and Total Participation), so that the same activity type or category has the same color on all charts
+50. THE Web_App SHALL display a legend on all three charts showing the color mapping for each activity type or category when multiple lines are displayed
+51. WHEN the view mode changes between "All", "Activity Type", and "Activity Category", THE Growth_Dashboard SHALL update all three charts without requiring a page refresh
 52. WHEN switching between view modes, THE Growth_Dashboard SHALL preserve the current time period, date range, and geographic area filter selections
 53. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage with key "growthChartViewMode"
 54. WHEN a user returns to the Growth Dashboard, THE Growth_Dashboard SHALL restore the previously selected view mode from local storage
@@ -435,6 +455,8 @@ The Web Frontend package provides a responsive React-based web application that 
 56. WHEN local storage is unavailable, THE Growth_Dashboard SHALL function normally with "All" as the default
 48. THE Web_App SHALL provide a geographic area filter for all analytics
 49. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
+49a. THE Web_App SHALL display both unique participant counts and total participation counts in the geographic breakdown chart
+49b. THE Web_App SHALL use separate data series for "Participants" (unique count) and "Participation" (non-unique count) in the geographic breakdown chart
 50. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
 57a. THE Web_App SHALL synchronize growth dashboard filter parameters (period, date range, grouping mode) with URL query parameters
 57b. WHEN a user navigates to a URL with growth dashboard query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard

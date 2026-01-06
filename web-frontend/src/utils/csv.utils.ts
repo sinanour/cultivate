@@ -65,15 +65,17 @@ export function generateEngagementSummaryCSV(
         headers.push(headerMap[dimension] || dimension);
     }
 
-    // Add metric column headers
+    // Add metric column headers (participant/participation first, then activities)
     headers.push(
+        'Participants at Start',
+        'Participants at End',
+        'Participation at Start',
+        'Participation at End',
         'Activities at Start',
         'Activities at End',
         'Activities Started',
         'Activities Completed',
-        'Activities Cancelled',
-        'Participants at Start',
-        'Participants at End'
+        'Activities Cancelled'
     );
     rows.push(headers);
 
@@ -86,15 +88,17 @@ export function generateEngagementSummaryCSV(
         totalRow.push('');
     }
 
-    // Add metric values
+    // Add metric values (participant/participation first, then activities)
     totalRow.push(
+        String(metrics.participantsAtStart),
+        String(metrics.participantsAtEnd),
+        String(metrics.participationAtStart),
+        String(metrics.participationAtEnd),
         String(metrics.activitiesAtStart),
         String(metrics.activitiesAtEnd),
         String(metrics.activitiesStarted),
         String(metrics.activitiesCompleted),
-        String(metrics.activitiesCancelled),
-        String(metrics.participantsAtStart),
-        String(metrics.participantsAtEnd)
+        String(metrics.activitiesCancelled)
     );
     rows.push(totalRow);
 
@@ -108,15 +112,17 @@ export function generateEngagementSummaryCSV(
                 row.push(group.dimensions[dimension] || '');
             }
 
-            // Add metric values
+            // Add metric values (participant/participation first, then activities)
             row.push(
+                String(group.metrics.participantsAtStart),
+                String(group.metrics.participantsAtEnd),
+                String(group.metrics.participationAtStart),
+                String(group.metrics.participationAtEnd),
                 String(group.metrics.activitiesAtStart),
                 String(group.metrics.activitiesAtEnd),
                 String(group.metrics.activitiesStarted),
                 String(group.metrics.activitiesCompleted),
-                String(group.metrics.activitiesCancelled),
-                String(group.metrics.participantsAtStart),
-                String(group.metrics.participantsAtEnd)
+                String(group.metrics.activitiesCancelled)
             );
 
             rows.push(row);

@@ -193,7 +193,7 @@ Services implement business logic and coordinate operations:
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
-- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering)
+- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload
 - **GeographicAuthorizationService**: Manages user geographic authorization rules (CRUD operations), evaluates user access to geographic areas (deny-first logic), calculates effective authorized areas (including descendants and ancestors), validates geographic restrictions for create operations, provides authorization filtering for all data access, enforces authorization on individual resource access (GET by ID, PUT, DELETE), validates authorization for nested resource endpoints, provides authorization bypass for administrators, logs all authorization denials
@@ -1125,6 +1125,26 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 *For any* engagement metrics request, participant counts should be broken down by activity type.
 **Validates: Requirements 6.14**
 
+**Property 30A: Participation at start of date range counting**
+*For any* date range, engagement metrics should correctly count total participation (non-unique participant-activity associations) at the start of the date range.
+**Validates: Requirements 6.8a**
+
+**Property 30B: Participation at end of date range counting**
+*For any* date range, engagement metrics should correctly count total participation (non-unique participant-activity associations) at the end of the date range.
+**Validates: Requirements 6.8b**
+
+**Property 30C: Aggregate participation counts**
+*For any* engagement metrics request, participation counts (non-unique) should be provided in aggregate across all activity categories and types.
+**Validates: Requirements 6.14a**
+
+**Property 30D: Participation counts by category breakdown**
+*For any* engagement metrics request, participation counts (non-unique) should be broken down by activity category.
+**Validates: Requirements 6.14b**
+
+**Property 30E: Participation counts by type breakdown**
+*For any* engagement metrics request, participation counts (non-unique) should be broken down by activity type.
+**Validates: Requirements 6.14c**
+
 **Property 31: Multi-dimensional grouping support**
 *For any* engagement metrics request with multiple grouping dimensions, the response should organize metrics hierarchically by the specified dimensions in order.
 **Validates: Requirements 6.15, 6.21**
@@ -1177,25 +1197,33 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 *For any* time period, growth metrics should count unique activities that were active during that period (snapshot, not cumulative).
 **Validates: Requirements 7.5**
 
+**Property 42A: Total participation counting per period**
+*For any* time period, growth metrics should count total participation (non-unique participant-activity associations) during that period (snapshot, not cumulative).
+**Validates: Requirements 7.5a**
+
 **Property 43: Chronological ordering**
 *For any* growth metrics response, time-series data should be ordered from earliest to latest period.
 **Validates: Requirements 7.6**
 
 **Property 44: Percentage change calculation**
-*For any* two consecutive time periods, the percentage change for both participants and activities should be calculated as ((current - previous) / previous) * 100.
+*For any* two consecutive time periods, the percentage change for participants, activities, and participation should be calculated as ((current - previous) / previous) * 100.
 **Validates: Requirements 7.7**
 
 **Property 45: Optional grouping by activity type**
-*For any* growth metrics request with groupBy='type', the response should include separate time-series data for each activity type showing unique participants and activities per period.
+*For any* growth metrics request with groupBy='type', the response should include separate time-series data for each activity type showing unique participants, unique activities, and total participation per period.
 **Validates: Requirements 7.10, 7.11**
 
 **Property 46: Optional grouping by activity category**
-*For any* growth metrics request with groupBy='category', the response should include separate time-series data for each activity category showing unique participants and activities per period.
+*For any* growth metrics request with groupBy='category', the response should include separate time-series data for each activity category showing unique participants, unique activities, and total participation per period.
 **Validates: Requirements 7.12**
 
 **Property 47: Aggregate growth without grouping**
-*For any* growth metrics request without a groupBy parameter, the response should include aggregate time-series data across all activity types and categories.
+*For any* growth metrics request without a groupBy parameter, the response should include aggregate time-series data for unique participants, unique activities, and total participation across all activity types and categories.
 **Validates: Requirements 7.13**
+
+**Property 47_participation: Time-series participation data inclusion**
+*For any* growth metrics response, each time period should include unique participant counts, unique activity counts, and total participation counts.
+**Validates: Requirements 7.14a**
 
 ### Activity Lifecycle Events Properties
 

@@ -19,6 +19,8 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Activity_Category**: A high-level grouping of related activity types (e.g., Study Circles, Children's Classes, Junior Youth Groups, Devotional Gatherings)
 - **Activity_Type**: A specific category of activity that belongs to an Activity_Category
 - **Population**: A label or demographic grouping that can be assigned to participants for segmentation and analysis (e.g., Youth, Adults, Families, Seekers)
+- **Participation**: The total count (non-unique) of all participant-activity associations, where the same participant involved in multiple activities contributes multiple counts
+- **Unique_Participant_Count**: The count of distinct participants involved in activities, where the same participant involved in multiple activities contributes only one count
 - **Geographic_Authorization**: Access control rules that restrict user access to specific geographic areas
 - **Allow_List**: A set of geographic areas that a user is explicitly permitted to access
 - **Deny_List**: A set of geographic areas that a user is explicitly forbidden from accessing
@@ -222,12 +224,17 @@ The Backend API package provides the RESTful API service that implements all bus
 6. WHEN calculating engagement metrics with a date range, THE API SHALL count activities that were cancelled within the date range
 7. WHEN calculating engagement metrics with a date range, THE API SHALL count unique participants at the start of the date range
 8. WHEN calculating engagement metrics with a date range, THE API SHALL count unique participants at the end of the date range
+8a. WHEN calculating engagement metrics with a date range, THE API SHALL count total participation (non-unique participant-activity associations) at the start of the date range
+8b. WHEN calculating engagement metrics with a date range, THE API SHALL count total participation (non-unique participant-activity associations) at the end of the date range
 9. THE API SHALL provide activity counts in aggregate across all activity categories and types
 10. THE API SHALL provide activity counts broken down by activity category
 11. THE API SHALL provide activity counts broken down by activity type
 12. THE API SHALL provide participant counts in aggregate across all activity categories and types
 13. THE API SHALL provide participant counts broken down by activity category
 14. THE API SHALL provide participant counts broken down by activity type
+14a. THE API SHALL provide participation counts (non-unique) in aggregate across all activity categories and types
+14b. THE API SHALL provide participation counts (non-unique) broken down by activity category
+14c. THE API SHALL provide participation counts (non-unique) broken down by activity type
 15. THE API SHALL support grouping engagement metrics by one or more dimensions: activity category, activity type, venue, geographic area, population, and date (with weekly, monthly, quarterly, or yearly granularity)
 16. THE API SHALL support filtering engagement metrics by activity category (point filter)
 17. THE API SHALL support filtering engagement metrics by activity type (point filter)
@@ -290,7 +297,7 @@ The Backend API package provides the RESTful API service that implements all bus
 
 ### Requirement 7: Track Growth Over Time
 
-**User Story:** As a community organizer, I want to track unique participant and activity counts over time via API with optional grouping by activity type or category, so that I can measure community development and understand engagement patterns at each point in the chronological history.
+**User Story:** As a community organizer, I want to track unique participant counts, unique activity counts, and total participation over time via API with optional grouping by activity type or category, so that I can measure community development and understand engagement patterns at each point in the chronological history.
 
 #### Acceptance Criteria
 
@@ -299,8 +306,9 @@ The Backend API package provides the RESTful API service that implements all bus
 3. WHEN calculating growth metrics, THE API SHALL accept optional start and end date filters
 4. WHEN calculating growth metrics, THE API SHALL count unique participants engaged in activities during each time period
 5. WHEN calculating growth metrics, THE API SHALL count unique activities that were active during each time period
-6. THE API SHALL return time-series data ordered chronologically where each period represents a snapshot of unique participants and activities at that point in time
-7. THE API SHALL calculate percentage change between consecutive periods for both participants and activities
+5a. WHEN calculating growth metrics, THE API SHALL count total participation (non-unique participant-activity associations) during each time period
+6. THE API SHALL return time-series data ordered chronologically where each period represents a snapshot of unique participants, unique activities, and total participation at that point in time
+7. THE API SHALL calculate percentage change between consecutive periods for participants, activities, and participation
 8. WHEN calculating growth metrics, THE API SHALL accept an optional geographic area ID filter
 9. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
 9a. WHEN calculating growth metrics, THE API SHALL accept an optional populationIds array filter
@@ -311,6 +319,7 @@ The Backend API package provides the RESTful API service that implements all bus
 12. WHEN groupBy is 'category', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_CATEGORY enum and return separate time-series data for each activity category in the groupedTimeSeries field
 13. WHEN no groupBy parameter is provided, THE API SHALL return aggregate time-series data in the timeSeries field with groupedTimeSeries undefined
 14. WHEN groupBy is specified, THE API SHALL return an empty timeSeries array and populate the groupedTimeSeries object with activity type or category names as keys
+14a. WHEN returning time-series data, THE API SHALL include unique participant counts, unique activity counts, and total participation counts for each time period
 
 ### Requirement 8: Persist Data
 

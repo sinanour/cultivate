@@ -537,7 +537,9 @@ src/
   - Activities at start/end of date range
   - Activities started, completed, cancelled within range
   - Participants at start/end of date range
-- Displays aggregate counts and breakdowns by activity category and activity type
+  - Participation (non-unique) at start/end of date range
+  - Info icons next to participant and participation metrics with popover explanations
+- Displays aggregate counts and breakdowns by activity category and activity type for activities, participants, and participation
 - Renders charts for activities distribution, role distribution, and geographic breakdown
 - **Activities Chart** (renamed from "Activities by Type"):
   - Displays chart titled "Activities" (generic name to reflect multiple view modes)
@@ -593,9 +595,11 @@ src/
 - Provides date range filter using CloudScape DateRangePicker
 - Renders "Engagement Summary" table using CloudScape Table:
   - Always visible regardless of whether grouping dimensions are selected
+  - Provides info icon next to "Engagement Summary" table header
+  - When info icon clicked, displays popover explaining: "Participant Count: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once. Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
   - First row displays aggregate metrics with "Total" label in first column
   - When multiple grouping dimensions selected, subsequent dimension cells in Total row are left blank
-  - Metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
+  - Metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end
   - When grouping dimensions selected, additional rows show dimensional breakdowns:
     - Breakdown dimension columns appear first (activity category, activity type, venue, geographic area)
     - Activity category names rendered as hyperlinks to /configuration (Activity Configuration page)
@@ -618,7 +622,9 @@ src/
   - Adjusts chart scales dynamically when series are toggled
   - Provides hover states and keyboard navigation for legend items
 - Displays geographic breakdown chart showing engagement by geographic area with interactive legend:
-  - Allows users to click legend items to toggle individual geographic area series on/off
+  - Displays both unique participant counts and total participation counts
+  - Uses separate data series for "Participants" (unique count) and "Participation" (non-unique count)
+  - Allows users to click legend items to toggle individual data series on/off
   - Visually indicates hidden series with dimmed text or reduced opacity
   - Adjusts chart scales dynamically when series are toggled
   - Provides hover states and keyboard navigation for legend items
@@ -639,7 +645,7 @@ src/
   - Exports human-friendly labels (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
   - Includes Total row as first data row in CSV
   - Includes all dimensional breakdown rows when grouping dimensions are selected
-  - Includes all metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
+  - Includes all metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end
   - Uses descriptive column headers matching table headers
   - Generates filename with format: "engagement-summary-YYYY-MM-DD.csv"
   - Displays loading indicator during export operation
@@ -695,40 +701,44 @@ src/
 - Uses same color scheme as other dashboard charts for consistency
 
 **GrowthDashboard**
-- Displays two separate time-series charts: one for unique participant counts and one for unique activity counts
+- Displays three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
 - Provides time period selector (day, week, month, year)
-- Each time period represents a snapshot of unique participants and activities engaged at that point in time (not cumulative counts)
+- Each time period represents a snapshot of unique participants, unique activities, and total participation engaged at that point in time (not cumulative counts)
 - Provides CloudScape SegmentedControl to view growth metrics with three options:
   - "All" (default selection)
   - "Activity Type"
   - "Activity Category"
 - When "All" selected: 
-  - Displays single aggregate time-series line for total unique participants and single aggregate time-series line for total unique activities across all activity types and categories in both charts
-  - Displays overall participation and activity growth numbers representing totals across all activity types and categories
+  - Displays single aggregate time-series line for total unique participants, single aggregate time-series line for total unique activities, and single aggregate time-series line for total participation across all activity types and categories in all three charts
+  - Displays overall participant growth numbers, activity growth numbers, and participation growth numbers representing totals across all activity types and categories
 - When "Activity Type" selected: 
-  - Displays multiple time-series lines in both charts, one line for each activity type showing unique participants and unique activities for that type
-  - Does NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
+  - Displays multiple time-series lines in all three charts, one line for each activity type showing unique participants, unique activities, and total participation for that type
+  - Does NOT display overall growth numbers, showing only the grouped breakdown data
 - When "Activity Category" selected: 
-  - Displays multiple time-series lines in both charts, one line for each activity category showing unique participants and unique activities for that category
-  - Does NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
-- Uses consistent color scheme across both Unique Participants chart and Unique Activities chart, so the same activity type or category has the same color on both charts
-- Displays interactive legend on both charts showing color mapping for each activity type or category when multiple lines are displayed
+  - Displays multiple time-series lines in all three charts, one line for each activity category showing unique participants, unique activities, and total participation for that category
+  - Does NOT display overall growth numbers, showing only the grouped breakdown data
+- Uses consistent color scheme across all three charts (Unique Participants, Unique Activities, and Total Participation), so the same activity type or category has the same color on all charts
+- Displays interactive legend on all three charts showing color mapping for each activity type or category when multiple lines are displayed
 - Allows users to click legend items to toggle individual data series on/off
 - Visually indicates hidden series in legend (dimmed text or reduced opacity)
 - Maintains at least one visible series or displays appropriate message when all are hidden
 - Adjusts chart axis scales dynamically when series are toggled
 - Provides hover states on legend items to indicate clickability
 - Ensures legend items are keyboard navigable and screen reader accessible
-- Updates both charts without page refresh when view mode changes between "All", "Activity Type", and "Activity Category"
+- Updates all three charts without page refresh when view mode changes between "All", "Activity Type", and "Activity Category"
 - Preserves current time period, date range, and geographic area filter selections when switching between view modes
 - Stores selected view mode in browser localStorage (key: "growthChartViewMode")
 - Restores previously selected view mode from localStorage when user returns to Growth Dashboard
 - Defaults to "All" view if no previous selection exists in localStorage
 - Functions normally with "All" as default when localStorage is unavailable
 - Uses separate line charts for each metric:
-  - Participant Growth Chart: displays unique participant counts over time
-  - Activity Growth Chart: displays unique activity counts over time
+  - Unique Participants Chart: displays unique participant counts over time
+  - Unique Activities Chart: displays unique activity counts over time
+  - Total Participation Chart: displays total participation (non-unique) counts over time
   - Each chart has its own Y-axis scale optimized for its data range
+- Provides info icons next to "Participant Growth" and "Participation Growth" boxes (displayed in "All" view mode)
+- When info icon next to Participant Growth is clicked, displays popover explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once."
+- When info icon next to Participation Growth is clicked, displays popover explaining "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
 - Provides geographic area filter dropdown
 - Uses recharts for line charts
 - Synchronizes filter parameters with URL query parameters:
@@ -1095,12 +1105,13 @@ src/
 **AnalyticsService**
 - `getEngagementMetrics(params)`: Fetches comprehensive engagement data from `/analytics/engagement` with flexible parameters
   - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityCategoryId?`, `activityTypeId?`, `venueId?`, `populationIds?`, `groupBy?` (array of dimensions)
-  - Returns temporal analysis: activities/participants at start/end, activities started/completed/cancelled
-  - Returns aggregate counts and breakdowns by activity category and activity type
+  - Returns temporal analysis: activities/participants/participation at start/end, activities started/completed/cancelled
+  - Returns aggregate counts and breakdowns by activity category and activity type for activities, participants, and participation
   - Returns hierarchically grouped results when multiple dimensions specified
   - Returns role distribution within filtered results
   - When populationIds provided: includes only participants in specified populations and activities with at least one participant in specified populations
 - `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?, populationIds?, groupBy?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR; groupBy: 'type' | 'category' for optional grouping; populationIds for population filtering)
+  - Returns time-series data with unique participant counts, unique activity counts, and total participation counts per period
 - `getGeographicAnalytics(startDate?, endDate?)`: Fetches geographic breakdown from `/analytics/geographic`
 - `getActivityLifecycleEvents(params)`: Fetches activity lifecycle event data from `/analytics/activity-lifecycle`
   - Parameters: `startDate` (required), `endDate` (required), `groupBy` ('category' | 'type'), `geographicAreaIds?`, `activityTypeIds?`, `venueIds?`, `populationIds?`
@@ -1331,9 +1342,14 @@ interface EngagementMetrics {
   participantsAtStart: number;
   participantsAtEnd: number;
   
+  // Temporal participation counts (non-unique)
+  participationAtStart: number;
+  participationAtEnd: number;
+  
   // Aggregate counts
   totalActivities: number;
   totalParticipants: number;
+  totalParticipation: number;
   
   // Breakdown by activity category
   activitiesByCategory: {
@@ -1346,6 +1362,8 @@ interface EngagementMetrics {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
+    participationAtStart: number;
+    participationAtEnd: number;
   }[];
   
   // Breakdown by activity type
@@ -1361,6 +1379,8 @@ interface EngagementMetrics {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
+    participationAtStart: number;
+    participationAtEnd: number;
   }[];
   
   // Role distribution
@@ -1376,6 +1396,7 @@ interface EngagementMetrics {
     geographicAreaName: string;
     activityCount: number;
     participantCount: number;
+    participationCount: number;
   }[];
   
   // Grouped results (when groupBy dimensions specified)
@@ -1403,6 +1424,7 @@ interface GrowthMetrics {
   period: string;
   uniqueParticipants: number;
   uniqueActivities: number;
+  totalParticipation: number;
 }
 
 interface GeographicAnalytics {
@@ -1794,15 +1816,39 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 24: Temporal participant metrics display
 
-*For any* engagement dashboard with a date range, the displayed metrics should include participants at start and participants at end.
+*For any* engagement dashboard with a date range, the displayed metrics should include participants at start, participants at end, participation at start, and participation at end.
 
-**Validates: Requirements 7.7, 7.8**
+**Validates: Requirements 7.7, 7.8, 7.8a, 7.8b**
+
+### Property 24a: Participation metric info icons
+
+*For any* Growth Dashboard in "All" view mode, info icons should be displayed next to the "Participant Growth" and "Participation Growth" boxes.
+
+**Validates: Requirements 7.8c, 7.8e**
+
+### Property 24b: Participation metric popover explanations
+
+*For any* info icon click next to the Participant Growth box, a popover should display explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once." For the Participation Growth box, the popover should explain "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
+
+**Validates: Requirements 7.8d, 7.8f**
+
+### Property 24c: Engagement Summary info icon
+
+*For any* Engagement Dashboard, an info icon should be displayed next to the "Engagement Summary" table header.
+
+**Validates: Requirements 7.21a**
+
+### Property 24d: Engagement Summary info popover
+
+*For any* info icon click next to the Engagement Summary header, a popover should display explaining both metrics: "Participant Count: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once. Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
+
+**Validates: Requirements 7.21b**
 
 ### Property 25: Aggregate and breakdown display
 
-*For any* engagement dashboard, all activity and participant counts should be displayed in both aggregate form and broken down by activity category and activity type.
+*For any* engagement dashboard, all activity, participant, and participation counts should be displayed in both aggregate form and broken down by activity category and activity type.
 
-**Validates: Requirements 7.9, 7.10, 7.11, 7.12, 7.13, 7.14**
+**Validates: Requirements 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c**
 
 ### Property 26: Multi-dimensional grouping controls
 
@@ -1824,7 +1870,7 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 28a: Total Row Aggregate Metrics
 
-*For any* engagement dashboard, the first row of the Engagement Summary table should display "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end) in subsequent columns.
+*For any* engagement dashboard, the first row of the Engagement Summary table should display "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end) in subsequent columns.
 
 **Validates: Requirements 7.22**
 
@@ -1848,7 +1894,7 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 28e: Metric Columns in Engagement Summary
 
-*For any* row in the Engagement Summary table, each metric aggregation (activities at start, at end, started, completed, cancelled, participants at start, at end) should be displayed in its own separate column.
+*For any* row in the Engagement Summary table, each metric aggregation (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end) should be displayed in its own separate column.
 
 **Validates: Requirements 7.29**
 
@@ -2070,9 +2116,9 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 32: Time-series unique count calculation
 
-*For any* time period and dataset, the separate time-series charts should correctly calculate unique participants and unique activities engaged during each time period as snapshots (not cumulative).
+*For any* time period and dataset, the separate time-series charts should correctly calculate unique participants, unique activities, and total participation engaged during each time period as snapshots (not cumulative).
 
-**Validates: Requirements 7.40, 7.41, 7.43**
+**Validates: Requirements 7.40, 7.41, 7.41a, 7.43**
 
 ### Property 33: Growth Dashboard Segmented Control Display
 
@@ -2082,37 +2128,37 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 33a: Growth Dashboard All View Mode
 
-*For any* growth dashboard with "All" view mode selected, both charts should display a single aggregate time-series line for total unique participants and total unique activities across all activity types and categories, and overall participation and activity growth numbers should be displayed.
+*For any* growth dashboard with "All" view mode selected, all three charts should display a single aggregate time-series line for total unique participants, total unique activities, and total participation across all activity types and categories, and overall growth numbers should be displayed.
 
-**Validates: Requirements 7.46, 7.46a**
+**Validates: Requirements 7.46, 7.46a, 7.46b, 7.46c**
 
 ### Property 33b: Growth Dashboard Activity Type View Mode
 
-*For any* growth dashboard with "Activity Type" view mode selected, both charts should display multiple time-series lines, one for each activity type, showing unique participants and unique activities for that type, and overall participation and activity growth numbers should NOT be displayed.
+*For any* growth dashboard with "Activity Type" view mode selected, all three charts should display multiple time-series lines, one for each activity type, showing unique participants, unique activities, and total participation for that type, and overall growth numbers should NOT be displayed.
 
-**Validates: Requirements 7.46b, 7.47**
+**Validates: Requirements 7.46d, 7.47**
 
 ### Property 33c: Growth Dashboard Activity Category View Mode
 
-*For any* growth dashboard with "Activity Category" view mode selected, both charts should display multiple time-series lines, one for each activity category, showing unique participants and unique activities for that category, and overall participation and activity growth numbers should NOT be displayed.
+*For any* growth dashboard with "Activity Category" view mode selected, all three charts should display multiple time-series lines, one for each activity category, showing unique participants, unique activities, and total participation for that category, and overall growth numbers should NOT be displayed.
 
-**Validates: Requirements 7.46b, 7.48**
+**Validates: Requirements 7.46d, 7.48**
 
 ### Property 33d: Growth Dashboard Consistent Color Scheme
 
-*For any* growth dashboard displaying multiple lines for activity types or categories, the same activity type or category should have the same color on both the Unique Participants chart and the Unique Activities chart.
+*For any* growth dashboard displaying multiple lines for activity types or categories, the same activity type or category should have the same color on all three charts (Unique Participants, Unique Activities, and Total Participation).
 
 **Validates: Requirements 7.49**
 
 ### Property 33e: Growth Dashboard Legend Display
 
-*For any* growth dashboard displaying multiple lines, both charts should display a legend showing the color mapping for each activity type or category.
+*For any* growth dashboard displaying multiple lines, all three charts should display a legend showing the color mapping for each activity type or category.
 
 **Validates: Requirements 7.50**
 
 ### Property 33f: Growth Dashboard View Mode Switching
 
-*For any* growth dashboard view mode change between "All", "Activity Type", and "Activity Category", both charts should update without requiring a page refresh.
+*For any* growth dashboard view mode change between "All", "Activity Type", and "Activity Category", all three charts should update without requiring a page refresh.
 
 **Validates: Requirements 7.51**
 
@@ -2544,9 +2590,9 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 72: Geographic Breakdown Chart Display
 
-*For any* engagement metrics, the geographic breakdown chart should correctly display engagement data grouped by geographic area.
+*For any* engagement metrics, the geographic breakdown chart should correctly display engagement data grouped by geographic area, including both unique participant counts and total participation counts as separate data series.
 
-**Validates: Requirements 7.38**
+**Validates: Requirements 7.49, 7.49a, 7.49b**
 
 ### Property 73: Geographic Area Drill-Down
 
@@ -3303,7 +3349,9 @@ function generateEngagementSummaryCSV(
     'Activities Completed',
     'Activities Cancelled',
     'Participants at Start',
-    'Participants at End'
+    'Participants at End',
+    'Participation at Start',
+    'Participation at End'
   );
   rows.push(headers);
   
@@ -3317,7 +3365,9 @@ function generateEngagementSummaryCSV(
     metrics.activitiesCompleted.toString(),
     metrics.activitiesCancelled.toString(),
     metrics.participantsAtStart.toString(),
-    metrics.participantsAtEnd.toString()
+    metrics.participantsAtEnd.toString(),
+    metrics.participationAtStart.toString(),
+    metrics.participationAtEnd.toString()
   );
   rows.push(totalRow);
   
@@ -3339,7 +3389,9 @@ function generateEngagementSummaryCSV(
         group.metrics.activitiesCompleted.toString(),
         group.metrics.activitiesCancelled.toString(),
         group.metrics.participantsAtStart.toString(),
-        group.metrics.participantsAtEnd.toString()
+        group.metrics.participantsAtEnd.toString(),
+        group.metrics.participationAtStart.toString(),
+        group.metrics.participationAtEnd.toString()
       );
       
       rows.push(row);

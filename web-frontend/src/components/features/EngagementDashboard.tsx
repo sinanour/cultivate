@@ -13,6 +13,8 @@ import PropertyFilter from '@cloudscape-design/components/property-filter';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
+import Popover from '@cloudscape-design/components/popover';
+import Icon from '@cloudscape-design/components/icon';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
@@ -497,6 +499,7 @@ export function EngagementDashboard() {
   const geographicBreakdownLegendItems: LegendItem[] = [
     { name: 'Activities', color: '#0088FE', dataKey: 'activityCount' },
     { name: 'Participants', color: '#00C49F', dataKey: 'participantCount' },
+    { name: 'Participation', color: '#FFBB28', dataKey: 'participationCount' },
   ];
 
   // Prepare legend items for Activity Category Pie Chart (before hooks)
@@ -748,6 +751,28 @@ export function EngagementDashboard() {
                 </Button>
               )
             }
+            info={
+              <Popover
+                dismissButton={false}
+                position="top"
+                size="medium"
+                triggerType="custom"
+                content={
+                  <SpaceBetween size="s">
+                    <Box variant="p">
+                      <strong>Participant Count:</strong> The count of distinct individuals involved in activities. 
+                      The same person involved in multiple activities is counted only once.
+                    </Box>
+                    <Box variant="p">
+                      <strong>Participation:</strong> The sum of all participant-activity associations. 
+                      The same person involved in 3 activities contributes 3 to this count.
+                    </Box>
+                  </SpaceBetween>
+                }
+              >
+                <Icon name="status-info" variant="link" />
+              </Popover>
+            }
           >
             Engagement Summary
           </Header>
@@ -924,7 +949,32 @@ export function EngagementDashboard() {
                 }))
               : []
             ),
-            // Metric columns
+            // Participant/Participation metric columns (grouped first)
+            {
+              id: 'participantsAtStart',
+              header: 'Participants at Start',
+              cell: (item: any) => item.metrics.participantsAtStart,
+              sortingField: 'participantsAtStart',
+            },
+            {
+              id: 'participantsAtEnd',
+              header: 'Participants at End',
+              cell: (item: any) => item.metrics.participantsAtEnd,
+              sortingField: 'participantsAtEnd',
+            },
+            {
+              id: 'participationAtStart',
+              header: 'Participation at Start',
+              cell: (item: any) => item.metrics.participationAtStart,
+              sortingField: 'participationAtStart',
+            },
+            {
+              id: 'participationAtEnd',
+              header: 'Participation at End',
+              cell: (item: any) => item.metrics.participationAtEnd,
+              sortingField: 'participationAtEnd',
+            },
+            // Activity metric columns (grouped second)
             {
               id: 'activitiesAtStart',
               header: 'Activities at Start',
@@ -955,18 +1005,6 @@ export function EngagementDashboard() {
               cell: (item: any) => item.metrics.activitiesCancelled,
               sortingField: 'activitiesCancelled',
             },
-            {
-              id: 'participantsAtStart',
-              header: 'Participants at Start',
-              cell: (item: any) => item.metrics.participantsAtStart,
-              sortingField: 'participantsAtStart',
-            },
-            {
-              id: 'participantsAtEnd',
-              header: 'Participants at End',
-              cell: (item: any) => item.metrics.participantsAtEnd,
-              sortingField: 'participantsAtEnd',
-            },
           ]}
           items={[
             // First row: Total (aggregate metrics)
@@ -981,6 +1019,8 @@ export function EngagementDashboard() {
                 activitiesCancelled: metrics.activitiesCancelled,
                 participantsAtStart: metrics.participantsAtStart,
                 participantsAtEnd: metrics.participantsAtEnd,
+                participationAtStart: metrics.participationAtStart,
+                participationAtEnd: metrics.participationAtEnd,
               },
             },
             // Subsequent rows: Dimensional breakdowns (if any)
@@ -1221,7 +1261,7 @@ export function EngagementDashboard() {
           />
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={metrics.geographicBreakdown.filter(area => 
-              !area.hasChildren && (area.activityCount > 0 || area.participantCount > 0)
+              !area.hasChildren && (area.activityCount > 0 || area.participantCount > 0 || area.participationCount > 0)
             )} barGap={BAR_CHART_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="geographicAreaName" />
@@ -1232,6 +1272,9 @@ export function EngagementDashboard() {
               )}
               {geographicBreakdownLegend.isSeriesVisible('Participants') && (
                 <Bar dataKey="participantCount" fill="#00C49F" name="Participants" />
+              )}
+              {geographicBreakdownLegend.isSeriesVisible('Participation') && (
+                <Bar dataKey="participationCount" fill="#FFBB28" name="Participation" />
               )}
             </BarChart>
           </ResponsiveContainer>

@@ -776,6 +776,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Activities at start/end of date range
       - Activities started, completed, cancelled within range
       - Participants at start/end of date range
+      - Participation (non-unique) at start/end of date range
     - Display aggregate counts and breakdowns by activity category and activity type
     - Render charts for activities distribution, activity category pie chart, role distribution, and geographic breakdown
     - Display pie chart showing breakdown of unique activities by activity category:
@@ -802,9 +803,11 @@ This implementation plan covers the React-based web application built with TypeS
       - Date range filter using CloudScape DateRangePicker
     - Render "Engagement Summary" table using CloudScape Table:
       - Always display table regardless of whether grouping dimensions are selected
+      - Add info icon next to "Engagement Summary" table header
+      - When info icon clicked, display popover explaining: "Participant Count: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once. Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
       - First row displays aggregate metrics with "Total" label in first column
       - When multiple grouping dimensions selected, leave subsequent dimension cells blank in Total row
-      - Display metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end
+      - Display metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end
       - When grouping dimensions selected, render additional rows below Total row showing dimensional breakdowns:
         - Display breakdown dimension columns first (activity category, activity type, venue, geographic area)
         - Display metric aggregation columns after dimensions
@@ -815,6 +818,8 @@ This implementation plan covers the React-based web application built with TypeS
         - Display each metric in its own column for easy comparison
     - Show role distribution within filtered and grouped results
     - Display geographic breakdown chart showing engagement by geographic area
+    - Include both unique participant counts and total participation counts in geographic breakdown chart
+    - Use separate data series for "Participants" (unique) and "Participation" (non-unique)
     - Allow drilling down into child geographic areas
     - Display all-time metrics when no date range specified
     - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest address for participants
@@ -826,7 +831,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.38a, 7.38b, 7.38c, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.19a, 7.19b, 7.19c, 7.20, 7.21, 7.21a, 7.21b, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.38a, 7.38b, 7.38c, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.49, 7.49a, 7.49b_
 
   - [x] 14.1a Enhance Activities chart with segmented control toggle
     - Rename chart title from "Activities by Type" to "Activities"
@@ -903,6 +908,10 @@ This implementation plan covers the React-based web application built with TypeS
   - [ ]* 14.2 Write property tests for engagement metrics
     - **Property 23: Temporal Activity Metrics Display**
     - **Property 24: Temporal Participant Metrics Display**
+    - **Property 24a: Participation Metric Info Icons**
+    - **Property 24b: Participation Metric Popover Explanations**
+    - **Property 24c: Engagement Summary Info Icon**
+    - **Property 24d: Engagement Summary Info Popover**
     - **Property 25: Aggregate and Breakdown Display**
     - **Property 26: Multi-Dimensional Grouping Controls**
     - **Property 27: Filter Control Availability**
@@ -928,12 +937,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31c: Analytics URL Update on State Change**
     - **Property 31d: Analytics Browser Navigation Support**
     - **Property 31e: Analytics URL Shareability**
-    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38**
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.19a, 7.19b, 7.19c, 7.20, 7.21, 7.21a, 7.21b, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.49, 7.49a, 7.49b**
 
   - [x] 14.2 Create GrowthDashboard component
-    - Display two separate time-series charts: one for unique participant counts and one for unique activity counts
+    - Display three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
     - Provide time period selector (DAY, WEEK, MONTH, YEAR) using period parameter
-    - Display each time period as a snapshot of unique participants and activities (not cumulative)
+    - Display each time period as a snapshot of unique participants, unique activities, and total participation (not cumulative)
     - Add CloudScape SegmentedControl component with three options:
       - "All" (default selection)
       - "Activity Type"
@@ -943,25 +952,28 @@ This implementation plan covers the React-based web application built with TypeS
       - Fetch aggregate growth data from API (no groupBy parameter)
       - Display single time-series line for total unique participants in Participant Growth Chart
       - Display single time-series line for total unique activities in Activity Growth Chart
-      - Display overall participation and activity growth numbers representing totals across all activity types and categories
+      - Display single time-series line for total participation in Total Participation Chart
+      - Display overall participant growth numbers, activity growth numbers, and participation growth numbers representing totals across all activity types and categories
     - When "Activity Type" selected:
       - Fetch growth data grouped by activity type from API (groupBy='type')
-      - Display multiple time-series lines in both charts, one for each activity type
+      - Display multiple time-series lines in all three charts, one for each activity type
       - Show unique participants per type in Participant Growth Chart
       - Show unique activities per type in Activity Growth Chart
-      - Do NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
+      - Show total participation per type in Total Participation Chart
+      - Do NOT display overall growth numbers, showing only the grouped breakdown data
     - When "Activity Category" selected:
       - Fetch growth data grouped by activity category from API (groupBy='category')
-      - Display multiple time-series lines in both charts, one for each activity category
+      - Display multiple time-series lines in all three charts, one for each activity category
       - Show unique participants per category in Participant Growth Chart
       - Show unique activities per category in Activity Growth Chart
-      - Do NOT display overall participation and activity growth numbers, showing only the grouped breakdown data
-    - Implement consistent color scheme across both charts:
+      - Show total participation per category in Total Participation Chart
+      - Do NOT display overall growth numbers, showing only the grouped breakdown data
+    - Implement consistent color scheme across all three charts:
       - Define color palette for activity types/categories
-      - Apply same color to same type/category on both Participant and Activity charts
+      - Apply same color to same type/category on all three charts (Participant, Activity, and Participation)
       - Use recharts color prop or custom color mapping function
-    - Display legend on both charts showing color mapping when multiple lines are displayed
-    - Update both charts without page refresh when view mode changes
+    - Display legend on all three charts showing color mapping when multiple lines are displayed
+    - Update all three charts without page refresh when view mode changes
     - Preserve current time period, date range, and geographic area filter selections when switching views
     - Implement localStorage persistence:
       - Store selected view mode in localStorage with key "growthChartViewMode"
@@ -972,9 +984,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Use /analytics/growth endpoint with optional startDate, endDate, period, geographicAreaId, groupBy parameters
     - Combine date range and period controls into single unified container with side-by-side layout
     - Use separate LineChart components for each metric:
-      - Participant Growth Chart: displays unique participant counts over time
-      - Activity Growth Chart: displays unique activity counts over time
+      - Unique Participants Chart: displays unique participant counts over time
+      - Unique Activities Chart: displays unique activity counts over time
+      - Total Participation Chart: displays total participation (non-unique) counts over time
       - Each chart has its own Y-axis scale optimized for its data range
+    - Provide info icons next to "Participant Growth" and "Participation Growth" boxes (displayed in "All" view mode)
+    - When info icon next to Participant Growth is clicked, displays popover explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once."
+    - When info icon next to Participation Growth is clicked, displays popover explaining "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
     - Synchronize filter and grouping parameters with URL query parameters:
       - Read URL parameters on component mount to initialize dashboard state
       - Update URL when user changes filters or grouping (using React Router's useSearchParams)
@@ -982,7 +998,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Use same compact relative date format as Engagement dashboard for consistency
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use replace: true)
-    - _Requirements: 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.46a, 7.46b, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e_
+    - _Requirements: 7.39, 7.40, 7.41, 7.41a, 7.41b, 7.41c, 7.41d, 7.41e, 7.42, 7.43, 7.44, 7.45, 7.46, 7.46a, 7.46b, 7.46c, 7.46d, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e_
 
   - [ ]* 14.3 Write property tests for growth metrics
     - **Property 32: Time-Series Unique Count Calculation**
@@ -1000,7 +1016,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 33k: Growth Dashboard URL Update on State Change**
     - **Property 33l: Growth Dashboard Browser Navigation Support**
     - **Property 33m: Growth Dashboard URL Shareability**
-    - **Validates: Requirements 7.40, 7.41, 7.43, 7.44, 7.45, 7.46, 7.46a, 7.46b, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e**
+    - **Validates: Requirements 7.40, 7.41, 7.41a, 7.43, 7.44, 7.45, 7.46, 7.46a, 7.46b, 7.46c, 7.46d, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e**
 
   - [x] 14.3 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint

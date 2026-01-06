@@ -20,6 +20,8 @@ export interface ActivityTypeBreakdown {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
+    participationAtStart: number;
+    participationAtEnd: number;
 }
 
 export interface ActivityCategoryBreakdown {
@@ -32,6 +34,8 @@ export interface ActivityCategoryBreakdown {
     activitiesCancelled: number;
     participantsAtStart: number;
     participantsAtEnd: number;
+    participationAtStart: number;
+    participationAtEnd: number;
 }
 
 export interface RoleDistribution {
@@ -45,6 +49,7 @@ export interface GeographicBreakdown {
     geographicAreaName: string;
     activityCount: number;
     participantCount: number;
+    participationCount: number;
     hasChildren: boolean;
 }
 
@@ -65,9 +70,14 @@ export interface EngagementMetrics {
     participantsAtStart: number;
     participantsAtEnd: number;
 
+    // Temporal participation counts (non-unique)
+    participationAtStart: number;
+    participationAtEnd: number;
+
     // Aggregate counts
     totalActivities: number;
     totalParticipants: number;
+    totalParticipation: number;
 
     // Breakdown by activity category
     activitiesByCategory: ActivityCategoryBreakdown[];
@@ -103,6 +113,7 @@ export interface GrowthPeriodData {
     date: string;
     uniqueParticipants: number;
     uniqueActivities: number;
+    totalParticipation: number;
 }
 
 export interface GrowthMetrics {
@@ -367,11 +378,29 @@ export class AnalyticsService {
             ).size
             : new Set(allActivities.flatMap(a => a.assignments.map(as => as.participantId))).size;
 
+        // Calculate participation temporal metrics (non-unique, counts all assignments)
+        const participationAtStart = startDate
+            ? allActivities
+                .filter(act => {
+                    return act.startDate <= startDate && (!act.endDate || act.endDate >= startDate);
+                })
+                .reduce((sum, act) => sum + act.assignments.length, 0)
+            : 0;
+
+        const participationAtEnd = endDate
+            ? allActivities
+                .filter(act => {
+                    return act.startDate <= endDate && (!act.endDate || act.endDate >= endDate);
+                })
+                .reduce((sum, act) => sum + act.assignments.length, 0)
+            : allActivities.reduce((sum, a) => sum + a.assignments.length, 0);
+
         // Calculate aggregate counts
         const totalActivities = allActivities.length;
         const totalParticipants = new Set(
             allActivities.flatMap(a => a.assignments.map(as => as.participantId))
         ).size;
+        const totalParticipation = allActivities.reduce((sum, a) => sum + a.assignments.length, 0);
 
         // Calculate breakdown by activity type
         const activitiesByTypeMap = new Map<string, ActivityTypeBreakdown>();
@@ -391,6 +420,8 @@ export class AnalyticsService {
                     activitiesCancelled: 0,
                     participantsAtStart: 0,
                     participantsAtEnd: 0,
+                    participationAtStart: 0,
+                    participationAtEnd: 0,
                 });
             }
 
@@ -452,7 +483,7 @@ export class AnalyticsService {
                 breakdown.activitiesCancelled++;
             }
 
-            // Count participants by type
+            // Count participants and participation by type
             // Participants are engaged if the activity was active at the point in time
             if (startDate) {
                 // Activity was active at startDate if it started on or before startDate
@@ -461,7 +492,8 @@ export class AnalyticsService {
                     (!activity.endDate || activity.endDate >= startDate);
 
                 if (wasActiveAtStart) {
-                    breakdown.participantsAtStart += activity.assignments.length;
+                    // Participation: count all assignments (non-unique)
+                    breakdown.participationAtStart += activity.assignments.length;
                 }
             }
 
@@ -472,8 +504,32 @@ export class AnalyticsService {
                     (!activity.endDate || activity.endDate >= endDate);
 
                 if (wasActiveAtEnd) {
-                    breakdown.participantsAtEnd += activity.assignments.length;
+                    // Participation: count all assignments (non-unique)
+                    breakdown.participationAtEnd += activity.assignments.length;
                 }
+            }
+        }
+
+        // Now calculate unique participants per type (second pass to collect unique IDs)
+        for (const [typeId, breakdown] of activitiesByTypeMap.entries()) {
+            const typeActivities = allActivities.filter(a => a.activityTypeId === typeId);
+
+            if (startDate) {
+                const uniqueParticipantsAtStart = new Set(
+                    typeActivities
+                        .filter(act => act.startDate <= startDate && (!act.endDate || act.endDate >= startDate))
+                        .flatMap(act => act.assignments.map(a => a.participantId))
+                );
+                breakdown.participantsAtStart = uniqueParticipantsAtStart.size;
+            }
+
+            if (endDate) {
+                const uniqueParticipantsAtEnd = new Set(
+                    typeActivities
+                        .filter(act => act.startDate <= endDate && (!act.endDate || act.endDate >= endDate))
+                        .flatMap(act => act.assignments.map(a => a.participantId))
+                );
+                breakdown.participantsAtEnd = uniqueParticipantsAtEnd.size;
             }
         }
 
@@ -497,6 +553,8 @@ export class AnalyticsService {
                     activitiesCancelled: 0,
                     participantsAtStart: 0,
                     participantsAtEnd: 0,
+                    participationAtStart: 0,
+                    participationAtEnd: 0,
                 });
             }
 
@@ -558,28 +616,46 @@ export class AnalyticsService {
                 breakdown.activitiesCancelled++;
             }
 
-            // Count participants by category
-            // Participants are engaged if the activity was active at the point in time
+            // Count participation by category (non-unique, all assignments)
             if (startDate) {
-                // Activity was active at startDate if it started on or before startDate
-                // AND it hasn't ended OR it ended after startDate
                 const wasActiveAtStart = activity.startDate <= startDate &&
                     (!activity.endDate || activity.endDate >= startDate);
 
                 if (wasActiveAtStart) {
-                    breakdown.participantsAtStart += activity.assignments.length;
+                    breakdown.participationAtStart += activity.assignments.length;
                 }
             }
 
             if (endDate) {
-                // Activity was active at endDate if it started on or before endDate
-                // AND it hasn't ended OR it ended after endDate
                 const wasActiveAtEnd = activity.startDate <= endDate &&
                     (!activity.endDate || activity.endDate >= endDate);
 
                 if (wasActiveAtEnd) {
-                    breakdown.participantsAtEnd += activity.assignments.length;
+                    breakdown.participationAtEnd += activity.assignments.length;
                 }
+            }
+        }
+
+        // Calculate unique participants per category (second pass)
+        for (const [categoryId, breakdown] of activitiesByCategoryMap.entries()) {
+            const categoryActivities = allActivities.filter(a => a.activityType.activityCategoryId === categoryId);
+
+            if (startDate) {
+                const uniqueParticipantsAtStart = new Set(
+                    categoryActivities
+                        .filter(act => act.startDate <= startDate && (!act.endDate || act.endDate >= startDate))
+                        .flatMap(act => act.assignments.map(a => a.participantId))
+                );
+                breakdown.participantsAtStart = uniqueParticipantsAtStart.size;
+            }
+
+            if (endDate) {
+                const uniqueParticipantsAtEnd = new Set(
+                    categoryActivities
+                        .filter(act => act.startDate <= endDate && (!act.endDate || act.endDate >= endDate))
+                        .flatMap(act => act.assignments.map(a => a.participantId))
+                );
+                breakdown.participantsAtEnd = uniqueParticipantsAtEnd.size;
             }
         }
 
@@ -637,6 +713,7 @@ export class AnalyticsService {
             const areaParticipantIds = new Set(
                 areaActivities.flatMap(a => a.assignments.map(as => as.participantId))
             );
+            const areaParticipationCount = areaActivities.reduce((sum, a) => sum + a.assignments.length, 0);
 
             // Check if this area has children
             const childrenCount = await this.geographicAreaRepository.countChildReferences(area.id);
@@ -646,6 +723,7 @@ export class AnalyticsService {
                 geographicAreaName: area.name,
                 activityCount: areaActivities.length,
                 participantCount: areaParticipantIds.size,
+                participationCount: areaParticipationCount,
                 hasChildren: childrenCount > 0,
             });
         }
@@ -658,8 +736,11 @@ export class AnalyticsService {
             activitiesCancelled,
             participantsAtStart,
             participantsAtEnd,
+            participationAtStart,
+            participationAtEnd,
             totalActivities,
             totalParticipants,
+            totalParticipation,
             activitiesByCategory,
             activitiesByType,
             roleDistribution,
@@ -671,6 +752,7 @@ export class AnalyticsService {
                 activityTypeId,
                 venueId,
                 geographicAreaId,
+                populationIds,
                 startDate: startDate?.toISOString(),
                 endDate: endDate?.toISOString(),
             },
@@ -1145,10 +1227,16 @@ export class AnalyticsService {
 
             const uniqueParticipants = uniqueParticipantIds.size;
 
+            // Total participation: sum of all assignments for activities active during this period (non-unique)
+            const totalParticipation = activeActivities.reduce((sum, activity) => {
+                return sum + activity.assignments.length;
+            }, 0);
+
             timeSeries.push({
                 date: period.label,
                 uniqueParticipants,
                 uniqueActivities,
+                totalParticipation,
             });
         }
 

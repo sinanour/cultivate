@@ -12,6 +12,8 @@ import type { MultiselectProps } from '@cloudscape-design/components/multiselect
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
+import Popover from '@cloudscape-design/components/popover';
+import Icon from '@cloudscape-design/components/icon';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
 import { PopulationService } from '../../services/api/population.service';
@@ -285,9 +287,18 @@ export function GrowthDashboard() {
         dataKey: `uniqueActivities_${name}`,
       }));
 
+  const participationLegendItems: LegendItem[] = viewMode === 'all'
+    ? []
+    : groupNames.map((name) => ({
+        name,
+        color: groupColors[name],
+        dataKey: `totalParticipation_${name}`,
+      }));
+
   // Use interactive legend hooks (MUST be called before any conditional returns)
   const participantLegend = useInteractiveLegend('growth-participants', participantLegendItems);
   const activityLegend = useInteractiveLegend('growth-activities', activityLegendItems);
+  const participationLegend = useInteractiveLegend('growth-participation', participationLegendItems);
 
   const periodOptions = [
     { label: 'Daily', value: 'DAY' as TimePeriod },
@@ -301,41 +312,40 @@ export function GrowthDashboard() {
   }
 
   // Check if we have data - either in timeSeries (all mode) or groupedTimeSeries (type/category mode)
-  const hasData = viewMode === 'all' 
-    ? (metrics?.timeSeries && metrics.timeSeries.length > 0)
-    : (metrics?.groupedTimeSeries && Object.keys(metrics.groupedTimeSeries).length > 0);
+  const hasData = metrics && (
+    viewMode === 'all' 
+      ? (metrics.timeSeries && metrics.timeSeries.length > 0)
+      : (metrics.groupedTimeSeries && Object.keys(metrics.groupedTimeSeries).length > 0)
+  );
 
-  if (!metrics || !hasData) {
-    return (
-      <Box textAlign="center" padding="xxl">
-        <b>No data available</b>
-      </Box>
-    );
-  }
-
-  const timeSeriesData = metrics.timeSeries;
+  const timeSeriesData = metrics?.timeSeries || [];
 
   // Calculate absolute deltas from start to end of period
   // For grouped mode, calculate total across all groups
   let activityGrowth = 0;
   let participantGrowth = 0;
+  let participationGrowth = 0;
 
-  if (viewMode === 'all' && timeSeriesData.length >= 2) {
-    activityGrowth = timeSeriesData[timeSeriesData.length - 1].uniqueActivities - timeSeriesData[0].uniqueActivities;
-    participantGrowth = timeSeriesData[timeSeriesData.length - 1].uniqueParticipants - timeSeriesData[0].uniqueParticipants;
-  } else if (viewMode !== 'all' && metrics.groupedTimeSeries) {
-    // Sum up growth across all groups
-    Object.values(metrics.groupedTimeSeries).forEach(groupData => {
-      if (groupData.length >= 2) {
-        activityGrowth += groupData[groupData.length - 1].uniqueActivities - groupData[0].uniqueActivities;
-        participantGrowth += groupData[groupData.length - 1].uniqueParticipants - groupData[0].uniqueParticipants;
-      }
-    });
+  if (hasData) {
+    if (viewMode === 'all' && timeSeriesData.length >= 2) {
+      activityGrowth = timeSeriesData[timeSeriesData.length - 1].uniqueActivities - timeSeriesData[0].uniqueActivities;
+      participantGrowth = timeSeriesData[timeSeriesData.length - 1].uniqueParticipants - timeSeriesData[0].uniqueParticipants;
+      participationGrowth = timeSeriesData[timeSeriesData.length - 1].totalParticipation - timeSeriesData[0].totalParticipation;
+    } else if (viewMode !== 'all' && metrics?.groupedTimeSeries) {
+      // Sum up growth across all groups
+      Object.values(metrics.groupedTimeSeries).forEach(groupData => {
+        if (groupData.length >= 2) {
+          activityGrowth += groupData[groupData.length - 1].uniqueActivities - groupData[0].uniqueActivities;
+          participantGrowth += groupData[groupData.length - 1].uniqueParticipants - groupData[0].uniqueParticipants;
+          participationGrowth += groupData[groupData.length - 1].totalParticipation - groupData[0].totalParticipation;
+        }
+      });
+    }
   }
 
   // Merge grouped time series data into a single dataset for charts
   const mergedTimeSeriesData = viewMode === 'all' ? timeSeriesData : (() => {
-    if (!metrics.groupedTimeSeries) return timeSeriesData;
+    if (!metrics?.groupedTimeSeries) return timeSeriesData;
 
     // Get all unique dates across all groups
     const allDates = new Set<string>();
@@ -353,6 +363,7 @@ export function GrowthDashboard() {
         const item = groupData.find(d => d.date === date);
         dataPoint[`uniqueParticipants_${groupName}`] = item?.uniqueParticipants || 0;
         dataPoint[`uniqueActivities_${groupName}`] = item?.uniqueActivities || 0;
+        dataPoint[`totalParticipation_${groupName}`] = item?.totalParticipation || 0;
       });
 
       return dataPoint;
@@ -453,66 +464,74 @@ export function GrowthDashboard() {
         </SpaceBetween>
       </Container>
 
-      {/* Only display growth numbers in "All" view mode */}
-      {viewMode === 'all' && (
-        <ColumnLayout columns={2} variant="text-grid">
-          <Container>
-            <Box variant="awsui-key-label">Participant Growth</Box>
-            <Box fontSize="display-l" fontWeight="bold" color={participantGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
-              {participantGrowth >= 0 ? '+' : ''}{participantGrowth}
-            </Box>
-          </Container>
+      {/* Only display growth numbers in "All" view mode and when data is available */}
+      {viewMode === 'all' && hasData && (
+        <ColumnLayout columns={3} variant="text-grid">
           <Container>
             <Box variant="awsui-key-label">Activity Growth</Box>
             <Box fontSize="display-l" fontWeight="bold" color={activityGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
               {activityGrowth >= 0 ? '+' : ''}{activityGrowth}
             </Box>
           </Container>
+          <Container>
+            <SpaceBetween size="xs" direction="horizontal">
+              <Box variant="awsui-key-label">Participant Growth</Box>
+              <Popover
+                dismissButton={false}
+                position="top"
+                size="small"
+                triggerType="custom"
+                content={
+                  <Box variant="p">
+                    <strong>Unique Participants:</strong> The count of distinct individuals involved in activities. 
+                    The same person involved in multiple activities is counted only once.
+                  </Box>
+                }
+              >
+                <Icon name="status-info" variant="link" />
+              </Popover>
+            </SpaceBetween>
+            <Box fontSize="display-l" fontWeight="bold" color={participantGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
+              {participantGrowth >= 0 ? '+' : ''}{participantGrowth}
+            </Box>
+          </Container>
+          <Container>
+            <SpaceBetween size="xs" direction="horizontal">
+              <Box variant="awsui-key-label">Participation Growth</Box>
+              <Popover
+                dismissButton={false}
+                position="top"
+                size="small"
+                triggerType="custom"
+                content={
+                  <Box variant="p">
+                    <strong>Total Participation:</strong> The sum of all participant-activity associations. 
+                    The same person involved in 3 activities contributes 3 to this count.
+                  </Box>
+                }
+              >
+                <Icon name="status-info" variant="link" />
+              </Popover>
+            </SpaceBetween>
+            <Box fontSize="display-l" fontWeight="bold" color={participationGrowth >= 0 ? 'text-status-success' : 'text-status-error'}>
+              {participationGrowth >= 0 ? '+' : ''}{participationGrowth}
+            </Box>
+          </Container>
         </ColumnLayout>
       )}
 
-      <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
-        {viewMode !== 'all' && participantLegendItems.length > 0 && (
-          <InteractiveLegend
-            chartId="growth-participants"
-            series={participantLegendItems}
-            onVisibilityChange={participantLegend.handleVisibilityChange}
-          />
-        )}
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={mergedTimeSeriesData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis 
-              label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
-            />
-            <Tooltip />
-            {viewMode === 'all' ? (
-              <Line
-                type="monotone"
-                dataKey="uniqueParticipants"
-                stroke="#0088FE"
-                strokeWidth={2}
-                name="Unique Participants"
-              />
-            ) : (
-              groupNames
-                .filter((groupName) => participantLegend.isSeriesVisible(groupName))
-                .map((groupName) => (
-                  <Line
-                    key={groupName}
-                    type="monotone"
-                    dataKey={`uniqueParticipants_${groupName}`}
-                    stroke={groupColors[groupName]}
-                    strokeWidth={2}
-                    name={groupName}
-                  />
-                ))
-            )}
-          </LineChart>
-        </ResponsiveContainer>
-      </Container>
-
+      {/* Display charts or empty state */}
+      {!hasData ? (
+        <Container>
+          <Box textAlign="center" padding="xxl">
+            <b>No data available for the selected filters</b>
+            <Box variant="p" color="text-body-secondary" margin={{ top: 'xs' }}>
+              Try adjusting your filters or date range to see growth metrics.
+            </Box>
+          </Box>
+        </Container>
+      ) : (
+        <>
       <Container header={<Header variant="h3">Unique Activities Over Time</Header>}>
         {viewMode !== 'all' && activityLegendItems.length > 0 && (
           <InteractiveLegend
@@ -554,6 +573,92 @@ export function GrowthDashboard() {
           </LineChart>
         </ResponsiveContainer>
       </Container>
+
+          <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
+            {viewMode !== 'all' && participantLegendItems.length > 0 && (
+              <InteractiveLegend
+                chartId="growth-participants"
+                series={participantLegendItems}
+                onVisibilityChange={participantLegend.handleVisibilityChange}
+              />
+            )}
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={mergedTimeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis 
+                  label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
+                />
+                <Tooltip />
+                {viewMode === 'all' ? (
+                  <Line
+                    type="monotone"
+                    dataKey="uniqueParticipants"
+                    stroke="#0088FE"
+                    strokeWidth={2}
+                    name="Unique Participants"
+                  />
+                ) : (
+                  groupNames
+                    .filter((groupName) => participantLegend.isSeriesVisible(groupName))
+                    .map((groupName) => (
+                      <Line
+                        key={groupName}
+                        type="monotone"
+                        dataKey={`uniqueParticipants_${groupName}`}
+                        stroke={groupColors[groupName]}
+                        strokeWidth={2}
+                        name={groupName}
+                      />
+                    ))
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </Container>
+
+      <Container header={<Header variant="h3">Total Participation Over Time</Header>}>
+        {viewMode !== 'all' && participationLegendItems.length > 0 && (
+          <InteractiveLegend
+            chartId="growth-participation"
+            series={participationLegendItems}
+            onVisibilityChange={participationLegend.handleVisibilityChange}
+          />
+        )}
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={mergedTimeSeriesData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis 
+              label={{ value: 'Total Participation', angle: -90, position: 'insideLeft' }}
+            />
+            <Tooltip />
+            {viewMode === 'all' ? (
+              <Line
+                type="monotone"
+                dataKey="totalParticipation"
+                stroke="#FFBB28"
+                strokeWidth={2}
+                name="Total Participation"
+              />
+            ) : (
+              groupNames
+                .filter((groupName) => participationLegend.isSeriesVisible(groupName))
+                .map((groupName) => (
+                  <Line
+                    key={groupName}
+                    type="monotone"
+                    dataKey={`totalParticipation_${groupName}`}
+                    stroke={groupColors[groupName]}
+                    strokeWidth={2}
+                    name={groupName}
+                  />
+                ))
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+      </Container>
+        </>
+      )}
     </SpaceBetween>
   );
 }
