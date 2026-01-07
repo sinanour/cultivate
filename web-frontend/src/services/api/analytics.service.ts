@@ -5,10 +5,10 @@ import type { TimePeriod, DateGranularity, GroupingDimension } from '../../utils
 export interface EngagementMetricsParams {
     startDate?: string;
     endDate?: string;
-    geographicAreaId?: string;
-    activityCategoryId?: string;
-    activityTypeId?: string;
-    venueId?: string;
+    activityCategoryIds?: string[];
+    activityTypeIds?: string[];
+    geographicAreaIds?: string[];
+    venueIds?: string[];
     populationIds?: string[];
     groupBy?: GroupingDimension[];
     dateGranularity?: DateGranularity;
@@ -18,7 +18,10 @@ export interface GrowthMetricsParams {
     startDate?: string;
     endDate?: string;
     period?: TimePeriod;
-    geographicAreaId?: string;
+    activityCategoryIds?: string[];
+    activityTypeIds?: string[];
+    geographicAreaIds?: string[];
+    venueIds?: string[];
     populationIds?: string[];
     groupBy?: 'type' | 'category';
 }
@@ -46,13 +49,33 @@ export class AnalyticsService {
 
         if (params.startDate) queryParams.append('startDate', params.startDate);
         if (params.endDate) queryParams.append('endDate', params.endDate);
-        if (params.geographicAreaId) queryParams.append('geographicAreaId', params.geographicAreaId);
-        if (params.activityCategoryId) queryParams.append('activityCategoryId', params.activityCategoryId);
-        if (params.activityTypeId) queryParams.append('activityTypeId', params.activityTypeId);
-        if (params.venueId) queryParams.append('venueId', params.venueId);
         if (params.dateGranularity) queryParams.append('dateGranularity', params.dateGranularity);
 
-        // Handle populationIds array parameter
+        // Handle array parameters - append each value separately
+        if (params.activityCategoryIds && params.activityCategoryIds.length > 0) {
+            params.activityCategoryIds.forEach(id => {
+                queryParams.append('activityCategoryIds', id);
+            });
+        }
+
+        if (params.activityTypeIds && params.activityTypeIds.length > 0) {
+            params.activityTypeIds.forEach(id => {
+                queryParams.append('activityTypeIds', id);
+            });
+        }
+
+        if (params.geographicAreaIds && params.geographicAreaIds.length > 0) {
+            params.geographicAreaIds.forEach(id => {
+                queryParams.append('geographicAreaIds', id);
+            });
+        }
+
+        if (params.venueIds && params.venueIds.length > 0) {
+            params.venueIds.forEach(id => {
+                queryParams.append('venueIds', id);
+            });
+        }
+
         if (params.populationIds && params.populationIds.length > 0) {
             params.populationIds.forEach(id => {
                 queryParams.append('populationIds', id);
@@ -76,10 +99,33 @@ export class AnalyticsService {
         if (params.startDate) queryParams.append('startDate', params.startDate);
         if (params.endDate) queryParams.append('endDate', params.endDate);
         if (params.period) queryParams.append('period', params.period);
-        if (params.geographicAreaId) queryParams.append('geographicAreaId', params.geographicAreaId);
         if (params.groupBy) queryParams.append('groupBy', params.groupBy);
 
-        // Handle populationIds array parameter
+        // Handle array parameters - append each value separately
+        if (params.activityCategoryIds && params.activityCategoryIds.length > 0) {
+            params.activityCategoryIds.forEach(id => {
+                queryParams.append('activityCategoryIds', id);
+            });
+        }
+
+        if (params.activityTypeIds && params.activityTypeIds.length > 0) {
+            params.activityTypeIds.forEach(id => {
+                queryParams.append('activityTypeIds', id);
+            });
+        }
+
+        if (params.geographicAreaIds && params.geographicAreaIds.length > 0) {
+            params.geographicAreaIds.forEach(id => {
+                queryParams.append('geographicAreaIds', id);
+            });
+        }
+
+        if (params.venueIds && params.venueIds.length > 0) {
+            params.venueIds.forEach(id => {
+                queryParams.append('venueIds', id);
+            });
+        }
+
         if (params.populationIds && params.populationIds.length > 0) {
             params.populationIds.forEach(id => {
                 queryParams.append('populationIds', id);
@@ -94,20 +140,35 @@ export class AnalyticsService {
         parentGeographicAreaId?: string,
         startDate?: string,
         endDate?: string,
-        activityCategoryId?: string,
-        activityTypeId?: string,
-        venueId?: string,
+        activityCategoryIds?: string[],
+        activityTypeIds?: string[],
+        venueIds?: string[],
         populationIds?: string[]
     ): Promise<GeographicAnalytics[]> {
         const params = new URLSearchParams();
         if (parentGeographicAreaId) params.append('parentGeographicAreaId', parentGeographicAreaId);
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
-        if (activityCategoryId) params.append('activityCategoryId', activityCategoryId);
-        if (activityTypeId) params.append('activityTypeId', activityTypeId);
-        if (venueId) params.append('venueId', venueId);
 
-        // Handle populationIds array parameter
+        // Handle array parameters
+        if (activityCategoryIds && activityCategoryIds.length > 0) {
+            activityCategoryIds.forEach(id => {
+                params.append('activityCategoryIds', id);
+            });
+        }
+
+        if (activityTypeIds && activityTypeIds.length > 0) {
+            activityTypeIds.forEach(id => {
+                params.append('activityTypeIds', id);
+            });
+        }
+
+        if (venueIds && venueIds.length > 0) {
+            venueIds.forEach(id => {
+                params.append('venueIds', id);
+            });
+        }
+
         if (populationIds && populationIds.length > 0) {
             populationIds.forEach(id => {
                 params.append('populationIds', id);

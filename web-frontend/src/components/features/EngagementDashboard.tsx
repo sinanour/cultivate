@@ -35,6 +35,7 @@ import { GroupingDimension } from '../../utils/constants';
 import { generateEngagementSummaryCSV, downloadBlob } from '../../utils/csv.utils';
 import { generateEngagementSummaryFilename } from '../../utils/csv-filename.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
+import { isValidUUID, setMultiValueParam, getValidatedUUIDs } from '../../utils/url-params.utils';
 import type { AreaType } from '../../types';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
@@ -164,14 +165,25 @@ export function EngagementDashboard() {
   };
 
   const initializeGroupByDimensions = (): MultiselectProps.Options => {
-    const groupByParam = searchParams.get('groupBy');
-    if (!groupByParam) return [];
+    // Check new param name first
+    const groupByParam = searchParams.get('engagementGroupBy');
     
-    const dimensions = groupByParam.split(',');
-    return dimensions.map(dim => {
-      const label = dim.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      return { label, value: dim };
-    });
+    // Backward compatibility: check old param name
+    const oldGroupByParam = !groupByParam ? searchParams.get('groupBy') : null;
+    
+    const paramToUse = groupByParam || oldGroupByParam;
+    
+    if (!paramToUse) return [];
+    
+    const dimensions = paramToUse.split(',');
+    const validDimensions = ['activityCategory', 'activityType', 'venue', 'geographicArea', 'population'];
+    
+    return dimensions
+      .filter(dim => validDimensions.includes(dim))
+      .map(dim => {
+        const label = dim.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return { label, value: dim };
+      });
   };
 
   const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(initializeDateRange);
@@ -333,21 +345,25 @@ export function EngagementDashboard() {
     const initializeFiltersFromUrl = async () => {
       const tokens: PropertyFilterProps.Token[] = [];
       
-      // Check for activity category in URL
-      const activityCategoryId = searchParams.get('activityCategory');
-      if (activityCategoryId) {
-        let label = getLabelFromUuid(activityCategoryId);
+      // Activity Categories - use correct param name with validation
+      const catIds = getValidatedUUIDs(searchParams, 'activityCategoryIds');
+      for (const id of catIds) {
+        let label = getLabelFromUuid(id);
         if (!label) {
           // Cache miss - fetch the category to get its label
           try {
             const categories = await activityCategoryService.getActivityCategories();
-            const category = categories.find(c => c.id === activityCategoryId);
+            const category = categories.find(c => c.id === id);
             if (category) {
               label = category.name;
               addToCache(category.id, category.name);
+            } else {
+              console.warn(`Invalid activity category ID in URL: ${id}`);
+              continue;
             }
           } catch (error) {
             console.error('Error fetching activity category:', error);
+            continue;
           }
         }
         if (label) {
@@ -355,21 +371,25 @@ export function EngagementDashboard() {
         }
       }
       
-      // Check for activity type in URL
-      const activityTypeId = searchParams.get('activityType');
-      if (activityTypeId) {
-        let label = getLabelFromUuid(activityTypeId);
+      // Activity Types - use correct param name with validation
+      const typeIds = getValidatedUUIDs(searchParams, 'activityTypeIds');
+      for (const id of typeIds) {
+        let label = getLabelFromUuid(id);
         if (!label) {
           // Cache miss - fetch the type to get its label
           try {
             const types = await ActivityTypeService.getActivityTypes();
-            const type = types.find(t => t.id === activityTypeId);
+            const type = types.find(t => t.id === id);
             if (type) {
               label = type.name;
               addToCache(type.id, type.name);
+            } else {
+              console.warn(`Invalid activity type ID in URL: ${id}`);
+              continue;
             }
           } catch (error) {
             console.error('Error fetching activity type:', error);
+            continue;
           }
         }
         if (label) {
@@ -377,25 +397,55 @@ export function EngagementDashboard() {
         }
       }
       
-      // Check for venue in URL
-      const venueId = searchParams.get('venue');
-      if (venueId) {
-        let label = getLabelFromUuid(venueId);
+      // Venues - use correct param name with validation
+      const venueIds = getValidatedUUIDs(searchParams, 'venueIds');
+      for (const id of venueIds) {
+        let label = getLabelFromUuid(id);
         if (!label) {
           // Cache miss - fetch the venue to get its label
           try {
             const venues = await VenueService.getVenues();
-            const venue = venues.find(v => v.id === venueId);
+            const venue = venues.find(v => v.id === id);
             if (venue) {
               label = venue.name;
               addToCache(venue.id, venue.name);
+            } else {
+              console.warn(`Invalid venue ID in URL: ${id}`);
+              continue;
             }
           } catch (error) {
             console.error('Error fetching venue:', error);
+            continue;
           }
         }
         if (label) {
           tokens.push({ propertyKey: 'venue', operator: '=', value: label });
+        }
+      }
+      
+      // Populations - use correct param name with validation
+      const popIds = getValidatedUUIDs(searchParams, 'populationIds');
+      for (const id of popIds) {
+        let label = getLabelFromUuid(id);
+        if (!label) {
+          // Cache miss - fetch the population to get its label
+          try {
+            const populations = await PopulationService.getPopulations();
+            const population = populations.find(p => p.id === id);
+            if (population) {
+              label = population.name;
+              addToCache(population.id, population.name);
+            } else {
+              console.warn(`Invalid population ID in URL: ${id}`);
+              continue;
+            }
+          } catch (error) {
+            console.error('Error fetching population:', error);
+            continue;
+          }
+        }
+        if (label) {
+          tokens.push({ propertyKey: 'population', operator: '=', value: label });
         }
       }
       
@@ -412,9 +462,16 @@ export function EngagementDashboard() {
 
   // Sync state to URL whenever filters or grouping changes
   useEffect(() => {
+    // Start with empty params - write only what this dashboard owns
     const params = new URLSearchParams();
     
-    // Add date range parameters
+    // CRITICAL: Add global geographic area filter if active
+    // Read from context (not URL) to get the current value
+    if (selectedGeographicAreaId) {
+      params.set('geographicArea', selectedGeographicAreaId);
+    }
+    
+    // Shared date range
     if (dateRange) {
       if (dateRange.type === 'absolute') {
         params.set('startDate', dateRange.startDate);
@@ -426,29 +483,42 @@ export function EngagementDashboard() {
       }
     }
     
-    // Add PropertyFilter tokens to URL (convert labels to UUIDs)
-    propertyFilterQuery.tokens.forEach((token) => {
-      if (token.propertyKey && token.value) {
-        const uuid = getUuidFromLabel(token.value);
-        if (uuid) {
-          params.append(token.propertyKey, uuid);
-        }
-      }
-    });
+    // Shared PropertyFilter tokens (extract UUIDs inline to avoid stale closures)
+    const activityCategoryIds = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+      .map(t => getUuidFromLabel(t.value))
+      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
+    setMultiValueParam(params, 'activityCategoryIds', activityCategoryIds);
+
+    const activityTypeIds = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+      .map(t => getUuidFromLabel(t.value))
+      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
+    setMultiValueParam(params, 'activityTypeIds', activityTypeIds);
+
+    const venueIds = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'venue' && t.operator === '=')
+      .map(t => getUuidFromLabel(t.value))
+      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
+    setMultiValueParam(params, 'venueIds', venueIds);
+
+    const populationIds = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'population' && t.operator === '=')
+      .map(t => getUuidFromLabel(t.value))
+      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
+    setMultiValueParam(params, 'populationIds', populationIds);
     
-    if (selectedGeographicAreaId) {
-      params.set('geographicArea', selectedGeographicAreaId);
-    }
-    
-    // Add grouping parameters
+    // Dashboard-specific grouping (renamed)
     if (groupByDimensions.length > 0) {
       const groupByValues = groupByDimensions.map(d => d.value).join(',');
-      params.set('groupBy', groupByValues);
+      params.set('engagementGroupBy', groupByValues);
     }
     
     // Update URL without causing navigation/reload
     setSearchParams(params, { replace: true });
-  }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, groupByDimensions, setSearchParams]);
+  }, [dateRange, propertyFilterQuery, groupByDimensions, selectedGeographicAreaId]);
+  // Note: selectedGeographicAreaId IS in dependencies - we want to update URL when it changes
+  // This is safe because we're not reading from URL, we're reading from context
 
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['engagementMetrics', dateRange, selectedGeographicAreaId, propertyFilterQuery, groupByDimensions],
@@ -488,14 +558,15 @@ export function EngagementDashboard() {
       }
       
       // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
-      const activityCategoryLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityCategory' && t.operator === '=')?.value;
-      const activityCategoryId = activityCategoryLabel ? getUuidFromLabel(activityCategoryLabel) : undefined;
+      // Support multiple values per property (OR logic within dimension)
+      const activityCategoryLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityCategory' && t.operator === '=').map(t => t.value);
+      const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const activityTypeLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityType' && t.operator === '=')?.value;
-      const activityTypeId = activityTypeLabel ? getUuidFromLabel(activityTypeLabel) : undefined;
+      const activityTypeLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityType' && t.operator === '=').map(t => t.value);
+      const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const venueLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'venue' && t.operator === '=')?.value;
-      const venueId = venueLabel ? getUuidFromLabel(venueLabel) : undefined;
+      const venueLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'venue' && t.operator === '=').map(t => t.value);
+      const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
       const populationLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
       const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
@@ -503,10 +574,10 @@ export function EngagementDashboard() {
       const params: EngagementMetricsParams = {
         startDate,
         endDate,
-        geographicAreaId: selectedGeographicAreaId || undefined,
-        activityCategoryId,
-        activityTypeId,
-        venueId,
+        geographicAreaIds: selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined,
+        activityCategoryIds: activityCategoryIds.length > 0 ? activityCategoryIds : undefined,
+        activityTypeIds: activityTypeIds.length > 0 ? activityTypeIds : undefined,
+        venueIds: venueIds.length > 0 ? venueIds : undefined,
         populationIds: populationIds.length > 0 ? populationIds : undefined,
         groupBy: groupByDimensions.map(d => d.value as GroupingDimension),
       };
@@ -551,15 +622,16 @@ export function EngagementDashboard() {
         }
       }
       
-      // Extract filters from PropertyFilter tokens
-      const activityCategoryLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityCategory' && t.operator === '=')?.value;
-      const activityCategoryId = activityCategoryLabel ? getUuidFromLabel(activityCategoryLabel) : undefined;
+      // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
+      // Support multiple values per property (OR logic within dimension)
+      const activityCategoryLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityCategory' && t.operator === '=').map(t => t.value);
+      const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const activityTypeLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityType' && t.operator === '=')?.value;
-      const activityTypeId = activityTypeLabel ? getUuidFromLabel(activityTypeLabel) : undefined;
+      const activityTypeLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityType' && t.operator === '=').map(t => t.value);
+      const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const venueLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'venue' && t.operator === '=')?.value;
-      const venueId = venueLabel ? getUuidFromLabel(venueLabel) : undefined;
+      const venueLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'venue' && t.operator === '=').map(t => t.value);
+      const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
       const populationLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
       const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
@@ -568,9 +640,9 @@ export function EngagementDashboard() {
         selectedGeographicAreaId || undefined, // parentGeographicAreaId
         startDate,
         endDate,
-        activityCategoryId,
-        activityTypeId,
-        venueId,
+        activityCategoryIds.length > 0 ? activityCategoryIds : undefined,
+        activityTypeIds.length > 0 ? activityTypeIds : undefined,
+        venueIds.length > 0 ? venueIds : undefined,
         populationIds.length > 0 ? populationIds : undefined
       );
     },
@@ -653,14 +725,14 @@ export function EngagementDashboard() {
         metrics.groupingDimensions || []
       );
       
-      // Extract filter values for filename
-      const activityCategoryToken = propertyFilterQuery.tokens.find(
+      // Extract filter values for filename (support multiple values per property)
+      const activityCategoryTokens = propertyFilterQuery.tokens.filter(
         t => t.propertyKey === 'activityCategory' && t.operator === '='
       );
-      const activityTypeToken = propertyFilterQuery.tokens.find(
+      const activityTypeTokens = propertyFilterQuery.tokens.filter(
         t => t.propertyKey === 'activityType' && t.operator === '='
       );
-      const venueToken = propertyFilterQuery.tokens.find(
+      const venueTokens = propertyFilterQuery.tokens.filter(
         t => t.propertyKey === 'venue' && t.operator === '='
       );
       const populationTokens = propertyFilterQuery.tokens.filter(
@@ -698,14 +770,14 @@ export function EngagementDashboard() {
         endDate = end.toISOString().split('T')[0];
       }
       
-      // Generate filename with active filters
+      // Generate filename with active filters (use first value if multiple)
       const filename = generateEngagementSummaryFilename({
         geographicArea: selectedGeographicArea,
         startDate,
         endDate,
-        activityCategoryName: activityCategoryToken?.value,
-        activityTypeName: activityTypeToken?.value,
-        venueName: venueToken?.value,
+        activityCategoryName: activityCategoryTokens[0]?.value,
+        activityTypeName: activityTypeTokens[0]?.value,
+        venueName: venueTokens[0]?.value,
         populationNames: populationTokens.map(t => t.value).filter((v): v is string => !!v),
       });
       
@@ -1308,19 +1380,19 @@ export function EngagementDashboard() {
         }
         geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
         activityCategoryIds={(() => {
-          const label = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityCategory' && t.operator === '=')?.value;
-          const uuid = label ? getUuidFromLabel(label) : undefined;
-          return uuid ? [uuid] : undefined;
+          const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityCategory' && t.operator === '=').map(t => t.value);
+          const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+          return uuids.length > 0 ? uuids : undefined;
         })()}
         activityTypeIds={(() => {
-          const label = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityType' && t.operator === '=')?.value;
-          const uuid = label ? getUuidFromLabel(label) : undefined;
-          return uuid ? [uuid] : undefined;
+          const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityType' && t.operator === '=').map(t => t.value);
+          const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+          return uuids.length > 0 ? uuids : undefined;
         })()}
         venueIds={(() => {
-          const label = propertyFilterQuery.tokens.find(t => t.propertyKey === 'venue' && t.operator === '=')?.value;
-          const uuid = label ? getUuidFromLabel(label) : undefined;
-          return uuid ? [uuid] : undefined;
+          const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'venue' && t.operator === '=').map(t => t.value);
+          const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+          return uuids.length > 0 ? uuids : undefined;
         })()}
         populationIds={(() => {
           const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);

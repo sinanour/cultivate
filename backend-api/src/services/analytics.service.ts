@@ -100,10 +100,10 @@ export interface EngagementMetrics {
     periodStart: string;
     periodEnd: string;
     appliedFilters: {
-        activityCategoryId?: string;
-        activityTypeId?: string;
-        venueId?: string;
-        geographicAreaId?: string;
+        activityCategoryIds?: string[];
+        activityTypeIds?: string[];
+        venueIds?: string[];
+        geographicAreaIds?: string[];
         populationIds?: string[];
         startDate?: string;
         endDate?: string;
@@ -132,13 +132,18 @@ export interface ActivityLifecycleData {
 export interface AnalyticsFilters {
     startDate?: Date;
     endDate?: Date;
+    activityCategoryIds?: string[];
+    activityTypeIds?: string[];
+    geographicAreaIds?: string[];
+    venueIds?: string[];
+    populationIds?: string[];
+    groupBy?: GroupingDimension[];
+    dateGranularity?: DateGranularity;
+    // Legacy single-value filters (deprecated, use array versions)
     geographicAreaId?: string;
     activityCategoryId?: string;
     activityTypeId?: string;
     venueId?: string;
-    populationIds?: string[];
-    groupBy?: GroupingDimension[];
-    dateGranularity?: DateGranularity;
 }
 
 export class AnalyticsService {
@@ -158,20 +163,34 @@ export class AnalyticsService {
      * Do NOT expand descendants again during implicit filtering.
      */
     private async getEffectiveGeographicAreaIds(
-        explicitGeographicAreaId: string | undefined,
+        explicitGeographicAreaIds: string | string[] | undefined,
         authorizedAreaIds: string[],
         hasGeographicRestrictions: boolean
     ): Promise<string[] | undefined> {
+        // Convert single value to array for uniform processing
+        const areaIdsArray = explicitGeographicAreaIds
+            ? (Array.isArray(explicitGeographicAreaIds) ? explicitGeographicAreaIds : [explicitGeographicAreaIds])
+            : undefined;
+
         // If explicit filter provided
-        if (explicitGeographicAreaId) {
-            // Validate user has access to this area
-            if (hasGeographicRestrictions && !authorizedAreaIds.includes(explicitGeographicAreaId)) {
-                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
+        if (areaIdsArray && areaIdsArray.length > 0) {
+            // Validate user has access to all areas
+            if (hasGeographicRestrictions) {
+                const allAuthorized = areaIdsArray.every(id => authorizedAreaIds.includes(id));
+                if (!allAuthorized) {
+                    throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access one or more of the specified geographic areas');
+                }
             }
 
-            // Expand to include descendants, but ONLY those in authorizedAreaIds
-            const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
-            const allPotentialIds = [explicitGeographicAreaId, ...descendantIds];
+            // Expand each area to include descendants
+            const allExpandedIds = new Set<string>();
+            for (const areaId of areaIdsArray) {
+                const descendantIds = await this.geographicAreaRepository.findDescendants(areaId);
+                allExpandedIds.add(areaId);
+                descendantIds.forEach(id => allExpandedIds.add(id));
+            }
+
+            const allPotentialIds = Array.from(allExpandedIds);
 
             // If user has geographic restrictions, filter to only authorized areas
             if (hasGeographicRestrictions) {
@@ -198,7 +217,15 @@ export class AnalyticsService {
         authorizedAreaIds: string[] = [],
         hasGeographicRestrictions: boolean = false
     ): Promise<EngagementMetrics> {
-        const { startDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, populationIds, groupBy } = filters;
+        const {
+            startDate,
+            activityCategoryIds,
+            activityTypeIds,
+            geographicAreaIds,
+            venueIds: filterVenueIds,
+            populationIds,
+            groupBy
+        } = filters;
 
         // Default endDate to now if startDate is provided but endDate is not
         const endDate = filters.endDate || (startDate ? new Date() : undefined);
@@ -210,12 +237,12 @@ export class AnalyticsService {
 
         // Determine effective geographic area IDs
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
-            geographicAreaId,
+            geographicAreaIds,
             authorizedAreaIds,
             hasGeographicRestrictions
         );
 
-        // Get venue IDs if geographic or venue filter is provided
+        // Get venue IDs if geographic filter is provided
         let venueIds: string[] | undefined;
         if (effectiveAreaIds) {
             // Use effective area IDs to get venues
@@ -224,21 +251,30 @@ export class AnalyticsService {
                 select: { id: true },
             });
             venueIds = venues.map((v) => v.id);
-        } else if (venueId) {
-            venueIds = [venueId];
+        }
+
+        // Merge explicit venue filter with geographic-derived venue IDs
+        if (filterVenueIds && filterVenueIds.length > 0) {
+            if (venueIds) {
+                // Intersection: only venues that match both filters
+                venueIds = venueIds.filter(id => filterVenueIds.includes(id));
+            } else {
+                // Use explicit venue filter
+                venueIds = filterVenueIds;
+            }
         }
 
         // Build base activity filter
         const activityWhere: any = {};
 
-        if (activityCategoryId) {
+        if (activityCategoryIds && activityCategoryIds.length > 0) {
             activityWhere.activityType = {
-                activityCategoryId,
+                activityCategoryId: { in: activityCategoryIds },
             };
         }
 
-        if (activityTypeId) {
-            activityWhere.activityTypeId = activityTypeId;
+        if (activityTypeIds && activityTypeIds.length > 0) {
+            activityWhere.activityTypeId = { in: activityTypeIds };
         }
 
         if (venueIds) {
@@ -718,10 +754,11 @@ export class AnalyticsService {
 
         // Determine which areas to include in breakdown
         let areasToBreakdown: any[];
-        if (geographicAreaId) {
+        const firstGeographicAreaId = geographicAreaIds && geographicAreaIds.length > 0 ? geographicAreaIds[0] : undefined;
+        if (firstGeographicAreaId) {
             // When filtered by geographic area, show breakdown of that area and its descendants
-            const descendantIds = await this.geographicAreaRepository.findDescendants(geographicAreaId);
-            const parentArea = await this.geographicAreaRepository.findById(geographicAreaId);
+            const descendantIds = await this.geographicAreaRepository.findDescendants(firstGeographicAreaId);
+            const parentArea = await this.geographicAreaRepository.findById(firstGeographicAreaId);
 
             // Fetch all descendant areas
             const descendantAreas = descendantIds.length > 0
@@ -781,10 +818,10 @@ export class AnalyticsService {
             periodStart: startDate?.toISOString() || '',
             periodEnd: endDate?.toISOString() || new Date().toISOString(),
             appliedFilters: {
-                activityCategoryId,
-                activityTypeId,
-                venueId,
-                geographicAreaId,
+                activityCategoryIds,
+                activityTypeIds,
+                venueIds: filterVenueIds,
+                geographicAreaIds,
                 populationIds,
                 startDate: startDate?.toISOString(),
                 endDate: endDate?.toISOString(),
@@ -849,11 +886,18 @@ export class AnalyticsService {
         hasGeographicRestrictions: boolean = false
     ): Promise<Array<{ dimensions: Record<string, string>; filters: Partial<AnalyticsFilters> }>> {
         // Build base activity filter from existing filters
-        const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, venueId } = filters;
+        const {
+            startDate,
+            endDate,
+            activityCategoryIds,
+            activityTypeIds,
+            geographicAreaIds,
+            venueIds: filterVenueIds
+        } = filters;
 
         // Determine effective geographic area IDs
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
-            geographicAreaId,
+            geographicAreaIds,
             authorizedAreaIds,
             hasGeographicRestrictions
         );
@@ -865,18 +909,25 @@ export class AnalyticsService {
                 select: { id: true },
             });
             venueIds = venues.map((v) => v.id);
-        } else if (venueId) {
-            venueIds = [venueId];
+        }
+
+        // Merge explicit venue filter with geographic-derived venue IDs
+        if (filterVenueIds && filterVenueIds.length > 0) {
+            if (venueIds) {
+                venueIds = venueIds.filter(id => filterVenueIds.includes(id));
+            } else {
+                venueIds = filterVenueIds;
+            }
         }
 
         const activityWhere: any = {};
-        if (activityCategoryId) {
+        if (activityCategoryIds && activityCategoryIds.length > 0) {
             activityWhere.activityType = {
-                activityCategoryId,
+                activityCategoryId: { in: activityCategoryIds },
             };
         }
-        if (activityTypeId) {
-            activityWhere.activityTypeId = activityTypeId;
+        if (activityTypeIds && activityTypeIds.length > 0) {
+            activityWhere.activityTypeId = { in: activityTypeIds };
         }
         if (venueIds) {
             activityWhere.activityVenueHistory = {
@@ -1052,11 +1103,20 @@ export class AnalyticsService {
         authorizedAreaIds: string[] = [],
         hasGeographicRestrictions: boolean = false
     ): Promise<GrowthMetrics> {
-        const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, populationIds, groupBy } = filters;
+        const {
+            startDate,
+            endDate,
+            activityCategoryIds,
+            activityTypeIds,
+            geographicAreaIds,
+            venueIds: filterVenueIds,
+            populationIds,
+            groupBy
+        } = filters;
 
         // Determine effective geographic area IDs
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
-            geographicAreaId,
+            geographicAreaIds,
             authorizedAreaIds,
             hasGeographicRestrictions
         );
@@ -1069,6 +1129,17 @@ export class AnalyticsService {
                 select: { id: true },
             });
             venueIds = venues.map((v) => v.id);
+        }
+
+        // Merge explicit venue filter with geographic-derived venue IDs
+        if (filterVenueIds && filterVenueIds.length > 0) {
+            if (venueIds) {
+                // Intersection: only venues that match both filters
+                venueIds = venueIds.filter(id => filterVenueIds.includes(id));
+            } else {
+                // Use explicit venue filter
+                venueIds = filterVenueIds;
+            }
         }
 
         // Determine date range - if no dates provided, query all history
@@ -1121,17 +1192,17 @@ export class AnalyticsService {
         };
 
         // Add additional filters to the AND array
-        if (activityCategoryId) {
+        if (activityCategoryIds && activityCategoryIds.length > 0) {
             activityWhere.AND.push({
                 activityType: {
-                    activityCategoryId,
+                    activityCategoryId: { in: activityCategoryIds },
                 },
             });
         }
 
-        if (activityTypeId) {
+        if (activityTypeIds && activityTypeIds.length > 0) {
             activityWhere.AND.push({
-                activityTypeId,
+                activityTypeId: { in: activityTypeIds },
             });
         }
 
@@ -1412,20 +1483,20 @@ export class AnalyticsService {
             };
 
             // Apply additional filters
-            if (filters.activityCategoryId) {
+            if (filters.activityCategoryIds && filters.activityCategoryIds.length > 0) {
                 activityWhere.activityType = {
-                    activityCategoryId: filters.activityCategoryId,
+                    activityCategoryId: { in: filters.activityCategoryIds },
                 };
             }
 
-            if (filters.activityTypeId) {
-                activityWhere.activityTypeId = filters.activityTypeId;
+            if (filters.activityTypeIds && filters.activityTypeIds.length > 0) {
+                activityWhere.activityTypeId = { in: filters.activityTypeIds };
             }
 
-            if (filters.venueId) {
+            if (filters.venueIds && filters.venueIds.length > 0) {
                 activityWhere.activityVenueHistory = {
                     some: {
-                        venueId: filters.venueId,
+                        venueId: { in: filters.venueIds },
                     },
                 };
             }

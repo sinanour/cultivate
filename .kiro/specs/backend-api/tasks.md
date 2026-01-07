@@ -527,7 +527,15 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Apply multiple filters using AND logic
     - Calculate role distribution within filtered and grouped results
     - Implement growth metrics calculation with unique participant counts, unique activity counts, and total participation counts per period (snapshots, not cumulative)
+    - Support multi-dimensional filtering for growth metrics with OR logic within dimensions and AND logic across dimensions:
+      - activityCategoryIds array filter (OR logic: category IN (A, B))
+      - activityTypeIds array filter (OR logic: type IN (A, B))
+      - geographicAreaIds array filter (OR logic: area IN (A, B) including descendants)
+      - venueIds array filter (OR logic: venue IN (A, B))
+      - populationIds array filter (OR logic: participant in at least one population)
+      - Multiple dimensions combined with AND logic (e.g., category AND venue AND population)
     - Support optional grouping by activity type or category for growth metrics
+    - Use Zod preprocess to normalize array query parameters (single value, multiple parameters, comma-separated)
     - Implement geographic breakdown calculation:
       - Accept optional parentGeographicAreaId parameter
       - When parentGeographicAreaId provided: return metrics for immediate children of that parent
@@ -542,7 +550,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - For activities with mixed participants (some in population, some not), count only the participants who match the population filter
     - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest date for participants
     - Correctly identify current venue/address when effectiveFrom is null
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19a, 6.19b, 6.19c, 6.19d, 6.19e, 6.19f, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 7.1, 7.2, 7.3, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.8, 7.9, 7.9a, 7.9b, 7.9c, 7.9d, 7.9e, 7.9f, 7.10, 7.11, 7.12, 7.13, 7.14a_
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19a, 6.19b, 6.19c, 6.19d, 6.19e, 6.19f, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 7.1, 7.2, 7.3, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33_
 
   - [ ]* 13.2 Write property tests for analytics calculations
     - **Property 20: Activities at Start of Date Range Counting**
@@ -567,18 +575,24 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 30G: Population Filter Participation Count Scoping**
     - **Property 30H: Population Filter Partial Activity Participant Counting**
     - **Property 31: Multi-Dimensional Grouping Support**
-    - **Property 31A: Activity Category Point Filter**
-    - **Property 32: Activity Type Point Filter**
-    - **Property 33: Venue Point Filter**
-    - **Property 34: Geographic Area Point Filter**
-    - **Property 35: Date Range Filter**
-    - **Property 36: Multiple Filter AND Logic**
-    - **Property 37: All-Time Metrics Without Date Range**
-    - **Property 38: Role Distribution Calculation**
-    - **Property 39: Date Grouping Granularity**
-    - **Property 40: Time Period Grouping**
-    - **Property 41: Unique Participant Counting Per Period**
-    - **Property 42: Unique Activity Counting Per Period**
+    - **Property 31A: Engagement Metrics Activity Category Filter**
+    - **Property 31B: Engagement Metrics Activity Type Filter**
+    - **Property 31C: Engagement Metrics Geographic Area Filter**
+    - **Property 31D: Engagement Metrics Venue Filter**
+    - **Property 31E: Engagement Metrics Population Filter Participant Inclusion**
+    - **Property 31F: Engagement Metrics Population Filter Activity Inclusion**
+    - **Property 31G: Engagement Metrics Population Filter Participant Count Scoping**
+    - **Property 31H: Engagement Metrics Population Filter Participation Count Scoping**
+    - **Property 32: Engagement Metrics Multi-Dimensional Filter AND Logic**
+    - **Property 33: Engagement Metrics Within-Dimension OR Logic**
+    - **Property 34: Date Range Filter**
+    - **Property 35: All-Time Metrics Without Date Range**
+    - **Property 36: Role Distribution Calculation**
+    - **Property 37: Engagement Metrics Array Parameter Normalization**
+    - **Property 38: Date Grouping Granularity**
+    - **Property 39: Time Period Grouping**
+    - **Property 40: Unique Participant Counting Per Period**
+    - **Property 41: Unique Activity Counting Per Period**
     - **Property 42A: Total Participation Counting Per Period**
     - **Property 43: Chronological Ordering**
     - **Property 44: Percentage Change Calculation**
@@ -586,10 +600,19 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 46: Optional Grouping by Activity Category**
     - **Property 47: Aggregate Growth Without Grouping**
     - **Property 47_participation: Time-Series Participation Data Inclusion**
-    - **Property 47G: Growth Metrics Population Filter Participant Count Scoping**
-    - **Property 47H: Growth Metrics Population Filter Participation Count Scoping**
-    - **Property 47I: Growth Metrics Population Filter Partial Activity Participant Counting**
-    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19d, 6.19e, 6.19f, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.2, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.9d, 7.9e, 7.9f, 7.10, 7.11, 7.12, 7.13, 7.14a**
+    - **Property 47G: Growth Metrics Activity Category Filter**
+    - **Property 47H: Growth Metrics Activity Type Filter**
+    - **Property 47I: Growth Metrics Geographic Area Filter**
+    - **Property 47J: Growth Metrics Venue Filter**
+    - **Property 47K: Growth Metrics Population Filter Participant Inclusion**
+    - **Property 47L: Growth Metrics Population Filter Activity Inclusion**
+    - **Property 47M: Growth Metrics Population Filter Participant Count Scoping**
+    - **Property 47N: Growth Metrics Population Filter Participation Count Scoping**
+    - **Property 47O: Growth Metrics Population Filter Partial Activity Participant Counting**
+    - **Property 47P: Growth Metrics Multi-Dimensional Filter AND Logic**
+    - **Property 47Q: Growth Metrics Within-Dimension OR Logic**
+    - **Property 47R: Growth Metrics Array Parameter Normalization**
+    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 6.30, 6.31, 6.32, 6.33, 6.34, 6.35, 6.36, 6.37, 6.38, 6.39, 6.40, 6.41, 6.42, 6.43, 7.2, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33**
 
   - [x] 13.3 Create analytics routes
     - GET /api/analytics/engagement

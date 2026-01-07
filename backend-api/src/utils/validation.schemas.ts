@@ -203,11 +203,51 @@ export const AssignmentUpdateSchema = z.object({
 export const EngagementQuerySchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
-  geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
   parentGeographicAreaId: z.string().uuid('Invalid parent geographic area ID format').optional(),
-  activityCategoryId: z.string().uuid('Invalid activity category ID format').optional(),
-  activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
-  venueId: z.string().uuid('Invalid venue ID format').optional(),
+  activityCategoryIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity category ID format')).optional()
+  ),
+  activityTypeIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity type ID format')).optional()
+  ),
+  geographicAreaIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid geographic area ID format')).optional()
+  ),
+  venueIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid venue ID format')).optional()
+  ),
   populationIds: z.preprocess(
     (val) => {
       if (val === undefined || val === null) return undefined;
@@ -234,7 +274,50 @@ export const GrowthQuerySchema = z.object({
   period: z.nativeEnum(TimePeriod),
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
-  geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  activityCategoryIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity category ID format')).optional()
+  ),
+  activityTypeIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity type ID format')).optional()
+  ),
+  geographicAreaIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid geographic area ID format')).optional()
+  ),
+  venueIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid venue ID format')).optional()
+  ),
   populationIds: z.preprocess(
     (val) => {
       if (val === undefined || val === null) return undefined;

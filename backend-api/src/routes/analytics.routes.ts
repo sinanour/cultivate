@@ -55,19 +55,30 @@ export class AnalyticsRoutes {
 
     private async getEngagement(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { startDate, endDate, geographicAreaId, activityCategoryId, activityTypeId, venueId, populationIds, groupBy, dateGranularity } = req.query;
+            const {
+                startDate,
+                endDate,
+                activityCategoryIds,
+                activityTypeIds,
+                geographicAreaIds,
+                venueIds,
+                populationIds,
+                groupBy,
+                dateGranularity
+            } = req.query;
 
             // Extract authorization info from request
             const authorizedAreaIds = req.user?.authorizedAreaIds || [];
             const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
 
             // Validate explicit geographic area access
-            if (geographicAreaId && hasGeographicRestrictions) {
-                const hasAccess = authorizedAreaIds.includes(geographicAreaId as string);
-                if (!hasAccess) {
+            if (geographicAreaIds && hasGeographicRestrictions) {
+                const areaIdsArray = Array.isArray(geographicAreaIds) ? geographicAreaIds : [geographicAreaIds];
+                const allAuthorized = areaIdsArray.every(id => authorizedAreaIds.includes(id as string));
+                if (!allAuthorized) {
                     res.status(403).json({
                         code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
-                        message: 'You do not have permission to access this geographic area',
+                        message: 'You do not have permission to access one or more of the specified geographic areas',
                         details: {},
                     });
                     return;
@@ -77,10 +88,10 @@ export class AnalyticsRoutes {
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
-                geographicAreaId: geographicAreaId as string | undefined,
-                activityCategoryId: activityCategoryId as string | undefined,
-                activityTypeId: activityTypeId as string | undefined,
-                venueId: venueId as string | undefined,
+                activityCategoryIds: activityCategoryIds as string[] | undefined,
+                activityTypeIds: activityTypeIds as string[] | undefined,
+                geographicAreaIds: geographicAreaIds as string[] | undefined,
+                venueIds: venueIds as string[] | undefined,
                 populationIds: populationIds as string[] | undefined,
                 groupBy: groupBy as any[] | undefined, // Already normalized by Zod transform
                 dateGranularity: dateGranularity as any | undefined,
@@ -112,19 +123,30 @@ export class AnalyticsRoutes {
 
     private async getGrowth(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { period, startDate, endDate, geographicAreaId, populationIds, groupBy } = req.query;
+            const {
+                period,
+                startDate,
+                endDate,
+                activityCategoryIds,
+                activityTypeIds,
+                geographicAreaIds,
+                venueIds,
+                populationIds,
+                groupBy
+            } = req.query;
 
             // Extract authorization info from request
             const authorizedAreaIds = req.user?.authorizedAreaIds || [];
             const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
 
             // Validate explicit geographic area access
-            if (geographicAreaId && hasGeographicRestrictions) {
-                const hasAccess = authorizedAreaIds.includes(geographicAreaId as string);
-                if (!hasAccess) {
+            if (geographicAreaIds && hasGeographicRestrictions) {
+                const areaIdsArray = Array.isArray(geographicAreaIds) ? geographicAreaIds : [geographicAreaIds];
+                const allAuthorized = areaIdsArray.every(id => authorizedAreaIds.includes(id as string));
+                if (!allAuthorized) {
                     res.status(403).json({
                         code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
-                        message: 'You do not have permission to access this geographic area',
+                        message: 'You do not have permission to access one or more of the specified geographic areas',
                         details: {},
                     });
                     return;
@@ -142,7 +164,10 @@ export class AnalyticsRoutes {
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
-                geographicAreaId: geographicAreaId as string | undefined,
+                activityCategoryIds: activityCategoryIds as string[] | undefined,
+                activityTypeIds: activityTypeIds as string[] | undefined,
+                geographicAreaIds: geographicAreaIds as string[] | undefined,
+                venueIds: venueIds as string[] | undefined,
                 populationIds: populationIds as string[] | undefined,
                 groupBy: groupByDimensions,
             };
@@ -174,7 +199,15 @@ export class AnalyticsRoutes {
 
     private async getGeographic(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { parentGeographicAreaId, startDate, endDate, activityCategoryId, activityTypeId, venueId, populationIds } = req.query;
+            const {
+                parentGeographicAreaId,
+                startDate,
+                endDate,
+                activityCategoryIds,
+                activityTypeIds,
+                venueIds,
+                populationIds
+            } = req.query;
 
             // Extract authorization info from request
             const authorizedAreaIds = req.user?.authorizedAreaIds || [];
@@ -196,9 +229,9 @@ export class AnalyticsRoutes {
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
-                activityCategoryId: activityCategoryId as string | undefined,
-                activityTypeId: activityTypeId as string | undefined,
-                venueId: venueId as string | undefined,
+                activityCategoryIds: activityCategoryIds as string[] | undefined,
+                activityTypeIds: activityTypeIds as string[] | undefined,
+                venueIds: venueIds as string[] | undefined,
                 populationIds: populationIds as string[] | undefined,
             };
 

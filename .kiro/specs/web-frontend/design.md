@@ -575,16 +575,19 @@ src/
 - **PropertyFilter Component** for unified filtering:
   - Replaces separate activity type and venue filter dropdowns
   - Uses CloudScape PropertyFilter component
-  - Supports filtering by Activity Category, Activity Type, and Venue properties
+  - Supports filtering by Activity Category, Activity Type, Venue, and Population properties
+  - Supports multi-select for each property (OR logic within dimension)
+  - Applies AND logic across different properties (e.g., categories AND venues AND populations)
   - Implements lazy loading of property values when user types in filter input
   - Asynchronously fetches matching values from backend APIs:
     - Activity Categories: from ActivityCategoryService.getActivityCategories()
     - Activity Types: from ActivityTypeService.getActivityTypes()
     - Venues: from VenueService.getVenues() with geographic area filtering
+    - Populations: from PopulationService.getPopulations()
   - Debounces user input internally (CloudScape handles debouncing)
   - Displays loading indicator while fetching property values
-  - Supports multiple filter tokens with AND logic
-  - Provides clear labels for each property (Activity Category, Activity Type, Venue)
+  - Supports multiple filter tokens with AND logic across dimensions
+  - Provides clear labels for each property (Activity Category, Activity Type, Venue, Population)
   - Displays selected property values in filter tokens
   - Allows clearing all filters at once
   - Integrates with existing date range and geographic area filters
@@ -757,6 +760,13 @@ src/
 - When info icon next to Participant Growth is clicked, displays popover explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once."
 - When info icon next to Participation Growth is clicked, displays popover explaining "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
 - Provides geographic area filter dropdown
+- Provides multi-dimensional filter controls:
+  - Activity category filter (multi-select, OR logic within dimension)
+  - Activity type filter (multi-select, OR logic within dimension)
+  - Geographic area filter (multi-select, OR logic within dimension, includes descendants)
+  - Venue filter (multi-select, OR logic within dimension)
+  - Population filter (multi-select, OR logic within dimension)
+  - Applies AND logic across filter dimensions
 - Uses recharts for line charts
 - Synchronizes filter parameters with URL query parameters:
   - Period parameter: `?period=MONTH`
@@ -764,6 +774,7 @@ src/
   - Relative date range: `?relativePeriod=-90d` (compact format: -[amount][unit])
     - Units: d (day), w (week), m (month), y (year)
     - Examples: `-30d`, `-6m`, `-1y`
+  - Filter parameters: activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds (arrays)
   - Grouping parameter: `?groupBy=all` or `?groupBy=type` or `?groupBy=category`
   - Reads URL parameters on component mount to initialize dashboard state
   - Updates URL when user changes filters (using React Router's useSearchParams)
@@ -1120,14 +1131,19 @@ src/
 - `getAddressHistory(participantId)`: Fetches participant's home address history from `/participants/:id/address-history`
 
 **AnalyticsService**
-- `getEngagementMetrics(params)`: Fetches comprehensive engagement data from `/analytics/engagement` with flexible parameters
-  - Parameters: `startDate?`, `endDate?`, `geographicAreaId?`, `activityCategoryId?`, `activityTypeId?`, `venueId?`, `populationIds?`, `groupBy?` (array of dimensions)
+- `getEngagementMetrics(params)`: Fetches comprehensive engagement data from `/analytics/engagement` with flexible multi-dimensional filtering
+  - Parameters: `startDate?`, `endDate?`, `activityCategoryIds?` (array), `activityTypeIds?` (array), `geographicAreaIds?` (array), `venueIds?` (array), `populationIds?` (array), `groupBy?` (array of dimensions)
+  - Supports OR logic within each filter dimension (e.g., `activityCategoryIds=[A, B]` means category IN (A, B))
+  - Applies AND logic across filter dimensions (e.g., categories AND venues AND populations)
   - Returns temporal analysis: activities/participants/participation at start/end, activities started/completed/cancelled
   - Returns aggregate counts and breakdowns by activity category and activity type for activities, participants, and participation
   - Returns hierarchically grouped results when multiple dimensions specified
   - Returns role distribution within filtered results
   - When populationIds provided: includes only participants in specified populations and activities with at least one participant in specified populations
-- `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?, populationIds?, groupBy?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR; groupBy: 'type' | 'category' for optional grouping; populationIds for population filtering)
+- `getGrowthMetrics(params)`: Fetches growth data from `/analytics/growth` with flexible multi-dimensional filtering
+  - Parameters: `startDate?`, `endDate?`, `period` (DAY, WEEK, MONTH, YEAR), `activityCategoryIds?` (array), `activityTypeIds?` (array), `geographicAreaIds?` (array), `venueIds?` (array), `populationIds?` (array), `groupBy?` ('type' | 'category')
+  - Supports OR logic within each filter dimension (e.g., `venueIds=[A, B]` means venue IN (A, B))
+  - Applies AND logic across filter dimensions (e.g., categories AND venues AND populations)
   - Returns time-series data with unique participant counts, unique activity counts, and total participation counts per period
 - `getGeographicAnalytics(parentGeographicAreaId?, startDate?, endDate?, activityCategoryIds?, activityTypeIds?, venueIds?, populationIds?)`: Fetches geographic breakdown from `/analytics/geographic`
   - When parentGeographicAreaId provided: returns metrics for immediate children of that area

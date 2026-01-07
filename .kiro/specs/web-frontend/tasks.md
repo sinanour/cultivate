@@ -795,12 +795,14 @@ This implementation plan covers the React-based web application built with TypeS
       - Activity type grouping
       - Venue grouping
       - Geographic area grouping
-    - Provide flexible filter controls:
-      - Activity category filter (dropdown)
-      - Activity type filter (dropdown)
-      - Venue filter (dropdown)
-      - Geographic area filter (dropdown, includes descendants)
+    - Provide multi-dimensional filter controls with OR logic within dimensions and AND logic across dimensions:
+      - Activity category filter (multi-select, OR logic: category IN (A, B))
+      - Activity type filter (multi-select, OR logic: type IN (A, B))
+      - Venue filter (multi-select, OR logic: venue IN (A, B))
+      - Geographic area filter (multi-select, OR logic: area IN (A, B), includes descendants)
+      - Population filter (multi-select, OR logic: participant in at least one population)
       - Date range filter using CloudScape DateRangePicker
+      - Multiple dimensions combined with AND logic (e.g., categories AND venues AND populations)
     - Render "Engagement Summary" table using CloudScape Table:
       - Always display table regardless of whether grouping dimensions are selected
       - Add info icon next to "Engagement Summary" table header
@@ -841,7 +843,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.19a, 7.19b, 7.19c, 7.20, 7.21, 7.21a, 7.21b, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.38a, 7.38b, 7.38c, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.49, 7.49a, 7.49b, 7.49c, 7.49d, 7.49e, 7.49f_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.30a, 7.30b, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121_
 
   - [x] 14.1a Enhance Activities chart with segmented control toggle
     - Rename chart title from "Activities by Type" to "Activities"
@@ -874,7 +876,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Add aria-label="Activities chart view mode" to segmented control
       - Add aria-live="polite" region to announce view mode changes
       - Ensure screen readers announce "Activity Type view selected" or "Activity Category view selected"
-    - _Requirements: 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65_
+    - _Requirements: 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121_
 
   - [ ]* 14.1b Write property tests for Activities chart enhancement
     - **Property 31f: Activities Chart Title Display**
@@ -886,7 +888,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31l: Activities Chart State Persistence**
     - **Property 31m: Activities Chart Keyboard Navigation**
     - **Property 31n: Activities Chart Screen Reader Support**
-    - **Validates: Requirements 7.47, 7.48, 7.49, 7.51, 7.52, 7.53, 7.54, 7.56, 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65**
+    - **Validates: Requirements 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121**
 
   - [x] 14.1c Add Activity Category Pie Chart to EngagementDashboard
     - Create ActivityCategoryPieChart component or add pie chart directly to EngagementDashboard
@@ -902,7 +904,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Ensure at least one segment remains visible when toggling
     - Apply all current filters (PropertyFilter tokens, date range, geographic area) to pie chart data
     - Update pie chart when filters change
-    - _Requirements: 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h_
+    - _Requirements: 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48_
 
   - [ ]* 14.1d Write property tests for Activity Category Pie Chart
     - **Property 31_pie: Activity Category Pie Chart Display**
@@ -913,7 +915,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31_pie_e: Pie Chart Hover Information**
     - **Property 31_pie_f: Pie Chart Interactive Legend**
     - **Property 31_pie_g: Pie Chart Minimum Visibility**
-    - **Validates: Requirements 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h**
+    - **Validates: Requirements 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48**
 
   - [ ]* 14.2 Write property tests for engagement metrics
     - **Property 23: Temporal Activity Metrics Display**
@@ -945,9 +947,8 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31a: Analytics URL Parameter Synchronization**
     - **Property 31b: Analytics URL Parameter Application**
     - **Property 31c: Analytics URL Update on State Change**
-    - **Property 31d: Analytics Browser Navigation Support**
     - **Property 31e: Analytics URL Shareability**
-    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.19a, 7.19b, 7.19c, 7.20, 7.21, 7.21a, 7.21b, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.49, 7.49a, 7.49b, 7.49c, 7.49d, 7.49e, 7.49f**
+    - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.30a, 7.30b, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121**
 
   - [x] 14.2 Create GrowthDashboard component
     - Display three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
@@ -990,8 +991,14 @@ This implementation plan covers the React-based web application built with TypeS
       - Read from localStorage on component mount to restore previous selection
       - Default to "All" if no localStorage value exists
       - Handle localStorage unavailability gracefully
-    - Provide geographic area filter (optional geographicAreaId)
-    - Use /analytics/growth endpoint with optional startDate, endDate, period, geographicAreaId, groupBy parameters
+    - Provide multi-dimensional filter controls with OR logic within dimensions and AND logic across dimensions:
+      - Activity category filter (multi-select, OR logic: category IN (A, B))
+      - Activity type filter (multi-select, OR logic: type IN (A, B))
+      - Geographic area filter (multi-select, OR logic: area IN (A, B), includes descendants)
+      - Venue filter (multi-select, OR logic: venue IN (A, B))
+      - Population filter (multi-select, OR logic: participant in at least one population)
+      - Multiple dimensions combined with AND logic (e.g., categories AND venues AND populations)
+    - Use /analytics/growth endpoint with optional startDate, endDate, period, activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds, groupBy parameters
     - Combine date range and period controls into single unified container with side-by-side layout
     - Use separate LineChart components for each metric:
       - Unique Participants Chart: displays unique participant counts over time
@@ -1004,11 +1011,11 @@ This implementation plan covers the React-based web application built with TypeS
     - Synchronize filter and grouping parameters with URL query parameters:
       - Read URL parameters on component mount to initialize dashboard state
       - Update URL when user changes filters or grouping (using React Router's useSearchParams)
-      - Support parameters: period, startDate, endDate, relativePeriod (compact format: -90d, -6m, -1y), groupBy (all|type|category)
+      - Support parameters: period, startDate, endDate, relativePeriod (compact format: -90d, -6m, -1y), activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds, groupBy (all|type|category)
       - Use same compact relative date format as Engagement dashboard for consistency
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use replace: true)
-    - _Requirements: 7.39, 7.40, 7.41, 7.41a, 7.41b, 7.41c, 7.41d, 7.41e, 7.42, 7.43, 7.44, 7.45, 7.46, 7.46a, 7.46b, 7.46c, 7.46d, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e_
+    - _Requirements: 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65, 7.66, 7.67, 7.68, 7.69, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.84, 7.85, 7.86, 7.87, 7.88, 7.89, 7.90, 7.91, 7.92, 7.93, 7.94, 7.95, 7.96, 7.97, 7.98, 7.99, 7.100, 7.101, 7.102_
 
   - [ ]* 14.3 Write property tests for growth metrics
     - **Property 32: Time-Series Unique Count Calculation**
@@ -1026,9 +1033,9 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 33k: Growth Dashboard URL Update on State Change**
     - **Property 33l: Growth Dashboard Browser Navigation Support**
     - **Property 33m: Growth Dashboard URL Shareability**
-    - **Validates: Requirements 7.40, 7.41, 7.41a, 7.43, 7.44, 7.45, 7.46, 7.46a, 7.46b, 7.46c, 7.46d, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 57a, 57b, 57c, 57d, 57e**
+    - **Validates: Requirements 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65, 7.66, 7.67, 7.68, 7.69, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.84, 7.85, 7.86, 7.87, 7.88, 7.89, 7.90, 7.91, 7.92, 7.93, 7.94, 7.95, 7.96, 7.97, 7.98, 7.99, 7.100, 7.101, 7.102**
 
-  - [x] 14.3 Create GeographicAnalyticsDashboard component
+  - [x] 14.4 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint
     - Pass parentGeographicAreaId from global filter context (or null for top-level areas)
     - Show metrics by geographic area (geographicAreaId, geographicAreaName, areaType, activityCount, participantCount, participationCount)
@@ -1036,8 +1043,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Implement click handler on chart bars/areas to set clicked area as new global filter
     - Provide optional date range filter (startDate, endDate)
     - Support additional filters (activityCategoryIds, activityTypeIds, venueIds, populationIds)
-    - _Requirements: 7.49, 7.49g, 7.49h, 7.49i, 7.49j, 7.49k, 7.50, 7.51_
-    - _Requirements: 7.38, 7.39_
+    - _Requirements: 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83_
 
   - [x] 14.4 Create ActivityLifecycleChart component
     - Create new component file with props interface (startDate?, endDate?, geographicAreaIds, activityTypeIds, venueIds)

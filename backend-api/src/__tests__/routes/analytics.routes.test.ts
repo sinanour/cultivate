@@ -146,7 +146,12 @@ describe('AnalyticsRoutes', () => {
             expect(response.body.data).toEqual(mockBreakdown);
             expect(mockService.getGeographicBreakdown).toHaveBeenCalledWith(
                 parentId,
-                expect.objectContaining({}),
+                expect.objectContaining({
+                    activityCategoryIds: undefined,
+                    activityTypeIds: undefined,
+                    venueIds: undefined,
+                    populationIds: undefined,
+                }),
                 expect.any(Array),
                 expect.any(Boolean),
                 expect.any(String) // userId

@@ -193,7 +193,7 @@ Services implement business logic and coordinate operations:
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
-- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data
+- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering with OR logic within dimensions and AND logic across dimensions (array filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data, supports growth metrics with multi-dimensional filtering (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) where multiple values within a dimension use OR logic and multiple dimensions use AND logic
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload
 - **GeographicAuthorizationService**: Manages user geographic authorization rules (CRUD operations), evaluates user access to geographic areas (deny-first logic), calculates effective authorized areas (including descendants and ancestors), validates geographic restrictions for create operations, provides authorization filtering for all data access, enforces authorization on individual resource access (GET by ID, PUT, DELETE), validates authorization for nested resource endpoints, provides authorization bypass for administrators, logs all authorization denials
@@ -355,7 +355,34 @@ ActivityLifecycleQuerySchema = {
   groupBy: enum (required, 'category' | 'type'),
   geographicAreaIds: string[] (optional, array of valid UUIDs),
   activityTypeIds: string[] (optional, array of valid UUIDs),
-  venueIds: string[] (optional, array of valid UUIDs)
+  venueIds: string[] (optional, array of valid UUIDs),
+  populationIds: string[] (optional, array of valid UUIDs)
+}
+
+// Engagement Query Schema
+EngagementQuerySchema = {
+  startDate: string (optional, ISO 8601 datetime format),
+  endDate: string (optional, ISO 8601 datetime format),
+  groupBy: string[] (optional, array of grouping dimensions: 'category', 'type', 'venue', 'geographicArea', 'population', 'date'),
+  dateGranularity: enum (optional, 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR', required when 'date' in groupBy),
+  activityCategoryIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  activityTypeIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  geographicAreaIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  venueIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  populationIds: string[] (optional, array of valid UUIDs, OR logic within dimension)
+}
+
+// Growth Query Schema
+GrowthQuerySchema = {
+  period: enum (required, 'DAY' | 'WEEK' | 'MONTH' | 'YEAR'),
+  startDate: string (optional, ISO 8601 datetime format),
+  endDate: string (optional, ISO 8601 datetime format),
+  groupBy: enum (optional, 'type' | 'category'),
+  activityCategoryIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  activityTypeIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  geographicAreaIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  venueIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  populationIds: string[] (optional, array of valid UUIDs, OR logic within dimension)
 }
 ```
 
@@ -1154,58 +1181,82 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Validates: Requirements 6.19e**
 
 **Property 30H: Population filter partial activity participant counting**
-*For any* activity with multiple participants where only some belong to the specified population, engagement metrics with a population filter should count only the participants who belong to the specified population (e.g., 3 out of 5 participants results in a count of 3, not 5).
-**Validates: Requirements 6.19f**
+*For any* activity with multiple participants where only some belong to at least one of the specified populations, engagement metrics with a populationIds filter should count only the participants who belong to at least one of the specified populations (e.g., 3 out of 5 participants results in a count of 3, not 5).
+**Validates: Requirements 6.29**
 
 **Property 31: Multi-dimensional grouping support**
 *For any* engagement metrics request with multiple grouping dimensions, the response should organize metrics hierarchically by the specified dimensions in order.
-**Validates: Requirements 6.15, 6.21**
+**Validates: Requirements 6.15, 6.33**
 
-**Property 31A: Activity category point filter**
-*For any* engagement metrics request with an activity category filter, only activities of the specified category should be included.
-**Validates: Requirements 6.16**
+**Property 31A: Engagement metrics activity category filter**
+*For any* engagement metrics request with an activityCategoryIds filter, only activities belonging to at least one of the specified activity categories should be included (OR logic within dimension).
+**Validates: Requirements 6.16, 6.17**
 
-**Property 32: Activity type point filter**
-*For any* engagement metrics request with an activity type filter, only activities of the specified type should be included.
-**Validates: Requirements 6.17**
+**Property 31B: Engagement metrics activity type filter**
+*For any* engagement metrics request with an activityTypeIds filter, only activities of at least one of the specified activity types should be included (OR logic within dimension).
+**Validates: Requirements 6.18, 6.19**
 
-**Property 33: Venue point filter**
-*For any* engagement metrics request with a venue filter, only activities associated with the specified venue should be included.
-**Validates: Requirements 6.18**
+**Property 31C: Engagement metrics geographic area filter**
+*For any* engagement metrics request with a geographicAreaIds filter, only activities and participants associated with venues in at least one of the specified geographic areas or their descendants should be included (OR logic within dimension).
+**Validates: Requirements 6.20, 6.21**
 
-**Property 34: Geographic area point filter**
-*For any* engagement metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
-**Validates: Requirements 6.19, 6.24**
+**Property 31D: Engagement metrics venue filter**
+*For any* engagement metrics request with a venueIds filter, only activities at at least one of the specified venues should be included (OR logic within dimension).
+**Validates: Requirements 6.22, 6.23**
 
-**Property 35: Date range filter**
+**Property 31E: Engagement metrics population filter participant inclusion**
+*For any* engagement metrics request with a populationIds filter, only participants who belong to at least one of the specified populations should be included (OR logic within dimension).
+**Validates: Requirements 6.24, 6.25**
+
+**Property 31F: Engagement metrics population filter activity inclusion**
+*For any* engagement metrics request with a populationIds filter, only activities that have at least one participant belonging to at least one of the specified populations should be included.
+**Validates: Requirements 6.26**
+
+**Property 31G: Engagement metrics population filter participant count scoping**
+*For any* engagement metrics request with a populationIds filter, participant counts should be calculated based only on participants who belong to at least one of the specified populations.
+**Validates: Requirements 6.27**
+
+**Property 31H: Engagement metrics population filter participation count scoping**
+*For any* engagement metrics request with a populationIds filter, participation counts should be calculated based only on participant-activity associations where the participant belongs to at least one of the specified populations.
+**Validates: Requirements 6.28**
+
+**Property 32: Engagement metrics multi-dimensional filter AND logic**
+*For any* engagement metrics request with multiple filter dimensions (e.g., activityCategoryIds AND venueIds AND populationIds), all filters should be applied using AND logic across dimensions.
+**Validates: Requirements 6.31**
+
+**Property 33: Engagement metrics within-dimension OR logic**
+*For any* engagement metrics request with multiple values within a single filter dimension (e.g., venueIds=[A, B]), the API should apply OR logic within that dimension (venue IN (A, B)).
+**Validates: Requirements 6.32**
+
+**Property 34: Date range filter**
 *For any* engagement metrics request with a date range filter, only activities and participants within the specified date range should be included.
-**Validates: Requirements 6.20**
+**Validates: Requirements 6.30**
 
-**Property 36: Multiple filter AND logic**
-*For any* engagement metrics request with multiple filters, all filters should be applied using AND logic.
-**Validates: Requirements 6.22**
-
-**Property 37: All-time metrics without date range**
+**Property 35: All-time metrics without date range**
 *For any* engagement metrics request without a date range, metrics should be calculated for all time.
-**Validates: Requirements 6.23**
+**Validates: Requirements 6.34**
 
-**Property 38: Role distribution calculation**
+**Property 36: Role distribution calculation**
 *For any* engagement metrics request, the response should include role distribution across all activities within the filtered and grouped results.
-**Validates: Requirements 6.25**
+**Validates: Requirements 6.35**
 
-**Property 39: Date grouping granularity**
+**Property 37: Engagement metrics array parameter normalization**
+*For any* engagement metrics request with array parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds), the API should correctly parse single values, multiple parameters, and comma-separated values into arrays.
+**Validates: Requirements 6.40, 6.41, 6.42, 6.43**
+
+**Property 38: Date grouping granularity**
 *For any* engagement metrics request with date grouping, the system should support weekly, monthly, quarterly, and yearly granularity.
 **Validates: Requirements 6.15**
 
-**Property 40: Time period grouping**
+**Property 39: Time period grouping**
 *For any* time period parameter (DAY, WEEK, MONTH, YEAR), growth metrics should correctly group data into the specified periods.
 **Validates: Requirements 7.2**
 
-**Property 41: Unique participant counting per period**
+**Property 40: Unique participant counting per period**
 *For any* time period, growth metrics should count unique participants who were engaged in activities during that period (snapshot, not cumulative).
 **Validates: Requirements 7.4**
 
-**Property 42: Unique activity counting per period**
+**Property 41: Unique activity counting per period**
 *For any* time period, growth metrics should count unique activities that were active during that period (snapshot, not cumulative).
 **Validates: Requirements 7.5**
 
@@ -1237,17 +1288,53 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 *For any* growth metrics response, each time period should include unique participant counts, unique activity counts, and total participation counts.
 **Validates: Requirements 7.14a**
 
-**Property 47G: Growth metrics population filter participant count scoping**
-*For any* growth metrics request with a population filter, unique participant counts should be calculated based only on participants who belong to at least one of the specified populations.
-**Validates: Requirements 7.9d**
+**Property 47G: Growth metrics activity category filter**
+*For any* growth metrics request with an activityCategoryIds filter, only activities belonging to at least one of the specified activity categories should be included (OR logic within dimension).
+**Validates: Requirements 7.8, 7.9**
 
-**Property 47H: Growth metrics population filter participation count scoping**
-*For any* growth metrics request with a population filter, total participation counts should be calculated based only on participant-activity associations where the participant belongs to at least one of the specified populations.
-**Validates: Requirements 7.9e**
+**Property 47H: Growth metrics activity type filter**
+*For any* growth metrics request with an activityTypeIds filter, only activities of at least one of the specified activity types should be included (OR logic within dimension).
+**Validates: Requirements 7.10, 7.11**
 
-**Property 47I: Growth metrics population filter partial activity participant counting**
-*For any* activity with multiple participants where only some belong to the specified population, growth metrics with a population filter should count only the participants who belong to the specified population in each time period (e.g., 3 out of 5 participants results in a count of 3, not 5).
-**Validates: Requirements 7.9f**
+**Property 47I: Growth metrics geographic area filter**
+*For any* growth metrics request with a geographicAreaIds filter, only activities and participants associated with venues in at least one of the specified geographic areas or their descendants should be included (OR logic within dimension).
+**Validates: Requirements 7.12, 7.13**
+
+**Property 47J: Growth metrics venue filter**
+*For any* growth metrics request with a venueIds filter, only activities at at least one of the specified venues should be included (OR logic within dimension).
+**Validates: Requirements 7.14, 7.15**
+
+**Property 47K: Growth metrics population filter participant inclusion**
+*For any* growth metrics request with a populationIds filter, only participants who belong to at least one of the specified populations should be included (OR logic within dimension).
+**Validates: Requirements 7.16, 7.17**
+
+**Property 47L: Growth metrics population filter activity inclusion**
+*For any* growth metrics request with a populationIds filter, only activities that have at least one participant belonging to at least one of the specified populations should be included.
+**Validates: Requirements 7.18**
+
+**Property 47M: Growth metrics population filter participant count scoping**
+*For any* growth metrics request with a populationIds filter, unique participant counts should be calculated based only on participants who belong to at least one of the specified populations.
+**Validates: Requirements 7.19**
+
+**Property 47N: Growth metrics population filter participation count scoping**
+*For any* growth metrics request with a populationIds filter, total participation counts should be calculated based only on participant-activity associations where the participant belongs to at least one of the specified populations.
+**Validates: Requirements 7.20**
+
+**Property 47O: Growth metrics population filter partial activity participant counting**
+*For any* activity with multiple participants where only some belong to at least one of the specified populations, growth metrics with a populationIds filter should count only the participants who belong to at least one of the specified populations in each time period (e.g., 3 out of 5 participants results in a count of 3, not 5).
+**Validates: Requirements 7.21**
+
+**Property 47P: Growth metrics multi-dimensional filter AND logic**
+*For any* growth metrics request with multiple filter dimensions (e.g., activityCategoryIds AND venueIds AND populationIds), all filters should be applied using AND logic across dimensions.
+**Validates: Requirements 7.22**
+
+**Property 47Q: Growth metrics within-dimension OR logic**
+*For any* growth metrics request with multiple values within a single filter dimension (e.g., venueIds=[A, B]), the API should apply OR logic within that dimension (venue IN (A, B)).
+**Validates: Requirements 7.23**
+
+**Property 47R: Growth metrics array parameter normalization**
+*For any* growth metrics request with array parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds), the API should correctly parse single values, multiple parameters, and comma-separated values into arrays.
+**Validates: Requirements 7.30, 7.31, 7.32, 7.33**
 
 ### Activity Lifecycle Events Properties
 
@@ -1845,9 +1932,9 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 *For any* geographic breakdown request where a user has DENY rules for specific geographic areas, those denied areas and all their descendants should be excluded from the breakdown results, and metrics for parent areas should only aggregate data from authorized descendant areas.
 **Validates: Requirements 6B.15, 6B.16, 6B.17**
 
-**Property 99: Geographic area filtering for growth**
-*For any* growth metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
-**Validates: Requirements 7.9, 7.10**
+**Property 99: Growth metrics multi-dimensional filtering**
+*For any* growth metrics request with multiple filter dimensions (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds), the API should apply OR logic within each dimension and AND logic across dimensions.
+**Validates: Requirements 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.22, 7.23**
 
 **Property 100: Hierarchical statistics aggregation**
 *For any* geographic area, statistics should include data from all descendant geographic areas in the hierarchy.

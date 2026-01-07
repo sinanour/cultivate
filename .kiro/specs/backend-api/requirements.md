@@ -236,26 +236,34 @@ The Backend API package provides the RESTful API service that implements all bus
 14b. THE API SHALL provide participation counts (non-unique) broken down by activity category
 14c. THE API SHALL provide participation counts (non-unique) broken down by activity type
 15. THE API SHALL support grouping engagement metrics by one or more dimensions: activity category, activity type, venue, geographic area, population, and date (with weekly, monthly, quarterly, or yearly granularity)
-16. THE API SHALL support filtering engagement metrics by activity category (point filter)
-17. THE API SHALL support filtering engagement metrics by activity type (point filter)
-18. THE API SHALL support filtering engagement metrics by venue (point filter)
-19. THE API SHALL support filtering engagement metrics by geographic area (point filter, includes descendants)
-19a. THE API SHALL support filtering engagement metrics by population (point filter, includes only participants belonging to specified populations)
-19b. WHEN a population filter is provided, THE API SHALL include only participants who belong to at least one of the specified populations
-19c. WHEN a population filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
-19d. WHEN a population filter is provided, THE API SHALL calculate participant counts based only on participants who belong to at least one of the specified populations
-19e. WHEN a population filter is provided, THE API SHALL calculate participation counts based only on participant-activity associations where the participant belongs to at least one of the specified populations
-19f. WHEN a population filter is provided and an activity has 5 participants with 3 belonging to the specified population, THE API SHALL count 3 participants (not 5) and 3 participation instances (not 5) for that activity
-20. THE API SHALL support filtering engagement metrics by date range (range filter with start and end dates)
-21. WHEN multiple grouping dimensions are specified, THE API SHALL return metrics organized hierarchically by the specified dimensions in order
-22. WHEN multiple filters are specified, THE API SHALL apply all filters using AND logic
-23. WHEN no date range is provided, THE API SHALL calculate metrics for all time
-24. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
-25. THE API SHALL return role distribution across all activities within the filtered and grouped results
-26. WHEN determining current venue for activities with venue history, THE API SHALL treat null effectiveFrom dates as equivalent to the activity start date
-27. WHEN determining current home address for participants with address history, THE API SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
-28. WHEN filtering or aggregating by venue, THE API SHALL correctly identify the current venue for activities considering null effectiveFrom dates
-29. WHEN filtering or aggregating by participant location, THE API SHALL correctly identify the current home venue for participants considering null effectiveFrom dates
+16. WHEN calculating engagement metrics, THE API SHALL accept an optional activityCategoryIds array filter to filter by one or more activity categories
+17. WHEN an activityCategoryIds filter is provided, THE API SHALL include only activities belonging to at least one of the specified activity categories (OR logic within dimension)
+18. WHEN calculating engagement metrics, THE API SHALL accept an optional activityTypeIds array filter to filter by one or more activity types
+19. WHEN an activityTypeIds filter is provided, THE API SHALL include only activities of at least one of the specified activity types (OR logic within dimension)
+20. WHEN calculating engagement metrics, THE API SHALL accept an optional geographicAreaIds array filter to filter by one or more geographic areas
+21. WHEN a geographicAreaIds filter is provided, THE API SHALL include only activities and participants associated with venues in at least one of the specified geographic areas or their descendants (OR logic within dimension)
+22. WHEN calculating engagement metrics, THE API SHALL accept an optional venueIds array filter to filter by one or more venues
+23. WHEN a venueIds filter is provided, THE API SHALL include only activities at at least one of the specified venues (OR logic within dimension)
+24. WHEN calculating engagement metrics, THE API SHALL accept an optional populationIds array filter to filter by one or more populations
+25. WHEN a populationIds filter is provided, THE API SHALL include only participants who belong to at least one of the specified populations (OR logic within dimension)
+26. WHEN a populationIds filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
+27. WHEN a populationIds filter is provided, THE API SHALL calculate participant counts based only on participants who belong to at least one of the specified populations
+28. WHEN a populationIds filter is provided, THE API SHALL calculate participation counts based only on participant-activity associations where the participant belongs to at least one of the specified populations
+29. WHEN a populationIds filter is provided and an activity has 5 participants with 3 belonging to at least one of the specified populations, THE API SHALL count 3 participants (not 5) and 3 participation instances (not 5) for that activity
+30. WHEN calculating engagement metrics, THE API SHALL accept optional start and end date filters (range filter)
+31. WHEN multiple filter dimensions are provided (e.g., activityCategoryIds AND venueIds AND populationIds), THE API SHALL apply all filters using AND logic across dimensions
+32. WHEN multiple values are provided within a single filter dimension (e.g., venueIds=[A, B]), THE API SHALL apply OR logic within that dimension (venue IN (A, B))
+33. WHEN multiple grouping dimensions are specified, THE API SHALL return metrics organized hierarchically by the specified dimensions in order
+34. WHEN no date range is provided, THE API SHALL calculate metrics for all time
+35. THE API SHALL return role distribution across all activities within the filtered and grouped results
+36. WHEN determining current venue for activities with venue history, THE API SHALL treat null effectiveFrom dates as equivalent to the activity start date
+37. WHEN determining current home address for participants with address history, THE API SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
+38. WHEN filtering or aggregating by venue, THE API SHALL correctly identify the current venue for activities considering null effectiveFrom dates
+39. WHEN filtering or aggregating by participant location, THE API SHALL correctly identify the current home venue for participants considering null effectiveFrom dates
+40. THE API SHALL use Zod preprocess to normalize array query parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) before validation
+41. WHEN a single value is provided for an array parameter, THE API SHALL parse it as an array with one element
+42. WHEN multiple values are provided for an array parameter (e.g., ?venueIds=id1&venueIds=id2), THE API SHALL parse them as an array with multiple elements
+43. WHEN comma-separated values are provided for an array parameter (e.g., ?venueIds=id1,id2), THE API SHALL parse them as an array with multiple elements
 
 ### Requirement 6A: Activity Lifecycle Events Analytics
 
@@ -324,7 +332,7 @@ The Backend API package provides the RESTful API service that implements all bus
 
 ### Requirement 7: Track Growth Over Time
 
-**User Story:** As a community organizer, I want to track unique participant counts, unique activity counts, and total participation over time via API with optional grouping by activity type or category, so that I can measure community development and understand engagement patterns at each point in the chronological history.
+**User Story:** As a community organizer, I want to track unique participant counts, unique activity counts, and total participation over time via API with flexible filtering by multiple dimensions and optional grouping by activity type or category, so that I can measure community development and understand engagement patterns at each point in the chronological history across different segments of my community.
 
 #### Acceptance Criteria
 
@@ -336,20 +344,32 @@ The Backend API package provides the RESTful API service that implements all bus
 5a. WHEN calculating growth metrics, THE API SHALL count total participation (non-unique participant-activity associations) during each time period
 6. THE API SHALL return time-series data ordered chronologically where each period represents a snapshot of unique participants, unique activities, and total participation at that point in time
 7. THE API SHALL calculate percentage change between consecutive periods for participants, activities, and participation
-8. WHEN calculating growth metrics, THE API SHALL accept an optional geographic area ID filter
-9. WHEN a geographic area filter is provided, THE API SHALL include only activities and participants associated with venues in that geographic area or its descendants
-9a. WHEN calculating growth metrics, THE API SHALL accept an optional populationIds array filter
-9b. WHEN a population filter is provided, THE API SHALL include only participants who belong to at least one of the specified populations
-9c. WHEN a population filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
-9d. WHEN a population filter is provided, THE API SHALL calculate unique participant counts based only on participants who belong to at least one of the specified populations
-9e. WHEN a population filter is provided, THE API SHALL calculate total participation counts based only on participant-activity associations where the participant belongs to at least one of the specified populations
-9f. WHEN a population filter is provided and an activity has 5 participants with 3 belonging to the specified population, THE API SHALL count 3 unique participants (not 5) and 3 participation instances (not 5) for that activity in the time period
-10. THE API SHALL accept an optional groupBy query parameter with string values 'type' or 'category' (not 'activityType' or 'activityCategory')
-11. WHEN groupBy is 'type', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_TYPE enum and return separate time-series data for each activity type in the groupedTimeSeries field
-12. WHEN groupBy is 'category', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_CATEGORY enum and return separate time-series data for each activity category in the groupedTimeSeries field
-13. WHEN no groupBy parameter is provided, THE API SHALL return aggregate time-series data in the timeSeries field with groupedTimeSeries undefined
-14. WHEN groupBy is specified, THE API SHALL return an empty timeSeries array and populate the groupedTimeSeries object with activity type or category names as keys
-14a. WHEN returning time-series data, THE API SHALL include unique participant counts, unique activity counts, and total participation counts for each time period
+8. WHEN calculating growth metrics, THE API SHALL accept an optional activityCategoryIds array filter to filter by one or more activity categories
+9. WHEN an activityCategoryIds filter is provided, THE API SHALL include only activities belonging to at least one of the specified activity categories (OR logic within dimension)
+10. WHEN calculating growth metrics, THE API SHALL accept an optional activityTypeIds array filter to filter by one or more activity types
+11. WHEN an activityTypeIds filter is provided, THE API SHALL include only activities of at least one of the specified activity types (OR logic within dimension)
+12. WHEN calculating growth metrics, THE API SHALL accept an optional geographicAreaIds array filter to filter by one or more geographic areas
+13. WHEN a geographicAreaIds filter is provided, THE API SHALL include only activities and participants associated with venues in at least one of the specified geographic areas or their descendants (OR logic within dimension)
+14. WHEN calculating growth metrics, THE API SHALL accept an optional venueIds array filter to filter by one or more venues
+15. WHEN a venueIds filter is provided, THE API SHALL include only activities at at least one of the specified venues (OR logic within dimension)
+16. WHEN calculating growth metrics, THE API SHALL accept an optional populationIds array filter to filter by one or more populations
+17. WHEN a populationIds filter is provided, THE API SHALL include only participants who belong to at least one of the specified populations (OR logic within dimension)
+18. WHEN a populationIds filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
+19. WHEN a populationIds filter is provided, THE API SHALL calculate unique participant counts based only on participants who belong to at least one of the specified populations
+20. WHEN a populationIds filter is provided, THE API SHALL calculate total participation counts based only on participant-activity associations where the participant belongs to at least one of the specified populations
+21. WHEN a populationIds filter is provided and an activity has 5 participants with 3 belonging to at least one of the specified populations, THE API SHALL count 3 unique participants (not 5) and 3 participation instances (not 5) for that activity in the time period
+22. WHEN multiple filter dimensions are provided (e.g., activityCategoryIds AND venueIds AND populationIds), THE API SHALL apply all filters using AND logic across dimensions
+23. WHEN multiple values are provided within a single filter dimension (e.g., venueIds=[A, B]), THE API SHALL apply OR logic within that dimension (venue IN (A, B))
+24. THE API SHALL accept an optional groupBy query parameter with string values 'type' or 'category' (not 'activityType' or 'activityCategory')
+25. WHEN groupBy is 'type', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_TYPE enum and return separate time-series data for each activity type in the groupedTimeSeries field
+26. WHEN groupBy is 'category', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_CATEGORY enum and return separate time-series data for each activity category in the groupedTimeSeries field
+27. WHEN no groupBy parameter is provided, THE API SHALL return aggregate time-series data in the timeSeries field with groupedTimeSeries undefined
+28. WHEN groupBy is specified, THE API SHALL return an empty timeSeries array and populate the groupedTimeSeries object with activity type or category names as keys
+29. WHEN returning time-series data, THE API SHALL include unique participant counts, unique activity counts, and total participation counts for each time period
+30. THE API SHALL use Zod preprocess to normalize array query parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) before validation
+31. WHEN a single value is provided for an array parameter, THE API SHALL parse it as an array with one element
+32. WHEN multiple values are provided for an array parameter (e.g., ?venueIds=id1&venueIds=id2), THE API SHALL parse them as an array with multiple elements
+33. WHEN comma-separated values are provided for an array parameter (e.g., ?venueIds=id1,id2), THE API SHALL parse them as an array with multiple elements
 
 ### Requirement 8: Persist Data
 

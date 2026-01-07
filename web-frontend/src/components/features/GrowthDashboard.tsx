@@ -6,9 +6,8 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
-import Select from '@cloudscape-design/components/select';
-import Multiselect from '@cloudscape-design/components/multiselect';
-import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
+import PropertyFilter from '@cloudscape-design/components/property-filter';
+import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
@@ -17,10 +16,14 @@ import Icon from '@cloudscape-design/components/icon';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
 import { PopulationService } from '../../services/api/population.service';
+import { activityCategoryService } from '../../services/api/activity-category.service';
+import { ActivityTypeService } from '../../services/api/activity-type.service';
+import { VenueService } from '../../services/api/venue.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import type { TimePeriod } from '../../utils/constants';
+import { isValidUUID, setMultiValueParam, getValidatedUUIDs } from '../../utils/url-params.utils';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -59,12 +62,6 @@ export function GrowthDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
-  // Fetch all populations for filter
-  const { data: allPopulations = [] } = useQuery({
-    queryKey: ['populations'],
-    queryFn: PopulationService.getPopulations,
-  });
-
   // Initialize state from URL parameters
   const [period, setPeriod] = useState<TimePeriod>(() => {
     const urlPeriod = searchParams.get('period');
@@ -72,10 +69,16 @@ export function GrowthDashboard() {
   });
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    // First check URL parameter
-    const urlGroupBy = searchParams.get('groupBy');
+    // First check URL parameter (new name)
+    const urlGroupBy = searchParams.get('growthGroupBy');
     if (urlGroupBy === 'all' || urlGroupBy === 'type' || urlGroupBy === 'category') {
       return urlGroupBy;
+    }
+    
+    // Backward compatibility: check old param name
+    const oldGroupBy = searchParams.get('groupBy');
+    if (oldGroupBy === 'all' || oldGroupBy === 'type' || oldGroupBy === 'category') {
+      return oldGroupBy;
     }
     
     // Then check localStorage
@@ -138,69 +141,308 @@ export function GrowthDashboard() {
     return null;
   });
 
-  // Population filter state
-  const [selectedPopulations, setSelectedPopulations] = useState<MultiselectProps.Options>(() => {
-    const urlPopIds = searchParams.getAll('populationIds');
-    if (urlPopIds.length > 0) {
-      // Will be populated with labels once populations are loaded
-      return urlPopIds.map(id => ({ label: '', value: id }));
-    }
-    return [];
+  // PropertyFilter configuration with bidirectional label-UUID cache
+  const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
+    tokens: [],
+    operation: 'and',
   });
+  const [propertyFilterOptions, setPropertyFilterOptions] = useState<PropertyFilterProps.FilteringOption[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  
+  // Bidirectional cache: label ↔ UUID
+  const [labelToUuidCache, setLabelToUuidCache] = useState<Map<string, string>>(new Map());
+  const [uuidToLabelCache, setUuidToLabelCache] = useState<Map<string, string>>(new Map());
 
-  // Update population labels when populations are loaded
-  useEffect(() => {
-    if (allPopulations.length > 0 && selectedPopulations.some(opt => !opt.label)) {
-      const updated = selectedPopulations.map(opt => {
-        const pop = allPopulations.find(p => p.id === opt.value);
-        return pop ? { label: pop.name, value: pop.id } : opt;
-      }).filter(opt => opt.label); // Remove any that couldn't be found
-      
-      if (JSON.stringify(updated) !== JSON.stringify(selectedPopulations)) {
-        setSelectedPopulations(updated);
+  // Helper to add to cache
+  const addToCache = (uuid: string, label: string) => {
+    setLabelToUuidCache(prev => new Map(prev).set(label, uuid));
+    setUuidToLabelCache(prev => new Map(prev).set(uuid, label));
+  };
+
+  // Helper to get UUID from label
+  const getUuidFromLabel = (label: string): string | undefined => {
+    return labelToUuidCache.get(label);
+  };
+
+  // Helper to get label from UUID
+  const getLabelFromUuid = (uuid: string): string | undefined => {
+    return uuidToLabelCache.get(uuid);
+  };
+
+  const filteringProperties: PropertyFilterProps.FilteringProperty[] = [
+    {
+      key: 'activityCategory',
+      propertyLabel: 'Activity Category',
+      groupValuesLabel: 'Activity Category values',
+      operators: ['=', '!='],
+    },
+    {
+      key: 'activityType',
+      propertyLabel: 'Activity Type',
+      groupValuesLabel: 'Activity Type values',
+      operators: ['=', '!='],
+    },
+    {
+      key: 'venue',
+      propertyLabel: 'Venue',
+      groupValuesLabel: 'Venue values',
+      operators: ['=', '!='],
+    },
+    {
+      key: 'population',
+      propertyLabel: 'Population',
+      groupValuesLabel: 'Population values',
+      operators: ['=', '!='],
+    },
+  ];
+
+  // Async loading of property values with cache population
+  const handleLoadItems = async ({ detail }: { detail: PropertyFilterProps.LoadItemsDetail }) => {
+    const { filteringProperty, filteringText } = detail;
+    
+    if (!filteringProperty) return;
+
+    setIsLoadingOptions(true);
+
+    try {
+      let options: PropertyFilterProps.FilteringOption[] = [];
+
+      if (filteringProperty.key === 'activityCategory') {
+        const categories = await activityCategoryService.getActivityCategories();
+        const filtered = categories.filter(cat => 
+          !filteringText || cat.name.toLowerCase().includes(filteringText.toLowerCase())
+        );
+        
+        // Add to cache and create options with labels as values
+        filtered.forEach(cat => addToCache(cat.id, cat.name));
+        options = filtered.map(cat => ({
+          propertyKey: 'activityCategory',
+          value: cat.name, // Use label as value for display
+          label: cat.name,
+        }));
+      } else if (filteringProperty.key === 'activityType') {
+        const types = await ActivityTypeService.getActivityTypes();
+        const filtered = types.filter(type => 
+          !filteringText || type.name.toLowerCase().includes(filteringText.toLowerCase())
+        );
+        
+        // Add to cache and create options with labels as values
+        filtered.forEach(type => addToCache(type.id, type.name));
+        options = filtered.map(type => ({
+          propertyKey: 'activityType',
+          value: type.name, // Use label as value for display
+          label: type.name,
+        }));
+      } else if (filteringProperty.key === 'venue') {
+        const venues = await VenueService.getVenues(undefined, undefined, selectedGeographicAreaId, filteringText || undefined);
+        
+        // Add to cache and create options with labels as values
+        venues.forEach(venue => addToCache(venue.id, venue.name));
+        options = venues.map(venue => ({
+          propertyKey: 'venue',
+          value: venue.name, // Use label as value for display
+          label: venue.name,
+        }));
+      } else if (filteringProperty.key === 'population') {
+        const populations = await PopulationService.getPopulations();
+        const filtered = populations.filter(pop => 
+          !filteringText || pop.name.toLowerCase().includes(filteringText.toLowerCase())
+        );
+        
+        // Add to cache and create options with labels as values
+        filtered.forEach(pop => addToCache(pop.id, pop.name));
+        options = filtered.map(pop => ({
+          propertyKey: 'population',
+          value: pop.name, // Use label as value for display
+          label: pop.name,
+        }));
       }
+
+      setPropertyFilterOptions(options);
+    } catch (error) {
+      console.error('Error loading property filter options:', error);
+      setPropertyFilterOptions([]);
+    } finally {
+      setIsLoadingOptions(false);
     }
-  }, [allPopulations, selectedPopulations]);
+  };
 
-  // Update URL when filters change
+  // Initialize PropertyFilter from URL parameters (convert UUIDs to labels)
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
+    const initializeFiltersFromUrl = async () => {
+      const tokens: PropertyFilterProps.Token[] = [];
+      
+      // Activity Categories - use correct param name with validation
+      const catIds = getValidatedUUIDs(searchParams, 'activityCategoryIds');
+      for (const id of catIds) {
+        let label = getLabelFromUuid(id);
+        if (!label) {
+          // Cache miss - fetch the category to get its label
+          try {
+            const categories = await activityCategoryService.getActivityCategories();
+            const category = categories.find(c => c.id === id);
+            if (category) {
+              label = category.name;
+              addToCache(category.id, category.name);
+            } else {
+              console.warn(`Invalid activity category ID in URL: ${id}`);
+              continue;
+            }
+          } catch (error) {
+            console.error('Error fetching activity category:', error);
+            continue;
+          }
+        }
+        if (label) {
+          tokens.push({ propertyKey: 'activityCategory', operator: '=', value: label });
+        }
+      }
+      
+      // Activity Types - use correct param name with validation
+      const typeIds = getValidatedUUIDs(searchParams, 'activityTypeIds');
+      for (const id of typeIds) {
+        let label = getLabelFromUuid(id);
+        if (!label) {
+          // Cache miss - fetch the type to get its label
+          try {
+            const types = await ActivityTypeService.getActivityTypes();
+            const type = types.find(t => t.id === id);
+            if (type) {
+              label = type.name;
+              addToCache(type.id, type.name);
+            } else {
+              console.warn(`Invalid activity type ID in URL: ${id}`);
+              continue;
+            }
+          } catch (error) {
+            console.error('Error fetching activity type:', error);
+            continue;
+          }
+        }
+        if (label) {
+          tokens.push({ propertyKey: 'activityType', operator: '=', value: label });
+        }
+      }
+      
+      // Venues - use correct param name with validation
+      const venueIds = getValidatedUUIDs(searchParams, 'venueIds');
+      for (const id of venueIds) {
+        let label = getLabelFromUuid(id);
+        if (!label) {
+          // Cache miss - fetch the venue to get its label
+          try {
+            const venues = await VenueService.getVenues();
+            const venue = venues.find(v => v.id === id);
+            if (venue) {
+              label = venue.name;
+              addToCache(venue.id, venue.name);
+            } else {
+              console.warn(`Invalid venue ID in URL: ${id}`);
+              continue;
+            }
+          } catch (error) {
+            console.error('Error fetching venue:', error);
+            continue;
+          }
+        }
+        if (label) {
+          tokens.push({ propertyKey: 'venue', operator: '=', value: label });
+        }
+      }
+      
+      // Populations - use correct param name with validation
+      const popIds = getValidatedUUIDs(searchParams, 'populationIds');
+      for (const id of popIds) {
+        let label = getLabelFromUuid(id);
+        if (!label) {
+          // Cache miss - fetch the population to get its label
+          try {
+            const populations = await PopulationService.getPopulations();
+            const population = populations.find(p => p.id === id);
+            if (population) {
+              label = population.name;
+              addToCache(population.id, population.name);
+            } else {
+              console.warn(`Invalid population ID in URL: ${id}`);
+              continue;
+            }
+          } catch (error) {
+            console.error('Error fetching population:', error);
+            continue;
+          }
+        }
+        if (label) {
+          tokens.push({ propertyKey: 'population', operator: '=', value: label });
+        }
+      }
 
-    // Update period
+      if (tokens.length > 0) {
+        setPropertyFilterQuery({ tokens, operation: 'and' });
+      }
+    };
+    
+    // Only initialize once on mount
+    if (propertyFilterQuery.tokens.length === 0) {
+      initializeFiltersFromUrl();
+    }
+  }, []); // Empty dependency array - run once on mount
+
+  // Sync state to URL whenever filters change
+  useEffect(() => {
+    // Start with empty params - write only what this dashboard owns
+    const params = new URLSearchParams();
+
+    // CRITICAL: Add global geographic area filter if active
+    // Read from context (not URL) to ensure it's always included
+    if (selectedGeographicAreaId) {
+      params.set('geographicArea', selectedGeographicAreaId);
+    }
+
+    // Dashboard-specific params
     params.set('period', period);
+    params.set('growthGroupBy', viewMode);
 
-    // Update groupBy
-    params.set('groupBy', viewMode);
-
-    // Update date range
+    // Shared date range
     if (dateRange) {
       if (dateRange.type === 'absolute') {
         params.set('startDate', dateRange.startDate);
         params.set('endDate', dateRange.endDate);
-        params.delete('relativePeriod');
       } else if (dateRange.type === 'relative') {
         // Convert relative date range to compact format (e.g., "-90d", "-6m")
         const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
         params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
-        params.delete('startDate');
-        params.delete('endDate');
       }
-    } else {
-      params.delete('startDate');
-      params.delete('endDate');
-      params.delete('relativePeriod');
     }
 
-    // Update population filters
-    params.delete('populationIds'); // Clear existing
-    if (selectedPopulations.length > 0) {
-      selectedPopulations.forEach(pop => {
-        params.append('populationIds', pop.value!);
-      });
-    }
+    // Shared PropertyFilter tokens (extract UUIDs inline to avoid stale closures)
+    const activityCategoryIds = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+      .map(t => getUuidFromLabel(t.value))
+      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
+    setMultiValueParam(params, 'activityCategoryIds', activityCategoryIds);
+
+    const activityTypeIds = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+      .map(t => getUuidFromLabel(t.value))
+      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
+    setMultiValueParam(params, 'activityTypeIds', activityTypeIds);
+
+    const venueIds = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'venue' && t.operator === '=')
+      .map(t => getUuidFromLabel(t.value))
+      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
+    setMultiValueParam(params, 'venueIds', venueIds);
+
+    const populationIds = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'population' && t.operator === '=')
+      .map(t => getUuidFromLabel(t.value))
+      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
+    setMultiValueParam(params, 'populationIds', populationIds);
 
     setSearchParams(params, { replace: true });
-  }, [period, viewMode, dateRange, selectedPopulations, searchParams, setSearchParams]);
+  }, [period, viewMode, dateRange, propertyFilterQuery, selectedGeographicAreaId]);
+  // Note: selectedGeographicAreaId IS in dependencies - we want to update URL when it changes
+  // This is safe because we're reading from context, not from URL (no circular dependency)
 
   // Store view mode in localStorage
   useEffect(() => {
@@ -212,7 +454,7 @@ export function GrowthDashboard() {
   }, [viewMode]);
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['growthMetrics', dateRange, period, selectedGeographicAreaId, selectedPopulations, viewMode],
+    queryKey: ['growthMetrics', dateRange, period, selectedGeographicAreaId, propertyFilterQuery, viewMode],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
@@ -248,13 +490,27 @@ export function GrowthDashboard() {
         }
       }
       
-      const populationIds = selectedPopulations.map(opt => opt.value!);
+      // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
+      const activityCategoryLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityCategory' && t.operator === '=').map(t => t.value);
+      const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+      
+      const activityTypeLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityType' && t.operator === '=').map(t => t.value);
+      const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+      
+      const venueLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'venue' && t.operator === '=').map(t => t.value);
+      const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+      
+      const populationLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
+      const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
       const params: GrowthMetricsParams = {
         startDate,
         endDate,
         period,
-        geographicAreaId: selectedGeographicAreaId || undefined,
+        activityCategoryIds: activityCategoryIds.length > 0 ? activityCategoryIds : undefined,
+        activityTypeIds: activityTypeIds.length > 0 ? activityTypeIds : undefined,
+        geographicAreaIds: selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined,
+        venueIds: venueIds.length > 0 ? venueIds : undefined,
         populationIds: populationIds.length > 0 ? populationIds : undefined,
         groupBy: viewMode === 'all' ? undefined : viewMode,
       };
@@ -299,13 +555,6 @@ export function GrowthDashboard() {
   const participantLegend = useInteractiveLegend('growth-participants', participantLegendItems);
   const activityLegend = useInteractiveLegend('growth-activities', activityLegendItems);
   const participationLegend = useInteractiveLegend('growth-participation', participationLegendItems);
-
-  const periodOptions = [
-    { label: 'Daily', value: 'DAY' as TimePeriod },
-    { label: 'Weekly', value: 'WEEK' as TimePeriod },
-    { label: 'Monthly', value: 'MONTH' as TimePeriod },
-    { label: 'Yearly', value: 'YEAR' as TimePeriod },
-  ];
 
   if (isLoading) {
     return <LoadingSpinner text="Loading growth metrics..." />;
@@ -374,22 +623,19 @@ export function GrowthDashboard() {
     <SpaceBetween size="l">
       <Container
         header={
-          <Header variant="h3">Filters</Header>
+          <Header variant="h3">Filters and Grouping</Header>
         }
       >
         <SpaceBetween size="m">
-          <ColumnLayout columns={2}>
-            <div>
-              <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Date Range</Box>
-              <DateRangePicker
-                value={dateRange}
-                onChange={({ detail }) => {
-                  setDateRange(detail.value || null);
-                }}
-                placeholder="All history"
-                dateOnly={true}
-                relativeOptions={[
-                  { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
+          <DateRangePicker
+            value={dateRange}
+            onChange={({ detail }) => {
+              setDateRange(detail.value || null);
+            }}
+            placeholder="All history"
+            dateOnly={true}
+            relativeOptions={[
+              { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
                   { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
                   { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
                   { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
@@ -425,41 +671,76 @@ export function GrowthDashboard() {
                   applyButtonLabel: 'Apply',
                 }}
               />
-            </div>
-            <div>
-              <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Time Period Grouping</Box>
-              <Select
-                selectedOption={periodOptions.find((o) => o.value === period) || periodOptions[2]}
-                onChange={({ detail }) => setPeriod(detail.selectedOption.value as TimePeriod)}
-                options={periodOptions}
-              />
-            </div>
-          </ColumnLayout>
+
+          {/* PropertyFilter for Activity Category, Activity Type, Venue, and Population */}
+          <PropertyFilter
+            query={propertyFilterQuery}
+            onChange={({ detail }) => setPropertyFilterQuery(detail)}
+            filteringProperties={filteringProperties}
+            filteringOptions={propertyFilterOptions}
+            filteringLoadingText="Loading options..."
+            filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
+            onLoadItems={handleLoadItems}
+            hideOperations={true}
+            i18nStrings={{
+              filteringAriaLabel: 'Filter growth data',
+              dismissAriaLabel: 'Dismiss',
+              filteringPlaceholder: 'Filter by activity category, type, venue, or population',
+              groupValuesText: 'Values',
+              groupPropertiesText: 'Properties',
+              operatorsText: 'Operators',
+              operationAndText: 'and',
+              operationOrText: 'or',
+              operatorLessText: 'Less than',
+              operatorLessOrEqualText: 'Less than or equal',
+              operatorGreaterText: 'Greater than',
+              operatorGreaterOrEqualText: 'Greater than or equal',
+              operatorContainsText: 'Contains',
+              operatorDoesNotContainText: 'Does not contain',
+              operatorEqualsText: 'Equals',
+              operatorDoesNotEqualText: 'Does not equal',
+              editTokenHeader: 'Edit filter',
+              propertyText: 'Property',
+              operatorText: 'Operator',
+              valueText: 'Value',
+              cancelActionText: 'Cancel',
+              applyActionText: 'Apply',
+              allPropertiesLabel: 'All properties',
+              tokenLimitShowMore: 'Show more',
+              tokenLimitShowFewer: 'Show fewer',
+              clearFiltersText: 'Clear filters',
+              removeTokenButtonAriaLabel: (token) => `Remove token ${token.propertyKey} ${token.operator} ${token.value}`,
+              enteredTextLabel: (text) => `Use: "${text}"`,
+            }}
+            filteringEmpty="No matching options"
+            filteringFinishedText="End of results"
+          />
 
           <div>
             <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Group By</Box>
-            <SegmentedControl
-              selectedId={viewMode}
-              onChange={({ detail }) => setViewMode(detail.selectedId as ViewMode)}
-              label="Growth chart view mode"
-              options={[
-                { id: 'all', text: 'All' },
-                { id: 'type', text: 'Activity Type' },
-                { id: 'category', text: 'Activity Category' },
-              ]}
-            />
-          </div>
-
-          <div>
-            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Populations</Box>
-            <Multiselect
-              selectedOptions={selectedPopulations}
-              onChange={({ detail }) => setSelectedPopulations(detail.selectedOptions)}
-              options={allPopulations.map(pop => ({ label: pop.name, value: pop.id }))}
-              placeholder="Filter by populations"
-              filteringType="auto"
-              tokenLimit={3}
-            />
+            <SpaceBetween size="s" direction="horizontal">
+              <SegmentedControl
+                selectedId={viewMode}
+                onChange={({ detail }) => setViewMode(detail.selectedId as ViewMode)}
+                label="Activity grouping mode"
+                options={[
+                  { id: 'all', text: 'All' },
+                  { id: 'category', text: 'Activity Category' },
+                  { id: 'type', text: 'Activity Type' },
+                ]}
+              />
+              <SegmentedControl
+                selectedId={period}
+                onChange={({ detail }) => setPeriod(detail.selectedId as TimePeriod)}
+                label="Time period aggregation"
+                options={[
+                  { id: 'DAY', text: 'Daily' },
+                  { id: 'WEEK', text: 'Weekly' },
+                  { id: 'MONTH', text: 'Monthly' },
+                  { id: 'YEAR', text: 'Yearly' },
+                ]}
+              />
+            </SpaceBetween>
           </div>
         </SpaceBetween>
       </Container>

@@ -387,111 +387,114 @@ The Web Frontend package provides a responsive React-based web application that 
 14b. THE Web_App SHALL display all participation counts (non-unique) broken down by activity category
 14c. THE Web_App SHALL display all participation counts (non-unique) broken down by activity type
 15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity category, activity type, venue, geographic area, and population
-16. THE Web_App SHALL provide filter controls for activity category (point filter)
-17. THE Web_App SHALL provide filter controls for activity type (point filter)
-18. THE Web_App SHALL provide filter controls for venue (point filter)
-19. THE Web_App SHALL provide filter controls for geographic area (point filter, includes descendants)
-19a. THE Web_App SHALL provide filter controls for population (point filter, includes only participants belonging to specified populations)
-19b. WHEN a population filter is applied, THE Web_App SHALL include only participants who belong to at least one of the specified populations
-19c. WHEN a population filter is applied, THE Web_App SHALL include only activities that have at least one participant belonging to at least one of the specified populations
-20. THE Web_App SHALL provide filter controls for date range (range filter with start and end dates)
-21. THE Web_App SHALL render an "Engagement Summary" table that displays aggregate metrics and dimensional breakdowns
-21a. THE Web_App SHALL provide an info icon next to the "Engagement Summary" table header
-21b. WHEN the info icon next to the Engagement Summary header is clicked, THE Web_App SHALL display a popover explaining both metrics: "Participant Count: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once. Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
-22. THE Web_App SHALL render the first row of the Engagement Summary table with the label "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end) in subsequent columns
-23. WHEN multiple grouping dimensions are selected, THE Web_App SHALL leave subsequent dimension cells blank in the first row (Total row)
-24. WHEN grouping dimensions are selected, THE Web_App SHALL render additional rows below the Total row showing dimensional breakdowns where breakdown dimension columns appear first followed by metric aggregation columns
-25. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity category names as hyperlinks to the Activity Configuration page at /configuration
-26. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity type names as hyperlinks to the Activity Configuration page at /configuration
-27. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render venue names as hyperlinks to their respective detail views at /venues/:id
-28. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render geographic area names as hyperlinks to their respective detail views at /geographic-areas/:id
-29. THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end, participation at start, participation at end) in its own column in the Engagement Summary table
-30. WHEN multiple filters are applied, THE Web_App SHALL apply all filters using AND logic
-31. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
-32. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
-32a. THE Web_App SHALL display a pie chart showing the breakdown of unique activities by activity category
-32b. THE pie chart SHALL appear in line width (full width of its container) and positioned to the left of the role distribution chart
-32c. THE pie chart SHALL use the same filtered data as other dashboard components
-32d. THE pie chart SHALL display activity category names in the legend
-32e. THE pie chart SHALL use a consistent color scheme with other dashboard charts
-32f. WHEN a user hovers over a pie chart segment, THE Web_App SHALL display the activity category name and count
-32g. THE pie chart SHALL include an interactive legend allowing users to toggle individual category segments on and off
-32h. WHEN all pie chart segments are hidden, THE Web_App SHALL display an appropriate message or allow at least one segment to remain visible
-33. THE Web_App SHALL synchronize all filter parameters (activity category, activity type, venue, geographic area, start date, end date) with URL query parameters
-34. THE Web_App SHALL synchronize all grouping parameters (group by dimensions) with URL query parameters
-35. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
-36. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
-37. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
-38. THE Web_App SHALL allow users to share the current analytics view URL with other users to display the same filtered and grouped results
-38a. WHEN calculating engagement metrics for activities, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates (treating null as activity start date)
-38b. WHEN calculating engagement metrics for participants, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates (treating null as oldest address)
-38c. WHEN filtering analytics by geographic area, THE Web_App SHALL correctly determine which activities and participants are in the filtered area considering null effectiveFrom dates
-39. THE Web_App SHALL provide a growth analytics dashboard
-40. THE Web_App SHALL display a separate time-series chart showing unique participant counts for each time period
-41. THE Web_App SHALL display a separate time-series chart showing unique activity counts for each time period
-41a. THE Web_App SHALL display a separate time-series chart showing total participation (non-unique participant-activity associations) for each time period
-41b. THE Web_App SHALL provide an info icon next to the "Unique Participants Over Time" chart title
-41c. WHEN the info icon next to the Unique Participants chart is clicked, THE Web_App SHALL display a popover explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once."
-41d. THE Web_App SHALL provide an info icon next to the "Total Participation Over Time" chart title
-41e. WHEN the info icon next to the Total Participation chart is clicked, THE Web_App SHALL display a popover explaining "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
-42. THE Web_App SHALL provide time period selection (day, week, month, year)
-43. THE Web_App SHALL display each time period as a snapshot of unique participants, unique activities, and total participation engaged at that point in time (not cumulative counts)
-44. THE Web_App SHALL provide a segmented control to view growth metrics with three options: "All", "Activity Type", and "Activity Category"
-45. THE Segmented_Control SHALL default to "All" as the selected option
-46. WHEN "All" is selected in the segmented control, THE Web_App SHALL display a single aggregate time-series line for total unique participants, a single aggregate time-series line for total unique activities, and a single aggregate time-series line for total participation across all activity types and categories in all three charts
-46a. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participation growth numbers (percentage change) representing totals across all activity types and categories
-46b. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall activity growth numbers (percentage change) representing totals across all activity types and categories
-46c. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participant growth numbers (percentage change) representing totals across all activity types and categories
-46d. WHEN "Activity Type" or "Activity Category" is selected in the segmented control, THE Web_App SHALL NOT display overall growth numbers, showing only the grouped breakdown data
-47. WHEN "Activity Type" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each activity type showing unique participants, unique activities, and total participation for that type
-48. WHEN "Activity Category" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each activity category showing unique participants, unique activities, and total participation for that category
-49. WHEN displaying multiple lines for activity types or categories, THE Web_App SHALL use a consistent color scheme across all three charts (Unique Participants, Unique Activities, and Total Participation), so that the same activity type or category has the same color on all charts
-50. THE Web_App SHALL display a legend on all three charts showing the color mapping for each activity type or category when multiple lines are displayed
-51. WHEN the view mode changes between "All", "Activity Type", and "Activity Category", THE Growth_Dashboard SHALL update all three charts without requiring a page refresh
-52. WHEN switching between view modes, THE Growth_Dashboard SHALL preserve the current time period, date range, and geographic area filter selections
-53. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage with key "growthChartViewMode"
-54. WHEN a user returns to the Growth Dashboard, THE Growth_Dashboard SHALL restore the previously selected view mode from local storage
-55. IF no previous selection exists in local storage, THE Growth_Dashboard SHALL default to "All" view
-56. WHEN local storage is unavailable, THE Growth_Dashboard SHALL function normally with "All" as the default
-48. THE Web_App SHALL provide a geographic area filter for all analytics
-49. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
-49a. THE Web_App SHALL display both unique participant counts and total participation counts in the geographic breakdown chart
-49b. THE Web_App SHALL use separate data series for "Participants" (unique count) and "Participation" (non-unique count) in the geographic breakdown chart
-49c. THE Web_App SHALL render geographic area names on the chart with customized labels that include the area type badge
-49d. THE Web_App SHALL display the area type badge underneath the geographic area name in the chart labels
-49e. THE Web_App SHALL use the getAreaTypeBadgeColor() utility function to determine the badge color for each area type
-49f. THE Web_App SHALL format the chart labels to show the area name on the first line and the area type badge on the second line
-49g. WHEN the global geographic area filter is active, THE Web_App SHALL display only the immediate children of the filtered geographic area in the breakdown chart
-49h. WHEN no global geographic area filter is active, THE Web_App SHALL display all top-level geographic areas (areas with null parent) in the breakdown chart
-49i. FOR each geographic area displayed in the breakdown chart, THE Web_App SHALL show metrics that aggregate all activities and participants from that area and all its descendant areas (recursive aggregation)
-49j. WHEN a geographic area in the breakdown chart is clicked, THE Web_App SHALL set that area as the new global geographic area filter
-49k. WHEN the global filter changes via drill-down, THE Web_App SHALL update the breakdown chart to show the immediate children of the newly selected area
-50. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart by clicking on an area to set it as the new global filter
-51. THE Web_App SHALL provide a way to navigate back up the geographic hierarchy (e.g., by clearing the filter or clicking on ancestor breadcrumbs in the header)
-57a. THE Web_App SHALL synchronize growth dashboard filter parameters (period, date range, grouping mode) with URL query parameters
-57b. WHEN a user navigates to a URL with growth dashboard query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
-57c. WHEN a user changes any filter or grouping parameter on the growth dashboard, THE Web_App SHALL update the browser URL to reflect the current state
-57d. THE Web_App SHALL enable browser back/forward navigation to move between different growth dashboard configurations
-57e. WHEN a user shares a growth dashboard URL, THE Web_App SHALL display the same filtered and grouped results for other users
-58. THE Web_App SHALL display a chart titled "Activities" (renamed from "Activities by Type") on the Engagement Dashboard
-59. THE Web_App SHALL provide a segmented control above or within the Activities chart to toggle between "Activity Type" and "Activity Category" views
-60. WHEN the Activities chart is first rendered, THE Segmented_Control SHALL default to "Activity Type" as the selected option
-61. THE Segmented_Control SHALL follow the same UX pattern as the map view toggle functionality
-62. WHEN "Activity Type" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity type
-63. WHEN "Activity Category" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity category
-64. WHEN the view mode changes, THE Activities chart SHALL update its data display without requiring a page refresh
-65. WHEN switching between views, THE Activities chart SHALL preserve the current date range and filter selections
-66. WHEN no activities exist for a grouping dimension, THE Activities chart SHALL display an appropriate empty state message
-67. THE Activities chart SHALL display activity counts in descending order by count value
-68. THE Activities chart SHALL handle API errors gracefully and display an error message to the user
-69. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage
-70. WHEN a user returns to the Engagement Dashboard, THE Activities chart SHALL restore the previously selected view mode from local storage
-71. IF no previous selection exists in local storage, THE Activities chart SHALL default to "Activity Type" view
-72. WHEN local storage is unavailable, THE Activities chart SHALL function normally with "Activity Type" as the default
-73. THE Segmented_Control SHALL be keyboard navigable using Tab and Arrow keys
-74. WHEN a segmented control option receives focus, THE System SHALL provide visual focus indicators
-75. THE Segmented_Control SHALL include appropriate ARIA labels for screen readers
-76. WHEN the view mode changes, THE System SHALL announce the change to screen readers
+16. THE Web_App SHALL provide filter controls to filter by one or more activity categories
+17. WHEN an activity category filter is applied with multiple values, THE Web_App SHALL include only activities belonging to at least one of the specified activity categories (OR logic within dimension)
+18. THE Web_App SHALL provide filter controls to filter by one or more activity types
+19. WHEN an activity type filter is applied with multiple values, THE Web_App SHALL include only activities of at least one of the specified activity types (OR logic within dimension)
+20. THE Web_App SHALL provide filter controls to filter by one or more geographic areas
+21. WHEN a geographic area filter is applied with multiple values, THE Web_App SHALL include only activities and participants associated with venues in at least one of the specified geographic areas or their descendants (OR logic within dimension)
+22. THE Web_App SHALL provide filter controls to filter by one or more venues
+23. WHEN a venue filter is applied with multiple values, THE Web_App SHALL include only activities at at least one of the specified venues (OR logic within dimension)
+24. THE Web_App SHALL provide filter controls to filter by one or more populations
+25. WHEN a population filter is applied with multiple values, THE Web_App SHALL include only participants who belong to at least one of the specified populations (OR logic within dimension)
+26. WHEN a population filter is applied, THE Web_App SHALL include only activities that have at least one participant belonging to at least one of the specified populations
+27. THE Web_App SHALL provide filter controls for date range (range filter with start and end dates)
+28. WHEN multiple filter dimensions are applied (e.g., activity categories AND venues AND populations), THE Web_App SHALL apply all filters using AND logic across dimensions
+29. WHEN multiple values are provided within a single filter dimension (e.g., venues=[A, B]), THE Web_App SHALL apply OR logic within that dimension
+30. THE Web_App SHALL render an "Engagement Summary" table that displays aggregate metrics and dimensional breakdowns
+30a. THE Web_App SHALL provide an info icon next to the "Engagement Summary" table header
+30b. WHEN the info icon next to the Engagement Summary header is clicked, THE Web_App SHALL display a popover explaining both metrics: "Participant Count: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once. Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
+31. THE Web_App SHALL render the first row of the Engagement Summary table with the label "Total" in the first column and aggregate metrics (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end) in subsequent columns
+32. WHEN multiple grouping dimensions are selected, THE Web_App SHALL leave subsequent dimension cells blank in the first row (Total row)
+33. WHEN grouping dimensions are selected, THE Web_App SHALL render additional rows below the Total row showing dimensional breakdowns where breakdown dimension columns appear first followed by metric aggregation columns
+34. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity category names as hyperlinks to the Activity Configuration page at /configuration
+35. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity type names as hyperlinks to the Activity Configuration page at /configuration
+36. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render venue names as hyperlinks to their respective detail views at /venues/:id
+37. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render geographic area names as hyperlinks to their respective detail views at /geographic-areas/:id
+38. THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end, participation at start, participation at end) in its own column in the Engagement Summary table
+39. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
+40. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
+41. THE Web_App SHALL display a pie chart showing the breakdown of unique activities by activity category
+42. THE pie chart SHALL appear in line width (full width of its container) and positioned to the left of the role distribution chart
+43. THE pie chart SHALL use the same filtered data as other dashboard components
+44. THE pie chart SHALL display activity category names in the legend
+45. THE pie chart SHALL use a consistent color scheme with other dashboard charts
+46. WHEN a user hovers over a pie chart segment, THE Web_App SHALL display the activity category name and count
+47. THE pie chart SHALL include an interactive legend allowing users to toggle individual category segments on and off
+48. WHEN all pie chart segments are hidden, THE Web_App SHALL display an appropriate message or allow at least one segment to remain visible
+49. THE Web_App SHALL synchronize all filter parameters (activity categories, activity types, venues, geographic areas, populations, start date, end date) with URL query parameters
+50. THE Web_App SHALL synchronize all grouping parameters (group by dimensions) with URL query parameters
+51. WHEN a user navigates to a URL with analytics filter or grouping query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
+52. WHEN a user changes any filter or grouping parameter, THE Web_App SHALL update the browser URL to reflect the current state
+53. THE Web_App SHALL enable browser back/forward navigation to move between different filter and grouping configurations
+54. WHEN a user shares an engagement analytics view URL, THE Web_App SHALL display the same filtered and grouped results for other users
+55. WHEN calculating engagement metrics for activities, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates (treating null as activity start date)
+56. WHEN calculating engagement metrics for participants, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates (treating null as oldest address)
+57. WHEN filtering analytics by geographic area, THE Web_App SHALL correctly determine which activities and participants are in the filtered area considering null effectiveFrom dates
+58. THE Web_App SHALL provide a growth analytics dashboard
+59. THE Web_App SHALL display a separate time-series chart showing unique participant counts for each time period
+60. THE Web_App SHALL display a separate time-series chart showing unique activity counts for each time period
+61. THE Web_App SHALL display a separate time-series chart showing total participation (non-unique participant-activity associations) for each time period
+62. THE Web_App SHALL provide an info icon next to the "Unique Participants Over Time" chart title
+63. WHEN the info icon next to the Unique Participants chart is clicked, THE Web_App SHALL display a popover explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once."
+64. THE Web_App SHALL provide an info icon next to the "Total Participation Over Time" chart title
+65. WHEN the info icon next to the Total Participation chart is clicked, THE Web_App SHALL display a popover explaining "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
+66. THE Web_App SHALL provide time period selection (day, week, month, year)
+67. THE Web_App SHALL display each time period as a snapshot of unique participants, unique activities, and total participation engaged at that point in time (not cumulative counts)
+68. THE Web_App SHALL provide a segmented control to view growth metrics with three options: "All", "Activity Type", and "Activity Category"
+69. THE Segmented_Control SHALL default to "All" as the selected option
+70. WHEN "All" is selected in the segmented control, THE Web_App SHALL display a single aggregate time-series line for total unique participants, a single aggregate time-series line for total unique activities, and a single aggregate time-series line for total participation across all activity types and categories in all three charts
+71. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participation growth numbers (percentage change) representing totals across all activity types and categories
+72. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall activity growth numbers (percentage change) representing totals across all activity types and categories
+73. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participant growth numbers (percentage change) representing totals across all activity types and categories
+74. WHEN "Activity Type" or "Activity Category" is selected in the segmented control, THE Web_App SHALL NOT display overall growth numbers, showing only the grouped breakdown data
+75. WHEN "Activity Type" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each activity type showing unique participants, unique activities, and total participation for that type
+76. WHEN "Activity Category" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each activity category showing unique participants, unique activities, and total participation for that category
+77. WHEN displaying multiple lines for activity types or categories, THE Web_App SHALL use a consistent color scheme across all three charts (Unique Participants, Unique Activities, and Total Participation), so that the same activity type or category has the same color on all charts
+78. THE Web_App SHALL display a legend on all three charts showing the color mapping for each activity type or category when multiple lines are displayed
+79. WHEN the view mode changes between "All", "Activity Type", and "Activity Category", THE Growth_Dashboard SHALL update all three charts without requiring a page refresh
+80. WHEN switching between view modes, THE Growth_Dashboard SHALL preserve the current time period, date range, and filter selections
+81. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage with key "growthChartViewMode"
+82. WHEN a user returns to the Growth Dashboard, THE Growth_Dashboard SHALL restore the previously selected view mode from local storage
+83. IF no previous selection exists in local storage, THE Growth_Dashboard SHALL default to "All" view
+84. WHEN local storage is unavailable, THE Growth_Dashboard SHALL function normally with "All" as the default
+85. THE Web_App SHALL provide filter controls to filter growth metrics by one or more activity categories
+86. WHEN an activity category filter is applied to growth metrics with multiple values, THE Web_App SHALL include only activities belonging to at least one of the specified activity categories (OR logic within dimension)
+87. THE Web_App SHALL provide filter controls to filter growth metrics by one or more activity types
+88. WHEN an activity type filter is applied to growth metrics with multiple values, THE Web_App SHALL include only activities of at least one of the specified activity types (OR logic within dimension)
+89. THE Web_App SHALL provide filter controls to filter growth metrics by one or more geographic areas
+90. WHEN a geographic area filter is applied to growth metrics with multiple values, THE Web_App SHALL include only activities and participants associated with venues in at least one of the specified geographic areas or their descendants (OR logic within dimension)
+91. THE Web_App SHALL provide filter controls to filter growth metrics by one or more venues
+92. WHEN a venue filter is applied to growth metrics with multiple values, THE Web_App SHALL include only activities at at least one of the specified venues (OR logic within dimension)
+93. THE Web_App SHALL provide filter controls to filter growth metrics by one or more populations
+94. WHEN a population filter is applied to growth metrics with multiple values, THE Web_App SHALL include only participants who belong to at least one of the specified populations (OR logic within dimension)
+95. WHEN a population filter is applied to growth metrics, THE Web_App SHALL include only activities that have at least one participant belonging to at least one of the specified populations
+96. WHEN multiple filter dimensions are applied to growth metrics (e.g., activity categories AND venues AND populations), THE Web_App SHALL apply all filters using AND logic across dimensions
+97. WHEN multiple values are provided within a single filter dimension for growth metrics (e.g., venues=[A, B]), THE Web_App SHALL apply OR logic within that dimension
+98. THE Web_App SHALL synchronize growth dashboard filter parameters (period, date range, filter dimensions, grouping mode) with URL query parameters
+99. WHEN a user navigates to a URL with growth dashboard query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
+100. WHEN a user changes any filter or grouping parameter on the growth dashboard, THE Web_App SHALL update the browser URL to reflect the current state
+101. THE Web_App SHALL enable browser back/forward navigation to move between different growth dashboard configurations
+102. WHEN a user shares a growth dashboard URL, THE Web_App SHALL display the same filtered and grouped results for other users
+103. THE Web_App SHALL display a chart titled "Activities" (renamed from "Activities by Type") on the Engagement Dashboard
+104. THE Web_App SHALL provide a segmented control above or within the Activities chart to toggle between "Activity Type" and "Activity Category" views
+105. WHEN the Activities chart is first rendered, THE Segmented_Control SHALL default to "Activity Type" as the selected option
+106. THE Segmented_Control SHALL follow the same UX pattern as the map view toggle functionality
+107. WHEN "Activity Type" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity type
+108. WHEN "Activity Category" is selected in the segmented control, THE Activities chart SHALL display activities grouped by activity category
+109. WHEN the view mode changes, THE Activities chart SHALL update its data display without requiring a page refresh
+110. WHEN switching between views, THE Activities chart SHALL preserve the current date range and filter selections
+111. WHEN no activities exist for a grouping dimension, THE Activities chart SHALL display an appropriate empty state message
+112. THE Activities chart SHALL display activity counts in descending order by count value
+113. THE Activities chart SHALL handle API errors gracefully and display an error message to the user
+114. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage
+115. WHEN a user returns to the Engagement Dashboard, THE Activities chart SHALL restore the previously selected view mode from local storage
+116. IF no previous selection exists in local storage, THE Activities chart SHALL default to "Activity Type" view
+117. WHEN local storage is unavailable, THE Activities chart SHALL function normally with "Activity Type" as the default
+118. THE Segmented_Control SHALL be keyboard navigable using Tab and Arrow keys
+119. WHEN a segmented control option receives focus, THE System SHALL provide visual focus indicators
+120. THE Segmented_Control SHALL include appropriate ARIA labels for screen readers
+121. WHEN the view mode changes, THE System SHALL announce the change to screen readers
 
 ### Requirement 7A: Activity Lifecycle Events Chart
 
