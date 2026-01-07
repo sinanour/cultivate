@@ -56,6 +56,12 @@ export class GeographicAuthorizationService {
             throw new AppError('NOT_FOUND', 'Geographic area not found', 404);
         }
 
+        // Validate createdBy user exists
+        const creator = await this.userRepository.findById(createdBy);
+        if (!creator) {
+            throw new AppError('NOT_FOUND', 'Creator user not found', 404);
+        }
+
         // Check for duplicate
         const existing = await this.authorizationRepository.findByUserAndArea(
             userId,

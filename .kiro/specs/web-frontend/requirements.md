@@ -457,7 +457,17 @@ The Web Frontend package provides a responsive React-based web application that 
 49. THE Web_App SHALL display a geographic breakdown chart showing engagement by geographic area
 49a. THE Web_App SHALL display both unique participant counts and total participation counts in the geographic breakdown chart
 49b. THE Web_App SHALL use separate data series for "Participants" (unique count) and "Participation" (non-unique count) in the geographic breakdown chart
-50. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart
+49c. THE Web_App SHALL render geographic area names on the chart with customized labels that include the area type badge
+49d. THE Web_App SHALL display the area type badge underneath the geographic area name in the chart labels
+49e. THE Web_App SHALL use the getAreaTypeBadgeColor() utility function to determine the badge color for each area type
+49f. THE Web_App SHALL format the chart labels to show the area name on the first line and the area type badge on the second line
+49g. WHEN the global geographic area filter is active, THE Web_App SHALL display only the immediate children of the filtered geographic area in the breakdown chart
+49h. WHEN no global geographic area filter is active, THE Web_App SHALL display all top-level geographic areas (areas with null parent) in the breakdown chart
+49i. FOR each geographic area displayed in the breakdown chart, THE Web_App SHALL show metrics that aggregate all activities and participants from that area and all its descendant areas (recursive aggregation)
+49j. WHEN a geographic area in the breakdown chart is clicked, THE Web_App SHALL set that area as the new global geographic area filter
+49k. WHEN the global filter changes via drill-down, THE Web_App SHALL update the breakdown chart to show the immediate children of the newly selected area
+50. THE Web_App SHALL allow drilling down into child geographic areas from the geographic breakdown chart by clicking on an area to set it as the new global filter
+51. THE Web_App SHALL provide a way to navigate back up the geographic hierarchy (e.g., by clearing the filter or clicking on ancestor breadcrumbs in the header)
 57a. THE Web_App SHALL synchronize growth dashboard filter parameters (period, date range, grouping mode) with URL query parameters
 57b. WHEN a user navigates to a URL with growth dashboard query parameters, THE Web_App SHALL apply those parameters automatically to the dashboard
 57c. WHEN a user changes any filter or grouping parameter on the growth dashboard, THE Web_App SHALL update the browser URL to reflect the current state
@@ -1019,17 +1029,25 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL export human-friendly labels for all dimension columns (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
 6. THE Web_App SHALL include all metric columns in the CSV export: activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end
 7. THE Web_App SHALL use descriptive column headers in the CSV file that match the table column headers
-8. WHEN the Export CSV button is clicked, THE Web_App SHALL trigger a browser download of the CSV file with a filename that includes "engagement-summary" and the current date
-9. THE Web_App SHALL display a loading indicator while generating the CSV export
-10. THE Web_App SHALL disable the Export CSV button during the export operation to prevent duplicate requests
-11. THE Web_App SHALL display a success notification after the CSV file is downloaded
-12. WHEN the CSV export fails, THE Web_App SHALL display an error message explaining the failure
-13. THE Web_App SHALL hide the Export CSV button from users with READ_ONLY role
-14. THE Web_App SHALL show the Export CSV button to users with EDITOR or ADMINISTRATOR role
-15. WHEN exporting the Engagement Summary table with filters applied, THE Web_App SHALL include only the filtered data in the CSV export
-16. WHEN exporting the Engagement Summary table with grouping dimensions selected, THE Web_App SHALL preserve the grouping structure in the CSV export
-17. THE Web_App SHALL format dates in the CSV filename using ISO-8601 format (YYYY-MM-DD)
-18. THE Web_App SHALL handle empty Engagement Summary tables by exporting a CSV file with only the header row
+8. WHEN the Export CSV button is clicked, THE Web_App SHALL trigger a browser download of the CSV file with a filename that reflects the active filters
+9. THE Web_App SHALL construct the CSV filename with the following components in order: "engagement-summary", active filter segments, and current date
+10. WHEN the global geographic area filter is active, THE Web_App SHALL include both the geographic area name and type in the filename in the format "{name}-{type}" (sanitized to remove invalid filename characters)
+11. THE Web_App SHALL format the geographic area type in the filename using title case with hyphens for multi-word types (e.g., "Neighbourhood", "City", "Province")
+12. WHEN a date range filter is active, THE Web_App SHALL include the start and end dates in the filename using ISO-8601 format (YYYY-MM-DD)
+13. WHEN activity category, activity type, venue, or population filters are active, THE Web_App SHALL include their names in the filename (sanitized to remove invalid filename characters)
+14. THE Web_App SHALL sanitize all filter values in the filename by replacing spaces with hyphens and removing or replacing invalid filename characters (colons, slashes, backslashes, asterisks, question marks, quotes, angle brackets, pipes)
+15. WHEN a filter is not active, THE Web_App SHALL omit that filter segment from the filename to keep the filename concise
+16. THE Web_App SHALL separate filename components with underscores for readability
+17. THE Web_App SHALL format the current date in the filename using ISO-8601 format (YYYY-MM-DD)
+17. THE Web_App SHALL display a loading indicator while generating the CSV export
+18. THE Web_App SHALL disable the Export CSV button during the export operation to prevent duplicate requests
+19. THE Web_App SHALL display a success notification after the CSV file is downloaded
+20. WHEN the CSV export fails, THE Web_App SHALL display an error message explaining the failure
+21. THE Web_App SHALL hide the Export CSV button from users with READ_ONLY role
+22. THE Web_App SHALL show the Export CSV button to users with EDITOR or ADMINISTRATOR role
+23. WHEN exporting the Engagement Summary table with filters applied, THE Web_App SHALL include only the filtered data in the CSV export
+24. WHEN exporting the Engagement Summary table with grouping dimensions selected, THE Web_App SHALL preserve the grouping structure in the CSV export
+25. THE Web_App SHALL handle empty Engagement Summary tables by exporting a CSV file with only the header row
 
 ### Requirement 31: Geographic Authorization Management UI
 

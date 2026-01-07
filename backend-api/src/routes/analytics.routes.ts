@@ -174,20 +174,56 @@ export class AnalyticsRoutes {
 
     private async getGeographic(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { startDate, endDate } = req.query;
+            const { parentGeographicAreaId, startDate, endDate, activityCategoryId, activityTypeId, venueId, populationIds } = req.query;
+
+            // Extract authorization info from request
+            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
+            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+
+            // Validate explicit parent geographic area access if provided
+            if (parentGeographicAreaId && hasGeographicRestrictions) {
+                const hasAccess = authorizedAreaIds.includes(parentGeographicAreaId as string);
+                if (!hasAccess) {
+                    res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: 'You do not have permission to access this geographic area',
+                        details: {},
+                    });
+                    return;
+                }
+            }
 
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
+                activityCategoryId: activityCategoryId as string | undefined,
+                activityTypeId: activityTypeId as string | undefined,
+                venueId: venueId as string | undefined,
+                populationIds: populationIds as string[] | undefined,
             };
 
-            const breakdown = await this.analyticsService.getGeographicBreakdown(filters);
+            const breakdown = await this.analyticsService.getGeographicBreakdown(
+                parentGeographicAreaId as string | undefined,
+                filters,
+                authorizedAreaIds,
+                hasGeographicRestrictions,
+                req.user?.userId
+            );
             res.status(HttpStatus.OK).json({ success: true, data: breakdown });
         } catch (error) {
+            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                res.status(403).json({
+                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
+            console.error('Error in getGeographic:', error);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 code: ErrorCode.INTERNAL_ERROR,
                 message: 'An error occurred while calculating geographic breakdown',
-                details: {},
+                details: error instanceof Error ? { message: error.message, stack: error.stack } : {},
             });
         }
     }

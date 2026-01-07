@@ -193,7 +193,7 @@ Services implement business logic and coordinate operations:
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
-- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts
+- **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering (point filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload
 - **GeographicAuthorizationService**: Manages user geographic authorization rules (CRUD operations), evaluates user access to geographic areas (deny-first logic), calculates effective authorized areas (including descendants and ancestors), validates geographic restrictions for create operations, provides authorization filtering for all data access, enforces authorization on individual resource access (GET by ID, PUT, DELETE), validates authorization for nested resource endpoints, provides authorization bypass for administrators, logs all authorization denials
@@ -1145,6 +1145,18 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 *For any* engagement metrics request, participation counts (non-unique) should be broken down by activity type.
 **Validates: Requirements 6.14c**
 
+**Property 30F: Population filter participant count scoping**
+*For any* engagement metrics request with a population filter, participant counts should be calculated based only on participants who belong to at least one of the specified populations.
+**Validates: Requirements 6.19d**
+
+**Property 30G: Population filter participation count scoping**
+*For any* engagement metrics request with a population filter, participation counts should be calculated based only on participant-activity associations where the participant belongs to at least one of the specified populations.
+**Validates: Requirements 6.19e**
+
+**Property 30H: Population filter partial activity participant counting**
+*For any* activity with multiple participants where only some belong to the specified population, engagement metrics with a population filter should count only the participants who belong to the specified population (e.g., 3 out of 5 participants results in a count of 3, not 5).
+**Validates: Requirements 6.19f**
+
 **Property 31: Multi-dimensional grouping support**
 *For any* engagement metrics request with multiple grouping dimensions, the response should organize metrics hierarchically by the specified dimensions in order.
 **Validates: Requirements 6.15, 6.21**
@@ -1224,6 +1236,18 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Property 47_participation: Time-series participation data inclusion**
 *For any* growth metrics response, each time period should include unique participant counts, unique activity counts, and total participation counts.
 **Validates: Requirements 7.14a**
+
+**Property 47G: Growth metrics population filter participant count scoping**
+*For any* growth metrics request with a population filter, unique participant counts should be calculated based only on participants who belong to at least one of the specified populations.
+**Validates: Requirements 7.9d**
+
+**Property 47H: Growth metrics population filter participation count scoping**
+*For any* growth metrics request with a population filter, total participation counts should be calculated based only on participant-activity associations where the participant belongs to at least one of the specified populations.
+**Validates: Requirements 7.9e**
+
+**Property 47I: Growth metrics population filter partial activity participant counting**
+*For any* activity with multiple participants where only some belong to the specified population, growth metrics with a population filter should count only the participants who belong to the specified population in each time period (e.g., 3 out of 5 participants results in a count of 3, not 5).
+**Validates: Requirements 7.9f**
 
 ### Activity Lifecycle Events Properties
 
@@ -1620,8 +1644,8 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Validates: Requirements 6.21**
 
 **Property 114: Geographic breakdown calculation**
-*For any* geographic analytics request, engagement metrics should be correctly grouped and aggregated by geographic area.
-**Validates: Requirements 6.9**
+*For any* geographic breakdown request with a parent geographic area ID, the API should return metrics for all immediate children of that parent area, with each child's metrics aggregating data from the child and all its descendants. When no parent is specified, the API should return metrics for all top-level geographic areas (areas with null parent).
+**Validates: Requirements 6B.1, 6B.2, 6B.3, 6B.4, 6B.5**
 
 **Property 115: Geographic area filtering for growth**
 *For any* growth metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.
@@ -1814,8 +1838,12 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Validates: Requirements 6.9, 6.10**
 
 **Property 98: Geographic breakdown calculation**
-*For any* geographic analytics request, engagement metrics should be correctly grouped and aggregated by geographic area.
-**Validates: Requirements 6.11**
+*For any* geographic breakdown request with a parent geographic area ID, the API should return metrics for all immediate children of that parent area, with each child's metrics aggregating data from the child and all its descendants. When no parent is specified, the API should return metrics for all top-level geographic areas (areas with null parent).
+**Validates: Requirements 6B.1, 6B.2, 6B.3, 6B.4, 6B.5**
+
+**Property 98A: Geographic breakdown respects deny rules**
+*For any* geographic breakdown request where a user has DENY rules for specific geographic areas, those denied areas and all their descendants should be excluded from the breakdown results, and metrics for parent areas should only aggregate data from authorized descendant areas.
+**Validates: Requirements 6B.15, 6B.16, 6B.17**
 
 **Property 99: Geographic area filtering for growth**
 *For any* growth metrics request with a geographic area filter, only activities and participants associated with venues in that geographic area or its descendants should be included.

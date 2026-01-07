@@ -185,6 +185,7 @@ export interface RoleDistribution {
 export interface GeographicBreakdown {
     geographicAreaId: string;
     geographicAreaName: string;
+    areaType: string;
     activityCount: number;
     participantCount: number;
     participationCount: number;
@@ -263,10 +264,10 @@ export interface GeographicAnalytics {
     geographicAreaId: string;
     geographicAreaName: string;
     areaType: string;
-    totalActivities: number;
-    activeActivities: number;
-    totalParticipants: number;
-    activeParticipants: number;
+    activityCount: number;
+    participantCount: number;
+    participationCount: number;
+    hasChildren: boolean;
 }
 
 export interface GeographicAreaStatistics {

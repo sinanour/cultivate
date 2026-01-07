@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
+import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
 import {
     ActivityStatus,
     TimePeriod,
@@ -47,6 +48,7 @@ export interface RoleDistribution {
 export interface GeographicBreakdown {
     geographicAreaId: string;
     geographicAreaName: string;
+    areaType: string;
     activityCount: number;
     participantCount: number;
     participationCount: number;
@@ -142,7 +144,8 @@ export interface AnalyticsFilters {
 export class AnalyticsService {
     constructor(
         private prisma: PrismaClient,
-        private geographicAreaRepository: GeographicAreaRepository
+        private geographicAreaRepository: GeographicAreaRepository,
+        private geographicAuthorizationService?: GeographicAuthorizationService
     ) { }
 
     /**
@@ -166,9 +169,17 @@ export class AnalyticsService {
                 throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
             }
 
-            // Expand to include descendants
+            // Expand to include descendants, but ONLY those in authorizedAreaIds
             const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
-            return [explicitGeographicAreaId, ...descendantIds];
+            const allPotentialIds = [explicitGeographicAreaId, ...descendantIds];
+
+            // If user has geographic restrictions, filter to only authorized areas
+            if (hasGeographicRestrictions) {
+                return allPotentialIds.filter(id => authorizedAreaIds.includes(id));
+            }
+
+            // No restrictions - return all descendants
+            return allPotentialIds;
         }
 
         // No explicit filter - apply implicit filtering if user has restrictions
@@ -349,9 +360,22 @@ export class AnalyticsService {
             ).length
             : allActivities.filter(a => a.status === ActivityStatus.CANCELLED).length;
 
+        // Helper function to filter assignments by population
+        const filterAssignmentsByPopulation = (assignments: any[]) => {
+            if (!populationIds || populationIds.length === 0) {
+                return assignments;
+            }
+            return assignments.filter(assignment =>
+                assignment.participant.participantPopulations.some((pp: any) =>
+                    populationIds.includes(pp.populationId)
+                )
+            );
+        };
+
         // Calculate participant temporal metrics
         // A participant is engaged at a point in time if they're assigned to an activity that was active at that time
         // The assignment createdAt is irrelevant - what matters is the activity's start/end dates
+        // When population filter is active, only count participants who belong to the specified populations
         const participantsAtStart = startDate
             ? new Set(
                 allActivities
@@ -361,7 +385,7 @@ export class AnalyticsService {
                         // - It hasn't ended OR it ended after startDate
                         return act.startDate <= startDate && (!act.endDate || act.endDate >= startDate);
                     })
-                    .flatMap(act => act.assignments.map(a => a.participantId))
+                    .flatMap(act => filterAssignmentsByPopulation(act.assignments).map(a => a.participantId))
             ).size
             : 0;
 
@@ -374,17 +398,18 @@ export class AnalyticsService {
                         // - It hasn't ended OR it ended after endDate
                         return act.startDate <= endDate && (!act.endDate || act.endDate >= endDate);
                     })
-                    .flatMap(act => act.assignments.map(a => a.participantId))
+                    .flatMap(act => filterAssignmentsByPopulation(act.assignments).map(a => a.participantId))
             ).size
-            : new Set(allActivities.flatMap(a => a.assignments.map(as => as.participantId))).size;
+            : new Set(allActivities.flatMap(a => filterAssignmentsByPopulation(a.assignments).map(as => as.participantId))).size;
 
         // Calculate participation temporal metrics (non-unique, counts all assignments)
+        // When population filter is active, only count assignments where participant belongs to specified populations
         const participationAtStart = startDate
             ? allActivities
                 .filter(act => {
                     return act.startDate <= startDate && (!act.endDate || act.endDate >= startDate);
                 })
-                .reduce((sum, act) => sum + act.assignments.length, 0)
+                .reduce((sum, act) => sum + filterAssignmentsByPopulation(act.assignments).length, 0)
             : 0;
 
         const participationAtEnd = endDate
@@ -392,15 +417,16 @@ export class AnalyticsService {
                 .filter(act => {
                     return act.startDate <= endDate && (!act.endDate || act.endDate >= endDate);
                 })
-                .reduce((sum, act) => sum + act.assignments.length, 0)
-            : allActivities.reduce((sum, a) => sum + a.assignments.length, 0);
+                .reduce((sum, act) => sum + filterAssignmentsByPopulation(act.assignments).length, 0)
+            : allActivities.reduce((sum, a) => sum + filterAssignmentsByPopulation(a.assignments).length, 0);
 
         // Calculate aggregate counts
+        // When population filter is active, only count participants and participation for filtered participants
         const totalActivities = allActivities.length;
         const totalParticipants = new Set(
-            allActivities.flatMap(a => a.assignments.map(as => as.participantId))
+            allActivities.flatMap(a => filterAssignmentsByPopulation(a.assignments).map(as => as.participantId))
         ).size;
-        const totalParticipation = allActivities.reduce((sum, a) => sum + a.assignments.length, 0);
+        const totalParticipation = allActivities.reduce((sum, a) => sum + filterAssignmentsByPopulation(a.assignments).length, 0);
 
         // Calculate breakdown by activity type
         const activitiesByTypeMap = new Map<string, ActivityTypeBreakdown>();
@@ -485,6 +511,7 @@ export class AnalyticsService {
 
             // Count participants and participation by type
             // Participants are engaged if the activity was active at the point in time
+            // When population filter is active, only count participants who belong to specified populations
             if (startDate) {
                 // Activity was active at startDate if it started on or before startDate
                 // AND it hasn't ended OR it ended after startDate
@@ -492,8 +519,8 @@ export class AnalyticsService {
                     (!activity.endDate || activity.endDate >= startDate);
 
                 if (wasActiveAtStart) {
-                    // Participation: count all assignments (non-unique)
-                    breakdown.participationAtStart += activity.assignments.length;
+                    // Participation: count filtered assignments (non-unique)
+                    breakdown.participationAtStart += filterAssignmentsByPopulation(activity.assignments).length;
                 }
             }
 
@@ -504,13 +531,14 @@ export class AnalyticsService {
                     (!activity.endDate || activity.endDate >= endDate);
 
                 if (wasActiveAtEnd) {
-                    // Participation: count all assignments (non-unique)
-                    breakdown.participationAtEnd += activity.assignments.length;
+                    // Participation: count filtered assignments (non-unique)
+                    breakdown.participationAtEnd += filterAssignmentsByPopulation(activity.assignments).length;
                 }
             }
         }
 
         // Now calculate unique participants per type (second pass to collect unique IDs)
+        // When population filter is active, only count participants who belong to specified populations
         for (const [typeId, breakdown] of activitiesByTypeMap.entries()) {
             const typeActivities = allActivities.filter(a => a.activityTypeId === typeId);
 
@@ -518,7 +546,7 @@ export class AnalyticsService {
                 const uniqueParticipantsAtStart = new Set(
                     typeActivities
                         .filter(act => act.startDate <= startDate && (!act.endDate || act.endDate >= startDate))
-                        .flatMap(act => act.assignments.map(a => a.participantId))
+                        .flatMap(act => filterAssignmentsByPopulation(act.assignments).map(a => a.participantId))
                 );
                 breakdown.participantsAtStart = uniqueParticipantsAtStart.size;
             }
@@ -527,7 +555,7 @@ export class AnalyticsService {
                 const uniqueParticipantsAtEnd = new Set(
                     typeActivities
                         .filter(act => act.startDate <= endDate && (!act.endDate || act.endDate >= endDate))
-                        .flatMap(act => act.assignments.map(a => a.participantId))
+                        .flatMap(act => filterAssignmentsByPopulation(act.assignments).map(a => a.participantId))
                 );
                 breakdown.participantsAtEnd = uniqueParticipantsAtEnd.size;
             }
@@ -616,13 +644,14 @@ export class AnalyticsService {
                 breakdown.activitiesCancelled++;
             }
 
-            // Count participation by category (non-unique, all assignments)
+            // Count participation by category (non-unique, filtered assignments)
+            // When population filter is active, only count assignments where participant belongs to specified populations
             if (startDate) {
                 const wasActiveAtStart = activity.startDate <= startDate &&
                     (!activity.endDate || activity.endDate >= startDate);
 
                 if (wasActiveAtStart) {
-                    breakdown.participationAtStart += activity.assignments.length;
+                    breakdown.participationAtStart += filterAssignmentsByPopulation(activity.assignments).length;
                 }
             }
 
@@ -631,12 +660,13 @@ export class AnalyticsService {
                     (!activity.endDate || activity.endDate >= endDate);
 
                 if (wasActiveAtEnd) {
-                    breakdown.participationAtEnd += activity.assignments.length;
+                    breakdown.participationAtEnd += filterAssignmentsByPopulation(activity.assignments).length;
                 }
             }
         }
 
         // Calculate unique participants per category (second pass)
+        // When population filter is active, only count participants who belong to specified populations
         for (const [categoryId, breakdown] of activitiesByCategoryMap.entries()) {
             const categoryActivities = allActivities.filter(a => a.activityType.activityCategoryId === categoryId);
 
@@ -644,7 +674,7 @@ export class AnalyticsService {
                 const uniqueParticipantsAtStart = new Set(
                     categoryActivities
                         .filter(act => act.startDate <= startDate && (!act.endDate || act.endDate >= startDate))
-                        .flatMap(act => act.assignments.map(a => a.participantId))
+                        .flatMap(act => filterAssignmentsByPopulation(act.assignments).map(a => a.participantId))
                 );
                 breakdown.participantsAtStart = uniqueParticipantsAtStart.size;
             }
@@ -653,7 +683,7 @@ export class AnalyticsService {
                 const uniqueParticipantsAtEnd = new Set(
                     categoryActivities
                         .filter(act => act.startDate <= endDate && (!act.endDate || act.endDate >= endDate))
-                        .flatMap(act => act.assignments.map(a => a.participantId))
+                        .flatMap(act => filterAssignmentsByPopulation(act.assignments).map(a => a.participantId))
                 );
                 breakdown.participantsAtEnd = uniqueParticipantsAtEnd.size;
             }
@@ -662,9 +692,10 @@ export class AnalyticsService {
         const activitiesByCategory = Array.from(activitiesByCategoryMap.values());
 
         // Calculate role distribution
+        // When population filter is active, only count assignments where participant belongs to specified populations
         const roleDistributionMap = new Map<string, RoleDistribution>();
         allActivities.forEach(activity => {
-            activity.assignments.forEach(assignment => {
+            filterAssignmentsByPopulation(activity.assignments).forEach(assignment => {
                 const roleId = assignment.roleId;
                 const roleName = assignment.role.name;
 
@@ -710,10 +741,11 @@ export class AnalyticsService {
             const areaActivities = allActivities.filter(a =>
                 a.activityVenueHistory?.some(vh => areaVenueIds.includes(vh.venueId))
             );
+            // When population filter is active, only count participants and participation for filtered participants
             const areaParticipantIds = new Set(
-                areaActivities.flatMap(a => a.assignments.map(as => as.participantId))
+                areaActivities.flatMap(a => filterAssignmentsByPopulation(a.assignments).map(as => as.participantId))
             );
-            const areaParticipationCount = areaActivities.reduce((sum, a) => sum + a.assignments.length, 0);
+            const areaParticipationCount = areaActivities.reduce((sum, a) => sum + filterAssignmentsByPopulation(a.assignments).length, 0);
 
             // Check if this area has children
             const childrenCount = await this.geographicAreaRepository.countChildReferences(area.id);
@@ -721,6 +753,7 @@ export class AnalyticsService {
             geographicBreakdown.push({
                 geographicAreaId: area.id,
                 geographicAreaName: area.name,
+                areaType: area.areaType,
                 activityCount: areaActivities.length,
                 participantCount: areaParticipantIds.size,
                 participationCount: areaParticipationCount,
@@ -1174,14 +1207,14 @@ export class AnalyticsService {
 
             // Calculate time series for each group
             for (const [groupName, groupActivities] of activityGroups) {
-                groupedTimeSeries[groupName] = this.calculateGrowthTimeSeries(periods, groupActivities);
+                groupedTimeSeries[groupName] = this.calculateGrowthTimeSeries(periods, groupActivities, populationIds);
             }
 
             return { timeSeries: [], groupedTimeSeries };
         }
 
         // Calculate aggregate time series
-        const timeSeries = this.calculateGrowthTimeSeries(periods, activities);
+        const timeSeries = this.calculateGrowthTimeSeries(periods, activities, populationIds);
 
         return { timeSeries };
     }
@@ -1197,9 +1230,22 @@ export class AnalyticsService {
                 participantId: string;
                 participant?: any; // Include participant when population filtering is used
             }>;
-        }>
+        }>,
+        populationIds?: string[]
     ): GrowthPeriodData[] {
         const timeSeries: GrowthPeriodData[] = [];
+
+        // Helper function to filter assignments by population
+        const filterAssignmentsByPopulation = (assignments: any[]) => {
+            if (!populationIds || populationIds.length === 0) {
+                return assignments;
+            }
+            return assignments.filter(assignment =>
+                assignment.participant?.participantPopulations?.some((pp: any) =>
+                    populationIds.includes(pp.populationId)
+                )
+            );
+        };
 
         for (const period of periods) {
             // Unique activities: activities that were ACTIVE during this period
@@ -1218,18 +1264,20 @@ export class AnalyticsService {
 
             // Unique participants: participants assigned to activities that were active during this period
             // The assignment createdAt is irrelevant - what matters is whether the activity was active
+            // When population filter is active, only count participants who belong to specified populations
             const uniqueParticipantIds = new Set<string>();
             activeActivities.forEach(activity => {
-                activity.assignments.forEach(assignment => {
+                filterAssignmentsByPopulation(activity.assignments).forEach(assignment => {
                     uniqueParticipantIds.add(assignment.participantId);
                 });
             });
 
             const uniqueParticipants = uniqueParticipantIds.size;
 
-            // Total participation: sum of all assignments for activities active during this period (non-unique)
+            // Total participation: sum of filtered assignments for activities active during this period (non-unique)
+            // When population filter is active, only count assignments where participant belongs to specified populations
             const totalParticipation = activeActivities.reduce((sum, activity) => {
-                return sum + activity.assignments.length;
+                return sum + filterAssignmentsByPopulation(activity.assignments).length;
             }, 0);
 
             timeSeries.push({
@@ -1243,16 +1291,231 @@ export class AnalyticsService {
         return timeSeries;
     }
 
-    async getGeographicBreakdown(filters: AnalyticsFilters = {}): Promise<Record<string, EngagementMetrics>> {
-        const areas = await this.geographicAreaRepository.findAll();
-        const breakdown: Record<string, EngagementMetrics> = {};
+    /**
+     * Get geographic breakdown showing metrics for immediate children of a parent area.
+     * When parentGeographicAreaId is provided: returns metrics for immediate children
+     * When not provided: returns metrics for all top-level areas (null parent)
+     * Each area's metrics aggregate data from the area and all its descendants.
+     */
+    async getGeographicBreakdown(
+        parentGeographicAreaId: string | undefined,
+        filters: AnalyticsFilters = {},
+        authorizedAreaIds: string[] = [],
+        hasGeographicRestrictions: boolean = false,
+        userId?: string
+    ): Promise<GeographicBreakdown[]> {
+        // Validate parent area access if provided
+        if (parentGeographicAreaId && hasGeographicRestrictions) {
+            const hasAccess = authorizedAreaIds.includes(parentGeographicAreaId);
+            if (!hasAccess) {
+                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
+            }
+        }
 
-        for (const area of areas) {
-            const metrics = await this.getEngagementMetrics({
-                ...filters,
-                geographicAreaId: area.id,
+        // Determine which areas to return based on parent parameter
+        let areasToReturn: any[];
+
+        if (parentGeographicAreaId) {
+            // Return immediate children of the specified parent
+            areasToReturn = await this.prisma.geographicArea.findMany({
+                where: { parentGeographicAreaId },
+                orderBy: { name: 'asc' },
             });
-            breakdown[area.name] = metrics;
+        } else {
+            // Return all top-level areas (null parent)
+            // If user has geographic restrictions, filter to only authorized top-level areas
+            const where: any = { parentGeographicAreaId: null };
+
+            if (hasGeographicRestrictions) {
+                // Only show top-level areas that the user has access to
+                where.id = { in: authorizedAreaIds };
+            }
+
+            areasToReturn = await this.prisma.geographicArea.findMany({
+                where,
+                orderBy: { name: 'asc' },
+            });
+        }
+
+        // Filter out denied areas if user has geographic restrictions
+        if (hasGeographicRestrictions && userId && this.geographicAuthorizationService) {
+            const authorizedAreas: any[] = [];
+
+            for (const area of areasToReturn) {
+                // Check if user has FULL access to this area
+                const accessLevel = await this.geographicAuthorizationService.evaluateAccess(userId, area.id);
+
+                // Only include areas with FULL access (exclude NONE and READ_ONLY)
+                if (accessLevel === AccessLevel.FULL) {
+                    authorizedAreas.push(area);
+                }
+            }
+
+            areasToReturn = authorizedAreas;
+        }
+
+        // For each area, calculate metrics by aggregating from the area and all its descendants
+        const breakdown: GeographicBreakdown[] = [];
+
+        for (const area of areasToReturn) {
+            // Get all descendant IDs for this area
+            const allDescendantIds = await this.geographicAreaRepository.findDescendants(area.id);
+
+            // Filter descendants to only include authorized areas
+            let authorizedDescendantIds = allDescendantIds;
+            if (hasGeographicRestrictions && userId && this.geographicAuthorizationService) {
+                const authorizedDescendants: string[] = [];
+
+                for (const descendantId of allDescendantIds) {
+                    const accessLevel = await this.geographicAuthorizationService.evaluateAccess(userId, descendantId);
+
+                    // Only include descendants with FULL access
+                    if (accessLevel === AccessLevel.FULL) {
+                        authorizedDescendants.push(descendantId);
+                    }
+                }
+
+                authorizedDescendantIds = authorizedDescendants;
+            }
+
+            // Include the area itself and only authorized descendants
+            const areaIds = [area.id, ...authorizedDescendantIds];
+
+            // Get all venues in this area and authorized descendants
+            const venues = await this.prisma.venue.findMany({
+                where: { geographicAreaId: { in: areaIds } },
+                select: { id: true },
+            });
+            const venueIds = venues.map(v => v.id);
+
+            if (venueIds.length === 0) {
+                // No venues in this area or authorized descendants - return zero metrics
+                breakdown.push({
+                    geographicAreaId: area.id,
+                    geographicAreaName: area.name,
+                    areaType: area.areaType,
+                    activityCount: 0,
+                    participantCount: 0,
+                    participationCount: 0,
+                    hasChildren: (await this.prisma.geographicArea.count({ where: { parentGeographicAreaId: area.id } })) > 0,
+                });
+                continue;
+            }
+
+            // Build activity filter
+            const activityWhere: any = {
+                activityVenueHistory: {
+                    some: {
+                        venueId: { in: venueIds },
+                    },
+                },
+            };
+
+            // Apply additional filters
+            if (filters.activityCategoryId) {
+                activityWhere.activityType = {
+                    activityCategoryId: filters.activityCategoryId,
+                };
+            }
+
+            if (filters.activityTypeId) {
+                activityWhere.activityTypeId = filters.activityTypeId;
+            }
+
+            if (filters.venueId) {
+                activityWhere.activityVenueHistory = {
+                    some: {
+                        venueId: filters.venueId,
+                    },
+                };
+            }
+
+            // Add date range filtering
+            if (filters.startDate && filters.endDate) {
+                activityWhere.AND = [
+                    { startDate: { lte: filters.endDate } },
+                    {
+                        OR: [
+                            { endDate: null },
+                            { endDate: { gte: filters.startDate } },
+                        ],
+                    },
+                ];
+            } else if (filters.startDate) {
+                activityWhere.AND = [
+                    { startDate: { gte: filters.startDate } },
+                ];
+            } else if (filters.endDate) {
+                activityWhere.startDate = { lte: filters.endDate };
+            }
+
+            // Add population filtering
+            if (filters.populationIds && filters.populationIds.length > 0) {
+                activityWhere.assignments = {
+                    some: {
+                        participant: {
+                            participantPopulations: {
+                                some: {
+                                    populationId: { in: filters.populationIds },
+                                },
+                            },
+                        },
+                    },
+                };
+            }
+
+            // Get activities in this area
+            const activities = await this.prisma.activity.findMany({
+                where: activityWhere,
+                include: {
+                    assignments: {
+                        include: {
+                            participant: {
+                                include: {
+                                    participantPopulations: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            // Filter assignments by population if needed
+            const filterAssignmentsByPopulation = (assignments: any[]) => {
+                if (!filters.populationIds || filters.populationIds.length === 0) {
+                    return assignments;
+                }
+                return assignments.filter(assignment =>
+                    assignment.participant.participantPopulations.some((pp: any) =>
+                        filters.populationIds!.includes(pp.populationId)
+                    )
+                );
+            };
+
+            // Calculate metrics
+            const activityCount = activities.length;
+            const participantCount = new Set(
+                activities.flatMap(a => filterAssignmentsByPopulation(a.assignments).map(as => as.participantId))
+            ).size;
+            const participationCount = activities.reduce(
+                (sum, a) => sum + filterAssignmentsByPopulation(a.assignments).length,
+                0
+            );
+
+            // Check if this area has children
+            const hasChildren = (await this.prisma.geographicArea.count({
+                where: { parentGeographicAreaId: area.id },
+            })) > 0;
+
+            breakdown.push({
+                geographicAreaId: area.id,
+                geographicAreaName: area.name,
+                areaType: area.areaType,
+                activityCount,
+                participantCount,
+                participationCount,
+                hasChildren,
+            });
         }
 
         return breakdown;

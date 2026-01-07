@@ -21,6 +21,10 @@ describe('AnalyticsService', () => {
             venue: {
                 findMany: jest.fn(),
             },
+            geographicArea: {
+                findMany: jest.fn(),
+                count: jest.fn(),
+            },
         } as any;
 
         mockGeoRepo = new GeographicAreaRepository(null as any) as jest.Mocked<GeographicAreaRepository>;
@@ -248,23 +252,51 @@ describe('AnalyticsService', () => {
     });
 
     describe('getGeographicBreakdown', () => {
-        it('should calculate metrics for each geographic area', async () => {
+        it('should return top-level areas when no parent is specified', async () => {
             const mockAreas = [
                 { id: 'area1', name: 'Area 1', areaType: 'CITY', parentGeographicAreaId: null, createdAt: new Date(), updatedAt: new Date(), version: 1 },
                 { id: 'area2', name: 'Area 2', areaType: 'CITY', parentGeographicAreaId: null, createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
 
-            mockGeoRepo.findAll = jest.fn().mockResolvedValue(mockAreas);
+            mockPrisma.geographicArea.findMany = jest.fn().mockResolvedValue(mockAreas);
+            mockPrisma.geographicArea.count = jest.fn().mockResolvedValue(0);
             mockGeoRepo.findDescendants = jest.fn().mockResolvedValue([]);
             mockPrisma.venue.findMany = jest.fn().mockResolvedValue([]);
             mockPrisma.activity.findMany = jest.fn().mockResolvedValue([]);
-            mockPrisma.participant.findMany = jest.fn().mockResolvedValue([]);
 
-            const result = await service.getGeographicBreakdown();
+            const result = await service.getGeographicBreakdown(undefined, {}, [], false);
 
-            expect(result).toHaveProperty('Area 1');
-            expect(result).toHaveProperty('Area 2');
-            expect(mockGeoRepo.findAll).toHaveBeenCalled();
+            expect(result).toHaveLength(2);
+            expect(result[0].geographicAreaName).toBe('Area 1');
+            expect(result[1].geographicAreaName).toBe('Area 2');
+            expect(mockPrisma.geographicArea.findMany).toHaveBeenCalledWith({
+                where: { parentGeographicAreaId: null },
+                orderBy: { name: 'asc' },
+            });
+        });
+
+        it('should return immediate children when parent is specified', async () => {
+            const parentId = 'parent-area-id';
+            const mockChildren = [
+                { id: 'child1', name: 'Child 1', areaType: 'NEIGHBOURHOOD', parentGeographicAreaId: parentId, createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: 'child2', name: 'Child 2', areaType: 'NEIGHBOURHOOD', parentGeographicAreaId: parentId, createdAt: new Date(), updatedAt: new Date(), version: 1 },
+            ];
+
+            mockPrisma.geographicArea.findMany = jest.fn().mockResolvedValue(mockChildren);
+            mockPrisma.geographicArea.count = jest.fn().mockResolvedValue(0);
+            mockGeoRepo.findDescendants = jest.fn().mockResolvedValue([]);
+            mockPrisma.venue.findMany = jest.fn().mockResolvedValue([]);
+            mockPrisma.activity.findMany = jest.fn().mockResolvedValue([]);
+
+            const result = await service.getGeographicBreakdown(parentId, {}, [], false);
+
+            expect(result).toHaveLength(2);
+            expect(result[0].geographicAreaName).toBe('Child 1');
+            expect(result[1].geographicAreaName).toBe('Child 2');
+            expect(mockPrisma.geographicArea.findMany).toHaveBeenCalledWith({
+                where: { parentGeographicAreaId: parentId },
+                orderBy: { name: 'asc' },
+            });
         });
     });
 });

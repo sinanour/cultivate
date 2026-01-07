@@ -624,6 +624,11 @@ src/
 - Displays geographic breakdown chart showing engagement by geographic area with interactive legend:
   - Displays both unique participant counts and total participation counts
   - Uses separate data series for "Participants" (unique count) and "Participation" (non-unique count)
+  - Renders geographic area names with customized labels that include area type badges
+  - Displays area type badge underneath the geographic area name in chart labels
+  - Uses getAreaTypeBadgeColor() utility function to determine badge color for each area type
+  - Formats chart labels with area name on first line and area type badge on second line
+  - Implements custom tick component or label formatter for recharts to render multi-line labels with badges
   - Allows users to click legend items to toggle individual data series on/off
   - Visually indicates hidden series with dimmed text or reduced opacity
   - Adjusts chart scales dynamically when series are toggled
@@ -647,7 +652,19 @@ src/
   - Includes all dimensional breakdown rows when grouping dimensions are selected
   - Includes all metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end
   - Uses descriptive column headers matching table headers
-  - Generates filename with format: "engagement-summary-YYYY-MM-DD.csv"
+  - Generates filename that reflects active filters with format: "engagement-summary" + filter segments + current date
+  - When global geographic area filter is active: includes area name and type in format "{name}-{type}" (e.g., "Vancouver-City", "Downtown-Neighbourhood")
+  - Formats geographic area type in title case with hyphens for multi-word types
+  - When date range filter is active: includes start and end dates in ISO-8601 format (YYYY-MM-DD)
+  - When activity category, type, venue, or population filters are active: includes their sanitized names
+  - Sanitizes filter values by replacing spaces with hyphens and removing invalid filename characters (colons, slashes, backslashes, asterisks, question marks, quotes, angle brackets, pipes)
+  - Omits inactive filters from filename to keep it concise
+  - Separates filename components with underscores
+  - Example filenames:
+    - No filters: "engagement-summary_2026-01-06.csv"
+    - With geographic area: "engagement-summary_Vancouver-City_2026-01-06.csv"
+    - With date range: "engagement-summary_2025-01-01_2025-12-31_2026-01-06.csv"
+    - Multiple filters: "engagement-summary_Vancouver-City_Study-Circles_2025-01-01_2025-12-31_2026-01-06.csv"
   - Displays loading indicator during export operation
   - Disables button during export to prevent duplicate requests
   - Shows success notification after download completes
@@ -1112,7 +1129,12 @@ src/
   - When populationIds provided: includes only participants in specified populations and activities with at least one participant in specified populations
 - `getGrowthMetrics(startDate?, endDate?, period?, geographicAreaId?, populationIds?, groupBy?)`: Fetches growth data from `/analytics/growth` with optional filters (period: DAY, WEEK, MONTH, YEAR; groupBy: 'type' | 'category' for optional grouping; populationIds for population filtering)
   - Returns time-series data with unique participant counts, unique activity counts, and total participation counts per period
-- `getGeographicAnalytics(startDate?, endDate?)`: Fetches geographic breakdown from `/analytics/geographic`
+- `getGeographicAnalytics(parentGeographicAreaId?, startDate?, endDate?, activityCategoryIds?, activityTypeIds?, venueIds?, populationIds?)`: Fetches geographic breakdown from `/analytics/geographic`
+  - When parentGeographicAreaId provided: returns metrics for immediate children of that area
+  - When parentGeographicAreaId not provided: returns metrics for all top-level areas (null parent)
+  - Each area's metrics aggregate data from the area and all its descendants (recursive)
+  - Supports optional date range and filter parameters
+  - Returns array of objects with geographicAreaId, geographicAreaName, areaType, activityCount, participantCount, participationCount
 - `getActivityLifecycleEvents(params)`: Fetches activity lifecycle event data from `/analytics/activity-lifecycle`
   - Parameters: `startDate` (required), `endDate` (required), `groupBy` ('category' | 'type'), `geographicAreaIds?`, `activityTypeIds?`, `venueIds?`, `populationIds?`
   - Returns array of objects with `groupName`, `started` count, and `completed` count
@@ -2590,9 +2612,9 @@ All entities support optimistic locking via the `version` field. When updating a
 
 ### Property 72: Geographic Breakdown Chart Display
 
-*For any* engagement metrics, the geographic breakdown chart should correctly display engagement data grouped by geographic area, including both unique participant counts and total participation counts as separate data series.
+*For any* engagement metrics, the geographic breakdown chart should display engagement data for the immediate children of the current global geographic area filter (or all top-level areas when no filter is active), with each area's metrics aggregating data from that area and all its descendants. The chart should include both unique participant counts and total participation counts as separate data series, with geographic area names rendered with customized labels showing area type badges underneath the area name. Clicking on an area in the chart should set it as the new global filter, enabling progressive drill-down through the geographic hierarchy.
 
-**Validates: Requirements 7.49, 7.49a, 7.49b**
+**Validates: Requirements 7.49, 7.49a, 7.49b, 7.49c, 7.49d, 7.49e, 7.49f, 7.49g, 7.49h, 7.49i, 7.49j, 7.49k, 7.50, 7.51**
 
 ### Property 73: Geographic Area Drill-Down
 

@@ -204,6 +204,7 @@ export const EngagementQuerySchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.string().datetime('Invalid end date format').optional(),
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  parentGeographicAreaId: z.string().uuid('Invalid parent geographic area ID format').optional(),
   activityCategoryId: z.string().uuid('Invalid activity category ID format').optional(),
   activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
   venueId: z.string().uuid('Invalid venue ID format').optional(),

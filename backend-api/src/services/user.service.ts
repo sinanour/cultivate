@@ -71,6 +71,14 @@ export class UserService {
       throw new Error('User with this email already exists');
     }
 
+    // Validate createdBy user exists (required for authorization rules)
+    if (data.authorizationRules && data.authorizationRules.length > 0) {
+      const creatorUser = await this.userRepository.findById(createdBy);
+      if (!creatorUser) {
+        throw new Error('Creator user not found - cannot create authorization rules');
+      }
+    }
+
     // Hash password
     const passwordHash = await bcrypt.hash(data.password, 10);
 

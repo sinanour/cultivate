@@ -24,13 +24,14 @@ describe('ActivityTypeService', () => {
     describe('getAllActivityTypes', () => {
         it('should return all activity types', async () => {
             const mockTypes = [
-                { id: '1', name: "Children's Class", activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1 },
-                { id: '2', name: 'Ruhi Book 1', activityCategoryId: 'cat-2', createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '1', name: "Children's Class", activityCategoryId: 'cat-1', isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '2', name: 'Ruhi Book 01', activityCategoryId: 'cat-2', isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
             mockPrisma.activityType.findMany.mockResolvedValue(mockTypes as any);
 
             const result = await service.getAllActivityTypes();
 
+            // Service should add computed isPredefined field based on name
             expect(result).toEqual(mockTypes.map(t => ({ ...t, isPredefined: true })));
             expect(mockPrisma.activityType.findMany).toHaveBeenCalled();
         });
@@ -46,7 +47,7 @@ describe('ActivityTypeService', () => {
 
     describe('createActivityType', () => {
         it('should create activity type with valid data', async () => {
-            const input = { name: 'Ruhi Book 1', activityCategoryId: 'cat-1' };
+            const input = { name: 'Ruhi Book 01', activityCategoryId: 'cat-1' };
             const mockType = { id: '1', name: input.name, activityCategoryId: input.activityCategoryId, isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 };
             const mockCategory = { id: 'cat-1', name: 'Study Circles', isPredefined: true, version: 1, createdAt: new Date(), updatedAt: new Date() };
 
@@ -56,8 +57,9 @@ describe('ActivityTypeService', () => {
 
             const result = await service.createActivityType(input);
 
+            // Service should add computed isPredefined field based on name
             expect(result).toEqual({ ...mockType, activityCategory: mockCategory, isPredefined: true });
-            expect(mockPrisma.activityType.findUnique).toHaveBeenCalledWith({ where: { name: 'Ruhi Book 1' } });
+            expect(mockPrisma.activityType.findUnique).toHaveBeenCalledWith({ where: { name: 'Ruhi Book 01' } });
             expect(mockPrisma.activityCategory.findUnique).toHaveBeenCalledWith({ where: { id: 'cat-1' } });
             expect(mockPrisma.activityType.create).toHaveBeenCalledWith({
                 data: {

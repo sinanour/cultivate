@@ -1,16 +1,20 @@
 import { Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { AuthenticatedRequest } from '../types/express.types';
+import { UserRepository } from '../repositories/user.repository';
 
 export class AuthMiddleware {
-    constructor(private authService: AuthService) { }
+    constructor(
+        private authService: AuthService,
+        private userRepository: UserRepository
+    ) { }
 
     /**
      * Middleware to authenticate requests using JWT tokens
      * Validates the token from Authorization header and attaches user info to request
      */
     authenticate() {
-        return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+        return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
             try {
                 // Get token from Authorization header
                 const authHeader = req.headers.authorization;
@@ -37,6 +41,17 @@ export class AuthMiddleware {
               // Validate token and extract payload
               try {
                   const payload = this.authService.validateAccessToken(token);
+
+                  // Validate that the user still exists in the database
+                  const user = await this.userRepository.findById(payload.userId);
+                  if (!user) {
+                      return res.status(401).json({
+                          code: 'UNAUTHORIZED',
+                          message: 'User no longer exists',
+                          details: {},
+                      });
+                  }
+
                   req.user = payload;
 
                   // Extract authorization info from token payload
@@ -69,7 +84,7 @@ export class AuthMiddleware {
      * Attaches user info if token is present, but doesn't fail if missing
      */
     optionalAuthenticate() {
-      return (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+        return async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
           try {
               const authHeader = req.headers.authorization;
               if (!authHeader) {
@@ -81,14 +96,19 @@ export class AuthMiddleware {
               const token = parts[1];
               try {
                   const payload = this.authService.validateAccessToken(token);
-                  req.user = payload;
 
-                  // Extract authorization info from token payload
-                  req.authorizationInfo = {
-                      hasGeographicRestrictions: payload.hasGeographicRestrictions,
-                      authorizedAreaIds: payload.authorizedAreaIds,
-                      readOnlyAreaIds: payload.readOnlyAreaIds,
-                  };
+                  // Validate that the user still exists in the database
+                  const user = await this.userRepository.findById(payload.userId);
+                  if (user) {
+                      req.user = payload;
+
+                      // Extract authorization info from token payload
+                      req.authorizationInfo = {
+                          hasGeographicRestrictions: payload.hasGeographicRestrictions,
+                          authorizedAreaIds: payload.authorizedAreaIds,
+                          readOnlyAreaIds: payload.readOnlyAreaIds,
+                      };
+                  }
               } catch {
                   // Ignore invalid tokens for optional auth
               }

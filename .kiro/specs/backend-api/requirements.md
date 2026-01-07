@@ -53,7 +53,7 @@ The Backend API package provides the RESTful API service that implements all bus
     - Category "Children's Classes": "Children's Class"
     - Category "Junior Youth Groups": "Junior Youth Group"
     - Category "Devotional Gatherings": "Devotional Gathering"
-    - Category "Study Circles": "Ruhi Book 1", "Ruhi Book 2", "Ruhi Book 3", "Ruhi Book 3A", "Ruhi Book 3B", "Ruhi Book 3C", "Ruhi Book 3D", "Ruhi Book 4", "Ruhi Book 5", "Ruhi Book 5A", "Ruhi Book 5B", "Ruhi Book 6", "Ruhi Book 7", "Ruhi Book 8", "Ruhi Book 9", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
+    - Category "Study Circles": "Ruhi Book 01", "Ruhi Book 02", "Ruhi Book 03", "Ruhi Book 03A", "Ruhi Book 03B", "Ruhi Book 03C", "Ruhi Book 03D", "Ruhi Book 04", "Ruhi Book 05", "Ruhi Book 05A", "Ruhi Book 05B", "Ruhi Book 06", "Ruhi Book 07", "Ruhi Book 08", "Ruhi Book 09", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
 17. WHEN retrieving activity types, THE API SHALL include the associated activity category information
 
 ### Requirement 2: Manage Participant Roles
@@ -243,6 +243,9 @@ The Backend API package provides the RESTful API service that implements all bus
 19a. THE API SHALL support filtering engagement metrics by population (point filter, includes only participants belonging to specified populations)
 19b. WHEN a population filter is provided, THE API SHALL include only participants who belong to at least one of the specified populations
 19c. WHEN a population filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
+19d. WHEN a population filter is provided, THE API SHALL calculate participant counts based only on participants who belong to at least one of the specified populations
+19e. WHEN a population filter is provided, THE API SHALL calculate participation counts based only on participant-activity associations where the participant belongs to at least one of the specified populations
+19f. WHEN a population filter is provided and an activity has 5 participants with 3 belonging to the specified population, THE API SHALL count 3 participants (not 5) and 3 participation instances (not 5) for that activity
 20. THE API SHALL support filtering engagement metrics by date range (range filter with start and end dates)
 21. WHEN multiple grouping dimensions are specified, THE API SHALL return metrics organized hierarchically by the specified dimensions in order
 22. WHEN multiple filters are specified, THE API SHALL apply all filters using AND logic
@@ -295,6 +298,30 @@ The Backend API package provides the RESTful API service that implements all bus
 31. WHEN an invalid UUID is provided in any array parameter, THE API SHALL return a 400 Bad Request error with a descriptive message
 32. THE API SHALL use Zod preprocess to normalize array query parameters before validation
 
+### Requirement 6B: Geographic Breakdown Analytics
+
+**User Story:** As a community organizer, I want to retrieve engagement metrics grouped by immediate child geographic areas via API, so that I can analyze engagement patterns at the next level of geographic hierarchy and drill down progressively through the hierarchy.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a GET /api/analytics/geographic endpoint that returns engagement metrics grouped by geographic area
+2. THE API SHALL accept an optional parentGeographicAreaId query parameter to specify which geographic area's children to analyze
+3. WHEN parentGeographicAreaId is provided, THE API SHALL return metrics for all immediate children of the specified geographic area
+4. WHEN parentGeographicAreaId is not provided (null or omitted), THE API SHALL return metrics for all top-level geographic areas (areas with null parent)
+5. FOR each geographic area in the breakdown, THE API SHALL calculate metrics by aggregating all activities and participants from that area and all its descendant areas (recursive aggregation)
+6. THE API SHALL return an array of objects with geographicAreaId, geographicAreaName, areaType, activityCount, participantCount, and participationCount
+7. THE API SHALL accept optional startDate and endDate query parameters to filter by date range
+8. WHEN a date range is provided, THE API SHALL include only activities and participants within that date range
+9. THE API SHALL accept optional activityCategoryIds, activityTypeIds, venueIds, and populationIds array filters
+10. WHEN filters are provided, THE API SHALL apply all filters using AND logic before grouping by geographic area
+11. THE API SHALL sort results alphabetically by geographicAreaName
+12. WHEN no geographic areas match the criteria, THE API SHALL return an empty array
+13. THE API SHALL validate all query parameters and return 400 Bad Request for invalid inputs
+14. THE API SHALL return 200 OK with the geographic breakdown data on success
+15. WHEN a user has geographic authorization restrictions with DENY rules, THE API SHALL exclude denied geographic areas and all their descendants from the breakdown results
+16. WHEN calculating metrics for a geographic area with denied descendants, THE API SHALL only aggregate data from authorized descendant areas (excluding denied areas and their descendants)
+17. WHEN a geographic area has both allowed and denied descendants, THE API SHALL include only the metrics from allowed descendants in the aggregation
+
 ### Requirement 7: Track Growth Over Time
 
 **User Story:** As a community organizer, I want to track unique participant counts, unique activity counts, and total participation over time via API with optional grouping by activity type or category, so that I can measure community development and understand engagement patterns at each point in the chronological history.
@@ -314,6 +341,9 @@ The Backend API package provides the RESTful API service that implements all bus
 9a. WHEN calculating growth metrics, THE API SHALL accept an optional populationIds array filter
 9b. WHEN a population filter is provided, THE API SHALL include only participants who belong to at least one of the specified populations
 9c. WHEN a population filter is provided, THE API SHALL include only activities that have at least one participant belonging to at least one of the specified populations
+9d. WHEN a population filter is provided, THE API SHALL calculate unique participant counts based only on participants who belong to at least one of the specified populations
+9e. WHEN a population filter is provided, THE API SHALL calculate total participation counts based only on participant-activity associations where the participant belongs to at least one of the specified populations
+9f. WHEN a population filter is provided and an activity has 5 participants with 3 belonging to the specified population, THE API SHALL count 3 unique participants (not 5) and 3 participation instances (not 5) for that activity in the time period
 10. THE API SHALL accept an optional groupBy query parameter with string values 'type' or 'category' (not 'activityType' or 'activityCategory')
 11. WHEN groupBy is 'type', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_TYPE enum and return separate time-series data for each activity type in the groupedTimeSeries field
 12. WHEN groupBy is 'category', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_CATEGORY enum and return separate time-series data for each activity category in the groupedTimeSeries field

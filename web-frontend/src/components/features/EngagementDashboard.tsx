@@ -19,6 +19,7 @@ import type { DateRangePickerProps } from '@cloudscape-design/components/date-ra
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import Badge from '@cloudscape-design/components/badge';
 import { AnalyticsService, type EngagementMetricsParams } from '../../services/api/analytics.service';
 import { activityCategoryService } from '../../services/api/activity-category.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
@@ -32,6 +33,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNotification } from '../../hooks/useNotification';
 import { GroupingDimension } from '../../utils/constants';
 import { generateEngagementSummaryCSV, downloadBlob } from '../../utils/csv.utils';
+import { generateEngagementSummaryFilename } from '../../utils/csv-filename.utils';
+import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
+import type { AreaType } from '../../types';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -56,6 +60,53 @@ const ACTIVITIES_CHART_VIEW_MODE_KEY = 'activitiesChartViewMode';
 
 // View mode options
 type ActivitiesViewMode = 'type' | 'category';
+
+// Custom tick component for geographic breakdown chart Y-axis
+// Renders area name with area type badge underneath using CloudScape Badge component
+interface GeographicAreaTickProps {
+  x?: number;
+  y?: number;
+  payload?: {
+    value: string; // This will be the geographicAreaName
+    index: number;
+  };
+  areaTypeMap: Map<string, string>; // Map from area name to area type
+}
+
+const GeographicAreaTick: React.FC<GeographicAreaTickProps> = ({ x = 0, y = 0, payload, areaTypeMap }) => {
+  if (!payload) return null;
+  
+  const areaName = payload.value;
+  const areaType = areaTypeMap.get(areaName);
+  
+  if (!areaType) {
+    // Fallback to just rendering the name if no area type found
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text x={0} y={0} dy={4} textAnchor="end" fill="#666" fontSize={12}>
+          {areaName}
+        </text>
+      </g>
+    );
+  }
+  
+  const badgeColor = getAreaTypeBadgeColor(areaType as AreaType);
+  
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {/* Area name on first line */}
+      <text x={0} y={-12} dy={4} textAnchor="end" fill="#666" fontSize={12} fontWeight="500">
+        {areaName}
+      </text>
+      {/* Area type badge on second line using foreignObject to embed CloudScape Badge */}
+      <foreignObject x={-180} y={0} width={180} height={24}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+          <Badge color={badgeColor}>{areaType}</Badge>
+        </div>
+      </foreignObject>
+    </g>
+  );
+};
 
 export function EngagementDashboard() {
   const navigate = useNavigate();
@@ -137,7 +188,7 @@ export function EngagementDashboard() {
     }
   });
   
-  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+  const { selectedGeographicAreaId, selectedGeographicArea, setGeographicAreaFilter } = useGlobalGeographicFilter();
   const { user } = useAuth();
   const notification = useNotification();
 
@@ -464,6 +515,67 @@ export function EngagementDashboard() {
     },
   });
 
+  // Separate query for geographic breakdown
+  const { data: geographicBreakdown } = useQuery({
+    queryKey: ['geographicBreakdown', dateRange, selectedGeographicAreaId, propertyFilterQuery],
+    queryFn: () => {
+      // Convert date range to ISO datetime format for API
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      
+      if (dateRange) {
+        if (dateRange.type === 'absolute') {
+          startDate = toISODateTime(dateRange.startDate, false);
+          endDate = toISODateTime(dateRange.endDate, true);
+        } else if (dateRange.type === 'relative') {
+          const now = new Date();
+          const start = new Date(now);
+          
+          switch (dateRange.unit) {
+            case 'day':
+              start.setDate(start.getDate() - dateRange.amount);
+              break;
+            case 'week':
+              start.setDate(start.getDate() - (dateRange.amount * 7));
+              break;
+            case 'month':
+              start.setMonth(start.getMonth() - dateRange.amount);
+              break;
+            case 'year':
+              start.setFullYear(start.getFullYear() - dateRange.amount);
+              break;
+          }
+          
+          startDate = start.toISOString();
+          endDate = now.toISOString();
+        }
+      }
+      
+      // Extract filters from PropertyFilter tokens
+      const activityCategoryLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityCategory' && t.operator === '=')?.value;
+      const activityCategoryId = activityCategoryLabel ? getUuidFromLabel(activityCategoryLabel) : undefined;
+      
+      const activityTypeLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'activityType' && t.operator === '=')?.value;
+      const activityTypeId = activityTypeLabel ? getUuidFromLabel(activityTypeLabel) : undefined;
+      
+      const venueLabel = propertyFilterQuery.tokens.find(t => t.propertyKey === 'venue' && t.operator === '=')?.value;
+      const venueId = venueLabel ? getUuidFromLabel(venueLabel) : undefined;
+      
+      const populationLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
+      const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+      
+      return AnalyticsService.getGeographicAnalytics(
+        selectedGeographicAreaId || undefined, // parentGeographicAreaId
+        startDate,
+        endDate,
+        activityCategoryId,
+        activityTypeId,
+        venueId,
+        populationIds.length > 0 ? populationIds : undefined
+      );
+    },
+  });
+
   // Prepare data BEFORE any conditional returns (for hooks)
   const hasDateRange = !!dateRange;
   
@@ -541,9 +653,61 @@ export function EngagementDashboard() {
         metrics.groupingDimensions || []
       );
       
-      // Generate filename with current date
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-      const filename = `engagement-summary-${today}.csv`;
+      // Extract filter values for filename
+      const activityCategoryToken = propertyFilterQuery.tokens.find(
+        t => t.propertyKey === 'activityCategory' && t.operator === '='
+      );
+      const activityTypeToken = propertyFilterQuery.tokens.find(
+        t => t.propertyKey === 'activityType' && t.operator === '='
+      );
+      const venueToken = propertyFilterQuery.tokens.find(
+        t => t.propertyKey === 'venue' && t.operator === '='
+      );
+      const populationTokens = propertyFilterQuery.tokens.filter(
+        t => t.propertyKey === 'population' && t.operator === '='
+      );
+      
+      // Extract date range (convert relative to absolute if needed)
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      if (dateRange?.type === 'absolute') {
+        startDate = dateRange.startDate;
+        endDate = dateRange.endDate;
+      } else if (dateRange?.type === 'relative') {
+        // Calculate absolute dates from relative range for filename
+        const now = new Date();
+        const end = new Date(now);
+        const start = new Date(now);
+        
+        switch (dateRange.unit) {
+          case 'day':
+            start.setDate(start.getDate() - dateRange.amount);
+            break;
+          case 'week':
+            start.setDate(start.getDate() - (dateRange.amount * 7));
+            break;
+          case 'month':
+            start.setMonth(start.getMonth() - dateRange.amount);
+            break;
+          case 'year':
+            start.setFullYear(start.getFullYear() - dateRange.amount);
+            break;
+        }
+        
+        startDate = start.toISOString().split('T')[0];
+        endDate = end.toISOString().split('T')[0];
+      }
+      
+      // Generate filename with active filters
+      const filename = generateEngagementSummaryFilename({
+        geographicArea: selectedGeographicArea,
+        startDate,
+        endDate,
+        activityCategoryName: activityCategoryToken?.value,
+        activityTypeName: activityTypeToken?.value,
+        venueName: venueToken?.value,
+        populationNames: populationTokens.map(t => t.value).filter((v): v is string => !!v),
+      });
       
       // Trigger download
       downloadBlob(csvBlob, filename);
@@ -684,6 +848,7 @@ export function EngagementDashboard() {
             filteringLoadingText="Loading options..."
             filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
             onLoadItems={handleLoadItems}
+            hideOperations={true}
             i18nStrings={{
               filteringAriaLabel: 'Filter engagement data',
               dismissAriaLabel: 'Dismiss',
@@ -1252,29 +1417,95 @@ export function EngagementDashboard() {
       </ColumnLayout>
 
       {/* Geographic Breakdown */}
-      {metrics.geographicBreakdown && metrics.geographicBreakdown.length > 0 && (
+      {geographicBreakdown && geographicBreakdown.length > 0 && (
         <Container header={<Header variant="h3">Geographic Breakdown</Header>}>
           <InteractiveLegend
             chartId="geographic-breakdown"
             series={geographicBreakdownLegendItems}
             onVisibilityChange={geographicBreakdownLegend.handleVisibilityChange}
           />
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={metrics.geographicBreakdown.filter(area => 
-              !area.hasChildren && (area.activityCount > 0 || area.participantCount > 0 || area.participationCount > 0)
-            )} barGap={BAR_CHART_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart 
+              data={geographicBreakdown} 
+              layout="vertical"
+              barGap={BAR_CHART_GAP} 
+              maxBarSize={BAR_CHART_MAX_BAR_SIZE}
+              margin={{ left: 20 }}
+            >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="geographicAreaName" />
-              <YAxis />
-              <Tooltip />
+              <XAxis type="number" />
+              <YAxis 
+                type="category" 
+                dataKey="geographicAreaName" 
+                width={180}
+                tick={<GeographicAreaTick 
+                  areaTypeMap={new Map(
+                    geographicBreakdown.map(area => [area.geographicAreaName, area.areaType])
+                  )}
+                />}
+              />
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div style={{ padding: '8px', backgroundColor: 'white', border: '1px solid #ccc' }}>
+                        <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>{data.geographicAreaName}</div>
+                        <div style={{ marginBottom: '4px', fontSize: '12px' }}>
+                          <Badge color={getAreaTypeBadgeColor(data.areaType as AreaType)}>{data.areaType}</Badge>
+                        </div>
+                        <div>Activities: {data.activityCount}</div>
+                        <div>Participants: {data.participantCount}</div>
+                        <div>Participation: {data.participationCount}</div>
+                        {data.hasChildren && (
+                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#0073bb' }}>
+                            Click to drill down
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               {geographicBreakdownLegend.isSeriesVisible('Activities') && (
-                <Bar dataKey="activityCount" fill="#0088FE" name="Activities" />
+                <Bar 
+                  dataKey="activityCount" 
+                  fill="#0088FE" 
+                  name="Activities"
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    if (data && data.hasChildren) {
+                      setGeographicAreaFilter(data.geographicAreaId);
+                    }
+                  }}
+                />
               )}
               {geographicBreakdownLegend.isSeriesVisible('Participants') && (
-                <Bar dataKey="participantCount" fill="#00C49F" name="Participants" />
+                <Bar 
+                  dataKey="participantCount" 
+                  fill="#00C49F" 
+                  name="Participants"
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    if (data && data.hasChildren) {
+                      setGeographicAreaFilter(data.geographicAreaId);
+                    }
+                  }}
+                />
               )}
               {geographicBreakdownLegend.isSeriesVisible('Participation') && (
-                <Bar dataKey="participationCount" fill="#FFBB28" name="Participation" />
+                <Bar 
+                  dataKey="participationCount" 
+                  fill="#FFBB28" 
+                  name="Participation"
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    if (data && data.hasChildren) {
+                      setGeographicAreaFilter(data.geographicAreaId);
+                    }
+                  }}
+                />
               )}
             </BarChart>
           </ResponsiveContainer>

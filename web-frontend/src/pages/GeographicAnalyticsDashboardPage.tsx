@@ -10,6 +10,7 @@ import {
     type DateRangePickerProps,
 } from '@cloudscape-design/components';
 import { AnalyticsService } from '../services/api/analytics.service';
+import { useGlobalGeographicFilter } from '../hooks/useGlobalGeographicFilter';
 import type { GeographicAnalytics } from '../types';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
@@ -25,9 +26,10 @@ function toISODateTime(dateString: string, isEndOfDay = false): string {
 
 export default function GeographicAnalyticsDashboardPage() {
     const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(null);
+    const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
     const { data: geographicData, isLoading } = useQuery({
-        queryKey: ['geographic-analytics', dateRange],
+        queryKey: ['geographic-analytics', dateRange, selectedGeographicAreaId],
         queryFn: () => {
             // Extract dates from the date range value and convert to ISO datetime
             let startDate: string | undefined;
@@ -38,7 +40,11 @@ export default function GeographicAnalyticsDashboardPage() {
                 endDate = toISODateTime(dateRange.endDate, true);
             }
 
-            return AnalyticsService.getGeographicAnalytics(startDate, endDate);
+            return AnalyticsService.getGeographicAnalytics(
+                selectedGeographicAreaId || undefined, // parentGeographicAreaId
+                startDate,
+                endDate
+            );
         },
     });
 
@@ -141,28 +147,22 @@ export default function GeographicAnalyticsDashboardPage() {
                             sortingField: 'areaType',
                         },
                         {
-                            id: 'totalActivities',
-                            header: 'Total Activities',
-                            cell: (item: GeographicAnalytics) => item.totalActivities,
-                            sortingField: 'totalActivities',
+                            id: 'activityCount',
+                            header: 'Activities',
+                            cell: (item: GeographicAnalytics) => item.activityCount,
+                            sortingField: 'activityCount',
                         },
                         {
-                            id: 'activeActivities',
-                            header: 'Active Activities',
-                            cell: (item: GeographicAnalytics) => item.activeActivities,
-                            sortingField: 'activeActivities',
+                            id: 'participantCount',
+                            header: 'Participants',
+                            cell: (item: GeographicAnalytics) => item.participantCount,
+                            sortingField: 'participantCount',
                         },
                         {
-                            id: 'totalParticipants',
-                            header: 'Total Participants',
-                            cell: (item: GeographicAnalytics) => item.totalParticipants,
-                            sortingField: 'totalParticipants',
-                        },
-                        {
-                            id: 'activeParticipants',
-                            header: 'Active Participants',
-                            cell: (item: GeographicAnalytics) => item.activeParticipants,
-                            sortingField: 'activeParticipants',
+                            id: 'participationCount',
+                            header: 'Participation',
+                            cell: (item: GeographicAnalytics) => item.participationCount,
+                            sortingField: 'participationCount',
                         },
                     ]}
                     items={geographicData || []}

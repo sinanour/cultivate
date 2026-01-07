@@ -12,6 +12,8 @@ import { AssignmentService } from '../../services/api/assignment.service';
 import { ParticipantService } from '../../services/api/participant.service';
 import { ParticipantRoleService } from '../../services/api/participant-role.service';
 import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
+import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
+import { useAuth } from '../../hooks/useAuth';
 
 interface AssignmentFormProps {
   activityId: string;
@@ -22,6 +24,7 @@ interface AssignmentFormProps {
 
 export function AssignmentForm({ activityId, existingAssignments, onSuccess, onCancel }: AssignmentFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [participantId, setParticipantId] = useState('');
   const [roleId, setRoleId] = useState('');
   const [notes, setNotes] = useState('');
@@ -29,8 +32,10 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
   const [participantError, setParticipantError] = useState('');
   const [roleError, setRoleError] = useState('');
   const [error, setError] = useState('');
+  const [isRefreshingParticipants, setIsRefreshingParticipants] = useState(false);
+  const [isRefreshingRoles, setIsRefreshingRoles] = useState(false);
 
-  const { data: roles = [] } = useQuery({
+  const { data: roles = [], refetch: refetchRoles } = useQuery({
     queryKey: ['participantRoles'],
     queryFn: () => ParticipantRoleService.getRoles(),
   });
@@ -39,6 +44,27 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
     label: r.name,
     value: r.id,
   }));
+
+  const handleRefreshParticipants = async () => {
+    setIsRefreshingParticipants(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['participants'] });
+    } finally {
+      setIsRefreshingParticipants(false);
+    }
+  };
+
+  const handleRefreshRoles = async () => {
+    setIsRefreshingRoles(true);
+    try {
+      await refetchRoles();
+    } finally {
+      setIsRefreshingRoles(false);
+    }
+  };
+
+  const canAddParticipant = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
+  const canAddRole = user?.role === 'ADMINISTRATOR';
 
   const assignMutation = useMutation({
     mutationFn: (data: {
@@ -131,45 +157,61 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
             </Alert>
           )}
           <FormField label="Participant" errorText={participantError} constraintText="Required">
-            <AsyncEntitySelect
-              value={participantId}
-              onChange={(value) => {
-                setParticipantId(value);
-                if (participantError) validateParticipant(value);
-              }}
-              entityType="participant"
-              fetchFunction={async (params) => {
-                const data = await ParticipantService.getParticipants(
-                  params.page,
-                  params.limit,
-                  params.geographicAreaId,
-                  params.search
-                );
-                return { data };
-              }}
-              formatOption={(p) => ({
-                value: p.id,
-                label: p.name,
-                description: p.email,
-              })}
-              placeholder="Search for a participant"
-              disabled={isSubmitting}
-              invalid={!!participantError}
-              ariaLabel="Select participant"
-            />
+            <EntitySelectorWithActions
+              onRefresh={handleRefreshParticipants}
+              addEntityUrl="/participants/new"
+              canAdd={canAddParticipant}
+              isRefreshing={isRefreshingParticipants}
+              entityTypeName="participant"
+            >
+              <AsyncEntitySelect
+                value={participantId}
+                onChange={(value) => {
+                  setParticipantId(value);
+                  if (participantError) validateParticipant(value);
+                }}
+                entityType="participant"
+                fetchFunction={async (params) => {
+                  const data = await ParticipantService.getParticipants(
+                    params.page,
+                    params.limit,
+                    params.geographicAreaId,
+                    params.search
+                  );
+                  return { data };
+                }}
+                formatOption={(p) => ({
+                  value: p.id,
+                  label: p.name,
+                  description: p.email,
+                })}
+                placeholder="Search for a participant"
+                disabled={isSubmitting}
+                invalid={!!participantError}
+                ariaLabel="Select participant"
+              />
+            </EntitySelectorWithActions>
           </FormField>
           <FormField label="Role" errorText={roleError} constraintText="Required">
-            <Select
-              selectedOption={roleOptions.find((o) => o.value === roleId) || null}
-              onChange={({ detail }) => {
-                setRoleId(detail.selectedOption.value || '');
-                if (roleError) validateRole(detail.selectedOption.value || '');
-              }}
-              options={roleOptions}
-              placeholder="Select a role"
-              disabled={isSubmitting}
-              empty="No roles available"
-            />
+            <EntitySelectorWithActions
+              onRefresh={handleRefreshRoles}
+              addEntityUrl="/configuration"
+              canAdd={canAddRole}
+              isRefreshing={isRefreshingRoles}
+              entityTypeName="role"
+            >
+              <Select
+                selectedOption={roleOptions.find((o) => o.value === roleId) || null}
+                onChange={({ detail }) => {
+                  setRoleId(detail.selectedOption.value || '');
+                  if (roleError) validateRole(detail.selectedOption.value || '');
+                }}
+                options={roleOptions}
+                placeholder="Select a role"
+                disabled={isSubmitting}
+                empty="No roles available"
+              />
+            </EntitySelectorWithActions>
           </FormField>
           <FormField label="Notes" constraintText="Optional">
             <Textarea

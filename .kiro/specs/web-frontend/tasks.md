@@ -818,9 +818,19 @@ This implementation plan covers the React-based web application built with TypeS
         - Display each metric in its own column for easy comparison
     - Show role distribution within filtered and grouped results
     - Display geographic breakdown chart showing engagement by geographic area
+    - When global geographic area filter is active: display only immediate children of the filtered area
+    - When no global filter is active: display all top-level geographic areas (null parent)
+    - For each area: aggregate metrics from the area and all its descendants (recursive)
+    - Render geographic area names with customized labels that include area type badges
+    - Display area type badge underneath the geographic area name in chart labels
+    - Use getAreaTypeBadgeColor() utility function to determine badge color for each area type
+    - Format chart labels with area name on first line and area type badge on second line
+    - Implement custom tick component or label formatter for recharts to render multi-line labels with badges
     - Include both unique participant counts and total participation counts in geographic breakdown chart
     - Use separate data series for "Participants" (unique) and "Participation" (non-unique)
-    - Allow drilling down into child geographic areas
+    - Allow drilling down into child geographic areas by clicking on an area to set it as the new global filter
+    - When drill-down occurs, update chart to show immediate children of newly selected area
+    - Provide way to navigate back up hierarchy via filter clear button or ancestor breadcrumbs
     - Display all-time metrics when no date range specified
     - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest address for participants
     - Correctly identify current venue/address when effectiveFrom is null for filtering and grouping
@@ -831,7 +841,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.19a, 7.19b, 7.19c, 7.20, 7.21, 7.21a, 7.21b, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.38a, 7.38b, 7.38c, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.49, 7.49a, 7.49b_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.19a, 7.19b, 7.19c, 7.20, 7.21, 7.21a, 7.21b, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.38a, 7.38b, 7.38c, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.49, 7.49a, 7.49b, 7.49c, 7.49d, 7.49e, 7.49f_
 
   - [x] 14.1a Enhance Activities chart with segmented control toggle
     - Rename chart title from "Activities by Type" to "Activities"
@@ -937,7 +947,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31c: Analytics URL Update on State Change**
     - **Property 31d: Analytics Browser Navigation Support**
     - **Property 31e: Analytics URL Shareability**
-    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.19a, 7.19b, 7.19c, 7.20, 7.21, 7.21a, 7.21b, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.49, 7.49a, 7.49b**
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.19a, 7.19b, 7.19c, 7.20, 7.21, 7.21a, 7.21b, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.32a, 7.32b, 7.32c, 7.32d, 7.32e, 7.32f, 7.32g, 7.32h, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.49, 7.49a, 7.49b, 7.49c, 7.49d, 7.49e, 7.49f**
 
   - [x] 14.2 Create GrowthDashboard component
     - Display three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
@@ -1020,8 +1030,13 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [x] 14.3 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint
-    - Show metrics by geographic area (geographicAreaId, geographicAreaName, areaType, totalActivities, activeActivities, totalParticipants, activeParticipants)
+    - Pass parentGeographicAreaId from global filter context (or null for top-level areas)
+    - Show metrics by geographic area (geographicAreaId, geographicAreaName, areaType, activityCount, participantCount, participationCount)
+    - Each area's metrics aggregate data from the area and all its descendants
+    - Implement click handler on chart bars/areas to set clicked area as new global filter
     - Provide optional date range filter (startDate, endDate)
+    - Support additional filters (activityCategoryIds, activityTypeIds, venueIds, populationIds)
+    - _Requirements: 7.49, 7.49g, 7.49h, 7.49i, 7.49j, 7.49k, 7.50, 7.51_
     - _Requirements: 7.38, 7.39_
 
   - [x] 14.4 Create ActivityLifecycleChart component
@@ -2006,7 +2021,17 @@ This implementation plan covers the React-based web application built with TypeS
     - Add CloudScape Button with iconName="download" near Engagement Summary table header
     - Implement handleExportEngagementSummary handler
     - Call generateEngagementSummaryCSV with current metrics and grouping dimensions
-    - Generate filename: "engagement-summary-YYYY-MM-DD.csv" using formatDate utility
+    - Generate dynamic filename reflecting active filters:
+      - Base: "engagement-summary"
+      - When global geographic area filter active: append "{name}-{type}" (e.g., "Vancouver-City", "Downtown-Neighbourhood")
+      - Format area type in title case with hyphens for multi-word types
+      - When date range filter active: append start and end dates in ISO-8601 format (YYYY-MM-DD)
+      - When activity category, type, venue, or population filters active: append sanitized names
+      - Sanitize all filter values: replace spaces with hyphens, remove invalid filename characters (: / \ * ? " < > |)
+      - Omit inactive filters to keep filename concise
+      - Separate components with underscores
+      - Append current date in ISO-8601 format (YYYY-MM-DD)
+      - Example: "engagement-summary_Vancouver-City_Study-Circles_2025-01-01_2025-12-31_2026-01-06.csv"
     - Call downloadBlob to trigger browser download
     - Show loading indicator during export
     - Disable button during export
@@ -2014,24 +2039,32 @@ This implementation plan covers the React-based web application built with TypeS
     - Display error notification on failure
     - Hide button from READ_ONLY users
     - Show button to EDITOR and ADMINISTRATOR users
-    - _Requirements: 30.1, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.14, 30.17_
+    - _Requirements: 30.1, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.14, 30.15, 30.16, 30.17, 30.18, 30.19, 30.20, 30.21, 30.22_
 
   - [x] 30A.3 Handle filtered and grouped data in CSV export
     - Ensure CSV export uses the same filtered metrics displayed in the table
     - Preserve grouping structure in CSV output
     - Export only data matching current filter state (PropertyFilter tokens, date range, geographic area)
+    - Pass active filter information to filename generator:
+      - Geographic area name and type (if filter active)
+      - Date range start and end dates (if filter active)
+      - Activity category, type, venue, population names (if filters active)
     - Handle empty table case (export header row only)
-    - _Requirements: 30.15, 30.16, 30.18_
+    - _Requirements: 30.15, 30.16, 30.23, 30.24, 30.25_
 
   - [ ]* 30A.4 Write property tests for Engagement Summary CSV export
     - **Property 152: Engagement Summary CSV Export Button Presence**
     - **Property 153: Engagement Summary CSV Content Completeness**
     - **Property 154: Engagement Summary CSV Human-Friendly Labels**
-    - **Property 155: Engagement Summary CSV Filename Format**
+    - **Property 155: Engagement Summary CSV Filename Format with Filters**
+    - **Property 155a: CSV Filename Geographic Area Type and Name**
+    - **Property 155b: CSV Filename Date Range Inclusion**
+    - **Property 155c: CSV Filename Filter Sanitization**
+    - **Property 155d: CSV Filename Inactive Filter Omission**
     - **Property 156: Engagement Summary CSV Export Loading State**
     - **Property 157: Engagement Summary CSV Export Filtered Data**
     - **Property 158: Engagement Summary CSV Empty Table Handling**
-    - **Validates: Requirements 30.1, 30.2, 30.3, 30.4, 30.5, 30.6, 30.8, 30.9, 30.10, 30.11, 30.13, 30.14, 30.15, 30.16, 30.17, 30.18**
+    - **Validates: Requirements 30.1, 30.2, 30.3, 30.4, 30.5, 30.6, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.14, 30.15, 30.16, 30.17, 30.18, 30.19, 30.20, 30.21, 30.22, 30.23, 30.24, 30.25**
 
 - [ ] 31. Checkpoint - Verify CSV import/export functionality
   - Ensure all tests pass, ask the user if questions arise.

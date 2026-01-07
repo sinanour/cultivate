@@ -5,10 +5,12 @@ import { ActivityTypeService } from '../../services/activity-type.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
 import { AuditLoggingMiddleware } from '../../middleware/audit-logging.middleware';
+import { UserRepository } from '../../repositories/user.repository';
 import { createMockTokenPayload } from '../helpers/token-payload.helper';
 import { UserRole } from '@prisma/client';
 
 jest.mock('../../services/activity-type.service');
+jest.mock('../../repositories/user.repository');
 
 describe('ActivityTypeRoutes', () => {
     let app: Application;
@@ -22,7 +24,8 @@ describe('ActivityTypeRoutes', () => {
         app.use(express.json());
 
         mockService = new ActivityTypeService(null as any, null as any) as jest.Mocked<ActivityTypeService>;
-        mockAuthMiddleware = new AuthMiddleware(null as any) as jest.Mocked<AuthMiddleware>;
+        const mockUserRepository = new UserRepository(null as any) as jest.Mocked<UserRepository>;
+        mockAuthMiddleware = new AuthMiddleware(null as any, mockUserRepository) as jest.Mocked<AuthMiddleware>;
         mockAuthzMiddleware = new AuthorizationMiddleware() as jest.Mocked<AuthorizationMiddleware>;
         mockAuditMiddleware = new AuditLoggingMiddleware(null as any) as jest.Mocked<AuditLoggingMiddleware>;
 

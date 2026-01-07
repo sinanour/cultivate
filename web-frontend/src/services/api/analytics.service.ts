@@ -91,12 +91,28 @@ export class AnalyticsService {
     }
 
     static async getGeographicAnalytics(
+        parentGeographicAreaId?: string,
         startDate?: string,
-        endDate?: string
+        endDate?: string,
+        activityCategoryId?: string,
+        activityTypeId?: string,
+        venueId?: string,
+        populationIds?: string[]
     ): Promise<GeographicAnalytics[]> {
         const params = new URLSearchParams();
+        if (parentGeographicAreaId) params.append('parentGeographicAreaId', parentGeographicAreaId);
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
+        if (activityCategoryId) params.append('activityCategoryId', activityCategoryId);
+        if (activityTypeId) params.append('activityTypeId', activityTypeId);
+        if (venueId) params.append('venueId', venueId);
+
+        // Handle populationIds array parameter
+        if (populationIds && populationIds.length > 0) {
+            populationIds.forEach(id => {
+                params.append('populationIds', id);
+            });
+        }
 
         const query = params.toString();
         return ApiClient.get<GeographicAnalytics[]>(`/analytics/geographic${query ? `?${query}` : ''}`);

@@ -127,12 +127,12 @@ const assignmentService = new AssignmentService(
   participantRepository,
   roleRepository
 );
-const analyticsService = new AnalyticsService(prisma, geographicAreaRepository);
+const analyticsService = new AnalyticsService(prisma, geographicAreaRepository, geographicAuthorizationService);
 const syncService = new SyncService(prisma);
 const geocodingService = new GeocodingService();
 
 // Initialize middleware
-const authMiddleware = new AuthMiddleware(authService);
+const authMiddleware = new AuthMiddleware(authService, userRepository);
 const authorizationMiddleware = new AuthorizationMiddleware();
 const auditLoggingMiddleware = new AuditLoggingMiddleware(auditLogRepository);
 

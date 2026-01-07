@@ -29,7 +29,7 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
       - Category "Children's Classes": "Children's Class"
       - Category "Junior Youth Groups": "Junior Youth Group"
       - Category "Devotional Gatherings": "Devotional Gathering"
-      - Category "Study Circles": "Ruhi Book 1", "Ruhi Book 2", "Ruhi Book 3", "Ruhi Book 3A", "Ruhi Book 3B", "Ruhi Book 3C", "Ruhi Book 3D", "Ruhi Book 4", "Ruhi Book 5", "Ruhi Book 5A", "Ruhi Book 5B", "Ruhi Book 6", "Ruhi Book 7", "Ruhi Book 8", "Ruhi Book 9", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
+      - Category "Study Circles": "Ruhi Book 01", "Ruhi Book 02", "Ruhi Book 03", "Ruhi Book 03A", "Ruhi Book 03B", "Ruhi Book 03C", "Ruhi Book 03D", "Ruhi Book 04", "Ruhi Book 05", "Ruhi Book 05A", "Ruhi Book 05B", "Ruhi Book 06", "Ruhi Book 07", "Ruhi Book 08", "Ruhi Book 09", "Ruhi Book 10", "Ruhi Book 11", "Ruhi Book 12", "Ruhi Book 13", "Ruhi Book 14"
     - Include seed data for predefined roles: "Tutor", "Teacher", "Animator", "Host", "Participant"
     - _Requirements: 1.7, 1.16, 2.7, 8.6_
 
@@ -528,13 +528,21 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Calculate role distribution within filtered and grouped results
     - Implement growth metrics calculation with unique participant counts, unique activity counts, and total participation counts per period (snapshots, not cumulative)
     - Support optional grouping by activity type or category for growth metrics
-    - Implement geographic breakdown calculation
+    - Implement geographic breakdown calculation:
+      - Accept optional parentGeographicAreaId parameter
+      - When parentGeographicAreaId provided: return metrics for immediate children of that parent
+      - When parentGeographicAreaId not provided: return metrics for all top-level areas (null parent)
+      - For each area: aggregate metrics from the area and all its descendants (recursive)
+      - Return geographicAreaId, geographicAreaName, areaType, activityCount, participantCount, participationCount
     - Support date range filtering
     - Support geographic area filtering
     - Support population filtering (include only participants in specified populations, include only activities with at least one participant in specified populations)
+    - When population filter is active, calculate participant counts based only on participants in specified populations
+    - When population filter is active, calculate participation counts based only on participant-activity associations where participant is in specified populations
+    - For activities with mixed participants (some in population, some not), count only the participants who match the population filter
     - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest date for participants
     - Correctly identify current venue/address when effectiveFrom is null
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19a, 6.19b, 6.19c, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 7.1, 7.2, 7.3, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.8, 7.9, 7.9a, 7.9b, 7.9c, 7.10, 7.11, 7.12, 7.13, 7.14a_
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19a, 6.19b, 6.19c, 6.19d, 6.19e, 6.19f, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 7.1, 7.2, 7.3, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.8, 7.9, 7.9a, 7.9b, 7.9c, 7.9d, 7.9e, 7.9f, 7.10, 7.11, 7.12, 7.13, 7.14a_
 
   - [ ]* 13.2 Write property tests for analytics calculations
     - **Property 20: Activities at Start of Date Range Counting**
@@ -555,6 +563,9 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 30C: Aggregate Participation Counts**
     - **Property 30D: Participation Counts by Category Breakdown**
     - **Property 30E: Participation Counts by Type Breakdown**
+    - **Property 30F: Population Filter Participant Count Scoping**
+    - **Property 30G: Population Filter Participation Count Scoping**
+    - **Property 30H: Population Filter Partial Activity Participant Counting**
     - **Property 31: Multi-Dimensional Grouping Support**
     - **Property 31A: Activity Category Point Filter**
     - **Property 32: Activity Type Point Filter**
@@ -575,7 +586,10 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 46: Optional Grouping by Activity Category**
     - **Property 47: Aggregate Growth Without Grouping**
     - **Property 47_participation: Time-Series Participation Data Inclusion**
-    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.2, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.10, 7.11, 7.12, 7.13, 7.14a**
+    - **Property 47G: Growth Metrics Population Filter Participant Count Scoping**
+    - **Property 47H: Growth Metrics Population Filter Participation Count Scoping**
+    - **Property 47I: Growth Metrics Population Filter Partial Activity Participant Counting**
+    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.19d, 6.19e, 6.19f, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 7.2, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.9d, 7.9e, 7.9f, 7.10, 7.11, 7.12, 7.13, 7.14a**
 
   - [x] 13.3 Create analytics routes
     - GET /api/analytics/engagement
@@ -1246,6 +1260,21 @@ if (geographicAreaId) {
   - Verify no foreign key constraint violations occur
 
 - [ ] 33. Implement geographic authorization system
+  - [x] 33.0 Fix createdBy foreign key constraint violation and test failures
+    - **Fixed Foreign Key Constraint:**
+      - Added validation in UserService.createUser() to check that createdBy user exists before creating authorization rules
+      - Added validation in GeographicAuthorizationService.createAuthorizationRule() to check that createdBy user exists
+      - Updated AuthMiddleware.authenticate() to validate user still exists in database after token validation
+      - Updated AuthMiddleware.optionalAuthenticate() to validate user still exists in database
+    - **Fixed Test Failures:**
+      - Updated AuthMiddleware constructor to require UserRepository parameter
+      - Updated all route test files to pass UserRepository to AuthMiddleware constructor
+      - Updated auth.middleware.test.ts to mock UserRepository and test user existence validation
+      - Fixed ActivityTypeService tests to use correct predefined type names ("Ruhi Book 01" not "Ruhi Book 1")
+      - Added maxWorkers: 1 to jest.config.js to run tests sequentially and avoid database conflicts
+    - **Result:** All 329 tests now passing
+    - _Requirements: 24.8, 11A.11, 11A.12_
+
   - [ ] 33.1 Create Prisma migration for UserGeographicAuthorization table
     - Add UserGeographicAuthorization model with userId, geographicAreaId, ruleType (ALLOW/DENY), createdAt, createdBy
     - Add unique constraint on (userId, geographicAreaId)
@@ -1353,6 +1382,16 @@ if (geographicAreaId) {
     - Update getActivityLifecycleEvents() to apply implicit filtering based on authorized areas
     - Validate explicit geographicAreaId filters against user's authorized areas
     - _Requirements: 24.19, 24.20, 24.21, 24.23, 24.24, 24.25_
+
+  - [ ] 33.13a Fix geographic breakdown to respect deny rules
+    - Update getGeographicBreakdown() to filter out denied areas from results
+    - For each child area in the breakdown, check if user has FULL access using evaluateAccess()
+    - Exclude areas where evaluateAccess() returns NONE or READ_ONLY
+    - When calculating metrics for an area, only include venues from authorized descendant areas
+    - Get authorized descendant IDs by filtering all descendants through evaluateAccess()
+    - Only aggregate metrics from venues in authorized descendant areas (excluding denied areas and their descendants)
+    - Ensure metrics accurately reflect only the authorized subset of the geographic hierarchy
+    - _Requirements: 6B.15, 6B.16, 6B.17_
 
   - [ ] 33.14 Apply geographic authorization filtering to CSV export endpoints
     - Update exportParticipants() to apply implicit filtering based on authorized areas
@@ -1537,3 +1576,21 @@ if (geographicAreaId) {
   - Verify no test data persists in the database after test runs
   - Ensure tests can run in any order without failures
   - Confirm tests run faster without database I/O
+
+- [x] 37. Fix dangerous integration test cleanup code
+  - **CRITICAL FIX:** Fixed geographic-breakdown-authorization.test.ts which was calling `deleteMany({})` with NO WHERE CLAUSE
+  - This was deleting ALL records from ALL tables including seed data and production data
+  - Updated cleanup to only delete specific test-created records using tracked IDs
+  - Added database safety check in test setup to prevent running tests against non-test databases
+  - Reviewed all 6 integration test files - all others already had safe cleanup patterns
+  - **Result:** All integration tests now use safe, scoped cleanup that only deletes test data
+  - _Requirements: Testing best practices, data safety_
+
+- [x] 38. Fix analytics to respect DENY authorization rules
+  - **Issue:** When explicitly filtering by a geographic area (e.g., city), analytics was including ALL descendants including denied areas
+  - **Root Cause:** getEffectiveGeographicAreaIds() was expanding explicit filters to all descendants without checking authorization
+  - **Fix:** Updated getEffectiveGeographicAreaIds() to filter descendants against authorizedAreaIds when user has geographic restrictions
+  - **Logic:** When explicit filter provided + user has restrictions → expand descendants but only include those in authorizedAreaIds
+  - **Created Test:** analytics-deny-authorization.test.ts with 4 test cases covering engagement, growth, lifecycle, and explicit filtering
+  - **Result:** All 333 tests passing, analytics now correctly excludes denied areas from all metrics
+  - _Requirements: 24.15, 24.16, 24.17, 24.18, 24.19, 24.20, 24.21, 6B.15, 6B.16, 6B.17_

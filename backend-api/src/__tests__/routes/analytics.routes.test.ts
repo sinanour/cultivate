@@ -4,10 +4,12 @@ import { AnalyticsRoutes } from '../../routes/analytics.routes';
 import { AnalyticsService } from '../../services/analytics.service';
 import { AuthMiddleware } from '../../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../../middleware/authorization.middleware';
+import { UserRepository } from '../../repositories/user.repository';
 import { createMockTokenPayload } from '../helpers/token-payload.helper';
 import { UserRole } from '@prisma/client';
 
 jest.mock('../../services/analytics.service');
+jest.mock('../../repositories/user.repository');
 
 describe('AnalyticsRoutes', () => {
     let app: Application;
@@ -20,7 +22,8 @@ describe('AnalyticsRoutes', () => {
         app.use(express.json());
 
         mockService = new AnalyticsService(null as any, null as any) as jest.Mocked<AnalyticsService>;
-        mockAuthMiddleware = new AuthMiddleware(null as any) as jest.Mocked<AuthMiddleware>;
+        const mockUserRepository = new UserRepository(null as any) as jest.Mocked<UserRepository>;
+        mockAuthMiddleware = new AuthMiddleware(null as any, mockUserRepository) as jest.Mocked<AuthMiddleware>;
         mockAuthzMiddleware = new AuthorizationMiddleware() as jest.Mocked<AuthorizationMiddleware>;
 
         mockAuthMiddleware.authenticate = jest.fn().mockReturnValue((req: any, _res: any, next: any) => {
@@ -80,25 +83,27 @@ describe('AnalyticsRoutes', () => {
     });
 
     describe('GET /api/analytics/geographic', () => {
-        it('should return geographic breakdown', async () => {
-            const mockBreakdown = {
-                'Downtown': {
-                    totalParticipants: 30,
-                    totalActivities: 10,
-                    activeActivities: 8,
-                    activitiesByType: {},
-                    participantsByType: {},
-                    roleDistribution: {},
+        it('should return geographic breakdown for top-level areas', async () => {
+            const mockBreakdown = [
+                {
+                    geographicAreaId: 'area1',
+                    geographicAreaName: 'Downtown',
+                    areaType: 'NEIGHBOURHOOD',
+                    activityCount: 10,
+                    participantCount: 30,
+                    participationCount: 45,
+                    hasChildren: true,
                 },
-                'Uptown': {
-                    totalParticipants: 20,
-                    totalActivities: 8,
-                    activeActivities: 6,
-                    activitiesByType: {},
-                    participantsByType: {},
-                    roleDistribution: {},
+                {
+                    geographicAreaId: 'area2',
+                    geographicAreaName: 'Uptown',
+                    areaType: 'NEIGHBOURHOOD',
+                    activityCount: 8,
+                    participantCount: 20,
+                    participationCount: 28,
+                    hasChildren: false,
                 },
-            };
+            ];
             mockService.getGeographicBreakdown = jest.fn().mockResolvedValue(mockBreakdown);
 
             const response = await request(app)
@@ -108,6 +113,44 @@ describe('AnalyticsRoutes', () => {
             expect(response.status).toBe(200);
             expect(response.body).toHaveProperty('success', true);
             expect(response.body.data).toEqual(mockBreakdown);
+            expect(mockService.getGeographicBreakdown).toHaveBeenCalledWith(
+                undefined, // parentGeographicAreaId
+                expect.objectContaining({}), // filters
+                expect.any(Array), // authorizedAreaIds
+                expect.any(Boolean), // hasGeographicRestrictions
+                expect.any(String) // userId
+            );
+        });
+
+        it('should return children when parentGeographicAreaId is provided', async () => {
+            const parentId = '550e8400-e29b-41d4-a716-446655440000'; // Valid UUID
+            const mockBreakdown = [
+                {
+                    geographicAreaId: 'child1',
+                    geographicAreaName: 'Child 1',
+                    areaType: 'CITY',
+                    activityCount: 5,
+                    participantCount: 15,
+                    participationCount: 20,
+                    hasChildren: true,
+                },
+            ];
+            mockService.getGeographicBreakdown = jest.fn().mockResolvedValue(mockBreakdown);
+
+            const response = await request(app)
+                .get(`/api/analytics/geographic?parentGeographicAreaId=${parentId}`)
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('success', true);
+            expect(response.body.data).toEqual(mockBreakdown);
+            expect(mockService.getGeographicBreakdown).toHaveBeenCalledWith(
+                parentId,
+                expect.objectContaining({}),
+                expect.any(Array),
+                expect.any(Boolean),
+                expect.any(String) // userId
+            );
         });
     });
 });
