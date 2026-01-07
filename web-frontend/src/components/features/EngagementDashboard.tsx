@@ -1187,40 +1187,47 @@ export function EngagementDashboard() {
               : []
             ),
             // Participant/Participation metric columns (grouped first)
-            {
-              id: 'participantsAtStart',
-              header: 'Participants at Start',
-              cell: (item: any) => item.metrics.participantsAtStart,
-              sortingField: 'participantsAtStart',
-            },
+            // When no date range: hide "At Start" columns (always 0) and simplify "At End" to current state
+            ...(hasDateRange ? [
+              {
+                id: 'participantsAtStart',
+                header: 'Participants at Start',
+                cell: (item: any) => item.metrics.participantsAtStart,
+                sortingField: 'participantsAtStart',
+              },
+            ] : []),
             {
               id: 'participantsAtEnd',
-              header: 'Participants at End',
+              header: hasDateRange ? 'Participants at End' : 'Participants',
               cell: (item: any) => item.metrics.participantsAtEnd,
               sortingField: 'participantsAtEnd',
             },
-            {
-              id: 'participationAtStart',
-              header: 'Participation at Start',
-              cell: (item: any) => item.metrics.participationAtStart,
-              sortingField: 'participationAtStart',
-            },
+            ...(hasDateRange ? [
+              {
+                id: 'participationAtStart',
+                header: 'Participation at Start',
+                cell: (item: any) => item.metrics.participationAtStart,
+                sortingField: 'participationAtStart',
+              },
+            ] : []),
             {
               id: 'participationAtEnd',
-              header: 'Participation at End',
+              header: hasDateRange ? 'Participation at End' : 'Participation',
               cell: (item: any) => item.metrics.participationAtEnd,
               sortingField: 'participationAtEnd',
             },
             // Activity metric columns (grouped second)
-            {
-              id: 'activitiesAtStart',
-              header: 'Activities at Start',
-              cell: (item: any) => item.metrics.activitiesAtStart,
-              sortingField: 'activitiesAtStart',
-            },
+            ...(hasDateRange ? [
+              {
+                id: 'activitiesAtStart',
+                header: 'Activities at Start',
+                cell: (item: any) => item.metrics.activitiesAtStart,
+                sortingField: 'activitiesAtStart',
+              },
+            ] : []),
             {
               id: 'activitiesAtEnd',
-              header: 'Activities at End',
+              header: hasDateRange ? 'Activities at End' : 'Activities',
               cell: (item: any) => item.metrics.activitiesAtEnd,
               sortingField: 'activitiesAtEnd',
             },

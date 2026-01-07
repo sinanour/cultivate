@@ -809,7 +809,8 @@ This implementation plan covers the React-based web application built with TypeS
       - When info icon clicked, display popover explaining: "Participant Count: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once. Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
       - First row displays aggregate metrics with "Total" label in first column
       - When multiple grouping dimensions selected, leave subsequent dimension cells blank in Total row
-      - Display metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end
+      - When date range is specified: display metric columns with temporal labels (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end)
+      - When no date range is specified: hide "at start" columns and simplify "at end" columns to current state labels (Participants, Participation, Activities, Activities Started, Activities Completed, Activities Cancelled)
       - When grouping dimensions selected, render additional rows below Total row showing dimensional breakdowns:
         - Display breakdown dimension columns first (activity category, activity type, venue, geographic area)
         - Display metric aggregation columns after dimensions

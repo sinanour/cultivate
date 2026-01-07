@@ -602,7 +602,8 @@ src/
   - When info icon clicked, displays popover explaining: "Participant Count: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once. Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
   - First row displays aggregate metrics with "Total" label in first column
   - When multiple grouping dimensions selected, subsequent dimension cells in Total row are left blank
-  - Metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end
+  - When date range is specified: displays metric columns with temporal labels (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end)
+  - When no date range is specified: hides "at start" columns (always 0 for all-time metrics) and simplifies "at end" columns to current state labels (Participants, Participation, Activities, Activities Started, Activities Completed, Activities Cancelled)
   - When grouping dimensions selected, additional rows show dimensional breakdowns:
     - Breakdown dimension columns appear first (activity category, activity type, venue, geographic area)
     - Activity category names rendered as hyperlinks to /configuration (Activity Configuration page)
@@ -653,7 +654,8 @@ src/
   - Exports human-friendly labels (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
   - Includes Total row as first data row in CSV
   - Includes all dimensional breakdown rows when grouping dimensions are selected
-  - Includes all metric columns: activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end
+  - When date range is specified: includes all temporal metric columns (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end)
+  - When no date range is specified: includes only current state and temporal event columns (Participants, Participation, Activities, Activities Started, Activities Completed, Activities Cancelled)
   - Uses descriptive column headers matching table headers
   - Generates filename that reflects active filters with format: "engagement-summary" + filter segments + current date
   - When global geographic area filter is active: includes area name and type in format "{name}-{type}" (e.g., "Vancouver-City", "Downtown-Neighbourhood")

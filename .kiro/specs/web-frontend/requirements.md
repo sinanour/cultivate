@@ -411,7 +411,10 @@ The Web Frontend package provides a responsive React-based web application that 
 35. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render activity type names as hyperlinks to the Activity Configuration page at /configuration
 36. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render venue names as hyperlinks to their respective detail views at /venues/:id
 37. WHEN rendering dimensional breakdown rows in the table, THE Web_App SHALL render geographic area names as hyperlinks to their respective detail views at /geographic-areas/:id
-38. THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end, participation at start, participation at end) in its own column in the Engagement Summary table
+38. WHEN a date range is specified, THE Web_App SHALL display each metric aggregation (activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end, participation at start, participation at end) in its own column in the Engagement Summary table
+38a. WHEN no date range is specified, THE Web_App SHALL hide "at start" metric columns from the Engagement Summary table (as these values are always 0 for all-time metrics)
+38b. WHEN no date range is specified, THE Web_App SHALL simplify "at end" column names to remove the "at End" suffix in the Engagement Summary table
+38c. WHEN no date range is specified, THE Web_App SHALL display the following columns in the Engagement Summary table: "Participants", "Participation", "Activities", "Activities Started", "Activities Completed", and "Activities Cancelled"
 39. WHEN no date range is specified, THE Web_App SHALL display all-time metrics
 40. THE Web_App SHALL display role distribution across all activities within the filtered and grouped results
 41. THE Web_App SHALL display a pie chart showing the breakdown of unique activities by activity category
