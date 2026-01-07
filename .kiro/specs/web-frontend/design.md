@@ -594,7 +594,14 @@ src/
   - Persists filter tokens to URL query parameters
   - Restores filter tokens from URL on page load
   - Extracts filter values from tokens (propertyKey and value) and applies to analytics queries
-  - Supports operators: = (equals) and != (not equals)
+  - Supports only the equals (=) operator for all properties
+  - Does NOT support the not equals (!=) operator
+  - Displays multiple values for a single property dimension as a single token with comma-separated values
+  - Maintains one-to-one mapping between property name and filter token
+  - Example: "Activity Category = Study Circles, Devotional Gatherings" (single token for multiple values)
+  - Does NOT create separate tokens for each value within the same property dimension
+  - Automatically de-duplicates values within each property dimension to prevent duplicate entries
+  - Uses Set-based de-duplication to ensure each value appears only once per property
 - Provides date range filter using CloudScape DateRangePicker
 - Renders "Engagement Summary" table using CloudScape Table:
   - Always visible regardless of whether grouping dimensions are selected
@@ -647,6 +654,15 @@ src/
   - Updates URL when user changes filters or grouping
   - Enables browser back/forward navigation between different configurations
   - Allows URL sharing for collaborative analysis
+- **Flicker-Free Updates:**
+  - Keeps all charts, tables, and filtering UI components mounted during filter/grouping changes
+  - Uses React Query's placeholderData option to display stale data while fetching new data
+  - Uses debounced loading indicators (500ms delay) to prevent flicker from quick requests
+  - Loading spinners only appear if data fetching takes longer than 500ms
+  - Displays loading overlay or subtle loading indicator without unmounting components
+  - Repaints visual components in place once new data arrives
+  - Avoids component unmounting/remounting that causes screen flicker
+  - Maintains smooth visual transitions between different data states
 - **CSV Export for Engagement Summary Table:**
   - Provides "Export CSV" button positioned near the Engagement Summary table header
   - Button uses CloudScape Button component with iconName="download"
@@ -782,6 +798,15 @@ src/
   - Updates URL when user changes filters (using React Router's useSearchParams)
   - Enables browser back/forward navigation between different configurations
   - Allows URL sharing for collaborative analysis
+- **Flicker-Free Updates:**
+  - Keeps all charts and filtering UI components mounted during filter/grouping changes
+  - Uses React Query's placeholderData option to display stale data while fetching new data
+  - Uses debounced loading indicators (500ms delay) to prevent flicker from quick requests
+  - Loading spinners only appear if data fetching takes longer than 500ms
+  - Displays loading overlay or subtle loading indicator without unmounting components
+  - Repaints visual components in place once new data arrives
+  - Avoids component unmounting/remounting that causes screen flicker
+  - Maintains smooth visual transitions between different data states
 
 #### 9. User Management (Admin Only)
 
@@ -2154,6 +2179,30 @@ All entities support optimistic locking via the `version` field. When updating a
 
 **Validates: Requirements 7B.10, 7B.16, 7B.17**
 
+### Property 31s: PropertyFilter Equals Operator Only
+
+*For any* PropertyFilter configuration, only the equals (=) operator should be available for all properties, and the not equals (!=) operator should not be supported.
+
+**Validates: Requirements 7B.18, 7B.19**
+
+### Property 31t: PropertyFilter Single Token Per Property
+
+*For any* property dimension with multiple selected values, the PropertyFilter should display exactly one token for that property dimension, maintaining a one-to-one mapping between property name and filter token.
+
+**Validates: Requirements 7B.20, 7B.21, 7B.23**
+
+### Property 31u: PropertyFilter Comma-Separated Values
+
+*For any* property dimension with multiple selected values (e.g., "Study Circles" and "Devotional Gatherings" for Activity Category), the PropertyFilter should display those values as a comma-separated list within a single token (e.g., "Activity Category = Study Circles, Devotional Gatherings").
+
+**Validates: Requirements 7B.20, 7B.22**
+
+### Property 31v: PropertyFilter Value De-duplication
+
+*For any* property dimension, when a user attempts to add a value that already exists in that property's token, the PropertyFilter should prevent the duplicate and maintain only unique values within the comma-separated list.
+
+**Validates: Requirements 7B.24, 7B.25**
+
 ### Property 32: Time-series unique count calculation
 
 *For any* time period and dataset, the separate time-series charts should correctly calculate unique participants, unique activities, and total participation engaged during each time period as snapshots (not cumulative).
@@ -2241,6 +2290,20 @@ All entities support optimistic locking via the `version` field. When updating a
 ### Property 33m: Growth Dashboard URL Shareability
 
 *For any* growth dashboard URL copied and shared with another user, when that user navigates to the URL, they should see the same filtered and grouped results as the original user.
+
+**Validates: Requirements 57e**
+
+### Property 33n: Engagement Dashboard Flicker-Free Filter Updates
+
+*For any* filter or grouping adjustment on the Engagement Dashboard, all charts, tables, and filtering UI components should remain mounted and rendered until newly fetched data is available, then repaint in place without screen flicker or component unmounting.
+
+**Validates: Requirements 7.122, 7.123, 7.124**
+
+### Property 33o: Growth Dashboard Flicker-Free Filter Updates
+
+*For any* filter or grouping adjustment on the Growth Dashboard, all charts and filtering UI components should remain mounted and rendered until newly fetched data is available, then repaint in place without screen flicker or component unmounting.
+
+**Validates: Requirements 7.125, 7.126, 7.127**
 
 **Validates: Requirements 57e**
 

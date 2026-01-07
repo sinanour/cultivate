@@ -843,8 +843,18 @@ This implementation plan covers the React-based web application built with TypeS
       - Support parameters: activityCategory, activityType, venue, geographicArea, startDate, endDate, groupBy (array)
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use history.pushState or React Router navigation)
+    - Implement flicker-free updates:
+      - Configure React Query with placeholderData: (previousData) => previousData option for all analytics queries
+      - Create useDebouncedLoading hook with 500ms delay to prevent loading spinner flicker
+      - Use debounced loading state instead of raw isLoading for all loading indicators
+      - Keep all chart, table, and filter UI components mounted during data fetching
+      - Display subtle loading overlay or spinner without unmounting components
+      - Allow stale data to remain visible while new data is being fetched
+      - Update visual components in place once new data arrives
+      - Avoid conditional rendering that causes component unmounting
+      - Use CSS transitions for smooth visual updates
     - Use /analytics/engagement endpoint with enhanced parameters
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.30a, 7.30b, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121_
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.30a, 7.30b, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121, 7.122, 7.123, 7.124_
 
   - [x] 14.1a Enhance Activities chart with segmented control toggle
     - Rename chart title from "Activities by Type" to "Activities"
@@ -949,7 +959,8 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31b: Analytics URL Parameter Application**
     - **Property 31c: Analytics URL Update on State Change**
     - **Property 31e: Analytics URL Shareability**
-    - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.30a, 7.30b, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121**
+    - **Property 33n: Engagement Dashboard Flicker-Free Filter Updates**
+    - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.30a, 7.30b, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121, 7.122, 7.123, 7.124**
 
   - [x] 14.2 Create GrowthDashboard component
     - Display three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
@@ -1016,7 +1027,15 @@ This implementation plan covers the React-based web application built with TypeS
       - Use same compact relative date format as Engagement dashboard for consistency
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use replace: true)
-    - _Requirements: 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65, 7.66, 7.67, 7.68, 7.69, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.84, 7.85, 7.86, 7.87, 7.88, 7.89, 7.90, 7.91, 7.92, 7.93, 7.94, 7.95, 7.96, 7.97, 7.98, 7.99, 7.100, 7.101, 7.102_
+    - Implement flicker-free updates:
+      - Configure React Query with placeholderData: (previousData) => previousData option for all growth analytics queries
+      - Keep all chart and filter UI components mounted during data fetching
+      - Display subtle loading overlay or spinner without unmounting components
+      - Allow stale data to remain visible while new data is being fetched
+      - Update visual components in place once new data arrives
+      - Avoid conditional rendering that causes component unmounting
+      - Use CSS transitions for smooth visual updates
+    - _Requirements: 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65, 7.66, 7.67, 7.68, 7.69, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.84, 7.85, 7.86, 7.87, 7.88, 7.89, 7.90, 7.91, 7.92, 7.93, 7.94, 7.95, 7.96, 7.97, 7.98, 7.99, 7.100, 7.101, 7.102, 7.125, 7.126, 7.127_
 
   - [ ]* 14.3 Write property tests for growth metrics
     - **Property 32: Time-Series Unique Count Calculation**
@@ -1034,7 +1053,8 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 33k: Growth Dashboard URL Update on State Change**
     - **Property 33l: Growth Dashboard Browser Navigation Support**
     - **Property 33m: Growth Dashboard URL Shareability**
-    - **Validates: Requirements 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65, 7.66, 7.67, 7.68, 7.69, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.84, 7.85, 7.86, 7.87, 7.88, 7.89, 7.90, 7.91, 7.92, 7.93, 7.94, 7.95, 7.96, 7.97, 7.98, 7.99, 7.100, 7.101, 7.102**
+    - **Property 33o: Growth Dashboard Flicker-Free Filter Updates**
+    - **Validates: Requirements 7.58, 7.59, 7.60, 7.61, 7.62, 7.63, 7.64, 7.65, 7.66, 7.67, 7.68, 7.69, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.84, 7.85, 7.86, 7.87, 7.88, 7.89, 7.90, 7.91, 7.92, 7.93, 7.94, 7.95, 7.96, 7.97, 7.98, 7.99, 7.100, 7.101, 7.102, 7.125, 7.126, 7.127**
 
   - [x] 14.4 Create GeographicAnalyticsDashboard component
     - Display geographic breakdown using /analytics/geographic endpoint
@@ -1054,7 +1074,8 @@ This implementation plan covers the React-based web application built with TypeS
     - Calculate absolute dates from relative date ranges
     - Transform data for recharts BarChart format
     - Display two data series: "Started" (blue) and "Completed" (green)
-    - Handle loading, error, and empty states
+    - Handle loading, error, and empty states without unmounting components
+    - Use debounced loading state (500ms delay) to prevent spinner flicker
     - Store view mode in localStorage (key: "lifecycleChartViewMode")
     - Restore view mode from localStorage on mount
     - Default to "By Type" view
@@ -1083,9 +1104,12 @@ This implementation plan covers the React-based web application built with TypeS
       - Fetch venues from VenueService with geographic area filtering
       - Fetch populations from PopulationService
       - Filter results based on user input text (case-insensitive)
-    - Configure PropertyFilter with operators: = (equals) and != (not equals)
+    - Configure PropertyFilter with only the equals (=) operator (do NOT support not equals operator)
     - Manage PropertyFilter query state with tokens and operation
-    - Extract filter values from PropertyFilter tokens (propertyKey and value)
+    - Implement token consolidation logic to display multiple values for a single property as a single token with comma-separated values
+    - Implement de-duplication logic using Set to prevent duplicate values within a property dimension
+    - Ensure one-to-one mapping between property name and filter token (e.g., "Activity Category = Study Circles, Devotional Gatherings")
+    - Extract filter values from PropertyFilter tokens (propertyKey and value array)
     - Apply extracted filters to analytics API queries (activityCategoryId, activityTypeId, venueId, populationIds)
     - When population filter applied: include only participants in specified populations
     - When population filter applied: include only activities with at least one participant in specified populations
@@ -1093,14 +1117,18 @@ This implementation plan covers the React-based web application built with TypeS
     - Update ActivityLifecycleChart to use PropertyFilter tokens for filtering including population
     - Display loading indicator while fetching property values
     - Provide comprehensive i18nStrings for PropertyFilter accessibility
-    - _Requirements: 7B.1, 7B.2, 7B.3, 7B.4, 7B.5, 7B.6, 7B.7, 7B.8, 7B.9, 7B.10, 7B.11, 7B.12, 7B.13, 7B.14, 7B.15, 7B.16, 7B.17, 7.19a, 7.19b, 7.19c_
+    - _Requirements: 7B.1, 7B.2, 7B.3, 7B.4, 7B.5, 7B.6, 7B.7, 7B.8, 7B.9, 7B.10, 7B.11, 7B.12, 7B.13, 7B.14, 7B.15, 7B.16, 7B.17, 7B.18, 7B.19, 7B.20, 7B.21, 7B.22, 7B.23, 7B.24, 7B.25, 7.19a, 7.19b, 7.19c_
 
   - [ ]* 14.7 Write property tests for PropertyFilter
     - **Property 31o: PropertyFilter Lazy Loading**
     - **Property 31p: PropertyFilter Multiple Token Application**
     - **Property 31q: PropertyFilter URL Persistence**
     - **Property 31r: PropertyFilter Integration**
-    - **Validates: Requirements 7B.5, 7B.6, 7B.9, 7B.10, 7B.11, 7B.12, 7B.16, 7B.17**
+    - **Property 31s: PropertyFilter Equals Operator Only**
+    - **Property 31t: PropertyFilter Single Token Per Property**
+    - **Property 31u: PropertyFilter Comma-Separated Values**
+    - **Property 31v: PropertyFilter Value De-duplication**
+    - **Validates: Requirements 7B.5, 7B.6, 7B.9, 7B.10, 7B.11, 7B.12, 7B.16, 7B.17, 7B.18, 7B.19, 7B.20, 7B.21, 7B.22, 7B.23, 7B.24, 7B.25**
 
 - [x] 15. Implement offline support
   - [x] 15.1 Create OfflineStorage service

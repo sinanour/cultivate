@@ -6,6 +6,7 @@ import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type ActivityLifecycleData } from '../../services/api/analytics.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { useDebouncedLoading } from '../../hooks/useDebouncedLoading';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 
 // Bar chart styling constants
@@ -70,6 +71,9 @@ export function ActivityLifecycleChart({
   // Use interactive legend hook
   const legend = useInteractiveLegend('activity-lifecycle', legendItems);
 
+  // Debounce loading state to prevent flicker from quick requests (500ms delay)
+  const debouncedLoading = useDebouncedLoading(isLoading, 500);
+
   // Fetch data when parameters change
   useEffect(() => {
     const fetchData = async () => {
@@ -130,50 +134,61 @@ export function ActivityLifecycleChart({
         </Header>
       }
     >
-      {isLoading ? (
-        <Box textAlign="center" padding="l">
-          <LoadingSpinner />
+      {/* Always render the chart structure to prevent unmounting */}
+      {/* Screen reader announcement for view mode changes */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}
+      >
+        {viewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
+      </div>
+      
+      {/* Show loading indicator inline without unmounting - debounced to prevent flicker */}
+      {debouncedLoading && (
+        <Box textAlign="center" padding="s">
+          <LoadingSpinner text="Updating lifecycle events..." />
         </Box>
-      ) : error ? (
+      )}
+      
+      {/* Show error state inline without unmounting */}
+      {error && !isLoading && (
         <Box textAlign="center" padding="l" color="text-status-error">
           <b>{error}</b>
         </Box>
-      ) : chartData.length > 0 ? (
+      )}
+      
+      {/* Always render legend and chart container */}
+      {!error && (
         <>
-          {/* Screen reader announcement for view mode changes */}
-          <div
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-            className="sr-only"
-            style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}
-          >
-            {viewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
-          </div>
           <InteractiveLegend
             chartId="activity-lifecycle"
             series={legendItems}
             onVisibilityChange={legend.handleVisibilityChange}
           />
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={chartData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              {legend.isSeriesVisible('Started') && (
-                <Bar dataKey="Started" fill="#0088FE" name="Started" />
-              )}
-              {legend.isSeriesVisible('Completed') && (
-                <Bar dataKey="Completed" fill="#00C49F" name="Completed" />
-              )}
-            </BarChart>
-          </ResponsiveContainer>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={chartData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                {legend.isSeriesVisible('Started') && (
+                  <Bar dataKey="Started" fill="#0088FE" name="Started" />
+                )}
+                {legend.isSeriesVisible('Completed') && (
+                  <Bar dataKey="Completed" fill="#00C49F" name="Completed" />
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          ) : !isLoading && (
+            <Box textAlign="center" padding="l">
+              <b>No activity lifecycle events for the selected {viewMode === 'type' ? 'activity types' : 'activity categories'}</b>
+            </Box>
+          )}
         </>
-      ) : (
-        <Box textAlign="center" padding="l">
-          <b>No activity lifecycle events for the selected {viewMode === 'type' ? 'activity types' : 'activity categories'}</b>
-        </Box>
       )}
     </Container>
   );

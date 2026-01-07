@@ -21,6 +21,7 @@ import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { VenueService } from '../../services/api/venue.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { useDebouncedLoading } from '../../hooks/useDebouncedLoading';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import type { TimePeriod } from '../../utils/constants';
 import { isValidUUID, setMultiValueParam, getValidatedUUIDs } from '../../utils/url-params.utils';
@@ -169,30 +170,80 @@ export function GrowthDashboard() {
     return uuidToLabelCache.get(uuid);
   };
 
+  // Consolidate tokens: merge multiple tokens for the same property into a single token with comma-separated values
+  // Also de-duplicates values to prevent the same value from appearing multiple times
+  const consolidateTokens = (query: PropertyFilterProps.Query): PropertyFilterProps.Query => {
+    const tokensByProperty = new Map<string, PropertyFilterProps.Token[]>();
+    
+    // Group tokens by property key
+    query.tokens.forEach(token => {
+      const key = token.propertyKey || '';
+      if (!tokensByProperty.has(key)) {
+        tokensByProperty.set(key, []);
+      }
+      tokensByProperty.get(key)!.push(token);
+    });
+    
+    // Consolidate tokens for each property
+    const consolidatedTokens: PropertyFilterProps.Token[] = [];
+    tokensByProperty.forEach((tokens, propertyKey) => {
+      if (tokens.length === 0) return;
+      
+      // Get all values for this property (only = operator)
+      const allValues = tokens
+        .filter(t => t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t)); // Split comma-separated values
+      
+      // De-duplicate values (case-sensitive comparison)
+      const uniqueValues = Array.from(new Set(allValues));
+      
+      if (uniqueValues.length > 0) {
+        // Create a single token with comma-separated unique values
+        consolidatedTokens.push({
+          propertyKey,
+          operator: '=',
+          value: uniqueValues.join(', '),
+        });
+      }
+    });
+    
+    return {
+      ...query,
+      tokens: consolidatedTokens,
+    };
+  };
+
+  // Extract individual values from consolidated tokens (split comma-separated values)
+  const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
+    if (!token.value) return [];
+    // Split by comma and trim whitespace
+    return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
+  };
+
   const filteringProperties: PropertyFilterProps.FilteringProperty[] = [
     {
       key: 'activityCategory',
       propertyLabel: 'Activity Category',
       groupValuesLabel: 'Activity Category values',
-      operators: ['=', '!='],
+      operators: ['='],
     },
     {
       key: 'activityType',
       propertyLabel: 'Activity Type',
       groupValuesLabel: 'Activity Type values',
-      operators: ['=', '!='],
+      operators: ['='],
     },
     {
       key: 'venue',
       propertyLabel: 'Venue',
       groupValuesLabel: 'Venue values',
-      operators: ['=', '!='],
+      operators: ['='],
     },
     {
       key: 'population',
       propertyLabel: 'Population',
       groupValuesLabel: 'Population values',
-      operators: ['=', '!='],
+      operators: ['='],
     },
   ];
 
@@ -270,10 +321,11 @@ export function GrowthDashboard() {
   // Initialize PropertyFilter from URL parameters (convert UUIDs to labels)
   useEffect(() => {
     const initializeFiltersFromUrl = async () => {
-      const tokens: PropertyFilterProps.Token[] = [];
+      const tokensByProperty = new Map<string, string[]>();
       
       // Activity Categories - use correct param name with validation
       const catIds = getValidatedUUIDs(searchParams, 'activityCategoryIds');
+      const catLabels: string[] = [];
       for (const id of catIds) {
         let label = getLabelFromUuid(id);
         if (!label) {
@@ -294,12 +346,16 @@ export function GrowthDashboard() {
           }
         }
         if (label) {
-          tokens.push({ propertyKey: 'activityCategory', operator: '=', value: label });
+          catLabels.push(label);
         }
+      }
+      if (catLabels.length > 0) {
+        tokensByProperty.set('activityCategory', catLabels);
       }
       
       // Activity Types - use correct param name with validation
       const typeIds = getValidatedUUIDs(searchParams, 'activityTypeIds');
+      const typeLabels: string[] = [];
       for (const id of typeIds) {
         let label = getLabelFromUuid(id);
         if (!label) {
@@ -320,12 +376,16 @@ export function GrowthDashboard() {
           }
         }
         if (label) {
-          tokens.push({ propertyKey: 'activityType', operator: '=', value: label });
+          typeLabels.push(label);
         }
+      }
+      if (typeLabels.length > 0) {
+        tokensByProperty.set('activityType', typeLabels);
       }
       
       // Venues - use correct param name with validation
       const venueIds = getValidatedUUIDs(searchParams, 'venueIds');
+      const venueLabels: string[] = [];
       for (const id of venueIds) {
         let label = getLabelFromUuid(id);
         if (!label) {
@@ -346,12 +406,16 @@ export function GrowthDashboard() {
           }
         }
         if (label) {
-          tokens.push({ propertyKey: 'venue', operator: '=', value: label });
+          venueLabels.push(label);
         }
+      }
+      if (venueLabels.length > 0) {
+        tokensByProperty.set('venue', venueLabels);
       }
       
       // Populations - use correct param name with validation
       const popIds = getValidatedUUIDs(searchParams, 'populationIds');
+      const popLabels: string[] = [];
       for (const id of popIds) {
         let label = getLabelFromUuid(id);
         if (!label) {
@@ -372,9 +436,24 @@ export function GrowthDashboard() {
           }
         }
         if (label) {
-          tokens.push({ propertyKey: 'population', operator: '=', value: label });
+          popLabels.push(label);
         }
       }
+      if (popLabels.length > 0) {
+        tokensByProperty.set('population', popLabels);
+      }
+      
+      // Create consolidated tokens (one token per property with comma-separated values)
+      const tokens: PropertyFilterProps.Token[] = [];
+      tokensByProperty.forEach((labels, propertyKey) => {
+        if (labels.length > 0) {
+          tokens.push({
+            propertyKey,
+            operator: '=',
+            value: labels.join(', '), // Comma-separated values in single token
+          });
+        }
+      });
 
       if (tokens.length > 0) {
         setPropertyFilterQuery({ tokens, operation: 'and' });
@@ -415,27 +494,32 @@ export function GrowthDashboard() {
     }
 
     // Shared PropertyFilter tokens (extract UUIDs inline to avoid stale closures)
+    // Tokens now contain comma-separated values, so we need to split them
     const activityCategoryIds = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
-      .map(t => getUuidFromLabel(t.value))
+      .flatMap(t => extractValuesFromToken(t))
+      .map(label => getUuidFromLabel(label))
       .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
     setMultiValueParam(params, 'activityCategoryIds', activityCategoryIds);
 
     const activityTypeIds = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
-      .map(t => getUuidFromLabel(t.value))
+      .flatMap(t => extractValuesFromToken(t))
+      .map(label => getUuidFromLabel(label))
       .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
     setMultiValueParam(params, 'activityTypeIds', activityTypeIds);
 
     const venueIds = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'venue' && t.operator === '=')
-      .map(t => getUuidFromLabel(t.value))
+      .flatMap(t => extractValuesFromToken(t))
+      .map(label => getUuidFromLabel(label))
       .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
     setMultiValueParam(params, 'venueIds', venueIds);
 
     const populationIds = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'population' && t.operator === '=')
-      .map(t => getUuidFromLabel(t.value))
+      .flatMap(t => extractValuesFromToken(t))
+      .map(label => getUuidFromLabel(label))
       .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
     setMultiValueParam(params, 'populationIds', populationIds);
 
@@ -491,16 +575,25 @@ export function GrowthDashboard() {
       }
       
       // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
-      const activityCategoryLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityCategory' && t.operator === '=').map(t => t.value);
+      // Tokens now contain comma-separated values, so we need to split them
+      const activityCategoryLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const activityTypeLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityType' && t.operator === '=').map(t => t.value);
+      const activityTypeLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const venueLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'venue' && t.operator === '=').map(t => t.value);
+      const venueLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'venue' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const populationLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
+      const populationLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'population' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
       const params: GrowthMetricsParams = {
@@ -517,7 +610,11 @@ export function GrowthDashboard() {
       
       return AnalyticsService.getGrowthMetrics(params);
     },
+    placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
+
+  // Debounce loading state to prevent flicker from quick requests (500ms delay)
+  const debouncedLoading = useDebouncedLoading(isLoading, 500);
 
   // Prepare data for grouped view (before hooks)
   const groupNames = metrics?.groupedTimeSeries ? Object.keys(metrics.groupedTimeSeries).sort() : [];
@@ -675,7 +772,11 @@ export function GrowthDashboard() {
           {/* PropertyFilter for Activity Category, Activity Type, Venue, and Population */}
           <PropertyFilter
             query={propertyFilterQuery}
-            onChange={({ detail }) => setPropertyFilterQuery(detail)}
+            onChange={({ detail }) => {
+              // Consolidate tokens to ensure one token per property with comma-separated values
+              const consolidated = consolidateTokens(detail);
+              setPropertyFilterQuery(consolidated);
+            }}
             filteringProperties={filteringProperties}
             filteringOptions={propertyFilterOptions}
             filteringLoadingText="Loading options..."
@@ -811,8 +912,15 @@ export function GrowthDashboard() {
             </Box>
           </Box>
         </Container>
-      ) : (
-        <>
+      ) : null}
+      
+      {/* Always render charts to prevent unmounting - show loading state inline */}
+      {debouncedLoading && (
+        <Box textAlign="center" padding="s">
+          <LoadingSpinner text="Updating growth metrics..." />
+        </Box>
+      )}
+      
       <Container header={<Header variant="h3">Unique Activities Over Time</Header>}>
         {viewMode !== 'all' && activityLegendItems.length > 0 && (
           <InteractiveLegend
@@ -821,81 +929,93 @@ export function GrowthDashboard() {
             onVisibilityChange={activityLegend.handleVisibilityChange}
           />
         )}
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={mergedTimeSeriesData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis 
-              label={{ value: 'Unique Activities', angle: -90, position: 'insideLeft' }}
-            />
-            <Tooltip />
-            {viewMode === 'all' ? (
-              <Line
-                type="monotone"
-                dataKey="uniqueActivities"
-                stroke="#00C49F"
-                strokeWidth={2}
-                name="Unique Activities"
+        {hasData ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={mergedTimeSeriesData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis 
+                label={{ value: 'Unique Activities', angle: -90, position: 'insideLeft' }}
               />
-            ) : (
-              groupNames
-                .filter((groupName) => activityLegend.isSeriesVisible(groupName))
-                .map((groupName) => (
-                  <Line
-                    key={groupName}
-                    type="monotone"
-                    dataKey={`uniqueActivities_${groupName}`}
-                    stroke={groupColors[groupName]}
-                    strokeWidth={2}
-                    name={groupName}
-                  />
-                ))
-            )}
-          </LineChart>
-        </ResponsiveContainer>
+              <Tooltip />
+              {viewMode === 'all' ? (
+                <Line
+                  type="monotone"
+                  dataKey="uniqueActivities"
+                  stroke="#00C49F"
+                  strokeWidth={2}
+                  name="Unique Activities"
+                />
+              ) : (
+                groupNames
+                  .filter((groupName) => activityLegend.isSeriesVisible(groupName))
+                  .map((groupName) => (
+                    <Line
+                      key={groupName}
+                      type="monotone"
+                      dataKey={`uniqueActivities_${groupName}`}
+                      stroke={groupColors[groupName]}
+                      strokeWidth={2}
+                      name={groupName}
+                    />
+                  ))
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <Box textAlign="center" padding="l">
+            <b>No data available</b>
+          </Box>
+        )}
       </Container>
 
-          <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
-            {viewMode !== 'all' && participantLegendItems.length > 0 && (
-              <InteractiveLegend
-                chartId="growth-participants"
-                series={participantLegendItems}
-                onVisibilityChange={participantLegend.handleVisibilityChange}
+      <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
+        {viewMode !== 'all' && participantLegendItems.length > 0 && (
+          <InteractiveLegend
+            chartId="growth-participants"
+            series={participantLegendItems}
+            onVisibilityChange={participantLegend.handleVisibilityChange}
+          />
+        )}
+        {hasData ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={mergedTimeSeriesData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis 
+                label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
               />
-            )}
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mergedTimeSeriesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis 
-                  label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
+              <Tooltip />
+              {viewMode === 'all' ? (
+                <Line
+                  type="monotone"
+                  dataKey="uniqueParticipants"
+                  stroke="#0088FE"
+                  strokeWidth={2}
+                  name="Unique Participants"
                 />
-                <Tooltip />
-                {viewMode === 'all' ? (
-                  <Line
-                    type="monotone"
-                    dataKey="uniqueParticipants"
-                    stroke="#0088FE"
-                    strokeWidth={2}
-                    name="Unique Participants"
-                  />
-                ) : (
-                  groupNames
-                    .filter((groupName) => participantLegend.isSeriesVisible(groupName))
-                    .map((groupName) => (
-                      <Line
-                        key={groupName}
-                        type="monotone"
-                        dataKey={`uniqueParticipants_${groupName}`}
-                        stroke={groupColors[groupName]}
-                        strokeWidth={2}
-                        name={groupName}
-                      />
-                    ))
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </Container>
+              ) : (
+                groupNames
+                  .filter((groupName) => participantLegend.isSeriesVisible(groupName))
+                  .map((groupName) => (
+                    <Line
+                      key={groupName}
+                      type="monotone"
+                      dataKey={`uniqueParticipants_${groupName}`}
+                      stroke={groupColors[groupName]}
+                      strokeWidth={2}
+                      name={groupName}
+                    />
+                  ))
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <Box textAlign="center" padding="l">
+            <b>No data available</b>
+          </Box>
+        )}
+      </Container>
 
       <Container header={<Header variant="h3">Total Participation Over Time</Header>}>
         {viewMode !== 'all' && participationLegendItems.length > 0 && (
@@ -905,41 +1025,45 @@ export function GrowthDashboard() {
             onVisibilityChange={participationLegend.handleVisibilityChange}
           />
         )}
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={mergedTimeSeriesData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis 
-              label={{ value: 'Total Participation', angle: -90, position: 'insideLeft' }}
-            />
-            <Tooltip />
-            {viewMode === 'all' ? (
-              <Line
-                type="monotone"
-                dataKey="totalParticipation"
-                stroke="#FFBB28"
-                strokeWidth={2}
-                name="Total Participation"
+        {hasData ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={mergedTimeSeriesData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis 
+                label={{ value: 'Total Participation', angle: -90, position: 'insideLeft' }}
               />
-            ) : (
-              groupNames
-                .filter((groupName) => participationLegend.isSeriesVisible(groupName))
-                .map((groupName) => (
-                  <Line
-                    key={groupName}
-                    type="monotone"
-                    dataKey={`totalParticipation_${groupName}`}
-                    stroke={groupColors[groupName]}
-                    strokeWidth={2}
-                    name={groupName}
-                  />
-                ))
-            )}
-          </LineChart>
-        </ResponsiveContainer>
+              <Tooltip />
+              {viewMode === 'all' ? (
+                <Line
+                  type="monotone"
+                  dataKey="totalParticipation"
+                  stroke="#FFBB28"
+                  strokeWidth={2}
+                  name="Total Participation"
+                />
+              ) : (
+                groupNames
+                  .filter((groupName) => participationLegend.isSeriesVisible(groupName))
+                  .map((groupName) => (
+                    <Line
+                      key={groupName}
+                      type="monotone"
+                      dataKey={`totalParticipation_${groupName}`}
+                      stroke={groupColors[groupName]}
+                      strokeWidth={2}
+                      name={groupName}
+                    />
+                  ))
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <Box textAlign="center" padding="l">
+            <b>No data available</b>
+          </Box>
+        )}
       </Container>
-        </>
-      )}
     </SpaceBetween>
   );
 }

@@ -31,6 +31,7 @@ import { ActivityLifecycleChart } from './ActivityLifecycleChart';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotification } from '../../hooks/useNotification';
+import { useDebouncedLoading } from '../../hooks/useDebouncedLoading';
 import { GroupingDimension } from '../../utils/constants';
 import { generateEngagementSummaryCSV, downloadBlob } from '../../utils/csv.utils';
 import { generateEngagementSummaryFilename } from '../../utils/csv-filename.utils';
@@ -233,30 +234,80 @@ export function EngagementDashboard() {
     return uuidToLabel.get(uuid);
   };
 
+  // Consolidate tokens: merge multiple tokens for the same property into a single token with comma-separated values
+  // Also de-duplicates values to prevent the same value from appearing multiple times
+  const consolidateTokens = (query: PropertyFilterProps.Query): PropertyFilterProps.Query => {
+    const tokensByProperty = new Map<string, PropertyFilterProps.Token[]>();
+    
+    // Group tokens by property key
+    query.tokens.forEach(token => {
+      const key = token.propertyKey || '';
+      if (!tokensByProperty.has(key)) {
+        tokensByProperty.set(key, []);
+      }
+      tokensByProperty.get(key)!.push(token);
+    });
+    
+    // Consolidate tokens for each property
+    const consolidatedTokens: PropertyFilterProps.Token[] = [];
+    tokensByProperty.forEach((tokens, propertyKey) => {
+      if (tokens.length === 0) return;
+      
+      // Get all values for this property (only = operator)
+      const allValues = tokens
+        .filter(t => t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t)); // Split comma-separated values
+      
+      // De-duplicate values (case-sensitive comparison)
+      const uniqueValues = Array.from(new Set(allValues));
+      
+      if (uniqueValues.length > 0) {
+        // Create a single token with comma-separated unique values
+        consolidatedTokens.push({
+          propertyKey,
+          operator: '=',
+          value: uniqueValues.join(', '),
+        });
+      }
+    });
+    
+    return {
+      ...query,
+      tokens: consolidatedTokens,
+    };
+  };
+
+  // Extract individual values from consolidated tokens (split comma-separated values)
+  const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
+    if (!token.value) return [];
+    // Split by comma and trim whitespace
+    return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
+  };
+
   const filteringProperties: PropertyFilterProps.FilteringProperty[] = [
     {
       key: 'activityCategory',
       propertyLabel: 'Activity Category',
       groupValuesLabel: 'Activity Category values',
-      operators: ['=', '!='],
+      operators: ['='],
     },
     {
       key: 'activityType',
       propertyLabel: 'Activity Type',
       groupValuesLabel: 'Activity Type values',
-      operators: ['=', '!='],
+      operators: ['='],
     },
     {
       key: 'venue',
       propertyLabel: 'Venue',
       groupValuesLabel: 'Venue values',
-      operators: ['=', '!='],
+      operators: ['='],
     },
     {
       key: 'population',
       propertyLabel: 'Population',
       groupValuesLabel: 'Population values',
-      operators: ['=', '!='],
+      operators: ['='],
     },
   ];
 
@@ -343,10 +394,11 @@ export function EngagementDashboard() {
   // Initialize PropertyFilter from URL parameters (convert UUIDs to labels)
   useEffect(() => {
     const initializeFiltersFromUrl = async () => {
-      const tokens: PropertyFilterProps.Token[] = [];
+      const tokensByProperty = new Map<string, string[]>();
       
       // Activity Categories - use correct param name with validation
       const catIds = getValidatedUUIDs(searchParams, 'activityCategoryIds');
+      const catLabels: string[] = [];
       for (const id of catIds) {
         let label = getLabelFromUuid(id);
         if (!label) {
@@ -367,12 +419,16 @@ export function EngagementDashboard() {
           }
         }
         if (label) {
-          tokens.push({ propertyKey: 'activityCategory', operator: '=', value: label });
+          catLabels.push(label);
         }
+      }
+      if (catLabels.length > 0) {
+        tokensByProperty.set('activityCategory', catLabels);
       }
       
       // Activity Types - use correct param name with validation
       const typeIds = getValidatedUUIDs(searchParams, 'activityTypeIds');
+      const typeLabels: string[] = [];
       for (const id of typeIds) {
         let label = getLabelFromUuid(id);
         if (!label) {
@@ -393,12 +449,16 @@ export function EngagementDashboard() {
           }
         }
         if (label) {
-          tokens.push({ propertyKey: 'activityType', operator: '=', value: label });
+          typeLabels.push(label);
         }
+      }
+      if (typeLabels.length > 0) {
+        tokensByProperty.set('activityType', typeLabels);
       }
       
       // Venues - use correct param name with validation
       const venueIds = getValidatedUUIDs(searchParams, 'venueIds');
+      const venueLabels: string[] = [];
       for (const id of venueIds) {
         let label = getLabelFromUuid(id);
         if (!label) {
@@ -419,12 +479,16 @@ export function EngagementDashboard() {
           }
         }
         if (label) {
-          tokens.push({ propertyKey: 'venue', operator: '=', value: label });
+          venueLabels.push(label);
         }
+      }
+      if (venueLabels.length > 0) {
+        tokensByProperty.set('venue', venueLabels);
       }
       
       // Populations - use correct param name with validation
       const popIds = getValidatedUUIDs(searchParams, 'populationIds');
+      const popLabels: string[] = [];
       for (const id of popIds) {
         let label = getLabelFromUuid(id);
         if (!label) {
@@ -445,9 +509,24 @@ export function EngagementDashboard() {
           }
         }
         if (label) {
-          tokens.push({ propertyKey: 'population', operator: '=', value: label });
+          popLabels.push(label);
         }
       }
+      if (popLabels.length > 0) {
+        tokensByProperty.set('population', popLabels);
+      }
+      
+      // Create consolidated tokens (one token per property with comma-separated values)
+      const tokens: PropertyFilterProps.Token[] = [];
+      tokensByProperty.forEach((labels, propertyKey) => {
+        if (labels.length > 0) {
+          tokens.push({
+            propertyKey,
+            operator: '=',
+            value: labels.join(', '), // Comma-separated values in single token
+          });
+        }
+      });
       
       if (tokens.length > 0) {
         setPropertyFilterQuery({ tokens, operation: 'and' });
@@ -484,27 +563,32 @@ export function EngagementDashboard() {
     }
     
     // Shared PropertyFilter tokens (extract UUIDs inline to avoid stale closures)
+    // Tokens now contain comma-separated values, so we need to split them
     const activityCategoryIds = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
-      .map(t => getUuidFromLabel(t.value))
+      .flatMap(t => extractValuesFromToken(t))
+      .map(label => getUuidFromLabel(label))
       .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
     setMultiValueParam(params, 'activityCategoryIds', activityCategoryIds);
 
     const activityTypeIds = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
-      .map(t => getUuidFromLabel(t.value))
+      .flatMap(t => extractValuesFromToken(t))
+      .map(label => getUuidFromLabel(label))
       .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
     setMultiValueParam(params, 'activityTypeIds', activityTypeIds);
 
     const venueIds = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'venue' && t.operator === '=')
-      .map(t => getUuidFromLabel(t.value))
+      .flatMap(t => extractValuesFromToken(t))
+      .map(label => getUuidFromLabel(label))
       .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
     setMultiValueParam(params, 'venueIds', venueIds);
 
     const populationIds = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'population' && t.operator === '=')
-      .map(t => getUuidFromLabel(t.value))
+      .flatMap(t => extractValuesFromToken(t))
+      .map(label => getUuidFromLabel(label))
       .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
     setMultiValueParam(params, 'populationIds', populationIds);
     
@@ -559,16 +643,25 @@ export function EngagementDashboard() {
       
       // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
       // Support multiple values per property (OR logic within dimension)
-      const activityCategoryLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityCategory' && t.operator === '=').map(t => t.value);
+      // Tokens now contain comma-separated values, so we need to split them
+      const activityCategoryLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const activityTypeLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityType' && t.operator === '=').map(t => t.value);
+      const activityTypeLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const venueLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'venue' && t.operator === '=').map(t => t.value);
+      const venueLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'venue' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const populationLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
+      const populationLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'population' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
       const params: EngagementMetricsParams = {
@@ -584,6 +677,7 @@ export function EngagementDashboard() {
       
       return AnalyticsService.getEngagementMetrics(params);
     },
+    placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
 
   // Separate query for geographic breakdown
@@ -624,16 +718,25 @@ export function EngagementDashboard() {
       
       // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
       // Support multiple values per property (OR logic within dimension)
-      const activityCategoryLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityCategory' && t.operator === '=').map(t => t.value);
+      // Tokens now contain comma-separated values, so we need to split them
+      const activityCategoryLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const activityTypeLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityType' && t.operator === '=').map(t => t.value);
+      const activityTypeLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const venueLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'venue' && t.operator === '=').map(t => t.value);
+      const venueLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'venue' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const populationLabels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
+      const populationLabels = propertyFilterQuery.tokens
+        .filter(t => t.propertyKey === 'population' && t.operator === '=')
+        .flatMap(t => extractValuesFromToken(t));
       const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
       return AnalyticsService.getGeographicAnalytics(
@@ -646,7 +749,11 @@ export function EngagementDashboard() {
         populationIds.length > 0 ? populationIds : undefined
       );
     },
+    placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
+
+  // Debounce loading state to prevent flicker from quick requests (500ms delay)
+  const debouncedLoading = useDebouncedLoading(isLoading, 500);
 
   // Prepare data BEFORE any conditional returns (for hooks)
   const hasDateRange = !!dateRange;
@@ -800,18 +907,10 @@ export function EngagementDashboard() {
     return <LoadingSpinner text="Loading engagement metrics..." />;
   }
 
-  if (!metrics) {
-    return (
-      <Box textAlign="center" padding="xxl">
-        <b>No data available</b>
-      </Box>
-    );
-  }
-
-  // Prepare chart data for activities by type
+  // Prepare chart data for activities by type (use empty arrays if no data yet)
   const endLabel = hasDateRange ? 'At End' : 'Count';
   
-  const activitiesByTypeChartData = (metrics.activitiesByType || [])
+  const activitiesByTypeChartData = (metrics?.activitiesByType || [])
     .map(type => {
       // Construct object with keys in correct order for legend
       const dataPoint: any = { name: type.activityTypeName };
@@ -833,7 +932,7 @@ export function EngagementDashboard() {
     .sort((a, b) => (b as any)[endLabel] - (a as any)[endLabel]); // Sort by count descending
 
   // Prepare chart data for activities by category
-  const activitiesByCategoryChartData = (metrics.activitiesByCategory || [])
+  const activitiesByCategoryChartData = (metrics?.activitiesByCategory || [])
     .map(category => {
       // Construct object with keys in correct order for legend
       const dataPoint: any = { name: category.activityCategoryName };
@@ -861,6 +960,13 @@ export function EngagementDashboard() {
 
   return (
     <SpaceBetween size="l">
+      {/* Show loading overlay when fetching but keep UI mounted - debounced to prevent flicker */}
+      {debouncedLoading && (
+        <Box textAlign="center" padding="s">
+          <LoadingSpinner text="Updating metrics..." />
+        </Box>
+      )}
+      
       {/* Filters Section */}
       <Container
         header={<Header variant="h3">Filters and Grouping</Header>}
@@ -914,7 +1020,11 @@ export function EngagementDashboard() {
           {/* PropertyFilter for Activity Category, Activity Type, and Venue */}
           <PropertyFilter
             query={propertyFilterQuery}
-            onChange={({ detail }) => setPropertyFilterQuery(detail)}
+            onChange={({ detail }) => {
+              // Consolidate tokens to ensure one token per property with comma-separated values
+              const consolidated = consolidateTokens(detail);
+              setPropertyFilterQuery(consolidated);
+            }}
             filteringProperties={filteringProperties}
             filteringOptions={propertyFilterOptions}
             filteringLoadingText="Loading options..."
@@ -1020,7 +1130,7 @@ export function EngagementDashboard() {
             // First column for dimension label or "Total"
             {
               id: 'label',
-              header: metrics.groupingDimensions && metrics.groupingDimensions.length > 0 
+              header: metrics?.groupingDimensions && metrics.groupingDimensions.length > 0 
                 ? metrics.groupingDimensions[0].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                 : 'Summary',
               cell: (item: any) => {
@@ -1030,7 +1140,7 @@ export function EngagementDashboard() {
                 }
                 
                 // For dimensional breakdown rows
-                const dimension = metrics.groupingDimensions?.[0];
+                const dimension = metrics?.groupingDimensions?.[0];
                 if (!dimension) return '-';
                 
                 const nameValue = item.dimensions[dimension];
@@ -1104,7 +1214,7 @@ export function EngagementDashboard() {
               sortingField: 'label',
             },
             // Additional dimension columns (if multiple dimensions selected)
-            ...(metrics.groupingDimensions && metrics.groupingDimensions.length > 1 
+            ...(metrics?.groupingDimensions && metrics.groupingDimensions.length > 1 
               ? metrics.groupingDimensions.slice(1).map(dimension => ({
                   id: dimension,
                   header: dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -1251,24 +1361,24 @@ export function EngagementDashboard() {
             },
           ]}
           items={[
-            // First row: Total (aggregate metrics)
+            // First row: Total (aggregate metrics) - use 0 as fallback if no data
             {
               isTotal: true,
               dimensions: {},
               metrics: {
-                activitiesAtStart: metrics.activitiesAtStart,
-                activitiesAtEnd: metrics.activitiesAtEnd,
-                activitiesStarted: metrics.activitiesStarted,
-                activitiesCompleted: metrics.activitiesCompleted,
-                activitiesCancelled: metrics.activitiesCancelled,
-                participantsAtStart: metrics.participantsAtStart,
-                participantsAtEnd: metrics.participantsAtEnd,
-                participationAtStart: metrics.participationAtStart,
-                participationAtEnd: metrics.participationAtEnd,
+                activitiesAtStart: metrics?.activitiesAtStart || 0,
+                activitiesAtEnd: metrics?.activitiesAtEnd || 0,
+                activitiesStarted: metrics?.activitiesStarted || 0,
+                activitiesCompleted: metrics?.activitiesCompleted || 0,
+                activitiesCancelled: metrics?.activitiesCancelled || 0,
+                participantsAtStart: metrics?.participantsAtStart || 0,
+                participantsAtEnd: metrics?.participantsAtEnd || 0,
+                participationAtStart: metrics?.participationAtStart || 0,
+                participationAtEnd: metrics?.participationAtEnd || 0,
               },
             },
             // Subsequent rows: Dimensional breakdowns (if any)
-            ...(metrics.groupedResults || []),
+            ...(metrics?.groupedResults || []),
           ]}
           sortingDisabled={false}
           variant="embedded"
@@ -1387,22 +1497,30 @@ export function EngagementDashboard() {
         }
         geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
         activityCategoryIds={(() => {
-          const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityCategory' && t.operator === '=').map(t => t.value);
+          const labels = propertyFilterQuery.tokens
+            .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+            .flatMap(t => extractValuesFromToken(t));
           const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
           return uuids.length > 0 ? uuids : undefined;
         })()}
         activityTypeIds={(() => {
-          const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'activityType' && t.operator === '=').map(t => t.value);
+          const labels = propertyFilterQuery.tokens
+            .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+            .flatMap(t => extractValuesFromToken(t));
           const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
           return uuids.length > 0 ? uuids : undefined;
         })()}
         venueIds={(() => {
-          const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'venue' && t.operator === '=').map(t => t.value);
+          const labels = propertyFilterQuery.tokens
+            .filter(t => t.propertyKey === 'venue' && t.operator === '=')
+            .flatMap(t => extractValuesFromToken(t));
           const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
           return uuids.length > 0 ? uuids : undefined;
         })()}
         populationIds={(() => {
-          const labels = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'population' && t.operator === '=').map(t => t.value);
+          const labels = propertyFilterQuery.tokens
+            .filter(t => t.propertyKey === 'population' && t.operator === '=')
+            .flatMap(t => extractValuesFromToken(t));
           const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
           return uuids.length > 0 ? uuids : undefined;
         })()}
@@ -1411,185 +1529,203 @@ export function EngagementDashboard() {
       {/* Activity Category Pie Chart and Role Distribution - Side by Side */}
       <ColumnLayout columns={2}>
         {/* Activity Category Pie Chart */}
-        {activityCategoryPieData.length > 0 && (
-          <Container header={<Header variant="h3">Activities by Category</Header>}>
-            {activityCategoryLegendItems.length > 0 && (
-              <InteractiveLegend
-                chartId="activity-category-pie"
-                series={activityCategoryLegendItems}
-                onVisibilityChange={activityCategoryLegend.handleVisibilityChange}
-              />
-            )}
-            {activityCategoryPieData.filter(cat => activityCategoryLegend.isSeriesVisible(cat.name)).length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={activityCategoryPieData.filter(cat => 
-                      activityCategoryLegend.isSeriesVisible(cat.name)
-                    )}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) => `${entry.name}: ${entry.value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {activityCategoryPieData
-                      .filter(cat => activityCategoryLegend.isSeriesVisible(cat.name))
-                      .map((category) => (
-                        <Cell key={`cell-${category.name}`} fill={categoryColorMap[category.name]} />
-                      ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box textAlign="center" padding="l">
-                <b>All categories are hidden. Toggle legend items to show data.</b>
-              </Box>
-            )}
-          </Container>
-        )}
+        <Container header={<Header variant="h3">Activities by Category</Header>}>
+          {activityCategoryPieData.length > 0 ? (
+            <>
+              {activityCategoryLegendItems.length > 0 && (
+                <InteractiveLegend
+                  chartId="activity-category-pie"
+                  series={activityCategoryLegendItems}
+                  onVisibilityChange={activityCategoryLegend.handleVisibilityChange}
+                />
+              )}
+              {activityCategoryPieData.filter(cat => activityCategoryLegend.isSeriesVisible(cat.name)).length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={activityCategoryPieData.filter(cat => 
+                        activityCategoryLegend.isSeriesVisible(cat.name)
+                      )}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(entry) => `${entry.name}: ${entry.value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {activityCategoryPieData
+                        .filter(cat => activityCategoryLegend.isSeriesVisible(cat.name))
+                        .map((category) => (
+                          <Cell key={`cell-${category.name}`} fill={categoryColorMap[category.name]} />
+                        ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <Box textAlign="center" padding="l">
+                  <b>All categories are hidden. Toggle legend items to show data.</b>
+                </Box>
+              )}
+            </>
+          ) : (
+            <Box textAlign="center" padding="l">
+              <b>No activity category data available</b>
+            </Box>
+          )}
+        </Container>
 
         {/* Role Distribution */}
-        {roleDistributionChartData.length > 0 && (
-          <Container header={<Header variant="h3">Role Distribution</Header>}>
-            {roleDistributionLegendItems.length > 0 && (
-              <InteractiveLegend
-                chartId="role-distribution"
-                series={roleDistributionLegendItems}
-                onVisibilityChange={roleDistributionLegend.handleVisibilityChange}
-              />
-            )}
-            {roleDistributionChartData.filter(role => roleDistributionLegend.isSeriesVisible(role.name)).length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={roleDistributionChartData.filter(role => 
-                      roleDistributionLegend.isSeriesVisible(role.name)
-                    )}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) => `${entry.name}: ${entry.value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {roleDistributionChartData
-                      .filter(role => roleDistributionLegend.isSeriesVisible(role.name))
-                      .map((role) => (
-                        <Cell key={`cell-${role.name}`} fill={roleColorMap[role.name]} />
-                      ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box textAlign="center" padding="l">
-                <b>All roles are hidden. Toggle legend items to show data.</b>
-              </Box>
-            )}
-          </Container>
-        )}
+        <Container header={<Header variant="h3">Role Distribution</Header>}>
+          {roleDistributionChartData.length > 0 ? (
+            <>
+              {roleDistributionLegendItems.length > 0 && (
+                <InteractiveLegend
+                  chartId="role-distribution"
+                  series={roleDistributionLegendItems}
+                  onVisibilityChange={roleDistributionLegend.handleVisibilityChange}
+                />
+              )}
+              {roleDistributionChartData.filter(role => roleDistributionLegend.isSeriesVisible(role.name)).length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={roleDistributionChartData.filter(role => 
+                        roleDistributionLegend.isSeriesVisible(role.name)
+                      )}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(entry) => `${entry.name}: ${entry.value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {roleDistributionChartData
+                        .filter(role => roleDistributionLegend.isSeriesVisible(role.name))
+                        .map((role) => (
+                          <Cell key={`cell-${role.name}`} fill={roleColorMap[role.name]} />
+                        ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <Box textAlign="center" padding="l">
+                  <b>All roles are hidden. Toggle legend items to show data.</b>
+                </Box>
+              )}
+            </>
+          ) : (
+            <Box textAlign="center" padding="l">
+              <b>No role distribution data available</b>
+            </Box>
+          )}
+        </Container>
       </ColumnLayout>
 
       {/* Geographic Breakdown */}
-      {geographicBreakdown && geographicBreakdown.length > 0 && (
-        <Container header={<Header variant="h3">Geographic Breakdown</Header>}>
-          <InteractiveLegend
-            chartId="geographic-breakdown"
-            series={geographicBreakdownLegendItems}
-            onVisibilityChange={geographicBreakdownLegend.handleVisibilityChange}
-          />
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart 
-              data={geographicBreakdown} 
-              layout="vertical"
-              barGap={BAR_CHART_GAP} 
-              maxBarSize={BAR_CHART_MAX_BAR_SIZE}
-              margin={{ left: 20 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis 
-                type="category" 
-                dataKey="geographicAreaName" 
-                width={180}
-                tick={<GeographicAreaTick 
-                  areaTypeMap={new Map(
-                    geographicBreakdown.map(area => [area.geographicAreaName, area.areaType])
-                  )}
-                />}
-              />
-              <Tooltip 
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload;
-                    return (
-                      <div style={{ padding: '8px', backgroundColor: 'white', border: '1px solid #ccc' }}>
-                        <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>{data.geographicAreaName}</div>
-                        <div style={{ marginBottom: '4px', fontSize: '12px' }}>
-                          <Badge color={getAreaTypeBadgeColor(data.areaType as AreaType)}>{data.areaType}</Badge>
-                        </div>
-                        <div>Activities: {data.activityCount}</div>
-                        <div>Participants: {data.participantCount}</div>
-                        <div>Participation: {data.participationCount}</div>
-                        {data.hasChildren && (
-                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#0073bb' }}>
-                            Click to drill down
+      <Container header={<Header variant="h3">Geographic Breakdown</Header>}>
+        {geographicBreakdown && geographicBreakdown.length > 0 ? (
+          <>
+            <InteractiveLegend
+              chartId="geographic-breakdown"
+              series={geographicBreakdownLegendItems}
+              onVisibilityChange={geographicBreakdownLegend.handleVisibilityChange}
+            />
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart 
+                data={geographicBreakdown} 
+                layout="vertical"
+                barGap={BAR_CHART_GAP} 
+                maxBarSize={BAR_CHART_MAX_BAR_SIZE}
+                margin={{ left: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis 
+                  type="category" 
+                  dataKey="geographicAreaName" 
+                  width={180}
+                  tick={<GeographicAreaTick 
+                    areaTypeMap={new Map(
+                      geographicBreakdown.map(area => [area.geographicAreaName, area.areaType])
+                    )}
+                  />}
+                />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div style={{ padding: '8px', backgroundColor: 'white', border: '1px solid #ccc' }}>
+                          <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>{data.geographicAreaName}</div>
+                          <div style={{ marginBottom: '4px', fontSize: '12px' }}>
+                            <Badge color={getAreaTypeBadgeColor(data.areaType as AreaType)}>{data.areaType}</Badge>
                           </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              {geographicBreakdownLegend.isSeriesVisible('Activities') && (
-                <Bar 
-                  dataKey="activityCount" 
-                  fill="#0088FE" 
-                  name="Activities"
-                  cursor="pointer"
-                  onClick={(data: any) => {
-                    if (data && data.hasChildren) {
-                      setGeographicAreaFilter(data.geographicAreaId);
+                          <div>Activities: {data.activityCount}</div>
+                          <div>Participants: {data.participantCount}</div>
+                          <div>Participation: {data.participationCount}</div>
+                          {data.hasChildren && (
+                            <div style={{ marginTop: '4px', fontSize: '12px', color: '#0073bb' }}>
+                              Click to drill down
+                            </div>
+                          )}
+                        </div>
+                      );
                     }
+                    return null;
                   }}
                 />
-              )}
-              {geographicBreakdownLegend.isSeriesVisible('Participants') && (
-                <Bar 
-                  dataKey="participantCount" 
-                  fill="#00C49F" 
-                  name="Participants"
-                  cursor="pointer"
-                  onClick={(data: any) => {
-                    if (data && data.hasChildren) {
-                      setGeographicAreaFilter(data.geographicAreaId);
-                    }
-                  }}
-                />
-              )}
-              {geographicBreakdownLegend.isSeriesVisible('Participation') && (
-                <Bar 
-                  dataKey="participationCount" 
-                  fill="#FFBB28" 
-                  name="Participation"
-                  cursor="pointer"
-                  onClick={(data: any) => {
-                    if (data && data.hasChildren) {
-                      setGeographicAreaFilter(data.geographicAreaId);
-                    }
-                  }}
-                />
-              )}
-            </BarChart>
-          </ResponsiveContainer>
-        </Container>
-      )}
+                {geographicBreakdownLegend.isSeriesVisible('Activities') && (
+                  <Bar 
+                    dataKey="activityCount" 
+                    fill="#0088FE" 
+                    name="Activities"
+                    cursor="pointer"
+                    onClick={(data: any) => {
+                      if (data && data.hasChildren) {
+                        setGeographicAreaFilter(data.geographicAreaId);
+                      }
+                    }}
+                  />
+                )}
+                {geographicBreakdownLegend.isSeriesVisible('Participants') && (
+                  <Bar 
+                    dataKey="participantCount" 
+                    fill="#00C49F" 
+                    name="Participants"
+                    cursor="pointer"
+                    onClick={(data: any) => {
+                      if (data && data.hasChildren) {
+                        setGeographicAreaFilter(data.geographicAreaId);
+                      }
+                    }}
+                  />
+                )}
+                {geographicBreakdownLegend.isSeriesVisible('Participation') && (
+                  <Bar 
+                    dataKey="participationCount" 
+                    fill="#FFBB28" 
+                    name="Participation"
+                    cursor="pointer"
+                    onClick={(data: any) => {
+                      if (data && data.hasChildren) {
+                        setGeographicAreaFilter(data.geographicAreaId);
+                      }
+                    }}
+                  />
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          </>
+        ) : (
+          <Box textAlign="center" padding="l">
+            <b>No geographic breakdown data available</b>
+          </Box>
+        )}
+      </Container>
     </SpaceBetween>
   );
 }

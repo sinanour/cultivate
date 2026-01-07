@@ -498,6 +498,12 @@ The Web Frontend package provides a responsive React-based web application that 
 119. WHEN a segmented control option receives focus, THE System SHALL provide visual focus indicators
 120. THE Segmented_Control SHALL include appropriate ARIA labels for screen readers
 121. WHEN the view mode changes, THE System SHALL announce the change to screen readers
+122. WHEN a user adjusts filters or grouping controls on the Engagement Dashboard, THE Web_App SHALL keep all charts, tables, and filtering UI components mounted and rendered until newly fetched data is available
+123. WHEN newly fetched data becomes available after a filter or grouping change, THE Web_App SHALL repaint visual components in place without unmounting or remounting components
+124. THE Web_App SHALL avoid screen flicker or visual disruption when transitioning between different filter or grouping states on the Engagement Dashboard
+125. WHEN a user adjusts filters or grouping controls on the Growth Dashboard, THE Web_App SHALL keep all charts and filtering UI components mounted and rendered until newly fetched data is available
+126. WHEN newly fetched data becomes available after a filter or grouping change on the Growth Dashboard, THE Web_App SHALL repaint visual components in place without unmounting or remounting components
+127. THE Web_App SHALL avoid screen flicker or visual disruption when transitioning between different filter or grouping states on the Growth Dashboard
 
 ### Requirement 7A: Activity Lifecycle Events Chart
 
@@ -561,6 +567,14 @@ The Web Frontend package provides a responsive React-based web application that 
 15. THE PropertyFilter SHALL allow users to clear all filters at once
 16. THE PropertyFilter SHALL integrate with the existing date range and geographic area filters
 17. WHEN the PropertyFilter is empty, THE Web_App SHALL display all activities without property-based filtering
+18. THE PropertyFilter SHALL support only the equals (=) operator for all properties
+19. THE PropertyFilter SHALL NOT support the not equals (!=) operator
+20. WHEN multiple values are selected for a single property dimension, THE PropertyFilter SHALL display a single token showing all values as a comma-separated list
+21. THE PropertyFilter SHALL maintain a one-to-one mapping between property name and filter token
+22. WHEN a user filters by Activity Category with values "Study Circles" and "Devotional Gatherings", THE PropertyFilter SHALL display a single token reading "Activity Category = Study Circles, Devotional Gatherings"
+23. THE PropertyFilter SHALL NOT create separate tokens for each value within the same property dimension
+24. THE PropertyFilter SHALL prevent duplicate values within a single property dimension
+25. WHEN a user attempts to add a value that already exists in a property dimension's token, THE PropertyFilter SHALL ignore the duplicate and maintain only unique values
 
 ### Requirement 8: Authentication UI
 
