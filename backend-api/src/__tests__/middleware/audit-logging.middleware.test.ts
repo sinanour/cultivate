@@ -183,6 +183,40 @@ describe('AuditLoggingMiddleware', () => {
                 done();
             }, 100);
         });
+
+        it('should log REFRESH events by extracting userId from refresh token', (done) => {
+            // Create a mock JWT refresh token with userId
+            const mockRefreshToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEyMyIsImlhdCI6MTYxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+            mockRequest.body = { refreshToken: mockRefreshToken };
+            mockRequest.user = undefined; // No authenticated user in request
+            mockAuditRepo.create = jest.fn().mockResolvedValue({});
+
+            const handler = middleware.logAuthenticationEvent('REFRESH');
+            handler(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+
+            expect(mockNext).toHaveBeenCalled();
+
+            const originalSend = mockResponse.send as jest.Mock;
+            mockResponse.statusCode = 200;
+            originalSend(JSON.stringify({
+                success: true,
+                data: {
+                    accessToken: 'new-access-token',
+                    refreshToken: 'new-refresh-token'
+                }
+            }));
+
+            setTimeout(() => {
+                expect(mockAuditRepo.create).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        userId: 'user-123',
+                        actionType: 'REFRESH',
+                        entityType: 'AUTH',
+                    })
+                );
+                done();
+            }, 100);
+        });
     });
 
     describe('logRoleChange', () => {

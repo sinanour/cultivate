@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import * as jwt from 'jsonwebtoken';
 import { AuditLogRepository } from '../repositories/audit-log.repository';
 import { AuthenticatedRequest } from '../types/express.types';
 
@@ -65,8 +66,20 @@ export class AuditLoggingMiddleware {
                                 } catch (parseError) {
                                     console.warn('Failed to parse login response for audit logging:', parseError);
                                 }
+                            } else if (eventType === 'REFRESH') {
+                                // For REFRESH, extract userId from refresh token in request body
+                                try {
+                                    const { refreshToken } = req.body;
+                                    if (refreshToken) {
+                                        // Decode without verification (just to get userId for logging)
+                                        const decoded = jwt.decode(refreshToken) as any;
+                                        userId = decoded?.userId;
+                                    }
+                                } catch (decodeError) {
+                                    console.warn('Failed to decode refresh token for audit logging:', decodeError);
+                                }
                             } else {
-                                // For LOGOUT and REFRESH, user is already authenticated
+                                // For LOGOUT, user is already authenticated
                                 userId = req.user?.userId;
                             }
 
