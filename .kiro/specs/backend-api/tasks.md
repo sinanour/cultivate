@@ -1617,3 +1617,41 @@ if (geographicAreaId) {
   - **Created Test:** analytics-deny-authorization.test.ts with 4 test cases covering engagement, growth, lifecycle, and explicit filtering
   - **Result:** All 333 tests passing, analytics now correctly excludes denied areas from all metrics
   - _Requirements: 24.15, 24.16, 24.17, 24.18, 24.19, 24.20, 24.21, 6B.15, 6B.16, 6B.17_
+
+
+- [x] 39. Fix grouped engagement metrics filter regression
+  - **Issue:** Grouped engagement metrics are not applying dimension filters correctly
+  - **Root Cause:** `queryActualDimensionCombinations()` builds filters using legacy single-value properties (activityCategoryId, activityTypeId, venueId, geographicAreaId) but `getEngagementMetrics()` expects array-based properties (activityCategoryIds, activityTypeIds, venueIds, geographicAreaIds)
+  - **Impact:** When groupBy dimensions are specified, each group's metrics include ALL activities instead of only activities matching that group's dimension values
+  - **Fix Required:** Update `queryActualDimensionCombinations()` to use array-based filter properties when building combination filters
+  - _Requirements: 6.15, 6.31, 6.33_
+
+  - [x] 39.1 Update queryActualDimensionCombinations to use array-based filters
+    - Change `combination.filters.activityCategoryId = value.id;` to `combination.filters.activityCategoryIds = [value.id];`
+    - Change `combination.filters.activityTypeId = value.id;` to `combination.filters.activityTypeIds = [value.id];`
+    - Change `combination.filters.venueId = value.id;` to `combination.filters.venueIds = [value.id];`
+    - Change `combination.filters.geographicAreaId = value.id;` to `combination.filters.geographicAreaIds = [value.id];`
+    - Ensure all dimension filters are passed as single-element arrays
+    - _Requirements: 6.15, 6.31, 6.33_
+
+  - [x]* 39.2 Write integration test for grouped engagement metrics
+    - Create test data with multiple activity categories and types
+    - Request engagement metrics with groupBy=['category']
+    - Verify each group's metrics only include activities from that category
+    - Verify grouped results match ungrouped results when summed
+    - Test with multiple grouping dimensions (category + type)
+    - **Validates: Requirements 6.15, 6.31, 6.33**
+
+  - [x] 39.3 Verify fix doesn't break existing functionality
+    - Run all existing analytics integration tests
+    - Verify ungrouped metrics still work correctly
+    - Verify geographic filtering still works with grouped metrics
+    - Verify population filtering still works with grouped metrics
+    - _Requirements: 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 6.31, 6.33_
+
+- [x] 40. Checkpoint - Verify grouped engagement metrics fix
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test grouped metrics with single dimension (category, type, venue, geographic area)
+  - Test grouped metrics with multiple dimensions
+  - Verify each group's metrics are correctly filtered
+  - Verify grouped results sum to match ungrouped totals

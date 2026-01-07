@@ -1055,28 +1055,28 @@ export class AnalyticsService {
                     case GroupingDimension.ACTIVITY_CATEGORY:
                         combination.dimensions[DimensionKeys.ACTIVITY_CATEGORY.name] = value.name;
                         combination.dimensions[DimensionKeys.ACTIVITY_CATEGORY.id] = value.id;
-                        combination.filters.activityCategoryId = value.id;
+                        combination.filters.activityCategoryIds = [value.id];
                         combinationKey += `category:${value.id}|`;
                         break;
 
                     case GroupingDimension.ACTIVITY_TYPE:
                         combination.dimensions[DimensionKeys.ACTIVITY_TYPE.name] = value.name;
                         combination.dimensions[DimensionKeys.ACTIVITY_TYPE.id] = value.id;
-                        combination.filters.activityTypeId = value.id;
+                        combination.filters.activityTypeIds = [value.id];
                         combinationKey += `type:${value.id}|`;
                         break;
 
                     case GroupingDimension.VENUE:
                         combination.dimensions[DimensionKeys.VENUE.name] = value.name;
                         combination.dimensions[DimensionKeys.VENUE.id] = value.id;
-                        combination.filters.venueId = value.id;
+                        combination.filters.venueIds = [value.id];
                         combinationKey += `venue:${value.id}|`;
                         break;
 
                     case GroupingDimension.GEOGRAPHIC_AREA:
                         combination.dimensions[DimensionKeys.GEOGRAPHIC_AREA.name] = value.name;
                         combination.dimensions[DimensionKeys.GEOGRAPHIC_AREA.id] = value.id;
-                        combination.filters.geographicAreaId = value.id;
+                        combination.filters.geographicAreaIds = [value.id];
                         combinationKey += `area:${value.id}|`;
                         break;
 
