@@ -57,7 +57,16 @@ export class GeographicAreaService {
 
             // Expand to include descendants
             const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
-            return [explicitGeographicAreaId, ...descendantIds];
+            const allAreaIds = [explicitGeographicAreaId, ...descendantIds];
+
+            // If user has geographic restrictions, filter descendants to only include authorized areas
+            // This ensures DENY rules are respected even when an explicit filter is provided
+            if (hasGeographicRestrictions) {
+                return allAreaIds.filter(id => authorizedAreaIds.includes(id));
+            }
+
+            // No restrictions - return all descendants
+            return allAreaIds;
         }
 
         // No explicit filter - apply implicit filtering if user has restrictions
