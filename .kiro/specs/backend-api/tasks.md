@@ -1655,3 +1655,199 @@ if (geographicAreaId) {
   - Test grouped metrics with multiple dimensions
   - Verify each group's metrics are correctly filtered
   - Verify grouped results sum to match ungrouped totals
+
+
+- [x] 41. Implement fake data generation script for load testing
+  - [x] 41.1 Create script structure and safety mechanisms
+    - Create generate-fake-data.ts in backend-api/scripts directory
+    - Implement NODE_ENV check (exit if not "development")
+    - Implement user confirmation prompt with summary of records to be created
+    - Parse command-line arguments for configurable record counts (--areas, --venues, --participants, --activities)
+    - Set default values (10K areas, 1M venues, 10M participants, 20M activities)
+    - Use same DATABASE_URL environment variable as main API
+    - Handle database connection errors gracefully with clear error messages
+    - _Requirements: 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7, 26.8, 26.9, 26.30_
+
+  - [ ]* 41.2 Write property test for environment safety check
+    - **Property 190: Environment Safety Check**
+    - **Validates: Requirements 26.4**
+
+  - [x] 41.3 Implement deterministic UUID generation
+    - Create generateDeterministicUUID(name: string) function
+    - Use crypto.createHash('md5') to hash the entity name
+    - Format MD5 hash as UUID (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx)
+    - Ensure same name always produces same UUID
+    - _Requirements: 26.11_
+
+  - [ ]* 41.4 Write property tests for UUID generation
+    - **Property 191: Deterministic Naming**
+    - **Property 192: MD5-Based UUID Determinism**
+    - **Validates: Requirements 26.10, 26.11, 26.22, 26.24**
+
+  - [x] 41.5 Implement geographic area generation
+    - Calculate type distribution (2% COUNTRY, 5% STATE, 3% PROVINCE, 20% CLUSTER, 30% CITY, 40% NEIGHBOURHOOD)
+    - Generate countries first with null parent
+    - For each country, randomly select subdivision type (STATE, PROVINCE, or CLUSTER) and use consistently
+    - Generate remaining areas with proper parent assignment based on hierarchy rules
+    - Use deterministic naming: "{Type} {Serial}" (e.g., "Country 000001")
+    - Use batch upsert operations (1000 records per batch)
+    - Provide progress output during generation
+    - _Requirements: 26.10, 26.11, 26.12, 26.13, 26.14, 26.15, 26.16, 26.28_
+
+  - [ ]* 41.6 Write property tests for geographic area generation
+    - **Property 193: Script Idempotency**
+    - **Property 194: Geographic Area Type Distribution**
+    - **Property 195: Country Parent Assignment**
+    - **Property 196: Hierarchical Parent Type Validation**
+    - **Property 197: Country Subdivision Consistency**
+    - **Validates: Requirements 26.12, 26.13, 26.14, 26.15, 26.16**
+
+  - [x] 41.7 Implement venue generation
+    - Identify all leaf-node geographic areas (areas with no children)
+    - Distribute venues evenly across leaf nodes using UUID modulo logic
+    - Generate venue names: "{GeographicAreaName} Venue {Serial}"
+    - Assign base coordinates to each geographic area (distributed globally)
+    - Generate venue coordinates within 10km radius using golden angle distribution
+    - Use batch upsert operations
+    - Provide progress output during generation
+    - _Requirements: 26.7, 26.10, 26.11, 26.12, 26.17, 26.18, 26.19, 26.20, 26.21, 26.28_
+
+  - [ ]* 41.8 Write property tests for venue generation
+    - **Property 198: Venue Naming Pattern**
+    - **Property 199: Venue Leaf-Node Assignment**
+    - **Property 200: Venue Distribution Across Leaf Nodes**
+    - **Property 201: Venue Coordinate Proximity**
+    - **Property 202: Geographic Area Coordinate Diversity**
+    - **Validates: Requirements 26.17, 26.18, 26.19, 26.20, 26.21**
+
+  - [x] 41.9 Implement participant generation
+    - Generate participant names: "Participant {Serial}" with zero-padded 8-digit serial
+    - Assign each participant to a venue using UUID modulo logic
+    - Create ParticipantAddressHistory record for each participant with null effectiveFrom (oldest address)
+    - Use batch upsert operations for both participants and address history
+    - Provide progress output during generation
+    - _Requirements: 26.8, 26.10, 26.11, 26.12, 26.22, 26.23, 26.28_
+
+  - [ ]* 41.10 Write property test for participant generation
+    - **Property 203: Participant Venue Assignment**
+    - **Validates: Requirements 26.23**
+
+  - [x] 41.11 Implement activity generation
+    - Generate activity names: "Activity {Serial}" with zero-padded 8-digit serial
+    - Assign each activity to a venue using UUID modulo logic
+    - Assign random activity type using UUID modulo logic
+    - Set startDate to random date in past year
+    - Set endDate to random date after startDate (or null for 10% of activities)
+    - Set status to PLANNED (70%), ACTIVE (20%), or COMPLETED (10%)
+    - Create ActivityVenueHistory record for each activity with null effectiveFrom
+    - Use batch upsert operations
+    - Provide progress output during generation
+    - _Requirements: 26.9, 26.10, 26.11, 26.12, 26.24, 26.25, 26.28_
+
+  - [ ]* 41.12 Write property tests for activity generation
+    - **Property 204: Activity Venue Assignment**
+    - **Property 205: Activity Participant Count Range**
+    - **Validates: Requirements 26.25, 26.26**
+
+  - [x] 41.13 Implement activity-participant assignment generation
+    - For each activity, determine participant count (3-15) using UUID modulo logic
+    - Assign participants to activity using UUID modulo logic
+    - Assign role to each assignment using UUID modulo logic
+    - Create Assignment records with deterministic UUIDs
+    - Use batch upsert operations
+    - Provide progress output during generation
+    - _Requirements: 26.11, 26.12, 26.26, 26.27, 26.28_
+
+  - [ ]* 41.14 Write property test for assignment generation
+    - **Property 206: Assignment Role Assignment**
+    - **Validates: Requirements 26.27**
+
+  - [x] 41.15 Add npm script and documentation
+    - Add "generate-fake-data" script to package.json
+    - Create README section documenting script usage
+    - Document command-line parameters
+    - Document safety mechanisms
+    - Provide examples of different configurations
+    - _Requirements: 26.5, 26.6, 26.7, 26.8, 26.9_
+
+  - [x] 41.16 Output generation summary
+    - Track counts of created records for each entity type
+    - Output final summary with total counts
+    - Include execution time in summary
+    - _Requirements: 26.29_
+
+- [x] 42. Checkpoint - Verify fake data generation script
+  - Ensure all tests pass, ask the user if questions arise.
+  - Run script with small dataset (100 areas, 1000 venues, 10000 participants, 20000 activities)
+  - Verify idempotency by running script twice and checking database state
+  - Verify geographic hierarchy is correct
+  - Verify venue coordinates are properly distributed
+  - Verify activities have correct participant counts
+  - Test with different parameter configurations
+
+
+- [x] 43. Implement fake data removal functionality
+  - [x] 43.1 Add --remove flag support to script
+    - Parse --remove flag from command-line arguments
+    - Add removal mode to script flow (skip generation, run removal instead)
+    - Apply same NODE_ENV check for removal mode
+    - Prompt user for confirmation before deletion with summary of records to be deleted
+    - _Requirements: 26.31, 26.32, 26.33_
+
+  - [ ]* 43.2 Write property test for removal environment safety check
+    - **Property 207: Removal Environment Safety Check**
+    - **Validates: Requirements 26.33**
+
+  - [x] 43.3 Implement pattern-based fake data identification
+    - Define regex patterns for each entity type (geographic areas, venues, participants, activities)
+    - Create functions to identify fake data records by name patterns
+    - Ensure patterns match the deterministic naming used in generation
+    - _Requirements: 26.34_
+
+  - [ ]* 43.4 Write property tests for pattern-based identification
+    - **Property 208: Pattern-Based Identification**
+    - **Property 209: Manual Data Preservation**
+    - **Validates: Requirements 26.34, 26.37**
+
+  - [x] 43.5 Implement fake data removal with correct deletion order
+    - Delete assignments first (WHERE activity.name matches pattern AND participant.name matches pattern)
+    - Delete activity venue history (WHERE activity.name matches pattern)
+    - Delete activities (WHERE name matches pattern)
+    - Delete participant address history (WHERE participant.name matches pattern)
+    - Delete participant population associations (WHERE participant.name matches pattern)
+    - Delete participants (WHERE name matches pattern)
+    - Delete venues (WHERE name matches pattern)
+    - Delete geographic areas (WHERE name matches pattern)
+    - Use Prisma deleteMany with where clauses for pattern matching
+    - Track deletion counts for each entity type
+    - _Requirements: 26.34, 26.35, 26.36, 26.37_
+
+  - [ ]* 43.6 Write property tests for deletion order and preservation
+    - **Property 210: Predefined Data Preservation**
+    - **Property 211: Foreign Key Constraint Order**
+    - **Validates: Requirements 26.35, 26.36**
+
+  - [x] 43.7 Add progress output and summary for removal
+    - Output progress during deletion for each entity type
+    - Show count of deleted records for each entity type
+    - Output final summary with total deletion counts
+    - Include execution time in summary
+    - _Requirements: 26.38, 26.39_
+
+  - [x] 43.8 Update documentation for removal functionality
+    - Add --remove flag documentation to scripts README
+    - Provide examples of removal usage
+    - Document pattern matching logic
+    - Explain preservation of manual and predefined data
+    - Add troubleshooting section for removal
+    - _Requirements: 26.31, 26.40_
+
+- [x] 44. Checkpoint - Verify fake data removal functionality
+  - Ensure all tests pass, ask the user if questions arise.
+  - Generate small dataset with fake data
+  - Manually create some test records (non-matching patterns)
+  - Run removal script and verify only fake data is deleted
+  - Verify manual records are preserved
+  - Verify predefined seed data is preserved
+  - Test idempotency (running removal twice should be safe)
+  - Verify foreign key constraints are not violated during deletion

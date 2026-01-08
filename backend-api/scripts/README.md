@@ -266,3 +266,323 @@ For issues or questions:
 ## Additional Scripts
 
 As the project grows, additional development scripts may be added to this directory. Each script will have its own documentation section in this README.
+
+
+## Fake Data Generation Script
+
+### Overview
+
+The `generate-fake-data.ts` script generates large volumes of realistic test data for load testing and performance validation. It creates geographic areas, venues, participants, and activities with proper relationships and realistic distributions.
+
+### Safety Mechanisms
+
+⚠️ **Critical Safety Features**:
+
+1. **Environment Check**: Script will **only run** when `NODE_ENV=development`
+2. **User Confirmation**: Prompts for explicit confirmation before generating data
+3. **Idempotent Operations**: Uses upsert operations - safe to run multiple times
+4. **Deterministic IDs**: Uses MD5-based UUIDs - same input always produces same output
+
+### Usage
+
+#### Basic Usage (Default Configuration)
+
+```bash
+NODE_ENV=development npm run generate-fake-data
+```
+
+Default configuration:
+- 10,000 geographic areas
+- 1,000,000 venues
+- 10,000,000 participants
+- 20,000,000 activities
+
+#### Custom Configuration
+
+Specify custom record counts using command-line arguments:
+
+```bash
+NODE_ENV=development npm run generate-fake-data -- --areas=1000 --venues=10000 --participants=100000 --activities=200000
+```
+
+Available parameters:
+- `--areas=N`: Number of geographic areas to generate
+- `--venues=N`: Number of venues to generate
+- `--participants=N`: Number of participants to generate
+- `--activities=N`: Number of activities to generate
+
+#### Small Test Dataset
+
+For quick testing with a small dataset:
+
+```bash
+NODE_ENV=development npm run generate-fake-data -- --areas=100 --venues=1000 --participants=10000 --activities=20000
+```
+
+#### Removing Fake Data
+
+Remove all auto-generated fake data while preserving manual records:
+
+```bash
+NODE_ENV=development npm run generate-fake-data -- --remove
+```
+
+This selective removal:
+- Deletes only records matching fake data naming patterns
+- Preserves manually created records (custom names)
+- Preserves predefined seed data (activity categories, types, roles)
+- Respects foreign key constraints (deletes in correct order)
+- Requires same safety checks (NODE_ENV=development, user confirmation)
+
+See the [Data Cleanup](#data-cleanup) section for more details.
+
+### Data Generation Details
+
+#### Geographic Areas
+
+**Distribution by Type:**
+- 2% COUNTRY (null parent)
+- 5% STATE
+- 3% PROVINCE
+- 20% CLUSTER
+- 30% CITY
+- 40% NEIGHBOURHOOD
+
+**Hierarchy Rules:**
+- Only countries have null parents
+- Each country's immediate subdivisions use a consistent type (all states, all provinces, or all clusters)
+- Parent types are logically higher in hierarchy (e.g., cities can belong to clusters, counties, provinces, states, or countries, but never to neighbourhoods)
+
+**Naming Pattern:** `{Type} {Serial}` (e.g., "COUNTRY 000001", "CITY 005432")
+
+#### Venues
+
+**Assignment:**
+- Assigned only to leaf-node geographic areas (areas with no children)
+- Distributed evenly across all leaf nodes using pseudo-random logic
+
+**Naming Pattern:** `Area {AreaIdPrefix} Venue {Serial}` (e.g., "Area 3f2a1b4c Venue 042")
+
+**Coordinates:**
+- Each geographic area has a central coordinate point
+- Venues within an area are distributed within a 10km radius
+- Different geographic areas have different global coordinates
+
+#### Participants
+
+**Naming Pattern:** `Participant {Serial}` (e.g., "Participant 00000001")
+
+**Home Address:**
+- Each participant is assigned to one venue as their home address
+- Assignment uses pseudo-random logic based on participant UUID
+- Creates ParticipantAddressHistory record with null effectiveFrom (oldest address)
+
+#### Activities
+
+**Naming Pattern:** `Activity {Serial}` (e.g., "Activity 00000001")
+
+**Properties:**
+- Assigned to venues using pseudo-random logic
+- Assigned to predefined activity types
+- Start dates distributed over past year
+- 10% ongoing (null endDate), 90% finite
+- Status distribution: 70% PLANNED, 20% ACTIVE, 10% COMPLETED
+
+**Participant Assignments:**
+- Each activity has 3-15 participants (determined by activity UUID)
+- Participants assigned using pseudo-random logic
+- Each assignment has a role from predefined roles
+
+### Idempotency
+
+The script is designed to be **idempotent** - running it multiple times with the same parameters produces identical results:
+
+- **Deterministic UUIDs**: Entity IDs are generated from MD5 hash of entity name
+- **Upsert Operations**: Uses `createMany` with `skipDuplicates: true`
+- **Consistent Naming**: Same index always produces same name
+- **Pseudo-Random Logic**: UUID-based modulo ensures consistent assignments
+
+This means you can:
+- Run the script multiple times without creating duplicates
+- Regenerate specific datasets reliably
+- Test with consistent data across environments
+
+### Performance Considerations
+
+**Batch Processing:**
+- Processes records in batches of 1,000 to avoid memory issues
+- Shows progress percentage during generation
+
+**Execution Time Estimates:**
+- Small dataset (100/1K/10K/20K): ~10-30 seconds
+- Medium dataset (1K/10K/100K/200K): ~1-5 minutes
+- Default dataset (10K/1M/10M/20M): ~30-60 minutes (depends on hardware)
+
+**Database Size Estimates:**
+- Small dataset: ~50 MB
+- Medium dataset: ~500 MB
+- Default dataset: ~50 GB
+
+### Prerequisites
+
+1. **Database Setup**: Run `npm run db:setup` first to create local database
+2. **Migrations**: Run `npm run prisma:migrate` to set up schema
+3. **Seed Data**: Ensure predefined data exists (activity categories, types, roles)
+4. **Environment**: Set `NODE_ENV=development` in your environment or .env file
+
+### Example Workflow
+
+```bash
+# 1. Set up local database
+npm run db:setup
+
+# 2. Run migrations
+npm run prisma:migrate
+
+# 3. Generate fake data with small dataset for testing
+NODE_ENV=development npm run generate-fake-data -- --areas=100 --venues=1000 --participants=10000 --activities=20000
+
+# 4. Verify data was created
+npm run prisma:studio
+
+# 5. Test API with realistic data
+npm run dev
+```
+
+### Troubleshooting
+
+#### Script Won't Run
+
+**Error: "This script can only run when NODE_ENV is set to 'development'"**
+
+Solution: Set the NODE_ENV environment variable:
+```bash
+NODE_ENV=development npm run generate-fake-data
+```
+
+Or add to your .env file:
+```
+NODE_ENV=development
+```
+
+#### Database Connection Errors
+
+**Error: "Failed to connect to database"**
+
+Solutions:
+1. Ensure PostgreSQL container is running: `finch ps`
+2. Check DATABASE_URL in .env file matches connection string
+3. Verify container is healthy: `finch logs cat-postgres-local`
+
+#### Out of Memory Errors
+
+**Error: "JavaScript heap out of memory"**
+
+Solutions:
+1. Reduce the number of records to generate
+2. Increase Node.js memory limit:
+   ```bash
+   NODE_OPTIONS="--max-old-space-size=4096" npm run generate-fake-data
+   ```
+
+#### Slow Performance
+
+If generation is taking too long:
+1. Use smaller dataset for testing
+2. Check database container resources
+3. Ensure database is on fast storage (SSD)
+
+### Data Cleanup
+
+#### Option 1: Selective Removal (Recommended)
+
+Remove only auto-generated fake data while preserving manual records and predefined seed data:
+
+```bash
+NODE_ENV=development npm run generate-fake-data -- --remove
+```
+
+This will:
+- ✓ Delete all auto-generated fake data (identified by naming patterns)
+- ✓ Preserve manually created test records
+- ✓ Preserve predefined seed data (activity categories, types, roles)
+- ✓ Respect foreign key constraints (deletes in correct order)
+
+**What gets deleted:**
+- Geographic areas matching pattern: `{TYPE} {6 digits}` (e.g., "COUNTRY 000001", "CITY 005432")
+- Venues matching pattern: `Area {8 hex} Venue {3 digits}` (e.g., "Area 3f2a1b4c Venue 042")
+- Participants matching pattern: `Participant {8 digits}` (e.g., "Participant 00000001")
+- Activities matching pattern: `Activity {8 digits}` (e.g., "Activity 00000001")
+- All related records (assignments, address history, venue history)
+
+**What gets preserved:**
+- Manually created records with custom names (e.g., "John Doe", "Community Center", "Weekly Study Circle")
+- Predefined activity categories and types
+- Predefined roles
+- Root administrator user
+- Any other manually entered data
+
+**Example Workflow:**
+```bash
+# 1. Generate fake data
+NODE_ENV=development npm run generate-fake-data -- --areas=100 --venues=1000 --participants=10000 --activities=5000
+
+# 2. Manually add some test records via API or Prisma Studio
+# (e.g., create a participant named "Test User", activity named "Test Activity")
+
+# 3. Run tests or load testing
+
+# 4. Remove only the fake data (manual records preserved)
+NODE_ENV=development npm run generate-fake-data -- --remove
+
+# 5. Verify manual records still exist
+npm run prisma:studio
+```
+
+#### Option 2: Complete Database Reset
+
+Drop and recreate the entire database (removes ALL data including manual records):
+
+```bash
+# Drop and recreate database
+finch exec -it cat-postgres-local psql -U cat_user -d community_activity_tracker -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+npm run prisma:migrate
+
+# Or remove container and volume (complete reset)
+finch rm -f cat-postgres-local
+finch volume rm cat-postgres-data
+npm run db:setup
+npm run prisma:migrate
+```
+
+⚠️ **Warning**: Option 2 deletes ALL data including manually created records. Use Option 1 for selective removal.
+
+### Security Notes
+
+⚠️ **Important**:
+- This script is for **development and testing only**
+- Never run this script in production environments
+- The NODE_ENV check prevents accidental production execution
+- Generated data is fake and should not be used for real community tracking
+
+### Technical Details
+
+**UUID Generation:**
+- Uses MD5 hash of entity name formatted as UUID v4
+- Ensures deterministic IDs for idempotency
+- Format: `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`
+
+**Pseudo-Random Assignment:**
+- Uses UUID modulo for deterministic but distributed assignment
+- Same UUID always assigns to same entity
+- Provides even distribution across entities
+
+**Geographic Hierarchy:**
+- Follows realistic parent-child relationships
+- Countries use consistent subdivision types
+- Leaf nodes (no children) receive venues
+
+**Coordinate Generation:**
+- Uses golden angle (137.5°) for even distribution
+- Venues within 10km radius of area center
+- Different areas have different global coordinates

@@ -509,6 +509,321 @@ Returns activity lifecycle event data showing activities started and completed w
 - Results sorted alphabetically by groupName
 - Returns empty array when no activities match filters
 
+### 6. Fake Data Generation Script
+
+The fake data generation script is a development utility for creating large volumes of realistic test data for load testing and performance validation.
+
+**Script Location:** `backend-api/scripts/generate-fake-data.ts`
+
+**Execution:**
+```bash
+npm run generate-fake-data -- --areas=10000 --venues=1000000 --participants=10000000 --activities=20000000
+```
+
+**Architecture:**
+
+```typescript
+interface GenerationConfig {
+  geographicAreas: number;    // Default: 10,000
+  venues: number;             // Default: 1,000,000
+  participants: number;       // Default: 10,000,000
+  activities: number;         // Default: 20,000,000
+}
+
+interface GeographicAreaDistribution {
+  COUNTRY: 0.02;      // 2%
+  STATE: 0.05;        // 5%
+  PROVINCE: 0.03;     // 3%
+  CLUSTER: 0.20;      // 20%
+  CITY: 0.30;         // 30%
+  NEIGHBOURHOOD: 0.40; // 40%
+}
+
+// MD5-based UUID generation for idempotency
+function generateDeterministicUUID(name: string): string {
+  const hash = crypto.createHash('md5').update(name).digest('hex');
+  // Format as UUID: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  return `${hash.slice(0,8)}-${hash.slice(8,12)}-4${hash.slice(13,16)}-${hash.slice(16,20)}-${hash.slice(20,32)}`;
+}
+
+// Pseudo-random assignment using UUID modulo
+function assignToEntity(uuid: string, totalEntities: number): number {
+  const numericValue = parseInt(uuid.replace(/-/g, '').slice(0, 8), 16);
+  return numericValue % totalEntities;
+}
+```
+
+**Safety Mechanisms:**
+
+1. **Environment Check:**
+   - Script checks `NODE_ENV` environment variable
+   - Exits immediately with error if not set to "development"
+   - Prevents accidental execution in production
+
+2. **User Confirmation:**
+   - Prompts user with summary of records to be created
+   - Requires explicit "yes" confirmation before proceeding
+   - Allows user to cancel before any database operations
+
+3. **Database Connection:**
+   - Uses same environment variables as main API (DATABASE_URL)
+   - Validates connection before starting generation
+   - Provides clear error messages for connection failures
+
+**Geographic Area Generation:**
+
+```typescript
+// Type distribution
+const distribution = {
+  COUNTRY: Math.floor(total * 0.02),
+  STATE: Math.floor(total * 0.05),
+  PROVINCE: Math.floor(total * 0.03),
+  CLUSTER: Math.floor(total * 0.20),
+  CITY: Math.floor(total * 0.30),
+  NEIGHBOURHOOD: Math.floor(total * 0.40)
+};
+
+// Hierarchy rules
+const hierarchyRules = {
+  COUNTRY: { parent: null },
+  STATE: { parent: ['COUNTRY'] },
+  PROVINCE: { parent: ['COUNTRY'] },
+  CLUSTER: { parent: ['COUNTRY', 'STATE', 'PROVINCE'] },
+  CITY: { parent: ['CLUSTER', 'COUNTY', 'PROVINCE', 'STATE', 'COUNTRY'] },
+  NEIGHBOURHOOD: { parent: ['CITY', 'COMMUNITY'] }
+};
+
+// Consistent subdivision type per country
+// For each country, randomly select one subdivision type (STATE, PROVINCE, or CLUSTER)
+// All immediate children of that country use the selected type
+```
+
+**Naming Patterns:**
+
+- **Geographic Areas:** `{Type} {Serial}` (e.g., "Country 001", "City 1234", "Neighbourhood 5678")
+- **Venues:** `{GeographicAreaName} Venue {Serial}` (e.g., "City 1234 Venue 042")
+- **Participants:** `Participant {Serial}` (e.g., "Participant 0000001")
+- **Activities:** `Activity {Serial}` (e.g., "Activity 0000001")
+
+**Coordinate Generation:**
+
+```typescript
+// Global coordinate distribution for countries
+const countryCoordinates = [
+  { lat: 40.7128, lon: -74.0060 },  // New York
+  { lat: 51.5074, lon: -0.1278 },   // London
+  { lat: 35.6762, lon: 139.6503 },  // Tokyo
+  // ... more distributed points
+];
+
+// Assign country to coordinate using modulo
+const countryIndex = assignToEntity(countryUUID, countryCoordinates.length);
+const baseCoords = countryCoordinates[countryIndex];
+
+// For venues in a geographic area, generate coordinates within 10km radius
+function generateVenueCoordinates(baseCoords, venueIndex) {
+  const angle = (venueIndex * 137.5) % 360; // Golden angle for distribution
+  const distance = Math.sqrt(venueIndex % 100) * 0.09; // Up to ~10km
+  const lat = baseCoords.lat + (distance * Math.cos(angle * Math.PI / 180));
+  const lon = baseCoords.lon + (distance * Math.sin(angle * Math.PI / 180));
+  return { lat, lon };
+}
+```
+
+**Batch Operations:**
+
+```typescript
+// Process in batches to avoid memory issues
+const BATCH_SIZE = 1000;
+
+async function generateGeographicAreas(config: GenerationConfig) {
+  const areas = [];
+  
+  for (let i = 0; i < config.geographicAreas; i++) {
+    const type = determineType(i, config.geographicAreas);
+    const name = `${type} ${String(i).padStart(6, '0')}`;
+    const id = generateDeterministicUUID(name);
+    const parentId = determineParent(type, i, areas);
+    
+    areas.push({ id, name, areaType: type, parentGeographicAreaId: parentId });
+    
+    // Upsert in batches
+    if (areas.length >= BATCH_SIZE) {
+      await prisma.geographicArea.createMany({
+        data: areas,
+        skipDuplicates: true
+      });
+      areas.length = 0;
+    }
+  }
+  
+  // Final batch
+  if (areas.length > 0) {
+    await prisma.geographicArea.createMany({
+      data: areas,
+      skipDuplicates: true
+    });
+  }
+}
+```
+
+**Activity Participant Assignment:**
+
+```typescript
+// Determine number of participants per activity (3-15)
+function getParticipantCount(activityUUID: string): number {
+  const numericValue = parseInt(activityUUID.replace(/-/g, '').slice(0, 8), 16);
+  return 3 + (numericValue % 13); // 3 to 15 inclusive
+}
+
+// Assign participants to activity
+async function assignParticipants(activityId: string, totalParticipants: number) {
+  const count = getParticipantCount(activityId);
+  const assignments = [];
+  
+  for (let i = 0; i < count; i++) {
+    const participantIndex = assignToEntity(activityId + i, totalParticipants);
+    const participantId = generateDeterministicUUID(`Participant ${String(participantIndex).padStart(8, '0')}`);
+    const roleIndex = assignToEntity(activityId + participantId, 5); // 5 predefined roles
+    const roleId = getPredefinedRoleId(roleIndex);
+    
+    assignments.push({
+      id: generateDeterministicUUID(`${activityId}-${participantId}-${roleId}`),
+      activityId,
+      participantId,
+      roleId
+    });
+  }
+  
+  return assignments;
+}
+```
+
+**Progress Reporting:**
+
+```typescript
+// Console output during generation
+console.log('Generating geographic areas...');
+console.log(`  Created ${count} geographic areas (${percentage}%)`);
+console.log('Generating venues...');
+console.log(`  Created ${count} venues (${percentage}%)`);
+console.log('Generating participants...');
+console.log(`  Created ${count} participants (${percentage}%)`);
+console.log('Generating activities...');
+console.log(`  Created ${count} activities (${percentage}%)`);
+console.log('Generating assignments...');
+console.log(`  Created ${count} assignments (${percentage}%)`);
+console.log('\nGeneration complete!');
+console.log(`Total records created: ${totalCount}`);
+```
+
+**Fake Data Removal:**
+
+The script supports removing all auto-generated fake data via the `--remove` flag, enabling operators to clean up test data while preserving manually created records.
+
+**Execution:**
+```bash
+npm run generate-fake-data -- --remove
+```
+
+**Removal Strategy:**
+
+```typescript
+// Identify fake data by deterministic naming patterns
+const FAKE_DATA_PATTERNS = {
+  geographicAreas: /^(COUNTRY|STATE|PROVINCE|CLUSTER|COUNTY|CITY|COMMUNITY|NEIGHBOURHOOD|CONTINENT|HEMISPHERE|WORLD) \d{6}$/,
+  venues: /^Area [0-9a-f]{8} Venue \d{3}$/,
+  participants: /^Participant \d{8}$/,
+  activities: /^Activity \d{8}$/
+};
+
+// Deletion order respects foreign key constraints
+async function removeFakeData(prisma: PrismaClient) {
+  // 1. Delete assignments (references activities, participants, roles)
+  const assignmentCount = await prisma.assignment.deleteMany({
+    where: {
+      AND: [
+        { activity: { name: { regex: FAKE_DATA_PATTERNS.activities } } },
+        { participant: { name: { regex: FAKE_DATA_PATTERNS.participants } } }
+      ]
+    }
+  });
+  
+  // 2. Delete activity venue history (references activities, venues)
+  await prisma.activityVenueHistory.deleteMany({
+    where: {
+      activity: { name: { regex: FAKE_DATA_PATTERNS.activities } }
+    }
+  });
+  
+  // 3. Delete activities
+  const activityCount = await prisma.activity.deleteMany({
+    where: { name: { regex: FAKE_DATA_PATTERNS.activities } }
+  });
+  
+  // 4. Delete participant address history (references participants, venues)
+  await prisma.participantAddressHistory.deleteMany({
+    where: {
+      participant: { name: { regex: FAKE_DATA_PATTERNS.participants } }
+    }
+  });
+  
+  // 5. Delete participants
+  const participantCount = await prisma.participant.deleteMany({
+    where: { name: { regex: FAKE_DATA_PATTERNS.participants } }
+  });
+  
+  // 6. Delete venues
+  const venueCount = await prisma.venue.deleteMany({
+    where: { name: { regex: FAKE_DATA_PATTERNS.venues } }
+  });
+  
+  // 7. Delete geographic areas (in reverse hierarchy order)
+  const areaCount = await prisma.geographicArea.deleteMany({
+    where: { name: { regex: FAKE_DATA_PATTERNS.geographicAreas } }
+  });
+  
+  return { assignmentCount, activityCount, participantCount, venueCount, areaCount };
+}
+```
+
+**Preservation Logic:**
+
+```typescript
+// Predefined data is preserved by checking isPredefined flag
+// Manual data is preserved by not matching naming patterns
+
+// Examples of preserved data:
+// - Activity categories (all have isPredefined=true)
+// - Activity types (all have isPredefined=true)
+// - Roles (predefined roles)
+// - Root administrator user
+// - Manually created participants (e.g., "John Doe", "Jane Smith")
+// - Manually created venues (e.g., "Community Center", "Main Hall")
+// - Manually created activities (e.g., "Weekly Study Circle")
+// - Manually created geographic areas (e.g., "Downtown", "West Side")
+```
+
+**Safety Mechanisms for Removal:**
+
+1. **Environment Check:** Same as generation - requires NODE_ENV=development
+2. **User Confirmation:** Prompts with summary of records to be deleted
+3. **Pattern Matching:** Only deletes records matching deterministic naming patterns
+4. **Cascade Handling:** Deletes in correct order to avoid foreign key violations
+
+**Design Rationale:**
+
+- **MD5-based UUIDs**: Ensures idempotency - running script multiple times produces identical data
+- **Upsert operations**: Prevents duplicate key errors on re-runs
+- **Batch processing**: Handles large volumes without memory exhaustion
+- **Deterministic naming**: Makes data predictable and debuggable, enables selective removal
+- **Pseudo-random assignment**: Distributes data evenly while remaining deterministic
+- **Hierarchical consistency**: Geographic areas follow realistic parent-child relationships
+- **Leaf-node venues**: Matches real-world pattern where venues exist at most granular level
+- **Coordinate clustering**: Venues in same area have nearby coordinates (realistic)
+- **Variable activity size**: Activities have 3-15 participants (realistic range)
+- **Pattern-based removal**: Enables mixing auto-generated and manual test data
+
 ## Data Models
 
 ### Database Schema
@@ -2217,6 +2532,98 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Property 189: Consistent authorization across access patterns**
 *For any* resource accessible through multiple endpoints (direct access, nested resources, related entities), geographic authorization should be applied consistently across all access patterns.
 **Validates: Requirements 25.44**
+
+### Fake Data Generation Properties
+
+**Property 190: Environment safety check**
+*For any* execution of the fake data generation script when NODE_ENV is not set to "development", the script should exit immediately with an error message without modifying the database.
+**Validates: Requirements 26.4**
+
+**Property 191: Deterministic naming**
+*For any* entity type (geographic area, venue, participant, activity) and any given index, the generated name should always be identical across multiple script executions.
+**Validates: Requirements 26.10, 26.22, 26.24**
+
+**Property 192: MD5-based UUID determinism**
+*For any* entity name, the MD5 hash formatted as a UUID should always produce the same UUID value across multiple script executions.
+**Validates: Requirements 26.11**
+
+**Property 193: Script idempotency**
+*For any* configuration parameters, running the fake data generation script multiple times should produce identical database state (same records with same IDs).
+**Validates: Requirements 26.12**
+
+**Property 194: Geographic area type distribution**
+*For any* total number of geographic areas to generate, the distribution should be approximately 2% COUNTRY, 5% STATE, 3% PROVINCE, 20% CLUSTER, 30% CITY, and 40% NEIGHBOURHOOD (within rounding tolerance).
+**Validates: Requirements 26.13**
+
+**Property 195: Country parent assignment**
+*For any* generated geographic area, if its type is COUNTRY then its parent should be null, and if its type is not COUNTRY then its parent should not be null.
+**Validates: Requirements 26.14**
+
+**Property 196: Hierarchical parent type validation**
+*For any* generated non-country geographic area, its parent's type should be logically higher in the hierarchy (e.g., cities have parents of type CLUSTER, COUNTY, PROVINCE, STATE, or COUNTRY, never NEIGHBOURHOOD).
+**Validates: Requirements 26.15**
+
+**Property 197: Country subdivision consistency**
+*For any* generated country, all of its immediate children should have the same type (either all PROVINCE, all STATE, or all CLUSTER).
+**Validates: Requirements 26.16**
+
+**Property 198: Venue naming pattern**
+*For any* generated venue, the name should match the pattern "{GeographicAreaName} Venue {Serial}" where Serial is a zero-padded number.
+**Validates: Requirements 26.17**
+
+**Property 199: Venue leaf-node assignment**
+*For any* generated venue, its assigned geographic area should be a leaf node (an area with no children).
+**Validates: Requirements 26.18**
+
+**Property 200: Venue distribution across leaf nodes**
+*For any* set of leaf-node geographic areas, the number of venues assigned to each should be roughly equal (within expected variance from modulo-based distribution).
+**Validates: Requirements 26.19**
+
+**Property 201: Venue coordinate proximity**
+*For any* two venues assigned to the same geographic area, the distance between their coordinates should be less than or equal to 20km (diameter of 10km radius).
+**Validates: Requirements 26.20**
+
+**Property 202: Geographic area coordinate diversity**
+*For any* two different geographic areas, their central coordinates (used for venue generation) should be different.
+**Validates: Requirements 26.21**
+
+**Property 203: Participant venue assignment**
+*For any* generated participant, it should be assigned to exactly one venue as its home address, and the assignment should be deterministic based on the participant's UUID.
+**Validates: Requirements 26.23**
+
+**Property 204: Activity venue assignment**
+*For any* generated activity, it should be assigned to exactly one venue, and the assignment should be deterministic based on the activity's UUID.
+**Validates: Requirements 26.25**
+
+**Property 205: Activity participant count range**
+*For any* generated activity, the number of assigned participants should be between 3 and 15 inclusive, and should be deterministic based on the activity's UUID.
+**Validates: Requirements 26.26**
+
+**Property 206: Assignment role assignment**
+*For any* generated participant-activity assignment, it should have exactly one role assigned, and the role assignment should be deterministic based on the assignment's composite key.
+**Validates: Requirements 26.27**
+
+### Fake Data Removal Properties
+
+**Property 207: Removal environment safety check**
+*For any* execution of the fake data removal script (--remove flag) when NODE_ENV is not set to "development", the script should exit immediately with an error message without modifying the database.
+**Validates: Requirements 26.33**
+
+**Property 208: Pattern-based identification**
+*For any* record in the database, if its name matches a fake data naming pattern (COUNTRY \d{6}, Participant \d{8}, Activity \d{8}, Area [0-9a-f]{8} Venue \d{3}), it should be identified for deletion during removal.
+**Validates: Requirements 26.34**
+
+**Property 209: Manual data preservation**
+*For any* record in the database whose name does not match fake data naming patterns, it should not be deleted during fake data removal.
+**Validates: Requirements 26.37**
+
+**Property 210: Predefined data preservation**
+*For any* predefined record (activity categories, activity types, roles with isPredefined=true, root administrator), it should not be deleted during fake data removal.
+**Validates: Requirements 26.36**
+
+**Property 211: Foreign key constraint order**
+*For any* fake data removal operation, records should be deleted in the order: assignments, activity venue history, activities, participant address history, participants, venues, geographic areas (respecting foreign key dependencies).
+**Validates: Requirements 26.35**
 
 ## Error Handling
 

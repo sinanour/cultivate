@@ -15,7 +15,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "db:setup": "bash scripts/setup-local-db.sh"
+    "db:setup": "bash scripts/setup-local-db.sh",
+    "generate-fake-data": "ts-node scripts/generate-fake-data.ts"
   },
   "keywords": [
     "api",
@@ -54,7 +55,7 @@
     "@types/express-rate-limit": "^5.1.3",
     "@types/jest": "^29.5.11",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/node": "^20.10.5",
+    "@types/node": "^20.19.27",
     "@types/supertest": "^6.0.3",
     "@types/swagger-ui-express": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^6.15.0",

@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
  */
 export const authRateLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 5, // 5 requests per window
+    max: 10, // 10 requests per window
     message: {
         code: 'RATE_LIMIT_EXCEEDED',
         message: 'Too many authentication requests. Please try again later.',
@@ -67,7 +67,7 @@ export const mutationRateLimiter = rateLimit({
  * 1000 requests per minute per user
  */
 export const queryRateLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
+    windowMs: 1 * 1000, // 1 second
     max: 1000, // 1000 requests per window
     message: {
         code: 'RATE_LIMIT_EXCEEDED',

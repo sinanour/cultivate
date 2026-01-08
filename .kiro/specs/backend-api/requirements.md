@@ -773,3 +773,51 @@ The Backend API package provides the RESTful API service that implements all bus
 43. WHEN a user has ADMINISTRATOR role, THE API SHALL bypass geographic authorization checks for administrative operations
 44. THE API SHALL apply geographic authorization consistently across all resource access patterns (direct access, nested resources, related entities)
 45. THE API SHALL log all geographic authorization denials in the audit log with user ID, resource type, resource ID, and attempted action
+
+
+### Requirement 26: Generate Fake Data for Load Testing
+
+**User Story:** As a developer, I want a script to generate realistic fake data in the local database, so that I can perform load testing and validate system performance with large datasets.
+
+#### Acceptance Criteria
+
+1. THE API package SHALL include a fake data generation script located in the scripts directory
+2. THE script SHALL use the same environment variables for database connectivity as the main API application
+3. WHEN the script is executed, THE script SHALL prompt the user for confirmation before proceeding with data generation
+4. WHEN the NODE_ENV environment variable is not set to "development", THE script SHALL refuse to run and exit with an error message
+5. THE script SHALL accept configurable parameters for the number of records to create for each entity type: geographic areas, venues, participants, and activities
+6. THE script SHALL default to creating 10,000 geographic areas when no parameter is provided
+7. THE script SHALL default to creating 1,000,000 venues when no parameter is provided
+8. THE script SHALL default to creating 10,000,000 participants when no parameter is provided
+9. THE script SHALL default to creating 20,000,000 activities when no parameter is provided
+10. THE script SHALL use deterministic naming patterns for all generated entities
+11. THE script SHALL use the MD5 hash of the entity name, formatted as a UUID, to populate the unique identifier field
+12. THE script SHALL use database upsert operations to ensure idempotency (running the script multiple times produces the same result)
+13. WHEN generating geographic areas, THE script SHALL create 2% as COUNTRY type, 5% as STATE type, 3% as PROVINCE type, 20% as CLUSTER type, 30% as CITY type, and 40% as NEIGHBOURHOOD type
+14. WHEN generating geographic areas, THE script SHALL assign null parent only to COUNTRY type areas
+15. WHEN generating geographic areas, THE script SHALL assign parents to non-country areas where the parent type is logically higher in the hierarchy (e.g., cities can belong to clusters, counties, provinces, states, or countries, but never to neighbourhoods)
+16. WHEN generating geographic areas, THE script SHALL ensure that for a given country, all immediate sub-divisions have a consistent type (either all provinces, all states, or all clusters)
+17. WHEN generating venues, THE script SHALL use a naming pattern that incorporates the geographic area name followed by "venue" followed by a serial number
+18. WHEN generating venues, THE script SHALL assign venues only to leaf-node geographic areas (areas with no children)
+19. WHEN generating venues, THE script SHALL distribute venues evenly across all leaf-node geographic areas using pseudo-random logic (e.g., UUID modulo number of leaf areas)
+20. WHEN generating venues for a given geographic area, THE script SHALL assign latitude and longitude coordinates within a 10km radius of a central point
+21. WHEN generating venues for different geographic areas, THE script SHALL use different central coordinates distributed around the globe
+22. WHEN generating participants, THE script SHALL use a simple and predictable naming pattern
+23. WHEN generating participants, THE script SHALL assign each participant to a venue as their home address using pseudo-random logic (e.g., UUID modulo number of venues)
+24. WHEN generating activities, THE script SHALL use a simple and predictable naming pattern
+25. WHEN generating activities, THE script SHALL assign each activity to a venue using pseudo-random logic (e.g., UUID modulo number of venues)
+26. WHEN generating activities, THE script SHALL assign between 3 and 15 participants to each activity using pseudo-random logic based on the activity UUID
+27. WHEN generating activities, THE script SHALL assign a role to each participant-activity assignment using pseudo-random logic
+28. THE script SHALL provide progress output during execution showing the number of records created for each entity type
+29. THE script SHALL complete successfully and output a summary of all created records
+30. THE script SHALL handle database connection errors gracefully and provide clear error messages
+31. THE script SHALL support a removal mode via a --remove flag that deletes all auto-generated fake data
+32. WHEN the --remove flag is provided, THE script SHALL prompt the user for confirmation before proceeding with data deletion
+33. WHEN the --remove flag is provided and NODE_ENV is not set to "development", THE script SHALL refuse to run and exit with an error message
+34. WHEN removing fake data, THE script SHALL identify records by their deterministic naming patterns (e.g., names starting with "COUNTRY ", "Participant ", "Activity ", "Area ")
+35. WHEN removing fake data, THE script SHALL delete records in the correct order to respect foreign key constraints (assignments first, then activities, then participants, then venues, then geographic areas)
+36. WHEN removing fake data, THE script SHALL NOT delete predefined seed data (activity categories, activity types, roles, root administrator)
+37. WHEN removing fake data, THE script SHALL NOT delete manually created records that don't match the deterministic naming patterns
+38. WHEN removing fake data, THE script SHALL provide progress output showing the number of records deleted for each entity type
+39. WHEN removing fake data, THE script SHALL complete successfully and output a summary of all deleted records
+40. THE script SHALL allow mixing auto-generated fake data with manually entered test data, enabling selective removal of only the auto-generated records
