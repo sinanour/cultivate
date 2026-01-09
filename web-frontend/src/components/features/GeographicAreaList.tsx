@@ -122,7 +122,14 @@ export function GeographicAreaList() {
           id: child.id,
           text: child.name,
           data: child,
-          children: child.childCount && child.childCount > 0 ? [] : undefined, // Empty array if has children, undefined if leaf
+          children: child.childCount && child.childCount > 0 ? [
+            // Placeholder for unloaded children
+            {
+              id: `${child.id}-loading-placeholder`,
+              text: 'Loading...',
+              data: child,
+            }
+          ] : undefined,
         }));
       } else if (area.children && area.children.length > 0) {
         // Use children from initial fetch
@@ -130,11 +137,24 @@ export function GeographicAreaList() {
           id: child.id,
           text: child.name,
           data: child,
-          children: child.childCount && child.childCount > 0 ? [] : undefined,
+          children: child.childCount && child.childCount > 0 ? [
+            // Placeholder for unloaded children
+            {
+              id: `${child.id}-loading-placeholder`,
+              text: 'Loading...',
+              data: child,
+            }
+          ] : undefined,
         }));
       } else if (area.childCount && area.childCount > 0) {
-        // Has children but not loaded yet - show empty array to enable expansion
-        node.children = [];
+        // Has children but not loaded yet - add placeholder to enable expansion
+        node.children = [
+          {
+            id: `${area.id}-loading-placeholder`,
+            text: 'Loading...',
+            data: area,
+          }
+        ];
       }
       // If childCount is 0 or undefined, children remains undefined (leaf node)
 
@@ -294,10 +314,17 @@ export function GeographicAreaList() {
     if (expanded) {
       // Expanding - fetch children if not already loaded
       const node = findNodeById(treeData, id);
-      if (node && node.children && node.children.length === 0 && node.data.childCount && node.data.childCount > 0) {
-        // Has children but not loaded yet - fetch them
-        await fetchChildren(id);
-        // The children are now in cache, which will trigger a re-render via state update
+      if (node && node.data.childCount && node.data.childCount > 0) {
+        // Check if children are not loaded yet (has placeholder or empty array)
+        const hasPlaceholder = node.children && node.children.length > 0 && 
+                              node.children[0].id.endsWith('-loading-placeholder');
+        const isEmpty = node.children && node.children.length === 0;
+        
+        if (hasPlaceholder || isEmpty) {
+          // Children not loaded yet - fetch them
+          await fetchChildren(id);
+          // The children are now in cache, which will trigger a re-render via state update
+        }
       }
       
       setExpandedItems(prev => [...prev, id]);
@@ -319,6 +346,19 @@ export function GeographicAreaList() {
   };
 
   const renderItem = (node: TreeNode): TreeViewProps.TreeItem => {
+    // Skip rendering placeholder nodes
+    if (node.id.endsWith('-loading-placeholder')) {
+      return {
+        content: (
+          <div style={{ padding: '8px 0', opacity: 0.5 }}>
+            <SpaceBetween direction="horizontal" size="xs">
+              <span>Loading...</span>
+            </SpaceBetween>
+          </div>
+        ),
+      };
+    }
+    
     const area = node.data;
     
     // Determine if this area is a read-only ancestor
