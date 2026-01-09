@@ -201,40 +201,45 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
   useEffect(() => {
     const fetchAvailableAreas = async () => {
       try {
-        // Fetch areas based on current filter
-        // When filter is active, only fetch descendants
-        // When filter is "Global", fetch all areas
+        // Fetch areas based on current filter with depth=1 for lazy loading
+        // When filter is active, only fetch descendants with depth=1
+        // When filter is "Global", fetch all top-level areas with depth=1
+        // The backend will include childCount for each area
         const areas = await GeographicAreaService.getGeographicAreas(
           undefined, 
           undefined, 
-          selectedGeographicAreaId
+          selectedGeographicAreaId,
+          undefined,
+          1  // depth=1 for lazy loading in dropdown too
         );
 
-        // Fetch ancestors for each area to build hierarchy paths
-        const areasWithHierarchy = await Promise.all(
-          areas.map(async (area) => {
-            try {
-              const ancestors = await GeographicAreaService.getAncestors(area.id);
-              // Build hierarchy path: closest ancestor to most distant
-              const hierarchyPath = ancestors.length > 0
-                ? ancestors.map(a => a.name).join(' > ')
-                : '';
-              
-              return {
-                ...area,
-                ancestors,
-                hierarchyPath,
-              } as GeographicAreaWithHierarchy;
-            } catch (error) {
-              console.error(`Failed to fetch ancestors for area ${area.id}:`, error);
-              return {
-                ...area,
-                ancestors: [],
-                hierarchyPath: '',
-              } as GeographicAreaWithHierarchy;
-            }
-          })
-        );
+        // For dropdown display, we need hierarchy paths
+        // Instead of fetching ancestors for each area (thousands of API calls),
+        // we'll build the hierarchy path from the parent relationships in the data
+        const areaMap = new Map<string, GeographicArea>();
+        areas.forEach(area => areaMap.set(area.id, area));
+
+        const buildHierarchyPath = (area: GeographicArea): string => {
+          const ancestors: string[] = [];
+          let currentId = area.parentGeographicAreaId;
+          
+          // Walk up the parent chain using the data we already have
+          while (currentId) {
+            const parent = areaMap.get(currentId);
+            if (!parent) break;
+            ancestors.push(parent.name);
+            currentId = parent.parentGeographicAreaId;
+          }
+          
+          // Return path from closest to most distant
+          return ancestors.length > 0 ? ancestors.join(' > ') : '';
+        };
+
+        const areasWithHierarchy = areas.map(area => ({
+          ...area,
+          ancestors: [], // We don't need the full ancestor objects for dropdown
+          hierarchyPath: buildHierarchyPath(area),
+        } as GeographicAreaWithHierarchy));
 
         setAvailableAreas(areasWithHierarchy);
       } catch (error) {
