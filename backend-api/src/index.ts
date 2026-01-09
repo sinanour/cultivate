@@ -31,6 +31,7 @@ import { VenueService } from './services/venue.service';
 import { ActivityService } from './services/activity.service';
 import { AssignmentService } from './services/assignment.service';
 import { AnalyticsService } from './services/analytics.service';
+import { MapDataService } from './services/map-data.service';
 import { SyncService } from './services/sync.service';
 import { GeocodingService } from './services/geocoding.service';
 import { GeographicAuthorizationService } from './services/geographic-authorization.service';
@@ -58,6 +59,7 @@ import { AnalyticsRoutes } from './routes/analytics.routes';
 import { SyncRoutes } from './routes/sync.routes';
 import { GeocodingRoutes } from './routes/geocoding.routes';
 import { GeographicAuthorizationRoutes } from './routes/geographic-authorization.routes';
+import { MapDataRoutes } from './routes/map-data.routes';
 
 // Load environment variables
 dotenv.config();
@@ -128,6 +130,7 @@ const assignmentService = new AssignmentService(
   roleRepository
 );
 const analyticsService = new AnalyticsService(prisma, geographicAreaRepository, geographicAuthorizationService);
+const mapDataService = new MapDataService(prisma, geographicAreaRepository, geographicAuthorizationService);
 const syncService = new SyncService(prisma);
 const geocodingService = new GeocodingService();
 
@@ -183,6 +186,11 @@ const analyticsRoutes = new AnalyticsRoutes(
   authMiddleware,
   authorizationMiddleware
 );
+const mapDataRoutes = new MapDataRoutes(
+  mapDataService,
+  authMiddleware,
+  authorizationMiddleware
+);
 const syncRoutes = new SyncRoutes(syncService, authMiddleware, authorizationMiddleware);
 const geocodingRoutes = new GeocodingRoutes(geocodingService, authMiddleware, authorizationMiddleware);
 
@@ -224,6 +232,7 @@ app.use('/api/v1/venues', smartRateLimiter, venueRoutes.getRouter());
 app.use('/api/v1/activities', smartRateLimiter, activityRoutes.getRouter());
 app.use('/api/v1/activities/:id/participants', smartRateLimiter, assignmentRoutes.getRouter());
 app.use('/api/v1/analytics', smartRateLimiter, analyticsRoutes.getRouter());
+app.use('/api/v1/map', smartRateLimiter, mapDataRoutes.getRouter());
 app.use('/api/v1/sync', smartRateLimiter, syncRoutes.getRouter());
 app.use('/api/v1/geocoding', smartRateLimiter, geocodingRoutes.getRouter());
 

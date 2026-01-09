@@ -1,0 +1,594 @@
+import { PrismaClient } from '@prisma/client';
+import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
+import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
+import { ActivityStatus } from '../utils/constants';
+
+export interface ActivityMarker {
+    id: string;
+    latitude: number;
+    longitude: number;
+    activityTypeId: string;
+    activityCategoryId: string;
+}
+
+export interface ActivityPopupContent {
+    id: string;
+    name: string;
+    activityTypeName: string;
+    activityCategoryName: string;
+    startDate: string;
+    participantCount: number;
+}
+
+export interface ParticipantHomeMarker {
+    venueId: string;
+    latitude: number;
+    longitude: number;
+    participantCount: number;
+}
+
+export interface ParticipantHomePopupContent {
+    venueId: string;
+    venueName: string;
+    participantCount: number;
+    participantNames: string[];
+}
+
+export interface VenueMarker {
+    id: string;
+    latitude: number;
+    longitude: number;
+}
+
+export interface VenuePopupContent {
+    id: string;
+    name: string;
+    address: string;
+    geographicAreaName: string;
+}
+
+export interface MapFilters {
+    geographicAreaIds?: string[];
+    activityCategoryIds?: string[];
+    activityTypeIds?: string[];
+    venueIds?: string[];
+    populationIds?: string[];
+    startDate?: Date;
+    endDate?: Date;
+    status?: ActivityStatus;
+}
+
+export class MapDataService {
+    constructor(
+        private prisma: PrismaClient,
+        private geographicAreaRepository: GeographicAreaRepository,
+        private geoAuthService: GeographicAuthorizationService
+    ) { }
+
+    /**
+     * Get lightweight activity marker data for map rendering
+     */
+    async getActivityMarkers(
+        filters: MapFilters,
+        userId: string
+    ): Promise<ActivityMarker[]> {
+        // Get effective geographic area IDs based on authorization
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            filters.geographicAreaIds,
+            userId
+        );
+
+        // If user has restrictions and no authorized areas, return empty
+        if (effectiveAreaIds !== undefined && effectiveAreaIds.length === 0) {
+            return [];
+        }
+
+        // Get venue IDs in authorized geographic areas
+        let effectiveVenueIds: string[] | undefined;
+        if (effectiveAreaIds) {
+            effectiveVenueIds = await this.getVenueIdsForAreas(effectiveAreaIds);
+            if (effectiveVenueIds.length === 0) {
+                return [];
+            }
+        }
+
+        // Build activity where clause
+        const activityWhere: any = {
+            // Exclude activities without venue history
+            activityVenueHistory: {
+                some: {},
+            },
+        };
+
+        // Apply venue filter (geographic or explicit)
+        if (effectiveVenueIds) {
+            activityWhere.activityVenueHistory = {
+                some: {
+                    venueId: { in: effectiveVenueIds },
+                },
+            };
+        } else if (filters.venueIds) {
+            activityWhere.activityVenueHistory = {
+                some: {
+                    venueId: { in: filters.venueIds },
+                },
+            };
+        }
+
+        // Apply activity category filter
+        if (filters.activityCategoryIds) {
+            activityWhere.activityType = {
+                activityCategoryId: { in: filters.activityCategoryIds },
+            };
+        }
+
+        // Apply activity type filter
+        if (filters.activityTypeIds) {
+            activityWhere.activityTypeId = { in: filters.activityTypeIds };
+        }
+
+        // Apply date filters
+        if (filters.startDate) {
+            activityWhere.startDate = { gte: filters.startDate };
+        }
+        if (filters.endDate) {
+            activityWhere.startDate = { lte: filters.endDate };
+        }
+
+        // Apply status filter
+        if (filters.status) {
+            activityWhere.status = filters.status;
+        }
+
+        // Apply population filter
+        if (filters.populationIds && filters.populationIds.length > 0) {
+            activityWhere.assignments = {
+                some: {
+                    participant: {
+                        participantPopulations: {
+                            some: {
+                                populationId: { in: filters.populationIds },
+                            },
+                        },
+                    },
+                },
+            };
+        }
+
+        // Fetch activities with venue history
+        const activities = await this.prisma.activity.findMany({
+            where: activityWhere,
+            include: {
+                activityType: {
+                    select: {
+                        activityCategoryId: true,
+                    },
+                },
+                activityVenueHistory: {
+                    include: {
+                        venue: {
+                            select: {
+                                latitude: true,
+                                longitude: true,
+                            },
+                        },
+                    },
+                    orderBy: {
+                        effectiveFrom: 'desc',
+                    },
+                },
+            },
+        });
+
+        // Transform to markers
+        const markers: ActivityMarker[] = [];
+        for (const activity of activities) {
+            // Get current venue (most recent in history)
+            const currentVenue = activity.activityVenueHistory[0];
+            if (!currentVenue) continue;
+
+            // Skip if venue has no coordinates
+            if (
+                currentVenue.venue.latitude === null ||
+                currentVenue.venue.longitude === null
+            ) {
+                continue;
+            }
+
+            markers.push({
+                id: activity.id,
+                latitude: currentVenue.venue.latitude.toNumber(),
+                longitude: currentVenue.venue.longitude.toNumber(),
+                activityTypeId: activity.activityTypeId,
+                activityCategoryId: activity.activityType.activityCategoryId,
+            });
+        }
+
+        return markers;
+    }
+
+    /**
+     * Get detailed popup content for an activity marker
+     */
+    async getActivityPopupContent(
+        activityId: string,
+        userId: string
+    ): Promise<ActivityPopupContent | null> {
+        const activity = await this.prisma.activity.findUnique({
+            where: { id: activityId },
+            include: {
+                activityType: {
+                    include: {
+                        activityCategory: true,
+                    },
+                },
+                activityVenueHistory: {
+                    include: {
+                        venue: {
+                            select: {
+                                geographicAreaId: true,
+                            },
+                        },
+                    },
+                    orderBy: {
+                        effectiveFrom: 'desc',
+                    },
+                    take: 1,
+                },
+                assignments: {
+                    select: {
+                        id: true,
+                    },
+                },
+            },
+        });
+
+        if (!activity) {
+            return null;
+        }
+
+        // Check geographic authorization
+        const currentVenue = activity.activityVenueHistory[0];
+        if (currentVenue) {
+            const accessLevel = await this.geoAuthService.evaluateAccess(
+                userId,
+                currentVenue.venue.geographicAreaId
+            );
+            if (accessLevel === AccessLevel.NONE) {
+                return null;
+            }
+        }
+
+        return {
+            id: activity.id,
+            name: activity.name,
+            activityTypeName: activity.activityType.name,
+            activityCategoryName: activity.activityType.activityCategory.name,
+            startDate: activity.startDate.toISOString(),
+            participantCount: activity.assignments.length,
+        };
+    }
+
+    /**
+     * Get lightweight participant home marker data grouped by venue
+     */
+    async getParticipantHomeMarkers(
+        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds'>,
+        userId: string
+    ): Promise<ParticipantHomeMarker[]> {
+        // Get effective geographic area IDs based on authorization
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            filters.geographicAreaIds,
+            userId
+        );
+
+        // If user has restrictions and no authorized areas, return empty
+        if (effectiveAreaIds !== undefined && effectiveAreaIds.length === 0) {
+            return [];
+        }
+
+        // Get venue IDs in authorized geographic areas
+        let effectiveVenueIds: string[] | undefined;
+        if (effectiveAreaIds) {
+            effectiveVenueIds = await this.getVenueIdsForAreas(effectiveAreaIds);
+            if (effectiveVenueIds.length === 0) {
+                return [];
+            }
+        }
+
+        // Build participant where clause
+        const participantWhere: any = {
+            // Must have address history
+            addressHistory: {
+                some: {},
+            },
+        };
+
+        // Apply population filter
+        if (filters.populationIds && filters.populationIds.length > 0) {
+            participantWhere.participantPopulations = {
+                some: {
+                    populationId: { in: filters.populationIds },
+                },
+            };
+        }
+
+        // Fetch participants with address history
+        const participants = await this.prisma.participant.findMany({
+            where: participantWhere,
+            include: {
+                addressHistory: {
+                    include: {
+                        venue: {
+                            select: {
+                                id: true,
+                                latitude: true,
+                                longitude: true,
+                                geographicAreaId: true,
+                            },
+                        },
+                    },
+                    orderBy: {
+                        effectiveFrom: 'desc',
+                    },
+                },
+            },
+        });
+
+        // Group by current home venue
+        const venueParticipantMap = new Map<string, number>();
+
+        for (const participant of participants) {
+            // Get current home venue (most recent in history)
+            const currentHome = participant.addressHistory[0];
+            if (!currentHome) continue;
+
+            // Skip if venue has no coordinates
+            if (
+                currentHome.venue.latitude === null ||
+                currentHome.venue.longitude === null
+            ) {
+                continue;
+            }
+
+            // Apply geographic filter
+            if (effectiveVenueIds && !effectiveVenueIds.includes(currentHome.venue.id)) {
+                continue;
+            }
+
+            // Increment count for this venue
+            const count = venueParticipantMap.get(currentHome.venue.id) || 0;
+            venueParticipantMap.set(currentHome.venue.id, count + 1);
+        }
+
+        // Fetch venue coordinates for markers
+        const venueIds = Array.from(venueParticipantMap.keys());
+        const venues = await this.prisma.venue.findMany({
+            where: {
+                id: { in: venueIds },
+            },
+            select: {
+                id: true,
+                latitude: true,
+                longitude: true,
+            },
+        });
+
+        // Transform to markers
+        const markers: ParticipantHomeMarker[] = venues.map(venue => ({
+            venueId: venue.id,
+            latitude: venue.latitude!.toNumber(),
+            longitude: venue.longitude!.toNumber(),
+            participantCount: venueParticipantMap.get(venue.id) || 0,
+        }));
+
+        return markers;
+    }
+
+    /**
+     * Get detailed popup content for a participant home marker
+     */
+    async getParticipantHomePopupContent(
+        venueId: string,
+        userId: string
+    ): Promise<ParticipantHomePopupContent | null> {
+        const venue = await this.prisma.venue.findUnique({
+            where: { id: venueId },
+            select: {
+                id: true,
+                name: true,
+                geographicAreaId: true,
+            },
+        });
+
+        if (!venue) {
+            return null;
+        }
+
+        // Check geographic authorization
+        const accessLevel = await this.geoAuthService.evaluateAccess(
+            userId,
+            venue.geographicAreaId
+        );
+        if (accessLevel === AccessLevel.NONE) {
+            return null;
+        }
+
+        // Get participants with this venue as current home
+        const participants = await this.prisma.participant.findMany({
+            where: {
+                addressHistory: {
+                    some: {
+                        venueId: venueId,
+                    },
+                },
+            },
+            include: {
+                addressHistory: {
+                    orderBy: {
+                        effectiveFrom: 'desc',
+                    },
+                    take: 1,
+                    include: {
+                        venue: {
+                            select: {
+                                id: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Filter to only participants where this is their current home
+        const currentResidents = participants.filter(
+            p => p.addressHistory[0]?.venue.id === venueId
+        );
+
+        return {
+            venueId: venue.id,
+            venueName: venue.name,
+            participantCount: currentResidents.length,
+            participantNames: currentResidents.map(p => p.name),
+        };
+    }
+
+    /**
+     * Get lightweight venue marker data for map rendering
+     */
+    async getVenueMarkers(
+        filters: Pick<MapFilters, 'geographicAreaIds'>,
+        userId: string
+    ): Promise<VenueMarker[]> {
+        // Get effective geographic area IDs based on authorization
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            filters.geographicAreaIds,
+            userId
+        );
+
+        // If user has restrictions and no authorized areas, return empty
+        if (effectiveAreaIds !== undefined && effectiveAreaIds.length === 0) {
+            return [];
+        }
+
+        // Build venue where clause
+        const venueWhere: any = {
+            // Must have coordinates
+            latitude: { not: null },
+            longitude: { not: null },
+        };
+
+        // Apply geographic filter
+        if (effectiveAreaIds) {
+            venueWhere.geographicAreaId = { in: effectiveAreaIds };
+        }
+
+        // Fetch venues
+        const venues = await this.prisma.venue.findMany({
+            where: venueWhere,
+            select: {
+                id: true,
+                latitude: true,
+                longitude: true,
+            },
+        });
+
+        // Transform to markers
+        return venues.map(venue => ({
+            id: venue.id,
+            latitude: venue.latitude!.toNumber(),
+            longitude: venue.longitude!.toNumber(),
+        }));
+    }
+
+    /**
+     * Get detailed popup content for a venue marker
+     */
+    async getVenuePopupContent(
+        venueId: string,
+        userId: string
+    ): Promise<VenuePopupContent | null> {
+        const venue = await this.prisma.venue.findUnique({
+            where: { id: venueId },
+            include: {
+                geographicArea: {
+                    select: {
+                        name: true,
+                    },
+                },
+            },
+        });
+
+        if (!venue) {
+            return null;
+        }
+
+        // Check geographic authorization
+        const accessLevel = await this.geoAuthService.evaluateAccess(
+            userId,
+            venue.geographicAreaId
+        );
+        if (accessLevel === AccessLevel.NONE) {
+            return null;
+        }
+
+        return {
+            id: venue.id,
+            name: venue.name,
+            address: venue.address,
+            geographicAreaName: venue.geographicArea.name,
+        };
+    }
+
+    /**
+     * Get effective geographic area IDs based on filters and authorization
+     */
+    private async getEffectiveGeographicAreaIds(
+        filterAreaIds: string[] | undefined,
+        userId: string
+    ): Promise<string[] | undefined> {
+        // Get user's authorized area IDs
+        const authInfo = await this.geoAuthService.getAuthorizationInfo(userId);
+
+        // If explicit filter provided
+        if (filterAreaIds && filterAreaIds.length > 0) {
+            // Expand to include descendants
+            const expandedIds = new Set<string>();
+            for (const areaId of filterAreaIds) {
+                expandedIds.add(areaId);
+                const descendants = await this.geographicAreaRepository.findDescendants(areaId);
+                descendants.forEach(d => expandedIds.add(d));
+            }
+
+            // If user has restrictions, intersect with authorized areas
+            if (authInfo.hasGeographicRestrictions) {
+                const authorizedSet = new Set(authInfo.authorizedAreaIds);
+                return Array.from(expandedIds).filter(id => authorizedSet.has(id));
+            }
+
+            return Array.from(expandedIds);
+        }
+
+        // No explicit filter - apply implicit filtering
+        if (authInfo.hasGeographicRestrictions) {
+            return authInfo.authorizedAreaIds;
+        }
+
+        return undefined; // No filtering
+    }
+
+    /**
+     * Get venue IDs for given geographic area IDs
+     */
+    private async getVenueIdsForAreas(areaIds: string[]): Promise<string[]> {
+        const venues = await this.prisma.venue.findMany({
+            where: {
+                geographicAreaId: { in: areaIds },
+            },
+            select: {
+                id: true,
+            },
+        });
+        return venues.map(v => v.id);
+    }
+}

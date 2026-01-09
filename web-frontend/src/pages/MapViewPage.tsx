@@ -7,11 +7,10 @@ import Header from '@cloudscape-design/components/header';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import Multiselect from '@cloudscape-design/components/multiselect';
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
-import { MapView } from '../components/features/MapView';
-import { ActivityTypeService } from '../services/api/activity-type.service';
+import { MapView } from '../components/features/MapView.optimized';
 import { PopulationService } from '../services/api/population.service';
 
-type MapMode = 'activities' | 'participantHomes' | 'venues' | 'activityCategories';
+type MapMode = 'activitiesByType' | 'activitiesByCategory' | 'participantHomes' | 'venues';
 
 export default function MapViewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,18 +18,12 @@ export default function MapViewPage() {
   // Initialize from URL
   const [mapMode, setMapMode] = useState<MapMode>(() => {
     const urlMode = searchParams.get('mode');
-    return (urlMode as MapMode) || 'activities';
+    return (urlMode as MapMode) || 'activitiesByType';
   });
   
   const [selectedPopulations, setSelectedPopulations] = useState<MultiselectProps.Options>(() => {
     const urlPopIds = searchParams.getAll('populationIds');
     return urlPopIds.map(id => ({ label: '', value: id }));
-  });
-
-  // Fetch activity types for the legend
-  const { data: activityTypes = [] } = useQuery({
-    queryKey: ['activityTypes'],
-    queryFn: () => ActivityTypeService.getActivityTypes(),
   });
 
   // Fetch populations for filter
@@ -92,8 +85,8 @@ export default function MapViewPage() {
                   selectedId={mapMode}
                   onChange={({ detail }) => setMapMode(detail.selectedId as MapMode)}
                   options={[
-                    { id: 'activities', text: 'Activities' },
-                    { id: 'activityCategories', text: 'By Category' },
+                    { id: 'activitiesByType', text: 'Activities by Type' },
+                    { id: 'activitiesByCategory', text: 'Activities by Category' },
                     { id: 'participantHomes', text: 'Participant Homes' },
                     { id: 'venues', text: 'Venues' }
                   ]}
@@ -119,8 +112,7 @@ export default function MapViewPage() {
       >
         <div style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
           <MapView 
-            mode={mapMode} 
-            activityTypes={activityTypes}
+            mode={mapMode}
             populationIds={selectedPopulationIds}
           />
         </div>

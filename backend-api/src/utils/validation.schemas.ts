@@ -395,6 +395,60 @@ export const ActivityLifecycleQuerySchema = z.object({
   ),
 });
 
+// Map Data schemas
+const arrayPreprocessor = (val: any) => {
+  if (val === undefined || val === null) return undefined;
+  if (Array.isArray(val)) {
+    return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+  }
+  const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+  return values.length > 0 ? values : undefined;
+};
+
+export const MapActivityMarkersQuerySchema = z.object({
+  geographicAreaIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid geographic area ID format')).optional()
+  ),
+  activityCategoryIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid activity category ID format')).optional()
+  ),
+  activityTypeIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid activity type ID format')).optional()
+  ),
+  venueIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid venue ID format')).optional()
+  ),
+  populationIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid population ID format')).optional()
+  ),
+  startDate: z.string().datetime('Invalid start date format').optional(),
+  endDate: z.string().datetime('Invalid end date format').optional(),
+  status: z.nativeEnum(ActivityStatus).optional(),
+});
+
+export const MapParticipantHomeMarkersQuerySchema = z.object({
+  geographicAreaIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid geographic area ID format')).optional()
+  ),
+  populationIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid population ID format')).optional()
+  ),
+});
+
+export const MapVenueMarkersQuerySchema = z.object({
+  geographicAreaIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid geographic area ID format')).optional()
+  ),
+});
+
 // Sync schemas
 export const SyncOperationSchema = z.object({
   operation: z.nativeEnum(SyncOperation),
@@ -451,6 +505,9 @@ export type AssignmentUpdateInput = z.infer<typeof AssignmentUpdateSchema>;
 export type EngagementQuery = z.infer<typeof EngagementQuerySchema>;
 export type GrowthQuery = z.infer<typeof GrowthQuerySchema>;
 export type ActivityLifecycleQuery = z.infer<typeof ActivityLifecycleQuerySchema>;
+export type MapActivityMarkersQuery = z.infer<typeof MapActivityMarkersQuerySchema>;
+export type MapParticipantHomeMarkersQuery = z.infer<typeof MapParticipantHomeMarkersQuerySchema>;
+export type MapVenueMarkersQuery = z.infer<typeof MapVenueMarkersQuerySchema>;
 export type SyncOperationInput = z.infer<typeof SyncOperationSchema>;
 export type BatchSyncInput = z.infer<typeof BatchSyncSchema>;
 export type UuidParam = z.infer<typeof UuidParamSchema>;

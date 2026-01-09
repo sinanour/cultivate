@@ -722,8 +722,8 @@ This implementation plan covers the React-based web application built with TypeS
     - Also used within ActivityForm to display temporary assignments during creation
     - _Requirements: 6.3, 6.4_
 
-- [ ] 13. Refactor map view UI for optimized loading
-  - [ ] 13.1 Create MapDataService
+- [x] 13. Refactor map view UI for optimized loading
+  - [x] 13.1 Create MapDataService
     - Implement getActivityMarkers(filters) to fetch from /api/v1/map/activities
     - Implement getActivityPopupContent(activityId) to fetch from /api/v1/map/activities/:id/popup
     - Implement getParticipantHomeMarkers(filters) to fetch from /api/v1/map/participant-homes
@@ -734,7 +734,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Implement popup content caching using React Query
     - _Requirements: 6C.9, 6C.16, 6C.18, 6C.22, 6C.25, 6C.26, 6C.29, 6C.30, 6C.33_
 
-  - [ ] 13.2 Update MapView component for immediate rendering and lazy loading
+  - [x] 13.2 Update MapView component for immediate rendering and lazy loading
     - Render map immediately at world zoom level on component mount (before fetching markers)
     - Display "Loading markers..." indicator overlay while fetching marker data
     - Keep map interactive (zoomable/pannable) during marker loading
@@ -753,7 +753,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Hide legend when no markers visible or in non-activity modes
     - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.23_
 
-  - [ ] 13.3 Implement lazy-loaded popup content
+  - [x] 13.3 Implement lazy-loaded popup content
     - When marker is clicked, display loading indicator in popup
     - Fetch popup content using MapDataService based on map mode:
       - Activities modes: call getActivityPopupContent(activityId)
@@ -765,7 +765,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Render entity names as hyperlinks to detail pages
     - _Requirements: 6C.21, 6C.22, 6C.23, 6C.24, 6C.25, 6C.26, 6C.27, 6C.28, 6C.29, 6C.30, 6C.31, 6C.32, 6C.33, 6C.34_
 
-  - [ ] 13.4 Update MapFilters component
+  - [x] 13.4 Update MapFilters component
     - Update filter change handlers to refetch marker data with new filters
     - Pass filter parameters to MapDataService.getActivityMarkers()
     - Update population filter enabling logic for four map modes
@@ -773,7 +773,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Enable population filter when mode is "Activities by Type", "Activities by Category", or "Participant Homes"
     - _Requirements: 6C.35, 6C.36, 6C.37, 6C.38, 6C.39, 6C.40, 6C.41, 6C.42, 6C.43_
 
-  - [ ] 13.5 Update global geographic filter integration
+  - [x] 13.5 Update global geographic filter integration
     - Apply global filter to all map modes
     - Pass selectedGeographicAreaId to marker fetch calls
     - Filter activities, participant homes, and venues by authorized geographic areas
