@@ -266,11 +266,20 @@ This implementation plan covers the React-based web application built with TypeS
     - Clean up blocker on component unmount
     - _Requirements: 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
 
-  - [x] 7.1 Create ParticipantList component
+  - [x] 7.1 Create ParticipantList component with batched incremental loading
     - Display table with search, sort, and filter
-    - Use CloudScape Table with optional pagination support
+    - Use CloudScape Table with batched pagination (100 items per batch)
+    - Implement batched loading: fetch participants in batches of 100 using pagination
+    - Render table rows incrementally as each batch is fetched
+    - Display progress indicator during loading ("Loading participants: X / Y")
+    - Update progress indicator after each batch is rendered
+    - Allow users to interact with already-loaded rows (click, select) while additional batches load
+    - Automatically fetch next batch after previous batch is rendered
+    - Use pagination metadata (total count) from API to determine if more batches available
+    - Remove loading indicator when all batches are fetched
+    - Handle batch fetching errors with retry button
     - Implement client-side search
-    - _Requirements: 4.1, 4.2, 4.3_
+    - _Requirements: 4.1, 4.2, 4.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.17, 26A.18, 26A.19_
 
   - [ ]* 7.2 Write property test for participant list display
     - **Property 5: Participant List Display**
@@ -408,13 +417,23 @@ This implementation plan covers the React-based web application built with TypeS
       - **Validates: Requirements 4.21, 4.22, 4.23, 4.24, 4.25, 4.26**
 
 - [x] 8. Implement venue management UI
-  - [x] 8.1 Create VenueList component
+  - [x] 8.1 Create VenueList component with batched incremental loading
     - Display table with name, address, and geographic area
+    - Use CloudScape Table with batched pagination (100 items per batch)
+    - Implement batched loading: fetch venues in batches of 100 using pagination
+    - Render table rows incrementally as each batch is fetched
+    - Display progress indicator during loading ("Loading venues: X / Y")
+    - Update progress indicator after each batch is rendered
+    - Allow users to interact with already-loaded rows while additional batches load
+    - Automatically fetch next batch after previous batch is rendered
+    - Use pagination metadata (total count) from API to determine if more batches available
+    - Remove loading indicator when all batches are fetched
+    - Handle batch fetching errors with retry button
     - Render venue name as hyperlink to /venues/:id
     - Render geographic area name as hyperlink to /geographic-areas/:id
     - Implement search via /venues/search?q= endpoint, sort, and filter
     - Support optional pagination
-    - _Requirements: 6A.1, 6A.1a, 6A.2, 6A.3_
+    - _Requirements: 6A.1, 6A.1a, 6A.2, 6A.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.20, 26A.21, 26A.22_
 
   - [ ]* 8.2 Write property tests for venue list and search
     - **Property 44: Venue List Display**
@@ -527,7 +546,7 @@ This implementation plan covers the React-based web application built with TypeS
       - **Validates: Requirements 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18, 22.19, 22.20, 22.21, 22.22, 22.23, 22.24, 22.25, 22.26**
 
 - [x] 9. Implement geographic area management UI
-  - [x] 9.1 Create GeographicAreaList component
+  - [x] 9.1 Create GeographicAreaList component with batched incremental loading
     - Display hierarchical tree view using CloudScape TreeView component
     - Use TreeView with items prop containing hierarchical data structure
     - Manage expanded state with expandedItems and onExpandedItemsChange props
@@ -535,7 +554,11 @@ This implementation plan covers the React-based web application built with TypeS
     - Show area type badges for each node with increased vertical spacing
     - Initially fetch only top-level areas and immediate children using depth=1 parameter
     - When global filter active: fetch filtered area's immediate children using depth=1
-    - Implement lazy loading: fetch children on-demand when user expands a node via GET /api/geographic-areas/:id/children
+    - Implement lazy loading with batched fetching: fetch children in batches of 100 on-demand when user expands node via GET /api/geographic-areas/:id/children
+    - When expanding nodes with many children (>100), render children incrementally as batches arrive
+    - Display progress indicator during batch loading ("Loading areas: X / Y")
+    - Update progress indicator after each batch is rendered
+    - Allow users to expand/collapse already-loaded nodes while additional nodes load
     - Use childCount field from API to determine if node has children
     - Show expansion affordance (arrow) only when childCount > 0
     - Hide expansion affordance when childCount = 0 (leaf node)
@@ -553,7 +576,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Visually indicate ancestor areas as read-only (e.g., with badge, icon, or muted styling)
     - Ensure ancestors are always rendered to provide hierarchy context
     - Support progressive disclosure through user-initiated node expansion
-    - _Requirements: 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.15, 6B.16, 6B.17, 6B.18, 6B.19, 6B.20, 6B.23, 6B.24, 6B.25, 6B.26, 6B.27_
+    - _Requirements: 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.15, 6B.16, 6B.17, 6B.18, 6B.19, 6B.20, 6B.23, 6B.24, 6B.25, 6B.26, 6B.27, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.23, 26A.24, 26A.25, 26A.26, 26A.27_
 
   - [ ]* 9.2 Write property tests for hierarchical display and lazy loading
     - **Property 50: Geographic Area Hierarchical Display**
@@ -604,13 +627,23 @@ This implementation plan covers the React-based web application built with TypeS
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 11. Implement activity management UI
-  - [x] 11.1 Create ActivityList component
+  - [x] 11.1 Create ActivityList component with batched incremental loading
     - Display table with filtering by category, type, and status (PLANNED, ACTIVE, COMPLETED, CANCELLED)
+    - Use CloudScape Table with batched pagination (100 items per batch)
+    - Implement batched loading: fetch activities in batches of 100 using pagination
+    - Render table rows incrementally as each batch is fetched
+    - Display progress indicator during loading ("Loading activities: X / Y")
+    - Update progress indicator after each batch is rendered
+    - Allow users to interact with already-loaded rows while additional batches load
+    - Automatically fetch next batch after previous batch is rendered
+    - Use pagination metadata (total count) from API to determine if more batches available
+    - Remove loading indicator when all batches are fetched
+    - Handle batch fetching errors with retry button
     - Show activity category and type
     - Visually distinguish finite vs ongoing
     - Provide sort capabilities
     - Support optional pagination
-    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.11_
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.11, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.14, 26A.15, 26A.16_
 
   - [ ]* 11.2 Write property tests for activity list
     - **Property 11: Activity List Display**
@@ -722,36 +755,46 @@ This implementation plan covers the React-based web application built with TypeS
     - Also used within ActivityForm to display temporary assignments during creation
     - _Requirements: 6.3, 6.4_
 
-- [x] 13. Refactor map view UI for optimized loading
-  - [x] 13.1 Create MapDataService
-    - Implement getActivityMarkers(filters) to fetch from /api/v1/map/activities
+- [x] 13. Refactor map view UI for optimized loading with batched incremental rendering
+  - [x] 13.1 Create MapDataService with pagination support
+    - Implement getActivityMarkers(filters, page?, limit?) to fetch from /api/v1/map/activities with pagination
     - Implement getActivityPopupContent(activityId) to fetch from /api/v1/map/activities/:id/popup
-    - Implement getParticipantHomeMarkers(filters) to fetch from /api/v1/map/participant-homes
+    - Implement getParticipantHomeMarkers(filters, page?, limit?) to fetch from /api/v1/map/participant-homes with pagination
     - Implement getParticipantHomePopupContent(venueId) to fetch from /api/v1/map/participant-homes/:venueId/popup
-    - Implement getVenueMarkers(filters) to fetch from /api/v1/map/venues
+    - Implement getVenueMarkers(filters, page?, limit?) to fetch from /api/v1/map/venues with pagination
     - Implement getVenuePopupContent(venueId) to fetch from /api/v1/map/venues/:id/popup
     - Support all filter parameters for marker endpoints
+    - Handle pagination metadata (page, limit, total, totalPages) from API responses
     - Implement popup content caching using React Query
-    - _Requirements: 6C.9, 6C.16, 6C.18, 6C.22, 6C.25, 6C.26, 6C.29, 6C.30, 6C.33_
+    - _Requirements: 6C.22, 6C.26, 6C.32, 6C.34, 6C.37, 6C.38, 6C.41, 6C.42, 6C.45, 6C.46, 6C.49, 6C.50_
 
-  - [x] 13.2 Update MapView component for immediate rendering and lazy loading
+  - [x] 13.2 Update MapView component for immediate rendering and batched incremental loading
     - Render map immediately at world zoom level on component mount (before fetching markers)
     - Display "Loading markers..." indicator overlay while fetching marker data
     - Keep map interactive (zoomable/pannable) during marker loading
+    - Implement batched marker fetching: fetch markers in batches of 100 using pagination
+    - Render markers incrementally as each batch is fetched (don't wait for all batches)
+    - Display progress indicator showing loaded/total count ("Loading markers: 300 / 1,500")
+    - Update progress indicator after each batch is rendered
+    - Allow users to interact with already-rendered markers while additional batches load
+    - Automatically fetch next batch after previous batch is rendered
+    - Use pagination metadata (total count) to determine if more batches available
+    - Remove loading indicator when all batches are fetched
+    - Handle batch fetching errors gracefully with retry button
     - Update mode selector to support four modes: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
-    - When mode changes, fetch appropriate marker data using MapDataService
-    - In "Activities by Type" mode: fetch activity markers, color-code by activityTypeId
-    - In "Activities by Category" mode: fetch activity markers, color-code by activityCategoryId
-    - In "Participant Homes" mode: fetch participant home markers
-    - In "Venues" mode: fetch venue markers
-    - Remove loading indicator once markers are rendered
-    - Automatically zoom map to fit bounds of all visible markers after rendering
+    - When mode changes, fetch appropriate marker data using MapDataService with batched loading
+    - In "Activities by Type" mode: fetch activity markers in batches of 100, color-code by activityTypeId
+    - In "Activities by Category" mode: fetch activity markers in batches of 100, color-code by activityCategoryId
+    - In "Participant Homes" mode: fetch participant home markers in batches of 100
+    - In "Venues" mode: fetch venue markers in batches of 100
+    - Automatically zoom map to fit bounds of all visible markers after first batch renders
+    - Adjust bounds as additional batches are rendered
     - Keep map at world zoom when no markers are visible
     - Implement marker clustering for dense areas
     - Update legend to show activity types (in "Activities by Type" mode) or activity categories (in "Activities by Category" mode)
     - Filter legend items based on markers actually visible
     - Hide legend when no markers visible or in non-activity modes
-    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.23_
+    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22, 6C.23, 6C.24, 6C.25, 6C.26, 6C.27, 6C.28, 6C.29, 6C.30, 6C.31, 6C.32, 6C.33, 6C.34, 6C.35, 6C.36_
 
   - [x] 13.3 Implement lazy-loaded popup content
     - When marker is clicked, display loading indicator in popup
@@ -763,23 +806,24 @@ This implementation plan covers the React-based web application built with TypeS
     - Cache popup content using React Query to avoid refetching
     - Display error message with retry button if popup fetch fails
     - Render entity names as hyperlinks to detail pages
-    - _Requirements: 6C.21, 6C.22, 6C.23, 6C.24, 6C.25, 6C.26, 6C.27, 6C.28, 6C.29, 6C.30, 6C.31, 6C.32, 6C.33, 6C.34_
+    - _Requirements: 6C.37, 6C.38, 6C.39, 6C.40, 6C.41, 6C.42, 6C.43, 6C.44, 6C.45, 6C.46, 6C.47, 6C.48, 6C.49, 6C.50_
 
   - [x] 13.4 Update MapFilters component
-    - Update filter change handlers to refetch marker data with new filters
-    - Pass filter parameters to MapDataService.getActivityMarkers()
+    - Update filter change handlers to refetch marker data with new filters (restart batched loading)
+    - Pass filter parameters to MapDataService marker methods
     - Update population filter enabling logic for four map modes
     - Disable population filter when mode is "Venues"
     - Enable population filter when mode is "Activities by Type", "Activities by Category", or "Participant Homes"
-    - _Requirements: 6C.35, 6C.36, 6C.37, 6C.38, 6C.39, 6C.40, 6C.41, 6C.42, 6C.43_
+    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56_
 
   - [x] 13.5 Update global geographic filter integration
     - Apply global filter to all map modes
     - Pass selectedGeographicAreaId to marker fetch calls
     - Filter activities, participant homes, and venues by authorized geographic areas
-    - _Requirements: 6C.44, 6C.45, 6C.46, 6C.47, 6C.48, 6C.49, 6C.50, 6C.51, 6C.52, 6C.53, 6C.54_
+    - Restart batched loading when global filter changes
+    - _Requirements: 6C.57, 6C.58, 6C.59, 6C.60, 6C.61, 6C.62, 6C.63, 6C.64, 6C.65, 6C.66, 6C.67_
 
-  - [ ]* 13.6 Write property tests for optimized map loading
+  - [ ]* 13.6 Write property tests for optimized map loading with batched rendering
     - **Property 60: Map Immediate Rendering**
     - **Property 61: Map Loading Indicator Display**
     - **Property 62: Map Auto-Zoom to Markers**
@@ -789,7 +833,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 66: Four Map Mode Support**
     - **Property 67: Activity Type vs Category Color Coding**
     - **Property 68: Map Filter Application to Markers**
-    - **Validates: Requirements 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.16, 6C.18, 6C.21, 6C.22, 6C.23, 6C.33, 6C.35**
+    - **Property 68a: Batched Marker Fetching**
+    - **Property 68b: Incremental Marker Rendering**
+    - **Property 68c: Progress Indicator Display**
+    - **Property 68d: Marker Interaction During Loading**
+    - **Property 68e: Batch Error Handling with Retry**
+    - **Validates: Requirements 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22, 6C.23, 6C.37, 6C.51**
 
 - [x] 14. Implement analytics dashboards
   - [x] 14.1 Create EngagementDashboard component

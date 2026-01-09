@@ -208,7 +208,10 @@ src/
 
 **ParticipantList**
 - Displays table with search, sort, and filter capabilities
-- Uses CloudScape Table with pagination
+- Uses CloudScape Table with batched pagination (100 items per batch)
+- Fetches participants in batches and renders incrementally
+- Displays progress indicator during batch loading ("Loading participants: X / Y")
+- Allows interaction with already-loaded participants while additional batches load
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
 - Provides actions for edit and delete (no separate View button)
 - Implements client-side search across name and email
@@ -287,6 +290,10 @@ src/
 
 **ActivityList**
 - Displays table with filtering by category, type, and status
+- Uses CloudScape Table with batched pagination (100 items per batch)
+- Fetches activities in batches and renders incrementally
+- Displays progress indicator during batch loading ("Loading activities: X / Y")
+- Allows interaction with already-loaded activities while additional batches load
 - Renders activity name as hyperlink in primary column (links to /activities/:id)
 - Shows activity category and type
 - Visually distinguishes finite vs ongoing activities
@@ -384,6 +391,10 @@ src/
 **VenueList**
 - Displays table of venues with name, address, and geographic area
 - Uses CloudScape Table with search, sort, and filter capabilities
+- Uses batched pagination (100 items per batch)
+- Fetches venues in batches and renders incrementally
+- Displays progress indicator during batch loading ("Loading venues: X / Y")
+- Allows interaction with already-loaded venues while additional batches load
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
 - Renders geographic area name as hyperlink in geographic area column (links to /geographic-areas/:id)
 - Provides actions for edit and delete (no separate View button)
@@ -453,7 +464,9 @@ src/
 - Applies padding directly to interactive elements for full-height clickability and hover treatment
 - Initially fetches only top-level areas and their immediate children using depth=1 parameter
 - When global filter active: fetches filtered area's immediate children using depth=1
-- Implements lazy loading: fetches children on-demand when user expands a node
+- Implements lazy loading with batched fetching: fetches children in batches of 100 items on-demand when user expands a node
+- When expanding nodes with many children (>100), renders children incrementally as batches arrive
+- Displays progress indicator during batch loading ("Loading areas: X / Y")
 - Uses childCount field from API to determine if node has children
 - Shows expansion affordance (arrow) only when childCount > 0
 - Hides expansion affordance when childCount = 0 (leaf node)
@@ -512,13 +525,22 @@ src/
 - Renders map immediately at world zoom level upon page navigation (before fetching any marker data)
 - Displays loading indicator ("Loading markers..." text or spinner overlay) while fetching marker data
 - Keeps map interactive (zoomable and pannable) during marker loading
+- Fetches markers in batches of 100 items using paginated API requests
+- Renders markers incrementally as each batch is fetched, without waiting for all batches
+- Displays progress indicator showing loaded/total marker count ("Loading markers: 300 / 1,500")
+- Updates progress indicator after each batch is rendered
+- Allows users to interact with already-rendered markers while additional batches load
+- Automatically fetches next batch after previous batch is rendered
+- Handles pagination metadata to determine if more batches are available
+- Removes loading indicator when all batches are fetched
+- Handles batch fetching errors gracefully with retry option
 - Automatically zooms to fit bounds of all visible markers once marker data is loaded
 - Keeps map at world zoom level when no markers are visible
 - Provides mode selector control to switch between four map modes: "Activities by Type", "Activities by Category", "Participant Homes", and "Venues"
-- In "Activities by Type" mode: fetches lightweight marker data from `/api/v1/map/activities`, displays activity markers at current venue locations, color-codes markers by activity type using activityTypeId
-- In "Activities by Category" mode: fetches lightweight marker data from `/api/v1/map/activities`, displays activity markers at current venue locations, color-codes markers by activity category using activityCategoryId
-- In "Participant Homes" mode: fetches lightweight marker data from `/api/v1/map/participant-homes`, displays markers for participant home addresses grouped by venue
-- In "Venues" mode: fetches lightweight marker data from `/api/v1/map/venues`, displays markers for all venues with coordinates
+- In "Activities by Type" mode: fetches lightweight marker data from `/api/v1/map/activities` in batches of 100, displays activity markers at current venue locations, color-codes markers by activity type using activityTypeId
+- In "Activities by Category" mode: fetches lightweight marker data from `/api/v1/map/activities` in batches of 100, displays activity markers at current venue locations, color-codes markers by activity category using activityCategoryId
+- In "Participant Homes" mode: fetches lightweight marker data from `/api/v1/map/participant-homes` in batches of 100, displays markers for participant home addresses grouped by venue
+- In "Venues" mode: fetches lightweight marker data from `/api/v1/map/venues` in batches of 100, displays markers for all venues with coordinates
 - Implements marker clustering for dense areas
 - Displays right-aligned legend showing color mapping for activity types (in "Activities by Type" mode) or activity categories (in "Activities by Category" mode)
 - Filters legend items dynamically based on markers actually visible on the map
@@ -903,11 +925,14 @@ src/
 - Uses Select's description property to display full ancestor hierarchy path
 - Formats hierarchy path as "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
 - Displays "No parent areas" when area has no ancestors
-- Implements async lazy-loading of geographic areas from backend
-- Loads first page of results (50 items) when dropdown opens
+- Implements async lazy-loading of geographic areas from backend in batches of 100 items
+- Loads first batch of 100 results when dropdown opens
+- Renders options incrementally as each batch is fetched
+- Displays loading indicator at bottom of dropdown while fetching additional batches
+- Automatically fetches next batch when user scrolls near bottom
 - Supports text-based filtering using CloudScape's filteringType="auto" (client-side filtering)
 - Displays loading indicator using statusType="loading" while fetching
-- Supports pagination for large result sets
+- Supports pagination for large result sets with batches of 100 items
 - Accepts optional props to filter results by parent area or other criteria
 - Handles empty states when no results match search
 - Handles error states gracefully
@@ -925,6 +950,8 @@ src/
 - Accepts props: value (selected area ID), onChange (callback), options (GeographicAreaWithHierarchy[]), loading, disabled, error, placeholder, inlineLabelText
 - Transforms GeographicAreaWithHierarchy objects into Select options with custom labelContent
 - Uses React useMemo to optimize option rendering
+- Maintains pagination state for batched loading
+- Tracks total count from API response for determining when all batches are loaded
 - Integrates with existing geographic area utilities (getAreaTypeBadgeColor)
 - Can be wrapped with additional UI elements (e.g., BreadcrumbGroup for global filter)
 
@@ -938,11 +965,14 @@ src/
 **AsyncEntitySelect**
 - Reusable dropdown component for high-cardinality entity selection (venues, participants, geographic areas)
 - Uses CloudScape Autosuggest or Select component with async loading capabilities
-- Loads first page of results from backend on component mount (default 50 items)
+- Loads first batch of 100 results from backend on component mount
+- Renders options incrementally as each batch of 100 items is fetched
+- Displays loading indicator at bottom of dropdown while fetching additional batches
+- Automatically fetches next batch when user scrolls near bottom of dropdown
 - Supports text-based filtering with debounced input (300ms delay)
 - Sends search query to backend via `?search=text` parameter
 - Displays loading indicator while fetching filtered results
-- Supports pagination for large result sets (loads more on scroll or explicit action)
+- Supports pagination for large result sets with batches of 100 items
 - Respects global geographic area filter when applicable (combines `?search=text&geographicAreaId=id`)
 - Handles empty states and error states gracefully
 - Provides clear visual feedback during async operations
@@ -950,9 +980,10 @@ src/
 
 **Implementation Details:**
 - Generic component accepting entity type, fetch function, and display formatter
-- Maintains local state for search text, loading status, and current results
+- Maintains local state for search text, loading status, current results, and pagination metadata
 - Uses React Query for caching and request deduplication
 - Implements virtual scrolling for large result sets
+- Tracks total count from API response for progress indicators
 - Provides accessible keyboard navigation and screen reader support
 
 **InteractiveLegend**
@@ -1202,23 +1233,26 @@ src/
   - When populationIds provided: includes only activities with at least one participant in specified populations
 
 **MapDataService**
-- `getActivityMarkers(filters)`: Fetches lightweight activity marker data from `/api/v1/map/activities`
-  - Parameters: `geographicAreaIds?`, `activityCategoryIds?`, `activityTypeIds?`, `venueIds?`, `populationIds?`, `startDate?`, `endDate?`, `status?`
-  - Returns array of objects with `id`, `latitude`, `longitude`, `activityTypeId`, `activityCategoryId`
-  - Minimal payload for fast rendering of thousands of markers
+- `getActivityMarkers(filters, page?, limit?)`: Fetches lightweight activity marker data from `/api/v1/map/activities` with pagination support
+  - Parameters: `geographicAreaIds?`, `activityCategoryIds?`, `activityTypeIds?`, `venueIds?`, `populationIds?`, `startDate?`, `endDate?`, `status?`, `page?`, `limit?`
+  - Returns paginated response with array of objects containing `id`, `latitude`, `longitude`, `activityTypeId`, `activityCategoryId`
+  - Returns pagination metadata with total count for progress indicators
+  - Minimal payload for fast rendering of thousands of markers in batches
 - `getActivityPopupContent(activityId)`: Fetches detailed popup content from `/api/v1/map/activities/:id/popup`
   - Returns object with `id`, `name`, `activityTypeName`, `activityCategoryName`, `startDate`, `participantCount`
   - Loaded on-demand when user clicks marker
-- `getParticipantHomeMarkers(filters)`: Fetches lightweight participant home marker data from `/api/v1/map/participant-homes`
-  - Parameters: `geographicAreaIds?`, `populationIds?`
-  - Returns array of objects with `venueId`, `latitude`, `longitude`, `participantCount`
+- `getParticipantHomeMarkers(filters, page?, limit?)`: Fetches lightweight participant home marker data from `/api/v1/map/participant-homes` with pagination support
+  - Parameters: `geographicAreaIds?`, `populationIds?`, `page?`, `limit?`
+  - Returns paginated response with array of objects containing `venueId`, `latitude`, `longitude`, `participantCount`
+  - Returns pagination metadata with total count
   - One marker per venue (grouped)
 - `getParticipantHomePopupContent(venueId)`: Fetches detailed popup content from `/api/v1/map/participant-homes/:venueId/popup`
   - Returns object with `venueId`, `venueName`, `participantCount`, `participantNames` (array)
   - Loaded on-demand when user clicks marker
-- `getVenueMarkers(filters)`: Fetches lightweight venue marker data from `/api/v1/map/venues`
-  - Parameters: `geographicAreaIds?`
-  - Returns array of objects with `id`, `latitude`, `longitude`
+- `getVenueMarkers(filters, page?, limit?)`: Fetches lightweight venue marker data from `/api/v1/map/venues` with pagination support
+  - Parameters: `geographicAreaIds?`, `page?`, `limit?`
+  - Returns paginated response with array of objects containing `id`, `latitude`, `longitude`
+  - Returns pagination metadata with total count
   - Shows all venues with coordinates
 - `getVenuePopupContent(venueId)`: Fetches detailed popup content from `/api/v1/map/venues/:id/popup`
   - Returns object with `id`, `name`, `address`, `geographicAreaName`

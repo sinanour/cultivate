@@ -202,7 +202,7 @@ Services implement business logic and coordinate operations:
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context)
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering with OR logic within dimensions and AND logic across dimensions (array filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data, supports growth metrics with multi-dimensional filtering (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) where multiple values within a dimension use OR logic and multiple dimensions use AND logic
-- **MapDataService**: Provides optimized map visualization data with lightweight marker endpoints and lazy-loaded popup content, returns minimal fields for fast marker rendering (coordinates and IDs only), fetches detailed popup content on-demand when markers are clicked, supports all filtering dimensions (geographic area, activity category, activity type, venue, population, date range, status), applies geographic authorization filtering, excludes entities without coordinates from marker responses, groups participant homes by venue to avoid duplicate markers
+- **MapDataService**: Provides optimized map visualization data with lightweight marker endpoints, batched pagination (100 items per batch), and lazy-loaded popup content, returns minimal fields for fast marker rendering (coordinates and IDs only), supports incremental rendering through paginated responses with total count metadata, fetches detailed popup content on-demand when markers are clicked, supports all filtering dimensions (geographic area, activity category, activity type, venue, population, date range, status), applies geographic authorization filtering, excludes entities without coordinates from marker responses, groups participant homes by venue to avoid duplicate markers
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload
 - **GeographicAuthorizationService**: Manages user geographic authorization rules (CRUD operations), evaluates user access to geographic areas (deny-first logic), calculates effective authorized areas (including descendants and ancestors), validates geographic restrictions for create operations, provides authorization filtering for all data access, enforces authorization on individual resource access (GET by ID, PUT, DELETE), validates authorization for nested resource endpoints, provides authorization bypass for administrators, logs all authorization denials
@@ -529,19 +529,23 @@ Returns activity lifecycle event data showing activities started and completed w
 
 ### Map Data API Endpoints
 
-The Map Data API provides specialized endpoints optimized for map visualization with lightweight marker data and lazy-loaded popup content.
+The Map Data API provides specialized endpoints optimized for map visualization with lightweight marker data, batched pagination for incremental rendering, and lazy-loaded popup content.
 
 **Design Rationale:**
 - Separates coordinate data (needed for rendering) from descriptive data (needed for popups)
-- Enables fast initial map rendering with thousands of markers
+- Enables fast initial map rendering with first batch of 100 markers
+- Supports incremental rendering as additional batches are fetched
+- Provides total count on first request for accurate progress indicators
 - Reduces bandwidth by loading popup content only when user clicks a marker
 - Supports both activity type and activity category visualization modes
 
 **GET /api/v1/map/activities**
 
-Returns lightweight activity marker data for map rendering.
+Returns lightweight activity marker data for map rendering with pagination support.
 
 **Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 100, max: 100)
 - `geographicAreaIds` (optional): Array of geographic area UUIDs
 - `activityCategoryIds` (optional): Array of activity category UUIDs
 - `activityTypeIds` (optional): Array of activity type UUIDs
@@ -561,7 +565,13 @@ Returns lightweight activity marker data for map rendering.
     longitude: number,         // Venue longitude
     activityTypeId: string,    // For color-coding by type
     activityCategoryId: string // For color-coding by category
-  }>
+  }>,
+  pagination: {
+    page: number,
+    limit: number,
+    total: number,              // Total count of matching activities
+    totalPages: number
+  }
 }
 ```
 
@@ -571,6 +581,8 @@ Returns lightweight activity marker data for map rendering.
 - Applies all filters using same logic as analytics endpoints
 - Applies geographic authorization filtering
 - Excludes activities without venue or without coordinates
+- Returns pagination metadata including total count on every request
+- Limits results to 100 items per page for optimal incremental rendering
 
 **GET /api/v1/map/activities/:id/popup**
 
@@ -593,9 +605,11 @@ Returns detailed popup content for a specific activity marker.
 
 **GET /api/v1/map/participant-homes**
 
-Returns lightweight participant home marker data grouped by venue.
+Returns lightweight participant home marker data grouped by venue with pagination support.
 
 **Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 100, max: 100)
 - `geographicAreaIds` (optional): Array of geographic area UUIDs
 - `populationIds` (optional): Array of population UUIDs
 
@@ -608,7 +622,13 @@ Returns lightweight participant home marker data grouped by venue.
     latitude: number,          // Venue latitude
     longitude: number,         // Venue longitude
     participantCount: number   // Count of participants at this venue
-  }>
+  }>,
+  pagination: {
+    page: number,
+    limit: number,
+    total: number,              // Total count of venue markers
+    totalPages: number
+  }
 }
 ```
 
@@ -618,6 +638,7 @@ Returns lightweight participant home marker data grouped by venue.
 - Handles null effectiveFrom as oldest address
 - Applies geographic authorization filtering
 - Excludes participants without home venue or without coordinates
+- Returns pagination metadata including total count on every request
 
 **GET /api/v1/map/participant-homes/:venueId/popup**
 
@@ -638,9 +659,11 @@ Returns detailed popup content for a specific participant home marker.
 
 **GET /api/v1/map/venues**
 
-Returns lightweight venue marker data for map rendering.
+Returns lightweight venue marker data for map rendering with pagination support.
 
 **Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 100, max: 100)
 - `geographicAreaIds` (optional): Array of geographic area UUIDs
 
 **Response:**
@@ -651,7 +674,13 @@ Returns lightweight venue marker data for map rendering.
     id: string,        // Venue UUID
     latitude: number,  // Venue latitude
     longitude: number  // Venue longitude
-  }>
+  }>,
+  pagination: {
+    page: number,
+    limit: number,
+    total: number,      // Total count of venue markers
+    totalPages: number
+  }
 }
 ```
 
@@ -659,6 +688,7 @@ Returns lightweight venue marker data for map rendering.
 - Returns all venues with non-null coordinates
 - Applies geographic authorization filtering
 - No activity or participant filtering (shows all venues)
+- Returns pagination metadata including total count on every request
 
 **GET /api/v1/map/venues/:id/popup**
 
@@ -681,6 +711,8 @@ Returns detailed popup content for a specific venue marker.
 - Database indexes on latitude, longitude, and foreign key fields
 - Minimal field selection in queries (SELECT only needed columns)
 - Efficient joins for current venue determination
+- Pagination with 100-item batches for incremental rendering
+- Total count calculation optimized with database COUNT queries
 - Cache headers for client-side caching
 - Geographic authorization applied at query level (not post-processing)
 

@@ -27,7 +27,9 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Authorized_Area**: A geographic area that a user has permission to access based on authorization rules
 - **Map_Marker**: A lightweight data structure containing only the essential fields needed to render a pin on a map (coordinates and identifiers)
 - **Popup_Content**: Detailed information about a map marker that is loaded on-demand when a user clicks the marker
-- **Lazy_Loading**: A performance optimization strategy where data is fetched only when needed rather than all at once
+- **Lazy_Loading**: A performance optimization strategy where data is fetched in batches of 100 items using paginated APIs and rendered incrementally to reduce latency and provide continuous loading feedback to the user
+- **Batched_Loading**: A technique where large datasets are fetched in multiple smaller requests (batches of 100 items) and rendered progressively as each batch arrives
+- **Incremental_Rendering**: A UI pattern where entities are displayed on screen as soon as they are fetched, without waiting for all data to be loaded
 
 ## Requirements
 
@@ -561,21 +563,24 @@ The Backend API package provides the RESTful API service that implements all bus
 10. THE script SHALL be located in a development utilities directory within the backend-api package
 11. WHEN the container is running, THE script SHALL output the connection string for the API to use
 
-### Requirement 17: Implement Pagination
+### Requirement 17: Implement Pagination with Total Count
 
-**User Story:** As a client developer, I want paginated list endpoints, so that I can efficiently load large datasets without overwhelming the client or network.
+**User Story:** As a client developer, I want paginated list endpoints with total count metadata, so that I can efficiently load large datasets in batches, render incrementally, and provide progress feedback to users without overwhelming the client or network.
 
 #### Acceptance Criteria
 
-1. THE API SHALL support pagination on GET /api/activities endpoint
-2. THE API SHALL support pagination on GET /api/participants endpoint
-3. THE API SHALL support pagination on GET /api/venues endpoint
-4. THE API SHALL support pagination on GET /api/geographic-areas endpoint
+1. THE API SHALL support pagination on GET /api/v1/activities endpoint
+2. THE API SHALL support pagination on GET /api/v1/participants endpoint
+3. THE API SHALL support pagination on GET /api/v1/venues endpoint
+4. THE API SHALL support pagination on GET /api/v1/geographic-areas endpoint
 5. WHEN pagination is requested, THE API SHALL accept page and limit query parameters
-6. THE API SHALL default to page 1 and limit 50 if not specified
+6. THE API SHALL default to page 1 and limit 100 if not specified
 7. THE API SHALL enforce a maximum limit of 100 items per page
 8. WHEN returning paginated results, THE API SHALL include pagination metadata with page, limit, total, and totalPages
-9. THE API SHALL wrap paginated data in a consistent response format with data and pagination fields
+9. THE API SHALL calculate and return the total count of matching records on every paginated request, including the first page
+10. THE API SHALL optimize total count queries to avoid performance degradation on large datasets
+11. THE API SHALL wrap paginated data in a consistent response format with data and pagination fields
+12. THE API SHALL return the total count even when filters are applied, reflecting the filtered result set size
 
 ### Requirement 18: Support Optimistic Locking
 
@@ -614,24 +619,26 @@ The Backend API package provides the RESTful API service that implements all bus
 4. THE API SHALL document version changes in the OpenAPI specification
 5. THE API SHALL support multiple API versions simultaneously during transition periods
 
-### Requirement 21: High-Cardinality Entity Filtering
+### Requirement 21: High-Cardinality Entity Filtering with Batched Loading
 
-**User Story:** As a client developer working with large datasets, I want API endpoints to support efficient text-based filtering and pagination for venues, participants, and geographic areas, so that dropdown lists can scale to millions of records without performance degradation.
+**User Story:** As a client developer working with large datasets, I want API endpoints to support efficient text-based filtering and batched pagination for venues, participants, and geographic areas, so that dropdown lists and table views can scale to millions of records with low initial latency, incremental rendering, and continuous progress feedback.
 
 #### Acceptance Criteria
 
-1. THE API SHALL support text-based filtering on GET /api/venues endpoint via a query parameter (e.g., ?search=text)
-2. THE API SHALL support text-based filtering on GET /api/participants endpoint via a query parameter (e.g., ?search=text)
-3. THE API SHALL support text-based filtering on GET /api/geographic-areas endpoint via a query parameter (e.g., ?search=text)
+1. THE API SHALL support text-based filtering on GET /api/v1/venues endpoint via a query parameter (e.g., ?search=text)
+2. THE API SHALL support text-based filtering on GET /api/v1/participants endpoint via a query parameter (e.g., ?search=text)
+3. THE API SHALL support text-based filtering on GET /api/v1/geographic-areas endpoint via a query parameter (e.g., ?search=text)
 4. WHEN a search query parameter is provided for venues, THE API SHALL return only venues whose name or address contains the search text (case-insensitive partial match)
 5. WHEN a search query parameter is provided for participants, THE API SHALL return only participants whose name or email contains the search text (case-insensitive partial match)
 6. WHEN a search query parameter is provided for geographic areas, THE API SHALL return only geographic areas whose name contains the search text (case-insensitive partial match)
 7. WHEN both search and geographicAreaId query parameters are provided, THE API SHALL apply both filters using AND logic
-8. THE API SHALL support pagination on all filtered results using page and limit query parameters
+8. THE API SHALL support pagination on all filtered results using page and limit query parameters with batches of 100 items
 9. WHEN returning filtered and paginated results, THE API SHALL include pagination metadata (page, limit, total, totalPages)
-10. THE API SHALL optimize database queries for text-based filtering using appropriate indexes on name, address, and email fields
-11. THE API SHALL return the first page of results by default when no page parameter is specified
-12. THE API SHALL limit the maximum page size to 100 items to prevent performance issues
+10. THE API SHALL return the total count of matching records on the first page request to enable progress indicators
+11. THE API SHALL optimize database queries for text-based filtering using appropriate indexes on name, address, and email fields
+12. THE API SHALL return the first page of results by default when no page parameter is specified
+13. THE API SHALL limit the maximum page size to 100 items to prevent performance issues
+14. THE API SHALL calculate total count efficiently using database COUNT queries optimized for large datasets
 
 ### Requirement 22: Clear Optional Fields
 
@@ -838,33 +845,39 @@ The Backend API package provides the RESTful API service that implements all bus
 
 ### Requirement 27: Provide Optimized Map Data API Endpoints
 
-**User Story:** As a frontend developer, I want specialized API endpoints that provide lightweight location data for map markers and support lazy-loaded popup content, so that the map can render quickly with thousands of markers without loading unnecessary data upfront.
+**User Story:** As a frontend developer, I want specialized API endpoints that provide lightweight location data for map markers with batched pagination and support lazy-loaded popup content, so that the map can render quickly with thousands of markers through incremental rendering and provide loading feedback to the user.
 
 #### Acceptance Criteria
 
-1. THE API SHALL provide a GET /api/v1/map/activities endpoint that returns lightweight activity marker data
+1. THE API SHALL provide a GET /api/v1/map/activities endpoint that returns lightweight activity marker data with pagination support
 2. WHEN fetching activity markers, THE API SHALL return only the minimal fields needed for map rendering: id, latitude, longitude, activityTypeId, activityCategoryId
 3. THE API SHALL NOT include activity name, participant details, or other verbose fields in the activity markers response
-4. THE API SHALL provide a GET /api/v1/map/activities/:id/popup endpoint that returns detailed popup content for a specific activity marker
-5. WHEN fetching activity popup content, THE API SHALL return: id, name, activityTypeName, activityCategoryName, startDate, participantCount
-6. THE API SHALL provide a GET /api/v1/map/participant-homes endpoint that returns lightweight participant home marker data
-7. WHEN fetching participant home markers, THE API SHALL return only the minimal fields needed for map rendering: venueId, latitude, longitude, participantCount (count of participants at that venue)
-8. THE API SHALL group participant homes by venue to avoid duplicate markers for the same address
-9. THE API SHALL provide a GET /api/v1/map/participant-homes/:venueId/popup endpoint that returns detailed popup content for a specific participant home marker
-10. WHEN fetching participant home popup content, THE API SHALL return: venueId, venueName, participantCount, participantNames (array of names)
-11. THE API SHALL provide a GET /api/v1/map/venues endpoint that returns lightweight venue marker data
-12. WHEN fetching venue markers, THE API SHALL return only the minimal fields needed for map rendering: id, latitude, longitude
-13. THE API SHALL NOT include venue name, address, or geographic area details in the venue markers response
-14. THE API SHALL provide a GET /api/v1/map/venues/:id/popup endpoint that returns detailed popup content for a specific venue marker
-15. WHEN fetching venue popup content, THE API SHALL return: id, name, address, geographicAreaName
-16. THE API SHALL apply geographic authorization filtering to all map data endpoints
-17. WHEN a user has geographic restrictions, THE API SHALL return only markers for venues in authorized geographic areas
-18. THE API SHALL support optional filter query parameters on all map marker endpoints: geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds, startDate, endDate, status
-19. WHEN filters are provided to map marker endpoints, THE API SHALL apply the same filtering logic as the analytics endpoints (OR within dimensions, AND across dimensions)
-20. THE API SHALL optimize map marker queries for performance by using database indexes on latitude, longitude, and foreign key fields
-21. THE API SHALL return map marker data in a flat array format optimized for client-side rendering
-22. THE API SHALL include appropriate cache headers on map marker responses to enable client-side caching
-23. WHEN determining current venue for activity markers, THE API SHALL correctly handle null effectiveFrom dates (treat as activity startDate)
-24. WHEN determining current home venue for participant home markers, THE API SHALL correctly handle null effectiveFrom dates (treat as oldest address)
-25. THE API SHALL exclude activities and participants without venue coordinates from map marker responses
-26. THE API SHALL exclude venues without latitude or longitude coordinates from venue marker responses
+4. THE API SHALL support pagination on GET /api/v1/map/activities endpoint using page and limit query parameters
+5. THE API SHALL default to limit 100 items per page for map marker endpoints when limit is not specified
+6. THE API SHALL enforce a maximum limit of 100 items per page for map marker endpoints
+7. WHEN returning paginated map marker results, THE API SHALL include pagination metadata with page, limit, total, and totalPages
+8. THE API SHALL provide a GET /api/v1/map/activities/:id/popup endpoint that returns detailed popup content for a specific activity marker
+9. WHEN fetching activity popup content, THE API SHALL return: id, name, activityTypeName, activityCategoryName, startDate, participantCount
+10. THE API SHALL provide a GET /api/v1/map/participant-homes endpoint that returns lightweight participant home marker data with pagination support
+11. WHEN fetching participant home markers, THE API SHALL return only the minimal fields needed for map rendering: venueId, latitude, longitude, participantCount (count of participants at that venue)
+12. THE API SHALL group participant homes by venue to avoid duplicate markers for the same address
+13. THE API SHALL support pagination on GET /api/v1/map/participant-homes endpoint using page and limit query parameters
+14. THE API SHALL provide a GET /api/v1/map/participant-homes/:venueId/popup endpoint that returns detailed popup content for a specific participant home marker
+15. WHEN fetching participant home popup content, THE API SHALL return: venueId, venueName, participantCount, participantNames (array of names)
+16. THE API SHALL provide a GET /api/v1/map/venues endpoint that returns lightweight venue marker data with pagination support
+17. WHEN fetching venue markers, THE API SHALL return only the minimal fields needed for map rendering: id, latitude, longitude
+18. THE API SHALL NOT include venue name, address, or geographic area details in the venue markers response
+19. THE API SHALL support pagination on GET /api/v1/map/venues endpoint using page and limit query parameters
+20. THE API SHALL provide a GET /api/v1/map/venues/:id/popup endpoint that returns detailed popup content for a specific venue marker
+21. WHEN fetching venue popup content, THE API SHALL return: id, name, address, geographicAreaName
+22. THE API SHALL apply geographic authorization filtering to all map data endpoints
+23. WHEN a user has geographic restrictions, THE API SHALL return only markers for venues in authorized geographic areas
+24. THE API SHALL support optional filter query parameters on all map marker endpoints: geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds, startDate, endDate, status
+25. WHEN filters are provided to map marker endpoints, THE API SHALL apply the same filtering logic as the analytics endpoints (OR within dimensions, AND across dimensions)
+26. THE API SHALL optimize map marker queries for performance by using database indexes on latitude, longitude, and foreign key fields
+27. THE API SHALL return map marker data in a flat array format optimized for client-side rendering
+28. THE API SHALL include appropriate cache headers on map marker responses to enable client-side caching
+29. WHEN determining current venue for activity markers, THE API SHALL correctly handle null effectiveFrom dates (treat as activity startDate)
+30. WHEN determining current home venue for participant home markers, THE API SHALL correctly handle null effectiveFrom dates (treat as oldest address)
+31. THE API SHALL exclude activities and participants without venue coordinates from map marker responses
+32. THE API SHALL exclude venues without latitude or longitude coordinates from venue marker responses

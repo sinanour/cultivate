@@ -35,7 +35,9 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Geographic_Area_Selector**: A specialized reusable dropdown component for selecting geographic areas that displays hierarchical context, area type badges, and supports async lazy-loading for optimal performance with large datasets
 - **Map_Marker**: A lightweight data structure containing only the essential fields needed to render a pin on a map (coordinates and identifiers)
 - **Popup_Content**: Detailed information about a map marker that is loaded on-demand when a user clicks the marker
-- **Lazy_Loading**: A performance optimization strategy where data is fetched only when needed rather than all at once
+- **Lazy_Loading**: A performance optimization strategy where data is fetched in batches of 100 items using paginated APIs and rendered incrementally to reduce latency and provide continuous loading feedback to the user
+- **Batched_Loading**: A technique where large datasets are fetched in multiple smaller requests (batches of 100 items) and rendered progressively as each batch arrives
+- **Incremental_Rendering**: A UI pattern where entities are displayed on screen as soon as they are fetched, without waiting for all data to be loaded
 - **Auto_Zoom**: Automatic adjustment of map zoom level to fit all visible markers within the viewport
 
 ## Requirements
@@ -308,34 +310,37 @@ The Web Frontend package provides a responsive React-based web application that 
 7. THE Geographic_Area_Selector SHALL use the Select component's description property to display the full ancestor hierarchy path
 8. THE Geographic_Area_Selector SHALL format the hierarchy path as "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
 9. WHEN an area has no parent areas, THE Geographic_Area_Selector SHALL display "No parent areas" as the description
-10. THE Geographic_Area_Selector SHALL implement async lazy-loading of geographic areas from the backend
-11. THE Geographic_Area_Selector SHALL load the first page of results (50 items) when the dropdown is opened
-12. THE Geographic_Area_Selector SHALL support text-based filtering using CloudScape Select's filteringType="auto" property
-13. THE Geographic_Area_Selector SHALL display a loading indicator using statusType="loading" while fetching results
-14. THE Geographic_Area_Selector SHALL support pagination for large result sets
-15. THE Geographic_Area_Selector SHALL accept optional props to filter results by parent geographic area or other criteria
-16. THE Geographic_Area_Selector SHALL handle empty states when no results match the search
-17. THE Geographic_Area_Selector SHALL handle error states gracefully
-18. THE Geographic_Area_Selector SHALL provide accessible keyboard navigation
-19. THE Geographic_Area_Selector SHALL be decoupled from any specific parent component (not tied to BreadcrumbGroup or global filter)
-20. THE Geographic_Area_Selector SHALL accept standard form control props (value, onChange, disabled, error, placeholder, inlineLabelText, etc.)
-21. THE Geographic_Area_Selector SHALL support an empty/unselected state with configurable placeholder text
-22. THE Geographic_Area_Selector SHALL NOT artificially insert a "Global" or "All Areas" option into the dropdown options list
-23. WHEN no geographic area is selected, THE Geographic_Area_Selector SHALL display the placeholder text (e.g., "Select a geographic area")
-24. THE Geographic_Area_Selector SHALL use expandToViewport property to allow dropdown to expand beyond container boundaries
-25. THE Geographic_Area_Selector SHALL provide renderHighlightedAriaLive callback for screen reader support
-26. THE Geographic_Area_Selector SHALL use selectedAriaLabel property for accessibility
-27. THE Geographic_Area_Selector SHALL be usable in both modal forms and full-page forms
-28. THE Web_App SHALL use the Geographic_Area_Selector component in all forms and interfaces where geographic area selection is required
-29. THE Web_App SHALL use the Geographic_Area_Selector component in the global geographic area filter (decoupled from BreadcrumbGroup)
-30. THE Web_App SHALL use the Geographic_Area_Selector component in VenueForm for geographic area selection
-31. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAreaForm for parent geographic area selection
-32. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAuthorizationForm for geographic area selection
-33. THE Web_App SHALL use the Geographic_Area_Selector component in any other forms or interfaces that require geographic area selection
+10. THE Geographic_Area_Selector SHALL implement async lazy-loading of geographic areas from the backend in batches of 100 items
+11. THE Geographic_Area_Selector SHALL load the first batch of results (100 items) when the dropdown is opened
+12. THE Geographic_Area_Selector SHALL render options incrementally as each batch is fetched
+13. THE Geographic_Area_Selector SHALL display a loading indicator at the bottom of the dropdown while fetching additional batches
+14. THE Geographic_Area_Selector SHALL automatically fetch the next batch when the user scrolls near the bottom of the dropdown
+15. THE Geographic_Area_Selector SHALL support text-based filtering using CloudScape Select's filteringType="auto" property
+16. THE Geographic_Area_Selector SHALL display a loading indicator using statusType="loading" while fetching results
+17. THE Geographic_Area_Selector SHALL support pagination for large result sets with batches of 100 items
+18. THE Geographic_Area_Selector SHALL accept optional props to filter results by parent geographic area or other criteria
+19. THE Geographic_Area_Selector SHALL handle empty states when no results match the search
+20. THE Geographic_Area_Selector SHALL handle error states gracefully
+21. THE Geographic_Area_Selector SHALL provide accessible keyboard navigation
+22. THE Geographic_Area_Selector SHALL be decoupled from any specific parent component (not tied to BreadcrumbGroup or global filter)
+23. THE Geographic_Area_Selector SHALL accept standard form control props (value, onChange, disabled, error, placeholder, inlineLabelText, etc.)
+24. THE Geographic_Area_Selector SHALL support an empty/unselected state with configurable placeholder text
+25. THE Geographic_Area_Selector SHALL NOT artificially insert a "Global" or "All Areas" option into the dropdown options list
+26. WHEN no geographic area is selected, THE Geographic_Area_Selector SHALL display the placeholder text (e.g., "Select a geographic area")
+27. THE Geographic_Area_Selector SHALL use expandToViewport property to allow dropdown to expand beyond container boundaries
+28. THE Geographic_Area_Selector SHALL provide renderHighlightedAriaLive callback for screen reader support
+29. THE Geographic_Area_Selector SHALL use selectedAriaLabel property for accessibility
+30. THE Geographic_Area_Selector SHALL be usable in both modal forms and full-page forms
+31. THE Web_App SHALL use the Geographic_Area_Selector component in all forms and interfaces where geographic area selection is required
+32. THE Web_App SHALL use the Geographic_Area_Selector component in the global geographic area filter (decoupled from BreadcrumbGroup)
+33. THE Web_App SHALL use the Geographic_Area_Selector component in VenueForm for geographic area selection
+34. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAreaForm for parent geographic area selection
+35. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAuthorizationForm for geographic area selection
+36. THE Web_App SHALL use the Geographic_Area_Selector component in any other forms or interfaces that require geographic area selection
 
 ### Requirement 6C: Map View UI with Optimized Loading
 
-**User Story:** As a community organizer, I want to view activities, participant locations, and venues on a map with fast initial rendering and progressive content loading, so that I can visualize community engagement and infrastructure by geography even when there are thousands of markers.
+**User Story:** As a community organizer, I want to view activities, participant locations, and venues on a map with fast initial rendering, batched incremental loading, and progressive content display, so that I can visualize community engagement and infrastructure by geography even when there are thousands of markers while receiving continuous loading feedback.
 
 #### Acceptance Criteria
 
@@ -349,61 +354,77 @@ The Web Frontend package provides a responsive React-based web application that 
 6. WHEN marker data is successfully fetched and markers are rendered, THE Web_App SHALL automatically zoom the map to fit the bounds of all visible markers
 7. WHEN no markers are visible after applying filters, THE Web_App SHALL keep the map at world zoom level and display an appropriate message
 
+**Batched Incremental Marker Loading:**
+
+8. THE Web_App SHALL fetch map markers in batches of 100 items using paginated API requests
+9. THE Web_App SHALL render markers incrementally as each batch is fetched, without waiting for all batches to complete
+10. WHEN the first batch of markers is fetched, THE Web_App SHALL immediately render those markers on the map
+11. WHEN subsequent batches of markers are fetched, THE Web_App SHALL append and render those markers to the existing map display
+12. THE Web_App SHALL display a progress indicator showing the number of markers loaded and total markers available (e.g., "Loading markers: 300 / 1,500")
+13. THE Web_App SHALL update the progress indicator after each batch is rendered
+14. THE Web_App SHALL keep the loading indicator visible until all batches have been fetched and rendered
+15. THE Web_App SHALL allow users to interact with already-rendered markers while additional batches are still loading
+16. THE Web_App SHALL automatically fetch the next batch of markers after the previous batch has been rendered
+17. THE Web_App SHALL handle pagination metadata from the API response to determine if more batches are available
+18. WHEN all batches have been fetched, THE Web_App SHALL remove the loading indicator and display the final marker count
+19. THE Web_App SHALL handle errors during batch fetching gracefully, displaying already-loaded markers and an error message for failed batches
+20. THE Web_App SHALL provide a retry button when batch fetching fails, allowing users to resume loading from the failed batch
+
 **Map Modes and Marker Display:**
 
-8. THE Web_App SHALL provide a mode selector control to switch between map modes: "Activities by Type", "Activities by Category", "Participant Homes", and "Venues"
-9. WHEN in "Activities by Type" mode, THE Web_App SHALL fetch lightweight activity marker data from GET /api/v1/map/activities endpoint
-10. WHEN in "Activities by Type" mode, THE Web_App SHALL display markers for all activities at their current venue locations
-11. WHEN in "Activities by Type" mode, THE Web_App SHALL color-code activity markers by activity type using the activityTypeId from the marker data
-12. WHEN in "Activities by Type" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity types
-13. WHEN in "Activities by Category" mode, THE Web_App SHALL fetch lightweight activity marker data from GET /api/v1/map/activities endpoint
-14. WHEN in "Activities by Category" mode, THE Web_App SHALL display markers for all activities at their current venue locations
-15. WHEN in "Activities by Category" mode, THE Web_App SHALL color-code activity markers by activity category using the activityCategoryId from the marker data
-16. WHEN in "Activities by Category" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity categories
-17. WHEN displaying the map legend, THE Web_App SHALL only include activity types or categories that are actually visible on the map based on current filters
-18. WHEN filters are applied that result in no visible markers, THE Web_App SHALL hide the legend
-19. WHEN in "Participant Homes" mode, THE Web_App SHALL fetch lightweight participant home marker data from GET /api/v1/map/participant-homes endpoint
-20. WHEN in "Participant Homes" mode, THE Web_App SHALL display markers for all participant home addresses grouped by venue
-21. WHEN in "Venues" mode, THE Web_App SHALL fetch lightweight venue marker data from GET /api/v1/map/venues endpoint
-22. WHEN in "Venues" mode, THE Web_App SHALL display markers for all venues with latitude and longitude coordinates, regardless of whether they have activities or participants
-23. THE Web_App SHALL implement marker clustering for dense areas to improve map readability
+21. THE Web_App SHALL provide a mode selector control to switch between map modes: "Activities by Type", "Activities by Category", "Participant Homes", and "Venues"
+22. WHEN in "Activities by Type" mode, THE Web_App SHALL fetch lightweight activity marker data from GET /api/v1/map/activities endpoint in batches of 100
+23. WHEN in "Activities by Type" mode, THE Web_App SHALL display markers for all activities at their current venue locations
+24. WHEN in "Activities by Type" mode, THE Web_App SHALL color-code activity markers by activity type using the activityTypeId from the marker data
+25. WHEN in "Activities by Type" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity types
+26. WHEN in "Activities by Category" mode, THE Web_App SHALL fetch lightweight activity marker data from GET /api/v1/map/activities endpoint in batches of 100
+27. WHEN in "Activities by Category" mode, THE Web_App SHALL display markers for all activities at their current venue locations
+28. WHEN in "Activities by Category" mode, THE Web_App SHALL color-code activity markers by activity category using the activityCategoryId from the marker data
+29. WHEN in "Activities by Category" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity categories
+30. WHEN displaying the map legend, THE Web_App SHALL only include activity types or categories that are actually visible on the map based on current filters
+31. WHEN filters are applied that result in no visible markers, THE Web_App SHALL hide the legend
+32. WHEN in "Participant Homes" mode, THE Web_App SHALL fetch lightweight participant home marker data from GET /api/v1/map/participant-homes endpoint in batches of 100
+33. WHEN in "Participant Homes" mode, THE Web_App SHALL display markers for all participant home addresses grouped by venue
+34. WHEN in "Venues" mode, THE Web_App SHALL fetch lightweight venue marker data from GET /api/v1/map/venues endpoint in batches of 100
+35. WHEN in "Venues" mode, THE Web_App SHALL display markers for all venues with latitude and longitude coordinates, regardless of whether they have activities or participants
+36. THE Web_App SHALL implement marker clustering for dense areas to improve map readability
 
 **Lazy-Loaded Popup Content:**
 
-24. WHEN an activity marker is clicked, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
-25. WHEN an activity marker is clicked, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/activities/:id/popup endpoint
-26. WHEN activity popup content is loaded, THE Web_App SHALL display the activity name, category, type, start date, and number of participants
-27. WHEN an activity marker popup is displayed, THE Web_App SHALL render the activity name as a hyperlink to the activity detail page (/activities/:id)
-28. WHEN a participant home marker is clicked, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
-29. WHEN a participant home marker is clicked, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/participant-homes/:venueId/popup endpoint
-30. WHEN participant home popup content is loaded, THE Web_App SHALL display the venue name and the number of participants living at that address
-31. WHEN a participant home marker popup is displayed, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
-32. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
-33. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/venues/:id/popup endpoint
-34. WHEN venue popup content is loaded, THE Web_App SHALL display the venue name, address, and geographic area
-35. WHEN a venue marker popup is displayed in "Venues" mode, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
-36. THE Web_App SHALL cache popup content locally to avoid refetching when the same marker is clicked multiple times
-37. WHEN popup content fails to load, THE Web_App SHALL display an error message in the popup with a retry button
+37. WHEN an activity marker is clicked, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
+38. WHEN an activity marker is clicked, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/activities/:id/popup endpoint
+39. WHEN activity popup content is loaded, THE Web_App SHALL display the activity name, category, type, start date, and number of participants
+40. WHEN an activity marker popup is displayed, THE Web_App SHALL render the activity name as a hyperlink to the activity detail page (/activities/:id)
+41. WHEN a participant home marker is clicked, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
+42. WHEN a participant home marker is clicked, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/participant-homes/:venueId/popup endpoint
+43. WHEN participant home popup content is loaded, THE Web_App SHALL display the venue name and the number of participants living at that address
+44. WHEN a participant home marker popup is displayed, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
+45. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
+46. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/venues/:id/popup endpoint
+47. WHEN venue popup content is loaded, THE Web_App SHALL display the venue name, address, and geographic area
+48. WHEN a venue marker popup is displayed in "Venues" mode, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
+49. THE Web_App SHALL cache popup content locally to avoid refetching when the same marker is clicked multiple times
+50. WHEN popup content fails to load, THE Web_App SHALL display an error message in the popup with a retry button
 
 **Filtering and Geographic Context:**
 
-38. THE Web_App SHALL provide filtering controls to show/hide activities by category, type, status, date range, or population
-39. THE Web_App SHALL provide a population filter control on the map view
-40. WHEN a population filter is applied on the map, THE Web_App SHALL display only activities that have at least one participant belonging to at least one of the specified populations
-41. WHEN a population filter is applied in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses for participants who belong to at least one of the specified populations
-42. WHEN the map mode is "Venues", THE Web_App SHALL disable the population filter control
-43. WHEN the map mode is "Activities by Type" or "Activities by Category", THE Web_App SHALL enable the population filter control
-44. THE Web_App SHALL provide geographic area boundary overlays when available
-45. THE Web_App SHALL allow zooming and panning of the map
-46. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
-47. WHEN the global geographic area filter is active, THE Web_App SHALL apply the filter to all map modes to show only markers for entities associated with venues in the filtered geographic area or its descendants
-48. WHEN the global geographic area filter is active in "Activities by Type" or "Activities by Category" modes, THE Web_App SHALL display only activities whose current venue is in the filtered geographic area or its descendants
-49. WHEN the global geographic area filter is active in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses where the venue is in the filtered geographic area or its descendants
-50. WHEN the global geographic area filter is active in "Venues" mode, THE Web_App SHALL display only venues that are in the filtered geographic area or its descendants
-51. WHEN determining current venue for activity markers, THE Web_App SHALL treat null effectiveFrom dates as equivalent to the activity start date
-52. WHEN determining current home address for participant markers, THE Web_App SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
-53. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
-54. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
+51. THE Web_App SHALL provide filtering controls to show/hide activities by category, type, status, date range, or population
+52. THE Web_App SHALL provide a population filter control on the map view
+53. WHEN a population filter is applied on the map, THE Web_App SHALL display only activities that have at least one participant belonging to at least one of the specified populations
+54. WHEN a population filter is applied in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses for participants who belong to at least one of the specified populations
+55. WHEN the map mode is "Venues", THE Web_App SHALL disable the population filter control
+56. WHEN the map mode is "Activities by Type" or "Activities by Category", THE Web_App SHALL enable the population filter control
+57. THE Web_App SHALL provide geographic area boundary overlays when available
+58. THE Web_App SHALL allow zooming and panning of the map
+59. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
+60. WHEN the global geographic area filter is active, THE Web_App SHALL apply the filter to all map modes to show only markers for entities associated with venues in the filtered geographic area or its descendants
+61. WHEN the global geographic area filter is active in "Activities by Type" or "Activities by Category" modes, THE Web_App SHALL display only activities whose current venue is in the filtered geographic area or its descendants
+62. WHEN the global geographic area filter is active in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses where the venue is in the filtered geographic area or its descendants
+63. WHEN the global geographic area filter is active in "Venues" mode, THE Web_App SHALL display only venues that are in the filtered geographic area or its descendants
+64. WHEN determining current venue for activity markers, THE Web_App SHALL treat null effectiveFrom dates as equivalent to the activity start date
+65. WHEN determining current home address for participant markers, THE Web_App SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
+66. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
+67. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
 
 
 ### Requirement 7: Analytics Dashboard
@@ -990,21 +1011,78 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 26: High-Cardinality Dropdown Filtering
 
-**User Story:** As a community organizer working with large datasets, I want dropdown lists for venues, participants, and geographic areas to support text-based filtering, so that I can efficiently find and select items even when there are millions of records.
+**User Story:** As a community organizer working with large datasets, I want dropdown lists for venues, participants, and geographic areas to support text-based filtering with batched incremental loading, so that I can efficiently find and select items even when there are millions of records while receiving continuous loading feedback.
 
 #### Acceptance Criteria
 
 1. THE Web_App SHALL support text-based input filtering for all venue selection dropdowns
 2. THE Web_App SHALL support text-based input filtering for all participant selection dropdowns
 3. THE Web_App SHALL support text-based input filtering for all geographic area selection dropdowns
-4. WHEN a dropdown is opened, THE Web_App SHALL automatically load the first page of results from the backend
-5. WHEN a user types text into a dropdown filter field, THE Web_App SHALL asynchronously load filtered results from the backend based on the input text
-6. THE Web_App SHALL debounce text input to avoid excessive API requests (minimum 300ms delay)
-7. THE Web_App SHALL display a loading indicator while fetching filtered results
-8. THE Web_App SHALL support pagination for dropdown results when the filtered set exceeds the page size
-9. THE Web_App SHALL use CloudScape Select or Autosuggest components with async loading capabilities
-10. WHEN the global geographic area filter is active and sufficiently scoped, THE Web_App SHALL display all matching items in dropdowns for convenience
-11. WHEN viewing data at a large geographic scale (country or global), THE Web_App SHALL rely on text-based filtering to manage the large result sets efficiently
+4. WHEN a dropdown is opened, THE Web_App SHALL automatically load the first batch of 100 results from the backend
+5. THE Web_App SHALL render dropdown options incrementally as each batch of 100 items is fetched
+6. THE Web_App SHALL display a loading indicator at the bottom of the dropdown while fetching additional batches
+7. THE Web_App SHALL automatically fetch the next batch of 100 items when the user scrolls near the bottom of the dropdown
+8. WHEN a user types text into a dropdown filter field, THE Web_App SHALL asynchronously load filtered results from the backend based on the input text in batches of 100 items
+9. THE Web_App SHALL debounce text input to avoid excessive API requests (minimum 300ms delay)
+10. THE Web_App SHALL display a loading indicator while fetching filtered results
+11. THE Web_App SHALL support pagination for dropdown results when the filtered set exceeds 100 items
+12. THE Web_App SHALL use CloudScape Select or Autosuggest components with async loading capabilities
+13. WHEN the global geographic area filter is active and sufficiently scoped, THE Web_App SHALL display all matching items in dropdowns for convenience
+14. WHEN viewing data at a large geographic scale (country or global), THE Web_App SHALL rely on text-based filtering and batched loading to manage the large result sets efficiently
+
+### Requirement 26A: Batched Incremental Loading for List Views
+
+**User Story:** As a community organizer working with large datasets, I want table and tree views to load data in batches with incremental rendering and progress feedback, so that I can start interacting with data immediately while the full dataset loads in the background.
+
+#### Acceptance Criteria
+
+**General Batched Loading Behavior:**
+
+1. THE Web_App SHALL fetch data for all high-cardinality entity list views (activities, participants, venues, geographic areas) in batches of 100 items using paginated API requests
+2. THE Web_App SHALL render list items incrementally as each batch is fetched, without waiting for all batches to complete
+3. WHEN the first batch of items is fetched, THE Web_App SHALL immediately render those items in the table or tree view
+4. WHEN subsequent batches of items are fetched, THE Web_App SHALL append and render those items to the existing display
+5. THE Web_App SHALL display a progress indicator showing the number of items loaded and total items available (e.g., "Loading: 300 / 1,500 items")
+6. THE Web_App SHALL update the progress indicator after each batch is rendered
+7. THE Web_App SHALL keep the loading indicator visible until all batches have been fetched and rendered
+8. THE Web_App SHALL allow users to interact with already-rendered items (click, select, scroll) while additional batches are still loading
+9. THE Web_App SHALL automatically fetch the next batch of items after the previous batch has been rendered
+10. THE Web_App SHALL use pagination metadata from the API response (total count) to determine if more batches are available
+11. WHEN all batches have been fetched, THE Web_App SHALL remove the loading indicator and display the final item count
+12. THE Web_App SHALL handle errors during batch fetching gracefully, displaying already-loaded items and an error message for failed batches
+13. THE Web_App SHALL provide a retry button when batch fetching fails, allowing users to resume loading from the failed batch
+
+**Activity List Batched Loading:**
+
+14. THE Web_App SHALL apply batched incremental loading to the ActivityList component
+15. WHEN loading activities, THE Web_App SHALL fetch in batches of 100 and render incrementally
+16. THE Web_App SHALL display "Loading activities: X / Y" progress indicator during batch loading
+
+**Participant List Batched Loading:**
+
+17. THE Web_App SHALL apply batched incremental loading to the ParticipantList component
+18. WHEN loading participants, THE Web_App SHALL fetch in batches of 100 and render incrementally
+19. THE Web_App SHALL display "Loading participants: X / Y" progress indicator during batch loading
+
+**Venue List Batched Loading:**
+
+20. THE Web_App SHALL apply batched incremental loading to the VenueList component
+21. WHEN loading venues, THE Web_App SHALL fetch in batches of 100 and render incrementally
+22. THE Web_App SHALL display "Loading venues: X / Y" progress indicator during batch loading
+
+**Geographic Area Tree View Batched Loading:**
+
+23. THE Web_App SHALL apply batched incremental loading to the GeographicAreaList tree view component
+24. WHEN initially loading the tree view, THE Web_App SHALL fetch top-level areas and their immediate children in batches of 100
+25. WHEN expanding a tree node with many children (>100), THE Web_App SHALL fetch children in batches of 100 and render incrementally
+26. THE Web_App SHALL display "Loading areas: X / Y" progress indicator during batch loading of tree nodes
+27. THE Web_App SHALL allow users to expand/collapse already-loaded nodes while additional nodes are still loading
+
+**Search and Filter Integration:**
+
+28. WHEN search or filter parameters are applied, THE Web_App SHALL restart batched loading with the new filter criteria
+29. THE Web_App SHALL use the total count from the API response to show accurate progress during filtered loading
+30. THE Web_App SHALL clear existing items and start fresh batched loading when filters change significantly
 
 
 ### Requirement 27: Clear Optional Fields

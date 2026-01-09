@@ -1858,22 +1858,107 @@ if (geographicAreaId) {
   - Verify foreign key constraints are not violated during deletion
 
 
-- [x] 45. Implement Map Data API endpoints for optimized map visualization
-  - [x] 45.1 Create MapDataService
-    - Implement getActivityMarkers() method to return lightweight activity marker data
+- [x] 45. Implement Map Data API endpoints for optimized map visualization with batched pagination
+  - [x] 45.1 Create MapDataService with pagination support
+    - Implement getActivityMarkers() method to return lightweight activity marker data with pagination
+    - Accept page and limit parameters (default limit: 100, max: 100)
     - Query activities with current venue coordinates (handle null effectiveFrom as activity startDate)
     - Return only id, latitude, longitude, activityTypeId, activityCategoryId fields
+    - Return pagination metadata with page, limit, total, totalPages
+    - Calculate total count efficiently for progress indicators
     - Exclude activities without venue or without coordinates
     - Apply geographic authorization filtering
     - Support all filter parameters (geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds, startDate, endDate, status)
     - Apply OR logic within dimensions, AND logic across dimensions
-    - _Requirements: 27.1, 27.2, 27.3, 27.16, 27.17, 27.18, 27.19, 27.20, 27.21, 27.23, 27.25_
+    - _Requirements: 27.1, 27.2, 27.3, 27.4, 27.5, 27.6, 27.7, 27.22, 27.23, 27.24, 27.25, 27.26, 27.27, 27.29, 27.31_
 
   - [x] 45.2 Implement activity popup content method
     - Implement getActivityPopupContent(activityId) method
     - Return id, name, activityTypeName, activityCategoryName, startDate, participantCount
     - Join with activityType and activityCategory tables for names
     - Count participants via assignments table
+    - Apply geographic authorization filtering
+    - _Requirements: 27.8, 27.9, 27.22_
+
+  - [x] 45.3 Implement participant home marker methods with pagination
+    - Implement getParticipantHomeMarkers() method with pagination support
+    - Accept page and limit parameters (default limit: 100, max: 100)
+    - Query participants grouped by current home venue
+    - Return venueId, latitude, longitude, participantCount
+    - Return pagination metadata with total count
+    - Handle null effectiveFrom as oldest address
+    - Apply geographic authorization filtering
+    - Support geographicAreaIds and populationIds filters
+    - Exclude participants without home venue or coordinates
+    - _Requirements: 27.10, 27.11, 27.12, 27.13, 27.22, 27.23, 27.24, 27.25, 27.30, 27.32_
+
+  - [x] 45.4 Implement participant home popup content method
+    - Implement getParticipantHomePopupContent(venueId) method
+    - Return venueId, venueName, participantCount, participantNames array
+    - Query participants with venue as current home
+    - Apply geographic authorization filtering
+    - _Requirements: 27.14, 27.15, 27.22_
+
+  - [x] 45.5 Implement venue marker methods with pagination
+    - Implement getVenueMarkers() method with pagination support
+    - Accept page and limit parameters (default limit: 100, max: 100)
+    - Query all venues with non-null latitude and longitude
+    - Return id, latitude, longitude
+    - Return pagination metadata with total count
+    - Apply geographic authorization filtering
+    - Support geographicAreaIds filter
+    - Exclude venues without coordinates
+    - _Requirements: 27.16, 27.17, 27.18, 27.19, 27.22, 27.23, 27.24, 27.25, 27.27, 27.32_
+
+  - [x] 45.6 Implement venue popup content method
+    - Implement getVenuePopupContent(venueId) method
+    - Return id, name, address, geographicAreaName
+    - Join with geographicArea table
+    - Apply geographic authorization filtering
+    - _Requirements: 27.20, 27.21, 27.22_
+
+  - [x] 45.7 Create map data routes with pagination
+    - Add GET /api/v1/map/activities route with filter validation and pagination parameters
+    - Add GET /api/v1/map/activities/:id/popup route
+    - Add GET /api/v1/map/participant-homes route with filter validation and pagination parameters
+    - Add GET /api/v1/map/participant-homes/:venueId/popup route
+    - Add GET /api/v1/map/venues route with filter validation and pagination parameters
+    - Add GET /api/v1/map/venues/:id/popup route
+    - Restrict all routes to authenticated users
+    - _Requirements: 27.1, 27.8, 27.10, 27.14, 27.16, 27.20, 27.22_
+
+  - [x] 45.8 Create validation schemas for map data endpoints with pagination
+    - Create MapActivityMarkersQuerySchema with optional filter arrays and pagination parameters (page, limit)
+    - Create MapParticipantHomeMarkersQuerySchema with optional filter arrays and pagination parameters
+    - Create MapVenueMarkersQuerySchema with optional filter arrays and pagination parameters
+    - Validate page is positive integer, limit is 1-100
+    - Use Zod preprocess for array parameter normalization
+    - _Requirements: 27.4, 27.5, 27.6, 27.7, 27.13, 27.19, 27.24, 27.25_
+
+  - [x] 45.9 Add database indexes for map query optimization
+    - Create index on venues (latitude, longitude) for coordinate queries
+    - Create index on activityVenueHistory (activityId, effectiveFrom) for current venue determination
+    - Create index on participantAddressHistory (participantId, effectiveFrom) for current address determination
+    - Create composite indexes for common filter combinations
+    - _Requirements: 27.26_
+
+  - [x] 45.10 Update OpenAPI documentation
+    - Document all six map data endpoints with pagination parameters
+    - Include request parameters and response schemas with pagination metadata
+    - Add examples showing batched loading with page/limit parameters
+    - Document total count in pagination metadata
+    - _Requirements: 27.1, 27.8, 27.10, 27.14, 27.16, 27.20_
+
+  - [ ]* 45.11 Write property tests for map data endpoints with pagination
+    - **Property 212: Activity Marker Lightweight Response**
+    - **Property 213: Activity Popup Content Completeness**
+    - **Property 214: Participant Home Marker Grouping**
+    - **Property 215: Venue Marker Coordinate Filtering**
+    - **Property 216: Map Data Geographic Authorization**
+    - **Property 217: Map Data Filter Application**
+    - **Property 218: Map Data Pagination Metadata**
+    - **Property 219: Map Data Total Count Accuracy**
+    - **Validates: Requirements 27.1, 27.2, 27.3, 27.4, 27.5, 27.6, 27.7, 27.8, 27.9, 27.10, 27.11, 27.12, 27.13, 27.14, 27.15, 27.16, 27.17, 27.18, 27.19, 27.20, 27.21, 27.22, 27.23, 27.24, 27.25, 27.26, 27.27, 27.28, 27.29, 27.30, 27.31, 27.32**
     - Apply geographic authorization check on activity access
     - _Requirements: 27.4, 27.5, 27.16_
 
