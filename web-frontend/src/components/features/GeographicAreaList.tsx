@@ -83,8 +83,12 @@ export function GeographicAreaList() {
     try {
       const children = await GeographicAreaService.getChildren(parentId);
       
-      // Update cache
-      setChildrenCache(prev => new Map(prev).set(parentId, children));
+      // Update cache - create new Map to trigger React re-render
+      setChildrenCache(prev => {
+        const newCache = new Map(prev);
+        newCache.set(parentId, children);
+        return newCache;
+      });
       
       return children;
     } finally {
