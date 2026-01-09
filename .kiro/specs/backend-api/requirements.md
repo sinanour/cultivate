@@ -25,6 +25,9 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Allow_List**: A set of geographic areas that a user is explicitly permitted to access
 - **Deny_List**: A set of geographic areas that a user is explicitly forbidden from accessing
 - **Authorized_Area**: A geographic area that a user has permission to access based on authorization rules
+- **Map_Marker**: A lightweight data structure containing only the essential fields needed to render a pin on a map (coordinates and identifiers)
+- **Popup_Content**: Detailed information about a map marker that is loaded on-demand when a user clicks the marker
+- **Lazy_Loading**: A performance optimization strategy where data is fetched only when needed rather than all at once
 
 ## Requirements
 
@@ -832,3 +835,36 @@ The Backend API package provides the RESTful API service that implements all bus
 38. WHEN removing fake data, THE script SHALL provide progress output showing the number of records deleted for each entity type
 39. WHEN removing fake data, THE script SHALL complete successfully and output a summary of all deleted records
 40. THE script SHALL allow mixing auto-generated fake data with manually entered test data, enabling selective removal of only the auto-generated records
+
+### Requirement 27: Provide Optimized Map Data API Endpoints
+
+**User Story:** As a frontend developer, I want specialized API endpoints that provide lightweight location data for map markers and support lazy-loaded popup content, so that the map can render quickly with thousands of markers without loading unnecessary data upfront.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a GET /api/v1/map/activities endpoint that returns lightweight activity marker data
+2. WHEN fetching activity markers, THE API SHALL return only the minimal fields needed for map rendering: id, latitude, longitude, activityTypeId, activityCategoryId
+3. THE API SHALL NOT include activity name, participant details, or other verbose fields in the activity markers response
+4. THE API SHALL provide a GET /api/v1/map/activities/:id/popup endpoint that returns detailed popup content for a specific activity marker
+5. WHEN fetching activity popup content, THE API SHALL return: id, name, activityTypeName, activityCategoryName, startDate, participantCount
+6. THE API SHALL provide a GET /api/v1/map/participant-homes endpoint that returns lightweight participant home marker data
+7. WHEN fetching participant home markers, THE API SHALL return only the minimal fields needed for map rendering: venueId, latitude, longitude, participantCount (count of participants at that venue)
+8. THE API SHALL group participant homes by venue to avoid duplicate markers for the same address
+9. THE API SHALL provide a GET /api/v1/map/participant-homes/:venueId/popup endpoint that returns detailed popup content for a specific participant home marker
+10. WHEN fetching participant home popup content, THE API SHALL return: venueId, venueName, participantCount, participantNames (array of names)
+11. THE API SHALL provide a GET /api/v1/map/venues endpoint that returns lightweight venue marker data
+12. WHEN fetching venue markers, THE API SHALL return only the minimal fields needed for map rendering: id, latitude, longitude
+13. THE API SHALL NOT include venue name, address, or geographic area details in the venue markers response
+14. THE API SHALL provide a GET /api/v1/map/venues/:id/popup endpoint that returns detailed popup content for a specific venue marker
+15. WHEN fetching venue popup content, THE API SHALL return: id, name, address, geographicAreaName
+16. THE API SHALL apply geographic authorization filtering to all map data endpoints
+17. WHEN a user has geographic restrictions, THE API SHALL return only markers for venues in authorized geographic areas
+18. THE API SHALL support optional filter query parameters on all map marker endpoints: geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds, startDate, endDate, status
+19. WHEN filters are provided to map marker endpoints, THE API SHALL apply the same filtering logic as the analytics endpoints (OR within dimensions, AND across dimensions)
+20. THE API SHALL optimize map marker queries for performance by using database indexes on latitude, longitude, and foreign key fields
+21. THE API SHALL return map marker data in a flat array format optimized for client-side rendering
+22. THE API SHALL include appropriate cache headers on map marker responses to enable client-side caching
+23. WHEN determining current venue for activity markers, THE API SHALL correctly handle null effectiveFrom dates (treat as activity startDate)
+24. WHEN determining current home venue for participant home markers, THE API SHALL correctly handle null effectiveFrom dates (treat as oldest address)
+25. THE API SHALL exclude activities and participants without venue coordinates from map marker responses
+26. THE API SHALL exclude venues without latitude or longitude coordinates from venue marker responses

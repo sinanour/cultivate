@@ -1856,3 +1856,108 @@ if (geographicAreaId) {
   - Verify predefined seed data is preserved
   - Test idempotency (running removal twice should be safe)
   - Verify foreign key constraints are not violated during deletion
+
+
+- [ ] 45. Implement Map Data API endpoints for optimized map visualization
+  - [ ] 45.1 Create MapDataService
+    - Implement getActivityMarkers() method to return lightweight activity marker data
+    - Query activities with current venue coordinates (handle null effectiveFrom as activity startDate)
+    - Return only id, latitude, longitude, activityTypeId, activityCategoryId fields
+    - Exclude activities without venue or without coordinates
+    - Apply geographic authorization filtering
+    - Support all filter parameters (geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds, startDate, endDate, status)
+    - Apply OR logic within dimensions, AND logic across dimensions
+    - _Requirements: 27.1, 27.2, 27.3, 27.16, 27.17, 27.18, 27.19, 27.20, 27.21, 27.23, 27.25_
+
+  - [ ] 45.2 Implement activity popup content method
+    - Implement getActivityPopupContent(activityId) method
+    - Return id, name, activityTypeName, activityCategoryName, startDate, participantCount
+    - Join with activityType and activityCategory tables for names
+    - Count participants via assignments table
+    - Apply geographic authorization check on activity access
+    - _Requirements: 27.4, 27.5, 27.16_
+
+  - [ ] 45.3 Implement participant home marker methods
+    - Implement getParticipantHomeMarkers() method
+    - Query participants grouped by current home venue
+    - Determine current home from most recent address history (handle null effectiveFrom as oldest)
+    - Return venueId, latitude, longitude, participantCount (one record per venue)
+    - Exclude participants without home venue or without coordinates
+    - Apply geographic authorization filtering
+    - Support geographicAreaIds and populationIds filters
+    - _Requirements: 27.6, 27.7, 27.8, 27.16, 27.17, 27.18, 27.19, 27.24, 27.25_
+
+  - [ ] 45.4 Implement participant home popup content method
+    - Implement getParticipantHomePopupContent(venueId) method
+    - Return venueId, venueName, participantCount, participantNames array
+    - Query participants where current home venue matches venueId
+    - Apply geographic authorization check on venue access
+    - _Requirements: 27.9, 27.10, 27.16_
+
+  - [ ] 45.5 Implement venue marker methods
+    - Implement getVenueMarkers() method
+    - Query all venues with non-null latitude and longitude
+    - Return only id, latitude, longitude fields
+    - Apply geographic authorization filtering
+    - Support geographicAreaIds filter
+    - _Requirements: 27.11, 27.12, 27.13, 27.16, 27.17, 27.18, 27.19, 27.26_
+
+  - [ ] 45.6 Implement venue popup content method
+    - Implement getVenuePopupContent(venueId) method
+    - Return id, name, address, geographicAreaName
+    - Join with geographicArea table for area name
+    - Apply geographic authorization check on venue access
+    - _Requirements: 27.14, 27.15, 27.16_
+
+  - [ ] 45.7 Create map data routes
+    - Add GET /api/v1/map/activities route with filter validation
+    - Add GET /api/v1/map/activities/:id/popup route
+    - Add GET /api/v1/map/participant-homes route with filter validation
+    - Add GET /api/v1/map/participant-homes/:venueId/popup route
+    - Add GET /api/v1/map/venues route with filter validation
+    - Add GET /api/v1/map/venues/:id/popup route
+    - Restrict all routes to authenticated users
+    - Add cache headers (Cache-Control: public, max-age=60) for marker endpoints
+    - _Requirements: 27.1, 27.4, 27.6, 27.9, 27.11, 27.14, 27.22_
+
+  - [ ] 45.8 Create validation schemas for map data endpoints
+    - Create MapActivityMarkersQuerySchema with optional filter arrays
+    - Create MapParticipantHomeMarkersQuerySchema with optional filter arrays
+    - Create MapVenueMarkersQuerySchema with optional filter arrays
+    - Use Zod preprocess for array parameter normalization
+    - _Requirements: 27.18, 27.19_
+
+  - [ ] 45.9 Add database indexes for map query optimization
+    - Create index on venues (latitude, longitude) for coordinate queries
+    - Create index on activityVenueHistory (activityId, effectiveFrom) for current venue determination
+    - Create index on participantAddressHistory (participantId, effectiveFrom) for current home determination
+    - Create Prisma migration for index creation
+    - _Requirements: 27.20_
+
+  - [ ] 45.10 Update OpenAPI documentation
+    - Document all six map data endpoints
+    - Include request parameters and response schemas
+    - Provide examples for marker and popup responses
+    - Document cache headers
+    - _Requirements: 27.1, 27.4, 27.6, 27.9, 27.11, 27.14_
+
+  - [ ]* 45.11 Write property tests for map data endpoints
+    - **Property 212: Activity Marker Lightweight Response**
+    - **Property 213: Activity Popup Content Completeness**
+    - **Property 214: Participant Home Marker Grouping**
+    - **Property 215: Participant Home Popup Content**
+    - **Property 216: Venue Marker Lightweight Response**
+    - **Property 217: Venue Popup Content Completeness**
+    - **Property 218: Map Data Geographic Authorization**
+    - **Property 219: Map Data Filter Application**
+    - **Property 220: Coordinate Exclusion for Missing Data**
+    - **Validates: Requirements 27.1, 27.2, 27.3, 27.4, 27.5, 27.6, 27.7, 27.8, 27.9, 27.10, 27.11, 27.12, 27.13, 27.14, 27.15, 27.16, 27.17, 27.18, 27.19, 27.23, 27.24, 27.25, 27.26**
+
+- [ ] 46. Checkpoint - Verify map data API endpoints
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test activity markers endpoint with various filters
+  - Test popup content endpoints return correct data
+  - Test participant home grouping by venue
+  - Verify geographic authorization is applied
+  - Verify coordinates are excluded when null
+  - Test performance with large datasets

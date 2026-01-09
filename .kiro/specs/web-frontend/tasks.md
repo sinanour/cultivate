@@ -722,68 +722,74 @@ This implementation plan covers the React-based web application built with TypeS
     - Also used within ActivityForm to display temporary assignments during creation
     - _Requirements: 6.3, 6.4_
 
-- [x] 13. Implement map view UI
-  - [x] 13.1 Create MapView component
-    - Render interactive map using Leaflet or Mapbox
-    - Provide mode selector control to switch between "Activities", "Participant Homes", and "Venues" modes
-    - In Activities mode: display activity markers at current venue locations, color-coded by activity type
-    - In Activity Categories mode: display activity markers at current venue locations, color-coded by activity category
-    - In Participant Homes mode: display markers for participant home addresses (current venue from address history)
-    - In Venues mode: display markers for all venues with coordinates, regardless of activities or participants
+- [ ] 13. Refactor map view UI for optimized loading
+  - [ ] 13.1 Create MapDataService
+    - Implement getActivityMarkers(filters) to fetch from /api/v1/map/activities
+    - Implement getActivityPopupContent(activityId) to fetch from /api/v1/map/activities/:id/popup
+    - Implement getParticipantHomeMarkers(filters) to fetch from /api/v1/map/participant-homes
+    - Implement getParticipantHomePopupContent(venueId) to fetch from /api/v1/map/participant-homes/:venueId/popup
+    - Implement getVenueMarkers(filters) to fetch from /api/v1/map/venues
+    - Implement getVenuePopupContent(venueId) to fetch from /api/v1/map/venues/:id/popup
+    - Support all filter parameters for marker endpoints
+    - Implement popup content caching using React Query
+    - _Requirements: 6C.9, 6C.16, 6C.18, 6C.22, 6C.25, 6C.26, 6C.29, 6C.30, 6C.33_
+
+  - [ ] 13.2 Update MapView component for immediate rendering and lazy loading
+    - Render map immediately at world zoom level on component mount (before fetching markers)
+    - Display "Loading markers..." indicator overlay while fetching marker data
+    - Keep map interactive (zoomable/pannable) during marker loading
+    - Update mode selector to support four modes: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
+    - When mode changes, fetch appropriate marker data using MapDataService
+    - In "Activities by Type" mode: fetch activity markers, color-code by activityTypeId
+    - In "Activities by Category" mode: fetch activity markers, color-code by activityCategoryId
+    - In "Participant Homes" mode: fetch participant home markers
+    - In "Venues" mode: fetch venue markers
+    - Remove loading indicator once markers are rendered
+    - Automatically zoom map to fit bounds of all visible markers after rendering
+    - Keep map at world zoom when no markers are visible
     - Implement marker clustering for dense areas
-    - Provide mode-specific popup with information on marker click
-    - Include map controls for zoom, pan, and center
-    - Display right-aligned legend in Activities mode showing only visible activity types
-    - Display right-aligned legend in Activity Categories mode showing only visible activity categories
-    - Filter legend items dynamically based on markers actually rendered on the map
-    - Hide legend when no markers are visible
-    - Respect global geographic area filter across all modes
-    - Handle null effectiveFrom dates: treat as activity startDate for activities, as oldest address for participants
-    - Correctly identify current venue for activity markers considering null effectiveFrom dates
-    - Correctly identify current home venue for participant markers considering null effectiveFrom dates
-    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.5a, 6C.5b, 6C.5c, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22, 6C.23, 6C.24, 6C.25, 6C.26_
+    - Update legend to show activity types (in "Activities by Type" mode) or activity categories (in "Activities by Category" mode)
+    - Filter legend items based on markers actually visible
+    - Hide legend when no markers visible or in non-activity modes
+    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.23_
 
-  - [ ]* 13.2 Write property tests for map display
-    - **Property 60: Map Mode Selector**
-    - **Property 61: Activity Marker Display**
-    - **Property 62: Activity Marker Color Coding**
-    - **Property 63: Activity Legend Display**
-    - **Property 63a: Legend Filtering Based on Visible Markers**
-    - **Property 63b: Legend Visibility with No Markers**
-    - **Property 64: Activity Popup Information**
-    - **Property 65: Participant Home Marker Display**
-    - **Property 66: Participant Home Popup Information**
-    - **Property 67: Venue Marker Display**
-    - **Property 68: Venue Popup Information**
-    - **Property 70: Map Global Filter Application**
-    - **Validates: Requirements 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.19, 6C.20, 6C.21, 6C.22**
+  - [ ] 13.3 Implement lazy-loaded popup content
+    - When marker is clicked, display loading indicator in popup
+    - Fetch popup content using MapDataService based on map mode:
+      - Activities modes: call getActivityPopupContent(activityId)
+      - Participant Homes mode: call getParticipantHomePopupContent(venueId)
+      - Venues mode: call getVenuePopupContent(venueId)
+    - Display popup content once loaded (name, details, hyperlinks)
+    - Cache popup content using React Query to avoid refetching
+    - Display error message with retry button if popup fetch fails
+    - Render entity names as hyperlinks to detail pages
+    - _Requirements: 6C.21, 6C.22, 6C.23, 6C.24, 6C.25, 6C.26, 6C.27, 6C.28, 6C.29, 6C.30, 6C.31, 6C.32, 6C.33, 6C.34_
 
-  - [x] 13.3 Create MapFilters component
-    - Provide filter controls for category, type, status, date range, and population
-    - Add population filter control to map view
-    - When population filter applied: show only activities with participants in specified populations
-    - When population filter applied in Participant Homes mode: show only participants in specified populations
-    - Update markers based on filters
-    - Support geographic area boundary toggle
-    - Provide center button
-    - _Requirements: 6C.14, 6C.14a, 6C.14b, 6C.14c, 6C.15, 6C.17_
+  - [ ] 13.4 Update MapFilters component
+    - Update filter change handlers to refetch marker data with new filters
+    - Pass filter parameters to MapDataService.getActivityMarkers()
+    - Update population filter enabling logic for four map modes
+    - Disable population filter when mode is "Venues"
+    - Enable population filter when mode is "Activities by Type", "Activities by Category", or "Participant Homes"
+    - _Requirements: 6C.35, 6C.36, 6C.37, 6C.38, 6C.39, 6C.40, 6C.41, 6C.42, 6C.43_
 
-  - [x] 13.3a Implement conditional population filter enabling based on map mode
-    - Disable population filter control when map mode is "Venues"
-    - Enable population filter control when map mode is "Activities", "Activity Categories", or "Participant Homes"
-    - Update MapViewPage component to pass disabled state to Multiselect component
-    - _Requirements: 6C.14d, 6C.14e_
+  - [ ] 13.5 Update global geographic filter integration
+    - Apply global filter to all map modes
+    - Pass selectedGeographicAreaId to marker fetch calls
+    - Filter activities, participant homes, and venues by authorized geographic areas
+    - _Requirements: 6C.44, 6C.45, 6C.46, 6C.47, 6C.48, 6C.49, 6C.50, 6C.51, 6C.52, 6C.53, 6C.54_
 
-  - [x] 13.4 Create MapPopup component
-    - In Activities mode: display activity name (hyperlinked to /activities/:id), category, type, start date, and participant count
-    - In Participant Homes mode: display venue name (hyperlinked to /venues/:id) and count of participants at that address
-    - In Venues mode: display venue name (hyperlinked to /venues/:id), address, and geographic area
-    - Provide navigation to detail pages via hyperlinked names
-    - _Requirements: 6C.6, 6C.7, 6C.9, 6C.10, 6C.12, 6C.13_
-
-  - [ ]* 13.5 Write property test for map filter application
-    - **Property 69: Map Filter Application**
-    - **Validates: Requirements 6C.14**
+  - [ ]* 13.6 Write property tests for optimized map loading
+    - **Property 60: Map Immediate Rendering**
+    - **Property 61: Map Loading Indicator Display**
+    - **Property 62: Map Auto-Zoom to Markers**
+    - **Property 63: Activity Marker Lightweight Data**
+    - **Property 64: Lazy-Loaded Popup Content**
+    - **Property 65: Popup Content Caching**
+    - **Property 66: Four Map Mode Support**
+    - **Property 67: Activity Type vs Category Color Coding**
+    - **Property 68: Map Filter Application to Markers**
+    - **Validates: Requirements 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.16, 6C.18, 6C.21, 6C.22, 6C.23, 6C.33, 6C.35**
 
 - [x] 14. Implement analytics dashboards
   - [x] 14.1 Create EngagementDashboard component

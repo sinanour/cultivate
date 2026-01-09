@@ -509,35 +509,43 @@ src/
 
 **MapView**
 - Renders interactive map using Leaflet or Mapbox GL JS
-- Provides mode selector control to switch between "Activities", "Participant Homes", and "Venues" modes
-- In Activities mode: displays activity markers at current venue locations, color-coded by activity type
-- In Activity Categories mode: displays activity markers at current venue locations, color-coded by activity category
-- In Participant Homes mode: displays markers for participant home addresses (current venue from address history)
-- In Venues mode: displays markers for all venues with coordinates, regardless of activities or participants
+- Renders map immediately at world zoom level upon page navigation (before fetching any marker data)
+- Displays loading indicator ("Loading markers..." text or spinner overlay) while fetching marker data
+- Keeps map interactive (zoomable and pannable) during marker loading
+- Automatically zooms to fit bounds of all visible markers once marker data is loaded
+- Keeps map at world zoom level when no markers are visible
+- Provides mode selector control to switch between four map modes: "Activities by Type", "Activities by Category", "Participant Homes", and "Venues"
+- In "Activities by Type" mode: fetches lightweight marker data from `/api/v1/map/activities`, displays activity markers at current venue locations, color-codes markers by activity type using activityTypeId
+- In "Activities by Category" mode: fetches lightweight marker data from `/api/v1/map/activities`, displays activity markers at current venue locations, color-codes markers by activity category using activityCategoryId
+- In "Participant Homes" mode: fetches lightweight marker data from `/api/v1/map/participant-homes`, displays markers for participant home addresses grouped by venue
+- In "Venues" mode: fetches lightweight marker data from `/api/v1/map/venues`, displays markers for all venues with coordinates
 - Implements marker clustering for dense areas
-- Provides popup with mode-specific information on marker click
-- Includes map controls for zoom, pan, and center
-- Displays right-aligned legend in Activities mode showing only activity types that are visible on the map
-- Displays right-aligned legend in Activity Categories mode showing only activity categories that are visible on the map
-- Filters legend items dynamically based on current markers after applying all filters
-- Hides legend when no markers are visible
+- Displays right-aligned legend showing color mapping for activity types (in "Activities by Type" mode) or activity categories (in "Activities by Category" mode)
+- Filters legend items dynamically based on markers actually visible on the map
+- Hides legend when no markers are visible or when in "Participant Homes" or "Venues" modes
 - Respects global geographic area filter across all modes
+- Handles null effectiveFrom dates: treats as activity startDate for activities, as oldest address for participants
+
+**MapPopup (Lazy-Loaded Content)**
+- Displays loading indicator in popup while fetching detailed content
+- In "Activities by Type" or "Activities by Category" modes: fetches popup content from `/api/v1/map/activities/:id/popup` when marker is clicked
+- In "Activities by Type" or "Activities by Category" modes: displays activity name (hyperlinked to /activities/:id), category, type, start date, and participant count
+- In "Participant Homes" mode: fetches popup content from `/api/v1/map/participant-homes/:venueId/popup` when marker is clicked
+- In "Participant Homes" mode: displays venue name (hyperlinked to /venues/:id) and count of participants living at that address
+- In "Venues" mode: fetches popup content from `/api/v1/map/venues/:id/popup` when marker is clicked
+- In "Venues" mode: displays venue name (hyperlinked to /venues/:id), address, and geographic area
+- Caches popup content locally to avoid refetching when same marker is clicked multiple times
+- Displays error message with retry button when popup content fails to load
 
 **MapFilters**
 - Provides filter controls for activity category, activity type, status, date range, and population
-- Updates map markers based on selected filters
+- Updates map markers based on selected filters (refetches marker data with new filter parameters)
 - When population filter is applied: shows only activities with participants in specified populations
-- When population filter is applied in Participant Homes mode: shows only participants in specified populations
-- Disables population filter control when map mode is "Venues" (population filtering has no effect on venues)
-- Enables population filter control when map mode is "Activities", "Activity Categories", or "Participant Homes"
+- When population filter is applied in "Participant Homes" mode: shows only participants in specified populations
+- Disables population filter control when map mode is "Venues"
+- Enables population filter control when map mode is "Activities by Type", "Activities by Category", or "Participant Homes"
 - Provides geographic area boundary toggle
 - Includes button to center map on specific venue or geographic area
-
-**MapPopup**
-- In Activities mode: displays activity name (hyperlinked to /activities/:id), category, type, start date, and participant count
-- In Participant Homes mode: displays venue name (hyperlinked to /venues/:id) and count of participants living at that address
-- In Venues mode: displays venue name (hyperlinked to /venues/:id), address, and geographic area
-- Provides navigation to detail pages via hyperlinked names
 
 #### 13. Analytics Dashboards
 
@@ -1193,6 +1201,29 @@ src/
   - Applies all provided filters using AND logic
   - When populationIds provided: includes only activities with at least one participant in specified populations
 
+**MapDataService**
+- `getActivityMarkers(filters)`: Fetches lightweight activity marker data from `/api/v1/map/activities`
+  - Parameters: `geographicAreaIds?`, `activityCategoryIds?`, `activityTypeIds?`, `venueIds?`, `populationIds?`, `startDate?`, `endDate?`, `status?`
+  - Returns array of objects with `id`, `latitude`, `longitude`, `activityTypeId`, `activityCategoryId`
+  - Minimal payload for fast rendering of thousands of markers
+- `getActivityPopupContent(activityId)`: Fetches detailed popup content from `/api/v1/map/activities/:id/popup`
+  - Returns object with `id`, `name`, `activityTypeName`, `activityCategoryName`, `startDate`, `participantCount`
+  - Loaded on-demand when user clicks marker
+- `getParticipantHomeMarkers(filters)`: Fetches lightweight participant home marker data from `/api/v1/map/participant-homes`
+  - Parameters: `geographicAreaIds?`, `populationIds?`
+  - Returns array of objects with `venueId`, `latitude`, `longitude`, `participantCount`
+  - One marker per venue (grouped)
+- `getParticipantHomePopupContent(venueId)`: Fetches detailed popup content from `/api/v1/map/participant-homes/:venueId/popup`
+  - Returns object with `venueId`, `venueName`, `participantCount`, `participantNames` (array)
+  - Loaded on-demand when user clicks marker
+- `getVenueMarkers(filters)`: Fetches lightweight venue marker data from `/api/v1/map/venues`
+  - Parameters: `geographicAreaIds?`
+  - Returns array of objects with `id`, `latitude`, `longitude`
+  - Shows all venues with coordinates
+- `getVenuePopupContent(venueId)`: Fetches detailed popup content from `/api/v1/map/venues/:id/popup`
+  - Returns object with `id`, `name`, `address`, `geographicAreaName`
+  - Loaded on-demand when user clicks marker
+
 **UserService** (Admin only)
 - `getUsers()`: Fetches all users from `/users` (admin only)
 - `getUser(id)`: Fetches single user from `/users/:id` (admin only)
@@ -1516,6 +1547,50 @@ interface ActivityLifecycleData {
   groupName: string;
   started: number;
   completed: number;
+}
+
+interface ActivityMarker {
+  id: string;
+  latitude: number;
+  longitude: number;
+  activityTypeId: string;
+  activityCategoryId: string;
+}
+
+interface ActivityPopupContent {
+  id: string;
+  name: string;
+  activityTypeName: string;
+  activityCategoryName: string;
+  startDate: string;
+  participantCount: number;
+}
+
+interface ParticipantHomeMarker {
+  venueId: string;
+  latitude: number;
+  longitude: number;
+  participantCount: number;
+}
+
+interface ParticipantHomePopupContent {
+  venueId: string;
+  venueName: string;
+  participantCount: number;
+  participantNames: string[];
+}
+
+interface VenueMarker {
+  id: string;
+  latitude: number;
+  longitude: number;
+}
+
+interface VenuePopupContent {
+  id: string;
+  name: string;
+  address: string;
+  geographicAreaName: string;
 }
 
 interface QueuedOperation {

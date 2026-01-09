@@ -33,6 +33,10 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Deny_List**: A set of geographic areas that a user is explicitly forbidden from accessing
 - **Authorized_Area**: A geographic area that a user has permission to access based on authorization rules
 - **Geographic_Area_Selector**: A specialized reusable dropdown component for selecting geographic areas that displays hierarchical context, area type badges, and supports async lazy-loading for optimal performance with large datasets
+- **Map_Marker**: A lightweight data structure containing only the essential fields needed to render a pin on a map (coordinates and identifiers)
+- **Popup_Content**: Detailed information about a map marker that is loaded on-demand when a user clicks the marker
+- **Lazy_Loading**: A performance optimization strategy where data is fetched only when needed rather than all at once
+- **Auto_Zoom**: Automatic adjustment of map zoom level to fit all visible markers within the viewport
 
 ## Requirements
 
@@ -329,46 +333,78 @@ The Web Frontend package provides a responsive React-based web application that 
 32. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAuthorizationForm for geographic area selection
 33. THE Web_App SHALL use the Geographic_Area_Selector component in any other forms or interfaces that require geographic area selection
 
-### Requirement 6C: Map View UI
+### Requirement 6C: Map View UI with Optimized Loading
 
-**User Story:** As a community organizer, I want to view activities, participant locations, and venues on a map, so that I can visualize community engagement and infrastructure by geography.
+**User Story:** As a community organizer, I want to view activities, participant locations, and venues on a map with fast initial rendering and progressive content loading, so that I can visualize community engagement and infrastructure by geography even when there are thousands of markers.
 
 #### Acceptance Criteria
 
+**Initial Map Rendering:**
+
 1. THE Web_App SHALL provide an interactive map view using a mapping library (e.g., Leaflet, Mapbox)
-2. THE Web_App SHALL provide a mode selector control to switch between three map modes: "Activities", "Participant Homes", and "Venues"
-3. WHEN in "Activities" mode, THE Web_App SHALL display markers for all activities at their current venue locations
-4. WHEN in "Activities" mode, THE Web_App SHALL color-code activity markers by activity category
-5. WHEN in "Activities" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity categories
-5a. WHEN displaying the map legend in "Activities" mode, THE Web_App SHALL only include activity types that are actually visible on the map based on current filters
-5b. WHEN displaying the map legend in "Activity Categories" mode, THE Web_App SHALL only include activity categories that are actually visible on the map based on current filters
-5c. WHEN filters are applied that result in no visible markers, THE Web_App SHALL hide the legend
-6. WHEN an activity marker is clicked, THE Web_App SHALL display a popup showing the activity name, category, type, start date, and number of participants
-7. WHEN an activity marker popup is displayed, THE Web_App SHALL render the activity name as a hyperlink to the activity detail page (/activities/:id)
-8. WHEN in "Participant Homes" mode, THE Web_App SHALL display markers for all participant home addresses (current venue from address history)
-9. WHEN a participant home marker is clicked, THE Web_App SHALL display a popup showing the venue name and the number of participants living at that address
-10. WHEN a participant home marker popup is displayed, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
-11. WHEN in "Venues" mode, THE Web_App SHALL display markers for all venues with latitude and longitude coordinates, regardless of whether they have activities or participants
-12. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL display a popup showing the venue name, address, and geographic area
-13. WHEN a venue marker popup is displayed in "Venues" mode, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
-14. THE Web_App SHALL provide filtering controls to show/hide activities by category, type, status, date range, or population
-14a. THE Web_App SHALL provide a population filter control on the map view
-14b. WHEN a population filter is applied on the map, THE Web_App SHALL display only activities that have at least one participant belonging to at least one of the specified populations
-14c. WHEN a population filter is applied in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses for participants who belong to at least one of the specified populations
-14d. WHEN the map mode is "Venues", THE Web_App SHALL disable the population filter control
-14e. WHEN the map mode is "Activities", "Activity Categories", or "Participant Homes", THE Web_App SHALL enable the population filter control
-15. THE Web_App SHALL provide geographic area boundary overlays when available
-16. THE Web_App SHALL allow zooming and panning of the map
-17. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
-18. THE Web_App SHALL implement marker clustering for dense areas to improve map readability
-19. WHEN the global geographic area filter is active, THE Web_App SHALL apply the filter to all map modes to show only markers for entities associated with venues in the filtered geographic area or its descendants
-20. WHEN the global geographic area filter is active in "Activities" mode, THE Web_App SHALL display only activities whose current venue is in the filtered geographic area or its descendants
-21. WHEN the global geographic area filter is active in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses where the venue is in the filtered geographic area or its descendants
-22. WHEN the global geographic area filter is active in "Venues" mode, THE Web_App SHALL display only venues that are in the filtered geographic area or its descendants
-23. WHEN determining current venue for activity markers, THE Web_App SHALL treat null effectiveFrom dates as equivalent to the activity start date
-24. WHEN determining current home address for participant markers, THE Web_App SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
-25. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
-26. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
+2. WHEN a user navigates to the map view page, THE Web_App SHALL render the map immediately zoomed out to show the entire world before any marker data is fetched
+3. THE Web_App SHALL display a loading indicator (e.g., "Loading markers..." text or spinner overlay) while fetching marker data from the backend
+4. THE Web_App SHALL keep the map interactive (zoomable and pannable) during the marker loading process
+5. WHEN marker data is successfully fetched, THE Web_App SHALL remove the loading indicator
+6. WHEN marker data is successfully fetched and markers are rendered, THE Web_App SHALL automatically zoom the map to fit the bounds of all visible markers
+7. WHEN no markers are visible after applying filters, THE Web_App SHALL keep the map at world zoom level and display an appropriate message
+
+**Map Modes and Marker Display:**
+
+8. THE Web_App SHALL provide a mode selector control to switch between map modes: "Activities by Type", "Activities by Category", "Participant Homes", and "Venues"
+9. WHEN in "Activities by Type" mode, THE Web_App SHALL fetch lightweight activity marker data from GET /api/v1/map/activities endpoint
+10. WHEN in "Activities by Type" mode, THE Web_App SHALL display markers for all activities at their current venue locations
+11. WHEN in "Activities by Type" mode, THE Web_App SHALL color-code activity markers by activity type using the activityTypeId from the marker data
+12. WHEN in "Activities by Type" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity types
+13. WHEN in "Activities by Category" mode, THE Web_App SHALL fetch lightweight activity marker data from GET /api/v1/map/activities endpoint
+14. WHEN in "Activities by Category" mode, THE Web_App SHALL display markers for all activities at their current venue locations
+15. WHEN in "Activities by Category" mode, THE Web_App SHALL color-code activity markers by activity category using the activityCategoryId from the marker data
+16. WHEN in "Activities by Category" mode, THE Web_App SHALL display a right-aligned legend showing the mapping between marker colors and activity categories
+17. WHEN displaying the map legend, THE Web_App SHALL only include activity types or categories that are actually visible on the map based on current filters
+18. WHEN filters are applied that result in no visible markers, THE Web_App SHALL hide the legend
+19. WHEN in "Participant Homes" mode, THE Web_App SHALL fetch lightweight participant home marker data from GET /api/v1/map/participant-homes endpoint
+20. WHEN in "Participant Homes" mode, THE Web_App SHALL display markers for all participant home addresses grouped by venue
+21. WHEN in "Venues" mode, THE Web_App SHALL fetch lightweight venue marker data from GET /api/v1/map/venues endpoint
+22. WHEN in "Venues" mode, THE Web_App SHALL display markers for all venues with latitude and longitude coordinates, regardless of whether they have activities or participants
+23. THE Web_App SHALL implement marker clustering for dense areas to improve map readability
+
+**Lazy-Loaded Popup Content:**
+
+24. WHEN an activity marker is clicked, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
+25. WHEN an activity marker is clicked, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/activities/:id/popup endpoint
+26. WHEN activity popup content is loaded, THE Web_App SHALL display the activity name, category, type, start date, and number of participants
+27. WHEN an activity marker popup is displayed, THE Web_App SHALL render the activity name as a hyperlink to the activity detail page (/activities/:id)
+28. WHEN a participant home marker is clicked, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
+29. WHEN a participant home marker is clicked, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/participant-homes/:venueId/popup endpoint
+30. WHEN participant home popup content is loaded, THE Web_App SHALL display the venue name and the number of participants living at that address
+31. WHEN a participant home marker popup is displayed, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
+32. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL display a loading indicator in the popup while fetching detailed content
+33. WHEN a venue marker is clicked in "Venues" mode, THE Web_App SHALL fetch detailed popup content from GET /api/v1/map/venues/:id/popup endpoint
+34. WHEN venue popup content is loaded, THE Web_App SHALL display the venue name, address, and geographic area
+35. WHEN a venue marker popup is displayed in "Venues" mode, THE Web_App SHALL render the venue name as a hyperlink to the venue detail page (/venues/:id)
+36. THE Web_App SHALL cache popup content locally to avoid refetching when the same marker is clicked multiple times
+37. WHEN popup content fails to load, THE Web_App SHALL display an error message in the popup with a retry button
+
+**Filtering and Geographic Context:**
+
+38. THE Web_App SHALL provide filtering controls to show/hide activities by category, type, status, date range, or population
+39. THE Web_App SHALL provide a population filter control on the map view
+40. WHEN a population filter is applied on the map, THE Web_App SHALL display only activities that have at least one participant belonging to at least one of the specified populations
+41. WHEN a population filter is applied in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses for participants who belong to at least one of the specified populations
+42. WHEN the map mode is "Venues", THE Web_App SHALL disable the population filter control
+43. WHEN the map mode is "Activities by Type" or "Activities by Category", THE Web_App SHALL enable the population filter control
+44. THE Web_App SHALL provide geographic area boundary overlays when available
+45. THE Web_App SHALL allow zooming and panning of the map
+46. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
+47. WHEN the global geographic area filter is active, THE Web_App SHALL apply the filter to all map modes to show only markers for entities associated with venues in the filtered geographic area or its descendants
+48. WHEN the global geographic area filter is active in "Activities by Type" or "Activities by Category" modes, THE Web_App SHALL display only activities whose current venue is in the filtered geographic area or its descendants
+49. WHEN the global geographic area filter is active in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses where the venue is in the filtered geographic area or its descendants
+50. WHEN the global geographic area filter is active in "Venues" mode, THE Web_App SHALL display only venues that are in the filtered geographic area or its descendants
+51. WHEN determining current venue for activity markers, THE Web_App SHALL treat null effectiveFrom dates as equivalent to the activity start date
+52. WHEN determining current home address for participant markers, THE Web_App SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
+53. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
+54. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
+
 
 ### Requirement 7: Analytics Dashboard
 

@@ -165,6 +165,14 @@ GET    /api/v1/analytics/growth             -> Get growth metrics (supports geog
 GET    /api/v1/analytics/geographic         -> Get engagement metrics by geographic area
 GET    /api/v1/analytics/activity-lifecycle -> Get activity lifecycle events (started/completed)
 
+// Map Data Routes (Optimized for Map Visualization)
+GET    /api/v1/map/activities          -> Get lightweight activity marker data (id, lat, lon, activityTypeId, activityCategoryId)
+GET    /api/v1/map/activities/:id/popup -> Get detailed activity popup content (name, type, category, startDate, participantCount)
+GET    /api/v1/map/participant-homes   -> Get lightweight participant home marker data (venueId, lat, lon, participantCount)
+GET    /api/v1/map/participant-homes/:venueId/popup -> Get detailed participant home popup content (venueName, participantCount, participantNames)
+GET    /api/v1/map/venues              -> Get lightweight venue marker data (id, lat, lon)
+GET    /api/v1/map/venues/:id/popup    -> Get detailed venue popup content (name, address, geographicAreaName)
+
 // Sync Routes
 POST   /api/v1/sync/batch              -> Batch sync operations
 
@@ -194,6 +202,7 @@ Services implement business logic and coordinate operations:
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
 - **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context)
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering with OR logic within dimensions and AND logic across dimensions (array filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data, supports growth metrics with multi-dimensional filtering (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) where multiple values within a dimension use OR logic and multiple dimensions use AND logic
+- **MapDataService**: Provides optimized map visualization data with lightweight marker endpoints and lazy-loaded popup content, returns minimal fields for fast marker rendering (coordinates and IDs only), fetches detailed popup content on-demand when markers are clicked, supports all filtering dimensions (geographic area, activity category, activity type, venue, population, date range, status), applies geographic authorization filtering, excludes entities without coordinates from marker responses, groups participant homes by venue to avoid duplicate markers
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload
 - **GeographicAuthorizationService**: Manages user geographic authorization rules (CRUD operations), evaluates user access to geographic areas (deny-first logic), calculates effective authorized areas (including descendants and ancestors), validates geographic restrictions for create operations, provides authorization filtering for all data access, enforces authorization on individual resource access (GET by ID, PUT, DELETE), validates authorization for nested resource endpoints, provides authorization bypass for administrators, logs all authorization denials
@@ -517,6 +526,163 @@ Returns activity lifecycle event data showing activities started and completed w
 - When multiple filters provided, applies AND logic
 - Results sorted alphabetically by groupName
 - Returns empty array when no activities match filters
+
+### Map Data API Endpoints
+
+The Map Data API provides specialized endpoints optimized for map visualization with lightweight marker data and lazy-loaded popup content.
+
+**Design Rationale:**
+- Separates coordinate data (needed for rendering) from descriptive data (needed for popups)
+- Enables fast initial map rendering with thousands of markers
+- Reduces bandwidth by loading popup content only when user clicks a marker
+- Supports both activity type and activity category visualization modes
+
+**GET /api/v1/map/activities**
+
+Returns lightweight activity marker data for map rendering.
+
+**Query Parameters:**
+- `geographicAreaIds` (optional): Array of geographic area UUIDs
+- `activityCategoryIds` (optional): Array of activity category UUIDs
+- `activityTypeIds` (optional): Array of activity type UUIDs
+- `venueIds` (optional): Array of venue UUIDs
+- `populationIds` (optional): Array of population UUIDs
+- `startDate` (optional): ISO 8601 datetime string
+- `endDate` (optional): ISO 8601 datetime string
+- `status` (optional): Activity status filter
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: Array<{
+    id: string,                // Activity UUID
+    latitude: number,          // Venue latitude
+    longitude: number,         // Venue longitude
+    activityTypeId: string,    // For color-coding by type
+    activityCategoryId: string // For color-coding by category
+  }>
+}
+```
+
+**Business Logic:**
+- Returns only activities with current venue that has non-null coordinates
+- Determines current venue from most recent venue history (handles null effectiveFrom as activity startDate)
+- Applies all filters using same logic as analytics endpoints
+- Applies geographic authorization filtering
+- Excludes activities without venue or without coordinates
+
+**GET /api/v1/map/activities/:id/popup**
+
+Returns detailed popup content for a specific activity marker.
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: {
+    id: string,
+    name: string,
+    activityTypeName: string,
+    activityCategoryName: string,
+    startDate: string,
+    participantCount: number
+  }
+}
+```
+
+**GET /api/v1/map/participant-homes**
+
+Returns lightweight participant home marker data grouped by venue.
+
+**Query Parameters:**
+- `geographicAreaIds` (optional): Array of geographic area UUIDs
+- `populationIds` (optional): Array of population UUIDs
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: Array<{
+    venueId: string,           // Venue UUID
+    latitude: number,          // Venue latitude
+    longitude: number,         // Venue longitude
+    participantCount: number   // Count of participants at this venue
+  }>
+}
+```
+
+**Business Logic:**
+- Groups participants by their current home venue (most recent address history)
+- Returns one marker per venue with participant count
+- Handles null effectiveFrom as oldest address
+- Applies geographic authorization filtering
+- Excludes participants without home venue or without coordinates
+
+**GET /api/v1/map/participant-homes/:venueId/popup**
+
+Returns detailed popup content for a specific participant home marker.
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: {
+    venueId: string,
+    venueName: string,
+    participantCount: number,
+    participantNames: string[]  // Array of participant names at this venue
+  }
+}
+```
+
+**GET /api/v1/map/venues**
+
+Returns lightweight venue marker data for map rendering.
+
+**Query Parameters:**
+- `geographicAreaIds` (optional): Array of geographic area UUIDs
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: Array<{
+    id: string,        // Venue UUID
+    latitude: number,  // Venue latitude
+    longitude: number  // Venue longitude
+  }>
+}
+```
+
+**Business Logic:**
+- Returns all venues with non-null coordinates
+- Applies geographic authorization filtering
+- No activity or participant filtering (shows all venues)
+
+**GET /api/v1/map/venues/:id/popup**
+
+Returns detailed popup content for a specific venue marker.
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: {
+    id: string,
+    name: string,
+    address: string,
+    geographicAreaName: string
+  }
+}
+```
+
+**Performance Optimizations:**
+- Database indexes on latitude, longitude, and foreign key fields
+- Minimal field selection in queries (SELECT only needed columns)
+- Efficient joins for current venue determination
+- Cache headers for client-side caching
+- Geographic authorization applied at query level (not post-processing)
 
 ### 6. Fake Data Generation Script
 
