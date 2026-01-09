@@ -45,12 +45,21 @@ export class GeographicAreaRepository {
   }
 
   async findById(id: string): Promise<GeographicArea | null> {
-    return this.prisma.geographicArea.findUnique({
+    const area = await this.prisma.geographicArea.findUnique({
       where: { id },
       include: {
         parent: true,
       },
     });
+
+    if (!area) return null;
+
+    // Add childCount
+    const childCount = await this.countChildren(id);
+    return {
+      ...area,
+      childCount,
+    } as any;
   }
 
   async create(data: CreateGeographicAreaData): Promise<GeographicArea> {
@@ -100,10 +109,61 @@ export class GeographicAreaRepository {
   }
 
   async findChildren(id: string): Promise<GeographicArea[]> {
-    return this.prisma.geographicArea.findMany({
+    const children = await this.prisma.geographicArea.findMany({
       where: { parentGeographicAreaId: id },
       orderBy: { name: 'asc' },
     });
+
+    // Add childCount to each child
+    const childrenWithCount = await Promise.all(
+      children.map(async (child) => ({
+        ...child,
+        childCount: await this.countChildren(child.id),
+      }))
+    );
+
+    return childrenWithCount as any;
+  }
+
+  async countChildren(id: string): Promise<number> {
+    return this.prisma.geographicArea.count({
+      where: { parentGeographicAreaId: id },
+    });
+  }
+
+  async findWithDepth(parentId: string | null, depth: number): Promise<GeographicArea[]> {
+    // Fetch areas at this level
+    const areas = await this.prisma.geographicArea.findMany({
+      where: { parentGeographicAreaId: parentId },
+      orderBy: { name: 'asc' },
+      include: {
+        parent: true,
+      },
+    });
+
+    // Add childCount to each area
+    const areasWithCount = await Promise.all(
+      areas.map(async (area) => ({
+        ...area,
+        childCount: await this.countChildren(area.id),
+      }))
+    );
+
+    // If depth > 0, recursively fetch children
+    if (depth > 0) {
+      const areasWithChildren = await Promise.all(
+        areasWithCount.map(async (area) => {
+          const children = await this.findWithDepth(area.id, depth - 1);
+          return {
+            ...area,
+            children: children.length > 0 ? children : undefined,
+          };
+        })
+      );
+      return areasWithChildren as any;
+    }
+
+    return areasWithCount as any;
   }
 
   async findAncestors(id: string): Promise<GeographicArea[]> {

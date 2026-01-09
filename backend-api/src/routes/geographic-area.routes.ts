@@ -124,6 +124,7 @@ export class GeographicAreaRoutes {
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
             const search = req.query.search as string | undefined;
+            const depth = req.query.depth ? parseInt(req.query.depth as string) : undefined;
 
             // Extract authorization info from request
             const authorizedAreaIds = req.user?.authorizedAreaIds || [];
@@ -148,6 +149,7 @@ export class GeographicAreaRoutes {
                     limit,
                     geographicAreaId,
                     search,
+                    depth,
                     authorizedAreaIds,
                     hasGeographicRestrictions,
                     readOnlyAreaIds
@@ -157,6 +159,7 @@ export class GeographicAreaRoutes {
                 const areas = await this.geographicAreaService.getAllGeographicAreas(
                     geographicAreaId,
                     search,
+                    depth,
                     authorizedAreaIds,
                     hasGeographicRestrictions,
                     readOnlyAreaIds

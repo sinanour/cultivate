@@ -83,6 +83,7 @@ export class GeographicAreaService {
     async getAllGeographicAreas(
         geographicAreaId?: string,
         search?: string,
+        depth?: number,
         authorizedAreaIds: string[] = [],
         hasGeographicRestrictions: boolean = false,
         readOnlyAreaIds: string[] = []
@@ -99,20 +100,49 @@ export class GeographicAreaService {
             hasGeographicRestrictions
         );
 
+        // If depth is specified, use depth-limited fetching
+        if (depth !== undefined) {
+            const parentId = geographicAreaId || null;
+            const areas = await this.geographicAreaRepository.findWithDepth(parentId, depth);
+
+            // Apply search filter if provided
+            if (search) {
+                return this.filterAreasRecursively(areas, search);
+            }
+
+            // If filtering by geographic area, also fetch ancestors for context
+            if (geographicAreaId) {
+                const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+                return [...ancestors, ...areas];
+            }
+
+            return areas;
+        }
+
         if (!effectiveAreaIds) {
             // No geographic filter
             if (!search) {
                 // No filters at all, use repository
-                return this.geographicAreaRepository.findAll();
+                const areas = await this.geographicAreaRepository.findAll();
+                // Add childCount to each area
+                return Promise.all(areas.map(async (area) => ({
+                    ...area,
+                    childCount: await this.geographicAreaRepository.countChildren(area.id),
+                }))) as any;
             }
             // Search only, use prisma with search filter
-            return this.prisma.geographicArea.findMany({
+            const areas = await this.prisma.geographicArea.findMany({
                 where: searchWhere,
                 orderBy: { name: 'asc' },
                 include: {
                     parent: true,
                 },
             });
+            // Add childCount to each area
+            return Promise.all(areas.map(async (area) => ({
+                ...area,
+                childCount: await this.geographicAreaRepository.countChildren(area.id),
+            }))) as any;
         }
 
         // When filtering by geographic area, include the selected area, its descendants, and ancestors
@@ -142,7 +172,22 @@ export class GeographicAreaService {
             },
         });
 
-        return allAreas;
+        // Add childCount to each area
+        return Promise.all(allAreas.map(async (area) => ({
+            ...area,
+            childCount: await this.geographicAreaRepository.countChildren(area.id),
+        }))) as any;
+    }
+
+    private filterAreasRecursively(areas: GeographicArea[], search: string): GeographicArea[] {
+        const searchLower = search.toLowerCase();
+        return areas.filter(area => {
+            const matches = area.name.toLowerCase().includes(searchLower);
+            if ((area as any).children) {
+                (area as any).children = this.filterAreasRecursively((area as any).children, search);
+            }
+            return matches || ((area as any).children && (area as any).children.length > 0);
+        });
     }
 
     async getAllGeographicAreasPaginated(
@@ -150,11 +195,26 @@ export class GeographicAreaService {
         limit?: number,
         geographicAreaId?: string,
         search?: string,
+        depth?: number,
         authorizedAreaIds: string[] = [],
         hasGeographicRestrictions: boolean = false,
         readOnlyAreaIds: string[] = []
     ): Promise<PaginatedResponse<GeographicArea>> {
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
+
+        // If depth is specified, use non-paginated depth-limited fetching
+        // (pagination doesn't make sense with hierarchical depth-limited data)
+        if (depth !== undefined) {
+            const areas = await this.getAllGeographicAreas(
+                geographicAreaId,
+                search,
+                depth,
+                authorizedAreaIds,
+                hasGeographicRestrictions,
+                readOnlyAreaIds
+            );
+            return PaginationHelper.createResponse(areas, validPage, validLimit, areas.length);
+        }
 
         // Build search filter
         const searchWhere = search ? {
@@ -170,7 +230,12 @@ export class GeographicAreaService {
 
         if (!effectiveAreaIds) {
             const { data, total } = await this.geographicAreaRepository.findAllPaginated(validPage, validLimit, searchWhere);
-            return PaginationHelper.createResponse(data, validPage, validLimit, total);
+            // Add childCount to each area
+            const dataWithCount = await Promise.all(data.map(async (area) => ({
+                ...area,
+                childCount: await this.geographicAreaRepository.countChildren(area.id),
+            })));
+            return PaginationHelper.createResponse(dataWithCount as any, validPage, validLimit, total);
         }
 
         // When filtering by geographic area, include the selected area, its descendants, and ancestors
@@ -200,12 +265,18 @@ export class GeographicAreaService {
             },
         });
 
-        // Apply pagination
-        const total = allAreas.length;
-        const skip = (validPage - 1) * validLimit;
-        const paginatedAreas = allAreas.slice(skip, skip + validLimit);
+        // Add childCount to each area
+        const allAreasWithCount = await Promise.all(allAreas.map(async (area) => ({
+            ...area,
+            childCount: await this.geographicAreaRepository.countChildren(area.id),
+        })));
 
-        return PaginationHelper.createResponse(paginatedAreas, validPage, validLimit, total);
+        // Apply pagination
+        const total = allAreasWithCount.length;
+        const skip = (validPage - 1) * validLimit;
+        const paginatedAreas = allAreasWithCount.slice(skip, skip + validLimit);
+
+        return PaginationHelper.createResponse(paginatedAreas as any, validPage, validLimit, total);
     }
 
     async getGeographicAreaById(id: string, userId?: string, userRole?: string): Promise<GeographicArea> {
