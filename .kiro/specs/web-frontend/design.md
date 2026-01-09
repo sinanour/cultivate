@@ -451,7 +451,15 @@ src/
 - Renders area type badges for each node with increased vertical spacing
 - Renders geographic area name as hyperlink in tree nodes (links to /geographic-areas/:id)
 - Applies padding directly to interactive elements for full-height clickability and hover treatment
-- Automatically expands all nodes when page loads for immediate visibility
+- Initially fetches only top-level areas and their immediate children using depth=1 parameter
+- When global filter active: fetches filtered area's immediate children using depth=1
+- Implements lazy loading: fetches children on-demand when user expands a node
+- Uses childCount field from API to determine if node has children
+- Shows expansion affordance (arrow) only when childCount > 0
+- Hides expansion affordance when childCount = 0 (leaf node)
+- Displays loading indicator on node while fetching children
+- Caches fetched children to avoid redundant API calls on collapse/re-expand
+- Maintains expansion state when navigating away and returning to view
 - Supports click-to-toggle expansion on any row with children
 - Provides hover highlighting with smooth transitions for interactive feedback
 - Shows pointer cursor for expandable rows, default cursor for leaf nodes
@@ -463,9 +471,10 @@ src/
 - Provides actions for edit and delete (no separate View button)
 - Handles delete validation (prevents deletion if referenced)
 - Applies global geographic area filter from context when active
-- When filtered, displays the selected area, all its descendants, and all its ancestors (to maintain hierarchy context)
+- When filtered, displays the selected area, its immediate children (initially), and all its ancestors (to maintain hierarchy context)
 - Visually indicates ancestor areas as read-only when displayed due to filtering (e.g., with a badge, icon, or muted styling)
 - Never suppresses or hides ancestor areas from the tree view, as they provide essential navigational context
+- Supports progressive disclosure through user-initiated node expansion
 
 **GeographicAreaFormPage**
 - Dedicated full-page form for creating/editing geographic areas (not a modal)
@@ -1143,12 +1152,12 @@ src/
 - `getVenueParticipants(id)`: Fetches participants with venue as home from `/venues/:id/participants`
 
 **GeographicAreaService**
-- `getGeographicAreas(page?, limit?, geographicAreaId?, search?)`: Fetches all geographic areas with optional pagination, optional geographic area filter (returns selected area, descendants, and ancestors for hierarchy context), and optional text search filter
-- `getGeographicArea(id)`: Fetches single geographic area with parent populated
+- `getGeographicAreas(page?, limit?, geographicAreaId?, search?, depth?)`: Fetches geographic areas with optional pagination, optional geographic area filter (returns selected area, descendants with depth limit, and ancestors for hierarchy context), optional text search filter, and optional depth parameter for lazy loading
+- `getGeographicArea(id)`: Fetches single geographic area with parent populated and childCount field
 - `createGeographicArea(data)`: Creates new geographic area (validates circular relationships)
 - `updateGeographicArea(id, data, version?)`: Updates existing geographic area with optional version for optimistic locking
 - `deleteGeographicArea(id)`: Deletes geographic area (validates references, returns REFERENCED_ENTITY error if referenced)
-- `getChildren(id)`: Fetches child geographic areas from `/geographic-areas/:id/children`
+- `getChildren(id)`: Fetches child geographic areas from `/geographic-areas/:id/children` (includes childCount for each child)
 - `getAncestors(id)`: Fetches hierarchy path to root from `/geographic-areas/:id/ancestors`
 - `getVenues(id)`: Fetches venues in geographic area from `/geographic-areas/:id/venues`
 - `getStatistics(id)`: Fetches statistics for geographic area and descendants from `/geographic-areas/:id/statistics`
@@ -1343,6 +1352,7 @@ interface GeographicArea {
   parentGeographicAreaId?: string;
   parent?: GeographicArea;
   children?: GeographicArea[];
+  childCount?: number;  // Number of immediate children (used for lazy loading)
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -2569,7 +2579,43 @@ All entities support optimistic locking via the `version` field. When updating a
 
 *For any* geographic area tree view rendering with an active filter, ancestor areas should never be suppressed or hidden from the display.
 
-**Validates: Requirements 6B.14**
+**Validates: Requirements 6B.14, 6B.25**
+
+### Property 59d: Lazy Loading Initial Fetch
+
+*For any* initial navigation to the geographic areas view, the system should fetch only top-level areas and their immediate children (depth=1), not all descendant nodes.
+
+**Validates: Requirements 6B.2, 6B.3, 6B.4, 6B.6**
+
+### Property 59e: On-Demand Child Fetching
+
+*For any* tree node expansion by the user, the system should fetch the children of that specific node on demand using the /api/geographic-areas/:id/children endpoint.
+
+**Validates: Requirements 6B.7**
+
+### Property 59f: Child Count Leaf Node Detection
+
+*For any* geographic area with childCount = 0, the tree view should render it as a leaf node without expansion affordance (no arrow icon).
+
+**Validates: Requirements 6B.8, 6B.9**
+
+### Property 59g: Child Count Expansion Affordance Display
+
+*For any* geographic area with childCount > 0, the tree view should render it with expansion affordance (arrow icon or similar).
+
+**Validates: Requirements 6B.8, 6B.10**
+
+### Property 59h: Children Caching
+
+*For any* tree node that has been expanded and then collapsed, re-expanding it should not trigger a new API call (children should be cached).
+
+**Validates: Requirements 6B.12**
+
+### Property 59i: Expansion State Persistence
+
+*For any* navigation away from and return to the geographic areas view, the expansion state of tree nodes should be maintained.
+
+**Validates: Requirements 6B.27**
 
 ### Property 60: Map Mode Selector
 

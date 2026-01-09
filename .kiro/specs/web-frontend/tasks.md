@@ -533,25 +533,40 @@ This implementation plan covers the React-based web application built with TypeS
     - Manage expanded state with expandedItems and onExpandedItemsChange props
     - Enable vertical connector lines with connectorLines="vertical" prop
     - Show area type badges for each node with increased vertical spacing
-    - Auto-expand all nodes on page load using useEffect to collect all node IDs
+    - Initially fetch only top-level areas and immediate children using depth=1 parameter
+    - When global filter active: fetch filtered area's immediate children using depth=1
+    - Implement lazy loading: fetch children on-demand when user expands a node via GET /api/geographic-areas/:id/children
+    - Use childCount field from API to determine if node has children
+    - Show expansion affordance (arrow) only when childCount > 0
+    - Hide expansion affordance when childCount = 0 (leaf node)
+    - Display loading indicator on node while fetching children
+    - Cache fetched children to avoid redundant API calls on collapse/re-expand
+    - Maintain expansion state when navigating away and returning to view
     - Implement click-to-toggle expansion on row click for nodes with children
     - Add hover highlighting with smooth background color transitions
     - Show pointer cursor for expandable rows, default cursor for leaf nodes
     - Prevent action button clicks from triggering row toggle with stopPropagation
-    - Provide View, Edit, and Delete actions per node based on permissions
+    - Provide Edit and Delete actions per node based on permissions (no separate View button)
     - Support optional pagination
     - Handle delete validation (REFERENCED_ENTITY error)
-    - When global filter is active, display filtered area, all descendants, AND all ancestors (never suppress ancestors)
+    - When global filter is active, display filtered area, immediate children (initially), AND all ancestors (never suppress ancestors)
     - Visually indicate ancestor areas as read-only (e.g., with badge, icon, or muted styling)
     - Ensure ancestors are always rendered to provide hierarchy context
-    - _Requirements: 6B.1, 6B.4, 6B.9, 6B.10, 6B.12, 6B.13, 6B.14_
+    - Support progressive disclosure through user-initiated node expansion
+    - _Requirements: 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.15, 6B.16, 6B.17, 6B.18, 6B.19, 6B.20, 6B.23, 6B.24, 6B.25, 6B.26, 6B.27_
 
-  - [ ]* 9.2 Write property test for hierarchical display
+  - [ ]* 9.2 Write property tests for hierarchical display and lazy loading
     - **Property 50: Geographic Area Hierarchical Display**
     - **Property 59a: Geographic Area Ancestor Display in Tree View**
     - **Property 59b: Geographic Area Ancestor Read-Only Indication**
     - **Property 59c: Geographic Area Ancestor Non-Suppression**
-    - **Validates: Requirements 6B.1, 6B.12, 6B.13, 6B.14**
+    - **Property 59d: Lazy Loading Initial Fetch**
+    - **Property 59e: On-Demand Child Fetching**
+    - **Property 59f: Child Count Leaf Node Detection**
+    - **Property 59g: Child Count Expansion Affordance Display**
+    - **Property 59h: Children Caching**
+    - **Property 59i: Expansion State Persistence**
+    - **Validates: Requirements 6B.1, 6B.2, 6B.3, 6B.4, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.23, 6B.24, 6B.25, 6B.26, 6B.27_
 
   - [x] 9.2 Create GeographicAreaFormPage component
     - Dedicated full-page form for create/edit (not a modal)
@@ -1639,7 +1654,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Update ActivityService.getActivities(page?, limit?, geographicAreaId?)
     - Update ParticipantService.getParticipants(page?, limit?, geographicAreaId?)
     - Update VenueService.getVenues(page?, limit?, geographicAreaId?)
-    - Update GeographicAreaService.getGeographicAreas(page?, limit?, geographicAreaId?)
+    - Update GeographicAreaService.getGeographicAreas(page?, limit?, geographicAreaId?, depth?)
     - Add geographicAreaId as query parameter in API requests
     - _Requirements: 24.4, 24.5_
 

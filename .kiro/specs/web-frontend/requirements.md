@@ -257,24 +257,37 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 6B: Geographic Area Management UI
 
-**User Story:** As a community organizer, I want to manage geographic areas in the web interface, so that I can organize venues hierarchically.
+**User Story:** As a community organizer, I want to manage geographic areas in the web interface with lazy loading support, so that I can efficiently navigate large geographic hierarchies without loading all nodes at once.
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL display a hierarchical tree view of all geographic areas
-2. THE Web_App SHALL provide a dedicated page to create new geographic areas
-3. THE Web_App SHALL provide a dedicated page to edit existing geographic areas
-4. THE Web_App SHALL provide a delete button for geographic areas
-5. THE Web_App SHALL validate that geographic area name and type are provided
-6. THE Web_App SHALL use the Geographic_Area_Selector component for parent geographic area selection
-7. THE Web_App SHALL prevent circular parent-child relationships
-8. THE Web_App SHALL display a detail view showing geographic area information, child areas, and associated venues from the area and all descendant areas (recursive aggregation)
-9. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
-10. WHEN deleting a geographic area, THE Web_App SHALL display an error message explaining which entities reference it
-11. THE Web_App SHALL display the full hierarchy path for each geographic area
-12. WHEN the global geographic area filter is active, THE Web_App SHALL display the filtered area, all its descendants, AND all its ancestors in the tree view to maintain hierarchy context
-13. WHEN displaying ancestors of a filtered geographic area, THE Web_App SHALL visually indicate that ancestor areas are read-only (e.g., with a badge, icon, or muted styling)
-14. THE Web_App SHALL NOT suppress or hide ancestor geographic areas from the tree view when a filter is active, as ancestors provide essential navigational context
+1. THE Web_App SHALL display a hierarchical tree view of geographic areas using CloudScape TreeView component
+2. WHEN first navigating to the geographic areas view, THE Web_App SHALL fetch only the top-level geographic areas (based on the current global filter) and their immediate children
+3. WHEN no global filter is active, THE Web_App SHALL fetch all top-level areas with null parents (e.g., countries) and their immediate children (e.g., states or provinces)
+4. WHEN a specific geographic area is selected in the global filter, THE Web_App SHALL fetch only the immediate children of that filtered area
+5. THE Web_App SHALL use the depth query parameter when fetching geographic areas to limit recursive fetching
+6. WHEN initially loading the tree view, THE Web_App SHALL request depth=1 to fetch only one level of children
+7. WHEN a tree node is expanded by the user, THE Web_App SHALL fetch the children of that node on demand using GET /api/geographic-areas/:id/children
+8. THE Web_App SHALL use the childCount field from the API response to determine if a node has children
+9. WHEN childCount is 0, THE Web_App SHALL render the node as a leaf node without expansion affordance
+10. WHEN childCount is greater than 0, THE Web_App SHALL render the node with expansion affordance (arrow icon or similar)
+11. THE Web_App SHALL display a loading indicator on a node while fetching its children
+12. THE Web_App SHALL cache fetched children to avoid redundant API calls when collapsing and re-expanding nodes
+13. THE Web_App SHALL provide a dedicated page to create new geographic areas
+14. THE Web_App SHALL provide a dedicated page to edit existing geographic areas
+15. THE Web_App SHALL provide a delete button for geographic areas
+16. THE Web_App SHALL validate that geographic area name and type are provided
+17. THE Web_App SHALL use the Geographic_Area_Selector component for parent geographic area selection
+18. THE Web_App SHALL prevent circular parent-child relationships
+19. THE Web_App SHALL display a detail view showing geographic area information, child areas, and associated venues from the area and all descendant areas (recursive aggregation)
+20. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
+21. WHEN deleting a geographic area, THE Web_App SHALL display an error message explaining which entities reference it
+22. THE Web_App SHALL display the full hierarchy path for each geographic area
+23. WHEN the global geographic area filter is active, THE Web_App SHALL display the filtered area, its immediate children (initially), AND all its ancestors in the tree view to maintain hierarchy context
+24. WHEN displaying ancestors of a filtered geographic area, THE Web_App SHALL visually indicate that ancestor areas are read-only (e.g., with a badge, icon, or muted styling)
+25. THE Web_App SHALL NOT suppress or hide ancestor geographic areas from the tree view when a filter is active, as ancestors provide essential navigational context
+26. THE Web_App SHALL support progressive disclosure of the hierarchy through user-initiated node expansion
+27. THE Web_App SHALL maintain expansion state when navigating away and returning to the geographic areas view
 
 ### Requirement 6B1: Reusable Geographic Area Selector Component
 

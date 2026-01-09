@@ -409,9 +409,10 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 - [x] 9. Implement geographic area management
   - [x] 9.1 Create geographic area repository
     - Implement CRUD operations
-    - Implement hierarchical queries (children, ancestors)
+    - Implement hierarchical queries (children, ancestors) with depth limiting support
+    - Implement child count calculation for each geographic area
     - Implement statistics aggregation across hierarchy
-    - _Requirements: 5B.1, 5B.2, 5B.3, 5B.4, 5B.5, 5B.12, 5B.13, 5B.14, 5B.15_
+    - _Requirements: 5B.1, 5B.2, 5B.3, 5B.4, 5B.5, 5B.9, 5B.10, 5B.22, 5B.23, 5B.24, 5B.25, 5B.26_
 
   - [x] 9.2 Create geographic area service
     - Validate required fields (name, area type)
@@ -420,26 +421,30 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Prevent circular parent-child relationships
     - Prevent deletion if venues or child areas reference area
     - Calculate hierarchical statistics
-    - _Requirements: 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.11, 5B.15_
+    - Support depth-limited fetching for lazy loading (depth parameter)
+    - Include childCount in all geographic area responses
+    - _Requirements: 5B.2, 5B.3, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.16, 5B.17, 5B.18, 5B.19, 5B.20, 5B.21, 5B.26_
 
   - [ ]* 9.3 Write property tests for geographic area operations
     - **Property 1: Resource Creation Persistence**
     - **Property 2: Resource Update Persistence**
     - **Property 3: Resource Deletion Removes Resource**
     - **Property 13: Referenced Entity Deletion Prevention**
-    - **Validates: Requirements 5B.3, 5B.4, 5B.5, 5B.11**
+    - **Property 116D: Depth-Limited Fetching**
+    - **Property 116E: Child Count Accuracy**
+    - **Validates: Requirements 5B.3, 5B.4, 5B.5, 5B.10, 5B.11, 5B.13, 5B.14, 5B.15, 5B.21, 5B.22, 5B.23**
 
   - [x] 9.4 Create geographic area routes
-    - GET /api/geographic-areas
-    - GET /api/geographic-areas/:id
+    - GET /api/geographic-areas (with optional depth parameter)
+    - GET /api/geographic-areas/:id (returns childCount)
     - POST /api/geographic-areas
     - PUT /api/geographic-areas/:id
     - DELETE /api/geographic-areas/:id
-    - GET /api/geographic-areas/:id/children
+    - GET /api/geographic-areas/:id/children (returns childCount for each child)
     - GET /api/geographic-areas/:id/ancestors
     - GET /api/geographic-areas/:id/venues
     - GET /api/geographic-areas/:id/statistics
-    - _Requirements: 5B.1, 5B.2, 5B.3, 5B.4, 5B.5, 5B.12, 5B.13, 5B.14, 5B.15_
+    - _Requirements: 5B.1, 5B.2, 5B.9, 5B.13, 5B.14, 5B.15, 5B.22, 5B.23, 5B.24, 5B.25, 5B.26_
 
 - [x] 10. Checkpoint - Verify core entity management
   - Ensure all tests pass, ask the user if questions arise.

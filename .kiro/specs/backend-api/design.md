@@ -146,12 +146,12 @@ GET    /api/v1/venues/:id/activities   -> List activities at venue
 GET    /api/v1/venues/:id/participants -> List participants with venue as home
 
 // Geographic Area Routes
-GET    /api/v1/geographic-areas        -> List all geographic areas (supports ?geographicAreaId=<id> and ?search=<text> filters)
-GET    /api/v1/geographic-areas/:id    -> Get geographic area by ID
+GET    /api/v1/geographic-areas        -> List all geographic areas (supports ?geographicAreaId=<id>, ?search=<text>, and ?depth=<n> filters)
+GET    /api/v1/geographic-areas/:id    -> Get geographic area by ID (includes childCount field)
 POST   /api/v1/geographic-areas        -> Create geographic area
 PUT    /api/v1/geographic-areas/:id    -> Update geographic area
 DELETE /api/v1/geographic-areas/:id    -> Delete geographic area
-GET    /api/v1/geographic-areas/:id/children   -> List child geographic areas
+GET    /api/v1/geographic-areas/:id/children   -> List child geographic areas (includes childCount for each child)
 GET    /api/v1/geographic-areas/:id/ancestors  -> Get hierarchy path to root
 GET    /api/v1/geographic-areas/:id/venues     -> List venues in geographic area
 GET    /api/v1/geographic-areas/:id/statistics -> Get statistics for geographic area
@@ -192,7 +192,7 @@ Services implement business logic and coordinate operations:
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
-- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants, and ancestors for hierarchy context)
+- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context)
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering with OR logic within dimensions and AND logic across dimensions (array filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data, supports growth metrics with multi-dimensional filtering (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) where multiple values within a dimension use OR logic and multiple dimensions use AND logic
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
 - **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload
@@ -214,7 +214,7 @@ Repositories encapsulate Prisma database access:
 - **ActivityRepository**: CRUD operations and queries for activities
 - **AssignmentRepository**: CRUD operations for participant assignments
 - **VenueRepository**: CRUD operations and text-based search for venues (supports filtering by name/address and geographic area with pagination), queries for associated activities and current residents (filters participants by most recent address history)
-- **GeographicAreaRepository**: CRUD operations for geographic areas with text-based search (supports filtering by name and geographic area with pagination), hierarchical queries for ancestors and descendants, statistics aggregation
+- **GeographicAreaRepository**: CRUD operations for geographic areas with text-based search (supports filtering by name and geographic area with pagination), hierarchical queries for ancestors and descendants with depth limiting, child count calculation, statistics aggregation
 - **ParticipantAddressHistoryRepository**: Temporal tracking operations for participant home address changes
 - **ActivityVenueHistoryRepository**: Temporal tracking operations for activity-venue associations
 - **AuditLogRepository**: Audit log storage and retrieval
@@ -314,6 +314,15 @@ GeographicAreaCreateSchema = {
   name: string (required, min 1 char, max 200 chars),
   areaType: enum (required, NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD),
   parentGeographicAreaId: string (optional, valid UUID)
+}
+
+// Geographic Area Query Schema
+GeographicAreaQuerySchema = {
+  page: number (optional, default 1),
+  limit: number (optional, default 50, max 100),
+  geographicAreaId: string (optional, valid UUID, filters to specific area + descendants + ancestors),
+  search: string (optional, max 200 chars, case-insensitive partial match on name),
+  depth: number (optional, limits recursive depth of children fetched, omit for all descendants)
 }
 
 // Sync Operation Schema
@@ -2068,6 +2077,18 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Property 116C: Current venue determination with null dates**
 *For any* activity or participant with venue/address history containing null effectiveFrom dates, the system should correctly identify the current venue/address by treating null dates according to their semantic meaning.
 **Validates: Requirements 6.26, 6.27, 6.28, 6.29**
+
+**Property 116D: Depth-limited geographic area fetching**
+*For any* GET /api/geographic-areas request with a depth parameter, the API should return geographic areas with children fetched only up to the specified depth level.
+**Validates: Requirements 5B.2, 5B.3, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8**
+
+**Property 116E: Child count accuracy**
+*For any* geographic area returned by the API, the childCount field should accurately reflect the number of immediate children that area has.
+**Validates: Requirements 5B.10, 5B.11, 5B.23**
+
+**Property 116F: Backward compatibility with omitted depth**
+*For any* GET /api/geographic-areas request without a depth parameter, the API should return all descendant nodes recursively (existing behavior).
+**Validates: Requirements 5B.3**
 
 ### Pagination Properties
 

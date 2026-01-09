@@ -189,26 +189,37 @@ The Backend API package provides the RESTful API service that implements all bus
 
 ### Requirement 5B: Manage Geographic Areas
 
-**User Story:** As a community organizer, I want to create and manage geographic areas via API, so that I can organize venues hierarchically and report on statistics at different geographic levels.
+**User Story:** As a community organizer, I want to create and manage geographic areas via API with support for lazy loading and depth-limited fetching, so that I can organize venues hierarchically and efficiently navigate large geographic hierarchies without loading all nodes at once.
 
 #### Acceptance Criteria
 
-1. THE API SHALL provide a GET /api/geographic-areas endpoint that returns all geographic areas
-2. THE API SHALL provide a GET /api/geographic-areas/:id endpoint that returns a specific geographic area
-3. THE API SHALL provide a POST /api/geographic-areas endpoint that creates a new geographic area
-4. THE API SHALL provide a PUT /api/geographic-areas/:id endpoint that updates a geographic area
-5. THE API SHALL provide a DELETE /api/geographic-areas/:id endpoint that deletes a geographic area
-6. WHEN creating a geographic area, THE API SHALL require name and area type
-7. WHEN creating a geographic area, THE API SHALL accept an optional parent geographic area ID
-8. WHEN creating a geographic area, THE API SHALL validate that the parent geographic area exists if provided
-9. WHEN creating a geographic area, THE API SHALL prevent circular parent-child relationships
-10. THE API SHALL support area types: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD
-11. WHEN deleting a geographic area, THE API SHALL prevent deletion if venues or child geographic areas reference it
-12. THE API SHALL provide a GET /api/geographic-areas/:id/children endpoint that returns all child geographic areas
-13. THE API SHALL provide a GET /api/geographic-areas/:id/ancestors endpoint that returns the full hierarchy path to the root
-14. THE API SHALL provide a GET /api/geographic-areas/:id/venues endpoint that returns all venues in the geographic area and all descendant areas (recursive aggregation)
-15. THE API SHALL provide a GET /api/geographic-areas/:id/statistics endpoint that returns activity and participant statistics for the geographic area and all descendants (recursive aggregation)
-16. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return the specified geographic area, all its descendants, and all its ancestors (to maintain hierarchy context for tree view display)
+1. THE API SHALL provide a GET /api/geographic-areas endpoint that returns geographic areas with optional depth limiting
+2. THE API SHALL accept an optional depth query parameter on GET /api/geographic-areas to limit the recursive depth of children fetched
+3. WHEN depth parameter is omitted, THE API SHALL fetch all descendant nodes recursively (backward-compatible behavior)
+4. WHEN depth parameter is 0, THE API SHALL return only the requested geographic areas without any children
+5. WHEN depth parameter is 1, THE API SHALL return the requested geographic areas with their immediate children only
+6. WHEN depth parameter is N, THE API SHALL return the requested geographic areas with children up to N levels deep
+7. WHEN a geographicAreaId filter is provided with a depth parameter, THE API SHALL apply the depth limit starting from the filtered geographic area
+8. WHEN no geographicAreaId filter is provided with a depth parameter, THE API SHALL return top-level areas (null parent) with children up to the specified depth
+9. THE API SHALL provide a GET /api/geographic-areas/:id endpoint that returns a specific geographic area with child count
+10. WHEN returning a geographic area, THE API SHALL include a childCount field indicating the number of immediate children
+11. WHEN childCount is 0, THE frontend SHALL know the area is a leaf node without making an additional API call
+12. WHEN childCount is greater than 0, THE frontend SHALL know the area has children that can be fetched on demand
+13. THE API SHALL provide a POST /api/geographic-areas endpoint that creates a new geographic area
+14. THE API SHALL provide a PUT /api/geographic-areas/:id endpoint that updates a geographic area
+15. THE API SHALL provide a DELETE /api/geographic-areas/:id endpoint that deletes a geographic area
+16. WHEN creating a geographic area, THE API SHALL require name and area type
+17. WHEN creating a geographic area, THE API SHALL accept an optional parent geographic area ID
+18. WHEN creating a geographic area, THE API SHALL validate that the parent geographic area exists if provided
+19. WHEN creating a geographic area, THE API SHALL prevent circular parent-child relationships
+20. THE API SHALL support area types: NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD
+21. WHEN deleting a geographic area, THE API SHALL prevent deletion if venues or child geographic areas reference it
+22. THE API SHALL provide a GET /api/geographic-areas/:id/children endpoint that returns all immediate child geographic areas with their child counts
+23. WHEN fetching children via GET /api/geographic-areas/:id/children, THE API SHALL include childCount for each returned child area
+24. THE API SHALL provide a GET /api/geographic-areas/:id/ancestors endpoint that returns the full hierarchy path to the root
+25. THE API SHALL provide a GET /api/geographic-areas/:id/venues endpoint that returns all venues in the geographic area and all descendant areas (recursive aggregation)
+26. THE API SHALL provide a GET /api/geographic-areas/:id/statistics endpoint that returns activity and participant statistics for the geographic area and all descendants (recursive aggregation)
+27. WHEN a geographic area filter is provided via geographicAreaId query parameter with depth parameter, THE API SHALL return the specified geographic area with children up to the specified depth, plus all ancestors (to maintain hierarchy context for tree view display)
 
 ### Requirement 6: Analyze Community Engagement
 
