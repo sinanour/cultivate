@@ -12,12 +12,13 @@ interface UpdateGeographicAreaData extends Partial<CreateGeographicAreaData> {
 }
 
 export class GeographicAreaService {
-  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<GeographicArea[]> {
+  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null, search?: string, depth?: number): Promise<GeographicArea[]> {
     const params = new URLSearchParams();
     if (page) params.append('page', page.toString());
     if (limit) params.append('limit', limit.toString());
     if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
     if (search) params.append('search', search);
+    if (depth !== undefined) params.append('depth', depth.toString());
     const query = params.toString();
     return ApiClient.get<GeographicArea[]>(`/geographic-areas${query ? `?${query}` : ''}`);
   }

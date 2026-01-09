@@ -93,6 +93,7 @@ export interface GeographicArea {
     parentGeographicAreaId?: string;
     parent?: GeographicArea;
     children?: GeographicArea[];
+    childCount?: number;  // Number of immediate children (used for lazy loading)
     version: number;
     createdAt: string;
     updatedAt: string;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
@@ -14,11 +14,18 @@ import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
-import { buildGeographicAreaTree, type TreeNode } from '../../utils/tree.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
+
+interface TreeNode {
+  id: string;
+  text: string;
+  data: GeographicArea;
+  children?: TreeNode[];
+  isLoading?: boolean;
+}
 
 export function GeographicAreaList() {
   const queryClient = useQueryClient();
@@ -33,10 +40,21 @@ export function GeographicAreaList() {
   const [showImportResults, setShowImportResults] = useState(false);
   const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Cache for fetched children to avoid redundant API calls
+  const [childrenCache, setChildrenCache] = useState<Map<string, GeographicArea[]>>(new Map());
+  const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
 
+  // Fetch initial geographic areas with depth=1 (top-level + immediate children)
   const { data: geographicAreas = [], isLoading } = useQuery({
-    queryKey: ['geographicAreas', selectedGeographicAreaId],
-    queryFn: () => GeographicAreaService.getGeographicAreas(undefined, undefined, selectedGeographicAreaId),
+    queryKey: ['geographicAreas', selectedGeographicAreaId, 'depth-1'],
+    queryFn: () => GeographicAreaService.getGeographicAreas(
+      undefined, 
+      undefined, 
+      selectedGeographicAreaId, 
+      undefined, 
+      1  // depth=1 for lazy loading
+    ),
   });
 
   const deleteMutation = useMutation({
@@ -44,32 +62,116 @@ export function GeographicAreaList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geographicAreas'] });
       setDeleteError('');
+      // Clear children cache on delete
+      setChildrenCache(new Map());
     },
     onError: (error: Error) => {
       setDeleteError(error.message || 'Failed to delete geographic area. It may be referenced by venues or child areas.');
     },
   });
 
-  // Helper function to check if an area is a descendant of another area
-  const isDescendantOf = (areaId: string, potentialAncestorId: string, areas: GeographicArea[]): boolean => {
-    const area = areas.find(a => a.id === areaId);
-    if (!area || !area.parentGeographicAreaId) {
-      return false;
+  // Fetch children for a specific node on demand
+  const fetchChildren = useCallback(async (parentId: string) => {
+    // Check cache first
+    if (childrenCache.has(parentId)) {
+      return childrenCache.get(parentId)!;
     }
-    
-    if (area.parentGeographicAreaId === potentialAncestorId) {
-      return true;
+
+    // Mark as loading
+    setLoadingNodes(prev => new Set(prev).add(parentId));
+
+    try {
+      const children = await GeographicAreaService.getChildren(parentId);
+      
+      // Update cache
+      setChildrenCache(prev => new Map(prev).set(parentId, children));
+      
+      return children;
+    } finally {
+      // Remove from loading
+      setLoadingNodes(prev => {
+        const next = new Set(prev);
+        next.delete(parentId);
+        return next;
+      });
     }
-    
-    // Recursively check parent
-    return isDescendantOf(area.parentGeographicAreaId, potentialAncestorId, areas);
-  };
+  }, [childrenCache]);
+
+  // Build tree structure from flat list with lazy loading support
+  const buildTree = useCallback((areas: GeographicArea[]): TreeNode[] => {
+    const areaMap = new Map<string, GeographicArea>();
+    areas.forEach(area => areaMap.set(area.id, area));
+
+    const rootNodes: TreeNode[] = [];
+    const nodeMap = new Map<string, TreeNode>();
+
+    // First pass: create nodes
+    areas.forEach(area => {
+      const node: TreeNode = {
+        id: area.id,
+        text: area.name,
+        data: area,
+        isLoading: loadingNodes.has(area.id),
+      };
+
+      // Check if we have cached children for this node
+      const cachedChildren = childrenCache.get(area.id);
+      if (cachedChildren) {
+        // Build child nodes from cache
+        node.children = cachedChildren.map(child => ({
+          id: child.id,
+          text: child.name,
+          data: child,
+          children: child.childCount && child.childCount > 0 ? [] : undefined, // Empty array if has children, undefined if leaf
+        }));
+      } else if (area.children && area.children.length > 0) {
+        // Use children from initial fetch
+        node.children = area.children.map(child => ({
+          id: child.id,
+          text: child.name,
+          data: child,
+          children: child.childCount && child.childCount > 0 ? [] : undefined,
+        }));
+      } else if (area.childCount && area.childCount > 0) {
+        // Has children but not loaded yet - show empty array to enable expansion
+        node.children = [];
+      }
+      // If childCount is 0 or undefined, children remains undefined (leaf node)
+
+      nodeMap.set(area.id, node);
+    });
+
+    // Second pass: build hierarchy
+    areas.forEach(area => {
+      const node = nodeMap.get(area.id)!;
+      
+      if (!area.parentGeographicAreaId) {
+        // Root node
+        rootNodes.push(node);
+      } else {
+        // Child node - add to parent if parent exists in current dataset
+        const parentNode = nodeMap.get(area.parentGeographicAreaId);
+        if (parentNode) {
+          if (!parentNode.children) {
+            parentNode.children = [];
+          }
+          // Only add if not already present
+          if (!parentNode.children.find(c => c.id === node.id)) {
+            parentNode.children.push(node);
+          }
+        } else {
+          // Parent not in dataset (might be filtered out) - treat as root
+          rootNodes.push(node);
+        }
+      }
+    });
+
+    return rootNodes;
+  }, [childrenCache, loadingNodes]);
+
+  const treeData = buildTree(geographicAreas);
 
   // Helper function to check if an area is a read-only ancestor
-  // An area is a read-only ancestor if:
-  // 1. User has authorization restrictions (authorizedAreaIds is not empty)
-  // 2. The area is NOT in the user's directly authorized areas
-  // 3. The area IS displayed (meaning it's an ancestor of an authorized area)
   const isReadOnlyAncestor = (areaId: string): boolean => {
     // If no authorization restrictions, no areas are read-only
     if (authorizedAreaIds.size === 0) {
@@ -83,8 +185,21 @@ export function GeographicAreaList() {
     
     // If we have a filter active, check if it's an ancestor of the filtered area
     if (selectedGeographicAreaId) {
-      return areaId !== selectedGeographicAreaId && 
-             !isDescendantOf(areaId, selectedGeographicAreaId, geographicAreas);
+      const area = geographicAreas.find(a => a.id === areaId);
+      if (!area) return false;
+      
+      // If this is the filtered area itself, it's not an ancestor
+      if (areaId === selectedGeographicAreaId) {
+        return false;
+      }
+      
+      // Check if filtered area is a descendant of this area
+      const isAncestor = geographicAreas.some(a => 
+        a.id === selectedGeographicAreaId && 
+        isDescendantOf(a, areaId, geographicAreas)
+      );
+      
+      return isAncestor;
     }
     
     // No explicit filter, but user has restrictions
@@ -92,26 +207,21 @@ export function GeographicAreaList() {
     return true;
   };
 
-  const treeData = buildGeographicAreaTree(geographicAreas);
-
-  // Expand all nodes by default when data loads
-  useEffect(() => {
-    if (geographicAreas.length > 0 && expandedItems.length === 0) {
-      const getAllNodeIds = (nodes: TreeNode[]): string[] => {
-        const ids: string[] = [];
-        const traverse = (node: TreeNode) => {
-          if (node.children && node.children.length > 0) {
-            ids.push(node.id);
-            node.children.forEach(traverse);
-          }
-        };
-        nodes.forEach(traverse);
-        return ids;
-      };
-      
-      setExpandedItems(getAllNodeIds(treeData));
+  const isDescendantOf = (area: GeographicArea, potentialAncestorId: string, areas: GeographicArea[]): boolean => {
+    if (!area.parentGeographicAreaId) {
+      return false;
     }
-  }, [geographicAreas, treeData, expandedItems.length]);
+    
+    if (area.parentGeographicAreaId === potentialAncestorId) {
+      return true;
+    }
+    
+    // Recursively check parent
+    const parent = areas.find(a => a.id === area.parentGeographicAreaId);
+    if (!parent) return false;
+    
+    return isDescendantOf(parent, potentialAncestorId, areas);
+  };
 
   const handleEdit = (area: GeographicArea) => {
     navigate(`/geographic-areas/${area.id}/edit`);
@@ -160,6 +270,8 @@ export function GeographicAreaList() {
 
       if (result.successCount > 0) {
         queryClient.invalidateQueries({ queryKey: ['geographicAreas'] });
+        // Clear children cache on import
+        setChildrenCache(new Map());
       }
     } catch (error) {
       setCsvError(error instanceof Error ? error.message : 'Failed to import geographic areas');
@@ -176,17 +288,38 @@ export function GeographicAreaList() {
 
   const getItemChildren = (node: TreeNode) => node.children || [];
 
-  const handleToggleItem = (nodeId: string) => {
-    setExpandedItems(prev => 
-      prev.includes(nodeId)
-        ? prev.filter(id => id !== nodeId)
-        : [...prev, nodeId]
-    );
+  const handleToggleItem = async (event: { detail: { id: string; expanded: boolean } }) => {
+    const { id, expanded } = event.detail;
+    
+    if (expanded) {
+      // Expanding - fetch children if not already loaded
+      const node = findNodeById(treeData, id);
+      if (node && node.children && node.children.length === 0 && node.data.childCount && node.data.childCount > 0) {
+        // Has children but not loaded yet - fetch them
+        await fetchChildren(id);
+        // The children are now in cache, which will trigger a re-render via state update
+      }
+      
+      setExpandedItems(prev => [...prev, id]);
+    } else {
+      // Collapsing
+      setExpandedItems(prev => prev.filter(itemId => itemId !== id));
+    }
+  };
+
+  const findNodeById = (nodes: TreeNode[], id: string): TreeNode | null => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNodeById(node.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
   };
 
   const renderItem = (node: TreeNode): TreeViewProps.TreeItem => {
     const area = node.data;
-    const hasChildren = node.children && node.children.length > 0;
     
     // Determine if this area is a read-only ancestor
     const isAncestor = isReadOnlyAncestor(area.id);
@@ -228,20 +361,9 @@ export function GeographicAreaList() {
     return {
       content: (
         <div
-          onClick={() => hasChildren && handleToggleItem(node.id)}
           style={{
-            cursor: hasChildren ? 'pointer' : 'default',
-            transition: 'background-color 0.15s ease',
             padding: '8px 0',
             opacity: isAncestor ? 0.7 : 1, // Muted styling for ancestors
-          }}
-          onMouseEnter={(e) => {
-            if (hasChildren) {
-              e.currentTarget.style.backgroundColor = 'rgba(0, 7, 22, 0.04)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <SpaceBetween direction="horizontal" size="xs">
@@ -257,6 +379,9 @@ export function GeographicAreaList() {
             <Badge color={getAreaTypeBadgeColor(area.areaType)}>{area.areaType}</Badge>
             {isAncestor && (
               <Badge color="grey">Read-Only</Badge>
+            )}
+            {node.isLoading && (
+              <Badge color="blue">Loading...</Badge>
             )}
           </SpaceBetween>
         </div>
@@ -349,14 +474,7 @@ export function GeographicAreaList() {
               getItemChildren={getItemChildren}
               renderItem={renderItem}
               expandedItems={expandedItems}
-              onItemToggle={(event) => {
-                const { id, expanded } = event.detail;
-                setExpandedItems(prev => 
-                  expanded 
-                    ? [...prev, id]
-                    : prev.filter(itemId => itemId !== id)
-                );
-              }}
+              onItemToggle={handleToggleItem}
               connectorLines="vertical"
               ariaLabel="Geographic areas hierarchy"
             />
