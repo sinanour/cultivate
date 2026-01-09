@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@cloudscape-design/components": "^3.0.1163",
+    "@cloudscape-design/design-tokens": "^3.0.66",
     "@cloudscape-design/global-styles": "^1.0.49",
     "@tanstack/react-query": "^5.90.12",
     "@types/leaflet": "^1.9.21",
@@ -45,6 +46,7 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^16.5.0",
     "jsdom": "^27.3.0",
+    "sass-embedded": "^1.97.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",

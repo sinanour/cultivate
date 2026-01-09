@@ -9,6 +9,8 @@ import Badge from '@cloudscape-design/components/badge';
 import Link from '@cloudscape-design/components/link';
 import Alert from '@cloudscape-design/components/alert';
 import Box from '@cloudscape-design/components/box';
+import Grid from '@cloudscape-design/components/grid';
+import Spinner from '@cloudscape-design/components/spinner';
 import TreeView, { type TreeViewProps } from '@cloudscape-design/components/tree-view';
 import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
@@ -18,6 +20,7 @@ import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
+import styles from './GeographicAreaList.module.scss';
 
 interface TreeNode {
   id: string;
@@ -109,8 +112,8 @@ export function GeographicAreaList() {
     const rootNodes: TreeNode[] = [];
     const nodeMap = new Map<string, TreeNode>();
 
-    // First pass: create nodes
-    areas.forEach(area => {
+    // Helper function to recursively build a node with its cached children
+    const buildNodeWithCache = (area: GeographicArea): TreeNode => {
       const node: TreeNode = {
         id: area.id,
         text: area.name,
@@ -120,37 +123,13 @@ export function GeographicAreaList() {
 
       // Check if we have cached children for this node
       const cachedChildren = childrenCache.get(area.id);
-      if (cachedChildren) {
-        // Build child nodes from cache
-        node.children = cachedChildren.map(child => ({
-          id: child.id,
-          text: child.name,
-          data: child,
-          children: child.childCount && child.childCount > 0 ? [
-            // Placeholder for unloaded children
-            {
-              id: `${child.id}-loading-placeholder`,
-              text: 'Loading...',
-              data: child,
-            }
-          ] : undefined,
-        }));
+      if (cachedChildren && cachedChildren.length > 0) {
+        // Build child nodes from cache recursively
+        node.children = cachedChildren.map(child => buildNodeWithCache(child));
       } else if (area.children && area.children.length > 0) {
-        // Use children from initial fetch
-        node.children = area.children.map(child => ({
-          id: child.id,
-          text: child.name,
-          data: child,
-          children: child.childCount && child.childCount > 0 ? [
-            // Placeholder for unloaded children
-            {
-              id: `${child.id}-loading-placeholder`,
-              text: 'Loading...',
-              data: child,
-            }
-          ] : undefined,
-        }));
-      } else if (area.childCount && area.childCount > 0) {
+        // Use children from initial fetch recursively
+        node.children = area.children.map(child => buildNodeWithCache(child));
+      } else if (area.childCount && area.childCount > 0 && !loadingNodes.has(area.id)) {
         // Has children but not loaded yet - add placeholder to enable expansion
         node.children = [
           {
@@ -162,6 +141,12 @@ export function GeographicAreaList() {
       }
       // If childCount is 0 or undefined, children remains undefined (leaf node)
 
+      return node;
+    };
+
+    // First pass: create nodes
+    areas.forEach(area => {
+      const node = buildNodeWithCache(area);
       nodeMap.set(area.id, node);
     });
 
@@ -176,11 +161,16 @@ export function GeographicAreaList() {
         // Child node - add to parent if parent exists in current dataset
         const parentNode = nodeMap.get(area.parentGeographicAreaId);
         if (parentNode) {
-          if (!parentNode.children) {
+          // Replace the entire children array from cache if available
+          const cachedChildren = childrenCache.get(area.parentGeographicAreaId);
+          if (cachedChildren) {
+            // Parent has cached children - rebuild from cache
+            parentNode.children = cachedChildren.map(child => buildNodeWithCache(child));
+          } else if (!parentNode.children) {
             parentNode.children = [];
           }
-          // Only add if not already present
-          if (!parentNode.children.find(c => c.id === node.id)) {
+          // Only add if not already present (for non-cached scenarios)
+          if (!cachedChildren && !parentNode.children.find(c => c.id === node.id)) {
             parentNode.children.push(node);
           }
         } else {
@@ -316,22 +306,24 @@ export function GeographicAreaList() {
     const { id, expanded } = event.detail;
     
     if (expanded) {
-      // Expanding - fetch children if not already loaded
+      // Add to expanded items first for immediate UI feedback
+      setExpandedItems(prev => [...prev, id]);
+      
+      // Fetch children if not already loaded
       const node = findNodeById(treeData, id);
       if (node && node.data.childCount && node.data.childCount > 0) {
-        // Check if children are not loaded yet (has placeholder or empty array)
+        // Check if children are not loaded yet (has placeholder or not in cache)
         const hasPlaceholder = node.children && node.children.length > 0 && 
                               node.children[0].id.endsWith('-loading-placeholder');
-        const isEmpty = node.children && node.children.length === 0;
+        const notInCache = !childrenCache.has(id);
         
-        if (hasPlaceholder || isEmpty) {
+        if (hasPlaceholder || notInCache) {
           // Children not loaded yet - fetch them
           await fetchChildren(id);
           // The children are now in cache, which will trigger a re-render via state update
+          // The buildTree function will use the cache to replace the placeholder
         }
       }
-      
-      setExpandedItems(prev => [...prev, id]);
     } else {
       // Collapsing
       setExpandedItems(prev => prev.filter(itemId => itemId !== id));
@@ -356,7 +348,8 @@ export function GeographicAreaList() {
         content: (
           <div style={{ padding: '8px 0', opacity: 0.5 }}>
             <SpaceBetween direction="horizontal" size="xs">
-              <span>Loading...</span>
+              <Spinner size="normal" variant="disabled" />
+              <span className={styles.loadingText}>Loading...</span>
             </SpaceBetween>
           </div>
         ),
@@ -508,8 +501,13 @@ export function GeographicAreaList() {
           }
         >
           {isLoading ? (
-            <Box key="loading" textAlign="center" padding="l">
-              Loading geographic areas...
+            <Box key="loading" padding="l">
+              <Grid gridDefinition={[{ colspan: 12 }]}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                  <Spinner size="normal" variant="disabled" />
+                  <span className={styles.loadingText}>Loading geographic areas</span>
+                </div>
+              </Grid>
             </Box>
           ) : treeData.length > 0 ? (
             <TreeView

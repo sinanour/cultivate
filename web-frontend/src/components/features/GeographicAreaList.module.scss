@@ -1,0 +1,5 @@
+@use '@cloudscape-design/design-tokens' as awsui;
+
+.loadingText {
+  color: awsui.$color-text-form-secondary;
+}
