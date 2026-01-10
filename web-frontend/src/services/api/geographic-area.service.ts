@@ -22,7 +22,7 @@ export interface PaginatedResponse<T> {
 }
 
 export class GeographicAreaService {
-  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null, search?: string, depth?: number): Promise<PaginatedResponse<GeographicArea> | GeographicArea[]> {
+  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null, search?: string, depth?: number): Promise<PaginatedResponse<GeographicArea>> {
     const params = new URLSearchParams();
     if (page) params.append('page', page.toString());
     if (limit) params.append('limit', limit.toString());
@@ -36,8 +36,17 @@ export class GeographicAreaService {
       return ApiClient.get<PaginatedResponse<GeographicArea>>(`/geographic-areas${query ? `?${query}` : ''}`);
     }
 
-    // Otherwise, expect array response
-    return ApiClient.get<GeographicArea[]>(`/geographic-areas${query ? `?${query}` : ''}`);
+    // Otherwise, ApiClient returns the array directly (unwrapped), so wrap it
+    const areas = await ApiClient.get<GeographicArea[]>(`/geographic-areas${query ? `?${query}` : ''}`);
+    return {
+      data: areas,
+      pagination: {
+        page: 1,
+        limit: areas.length,
+        total: areas.length,
+        totalPages: 1
+      }
+    };
   }
 
   static async getChildrenPaginated(parentId: string, page: number = 1, limit: number = 100): Promise<PaginatedResponse<GeographicArea>> {

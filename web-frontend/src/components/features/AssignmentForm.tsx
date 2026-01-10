@@ -172,13 +172,12 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
                 }}
                 entityType="participant"
                 fetchFunction={async (params) => {
-                  const data = await ParticipantService.getParticipants(
+                  return await ParticipantService.getParticipants(
                     params.page,
                     params.limit,
                     params.geographicAreaId,
                     params.search
                   );
-                  return { data };
                 }}
                 formatOption={(p) => ({
                   value: p.id,

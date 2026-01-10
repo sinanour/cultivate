@@ -35,14 +35,30 @@ export interface PaginatedResponse<T> {
 }
 
 export class ParticipantService {
-    static async getParticipants(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<Participant[]> {
+    static async getParticipants(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<PaginatedResponse<Participant>> {
         const params = new URLSearchParams();
         if (page) params.append('page', page.toString());
         if (limit) params.append('limit', limit.toString());
         if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
         if (search) params.append('search', search);
         const query = params.toString();
-        return ApiClient.get<Participant[]>(`/participants${query ? `?${query}` : ''}`);
+
+        // If pagination params provided, return paginated response
+        if (page !== undefined || limit !== undefined) {
+            return ApiClient.get<PaginatedResponse<Participant>>(`/participants${query ? `?${query}` : ''}`);
+        }
+
+        // Otherwise, ApiClient returns the array directly (unwrapped), so wrap it
+        const participants = await ApiClient.get<Participant[]>(`/participants${query ? `?${query}` : ''}`);
+        return {
+            data: participants,
+            pagination: {
+                page: 1,
+                limit: participants.length,
+                total: participants.length,
+                totalPages: 1
+            }
+        };
     }
 
     static async getParticipantsPaginated(page: number = 1, limit: number = 100, geographicAreaId?: string | null, search?: string): Promise<PaginatedResponse<Participant>> {

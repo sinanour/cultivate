@@ -25,14 +25,30 @@ export interface PaginatedResponse<T> {
 }
 
 export class VenueService {
-    static async getVenues(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<Venue[]> {
+    static async getVenues(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<PaginatedResponse<Venue>> {
         const params = new URLSearchParams();
         if (page) params.append('page', page.toString());
         if (limit) params.append('limit', limit.toString());
         if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
         if (search) params.append('search', search);
         const query = params.toString();
-        return ApiClient.get<Venue[]>(`/venues${query ? `?${query}` : ''}`);
+
+        // If pagination params provided, return paginated response
+        if (page !== undefined || limit !== undefined) {
+            return ApiClient.get<PaginatedResponse<Venue>>(`/venues${query ? `?${query}` : ''}`);
+        }
+
+        // Otherwise, ApiClient returns the array directly (unwrapped), so wrap it
+        const venues = await ApiClient.get<Venue[]>(`/venues${query ? `?${query}` : ''}`);
+        return {
+            data: venues,
+            pagination: {
+                page: 1,
+                limit: venues.length,
+                total: venues.length,
+                totalPages: 1
+            }
+        };
   }
 
     static async getVenuesPaginated(page: number = 1, limit: number = 100, geographicAreaId?: string | null, search?: string): Promise<PaginatedResponse<Venue>> {

@@ -826,13 +826,12 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                           }}
                           entityType="venue"
                           fetchFunction={async (params) => {
-                            const data = await VenueService.getVenues(
+                            return await VenueService.getVenues(
                               params.page,
                               params.limit,
                               params.geographicAreaId,
                               params.search
                             );
-                            return { data };
                           }}
                           formatOption={(v) => ({
                             value: v.id,
@@ -964,13 +963,12 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                           }}
                           entityType="participant"
                           fetchFunction={async (params) => {
-                            const data = await ParticipantService.getParticipants(
+                            return await ParticipantService.getParticipants(
                               params.page,
                               params.limit,
                               params.geographicAreaId,
                               params.search
                             );
-                            return { data };
                           }}
                           formatOption={(p) => ({
                             value: p.id,

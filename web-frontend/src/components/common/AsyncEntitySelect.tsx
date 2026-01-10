@@ -21,7 +21,7 @@ export interface AsyncEntitySelectProps {
     limit?: number;
     geographicAreaId?: string;
     search?: string;
-  }) => Promise<{ data: any[] }>;
+  }) => Promise<{ data: any[]; pagination?: any }>;
   formatOption: (entity: any) => AsyncEntitySelectOption;
   placeholder?: string;
   disabled?: boolean;

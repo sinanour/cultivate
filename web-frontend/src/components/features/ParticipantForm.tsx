@@ -783,13 +783,12 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                           }}
                           entityType="venue"
                           fetchFunction={async (params) => {
-                            const data = await VenueService.getVenues(
+                            return await VenueService.getVenues(
                               params.page,
                               params.limit,
                               params.geographicAreaId,
                               params.search
                             );
-                            return { data };
                           }}
                           formatOption={(v) => ({
                             value: v.id,
