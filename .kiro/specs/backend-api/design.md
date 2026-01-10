@@ -118,7 +118,7 @@ PUT    /api/v1/participants/:id        -> Update participant
 DELETE /api/v1/participants/:id        -> Delete participant
 
 // Activity Routes
-GET    /api/v1/activities              -> List all activities (supports ?geographicAreaId=<id> filter)
+GET    /api/v1/activities              -> List all activities (supports ?geographicAreaId=<id>, ?activityTypeIds=<ids>, ?activityCategoryIds=<ids>, ?status=<statuses>, ?populationIds=<ids>, ?startDate=<date>, ?endDate=<date> filters)
 GET    /api/v1/activities/:id          -> Get activity by ID
 POST   /api/v1/activities              -> Create activity
 PUT    /api/v1/activities/:id          -> Update activity
@@ -153,6 +153,8 @@ PUT    /api/v1/geographic-areas/:id    -> Update geographic area
 DELETE /api/v1/geographic-areas/:id    -> Delete geographic area
 GET    /api/v1/geographic-areas/:id/children   -> List child geographic areas (includes childCount for each child)
 GET    /api/v1/geographic-areas/:id/ancestors  -> Get hierarchy path to root
+POST   /api/v1/geographic-areas/batch-ancestors -> Get ancestors for multiple areas in a single request
+POST   /api/v1/geographic-areas/batch-details  -> Get full entity details for multiple areas in a single request
 GET    /api/v1/geographic-areas/:id/venues     -> List venues in geographic area
 GET    /api/v1/geographic-areas/:id/statistics -> Get statistics for geographic area
 
@@ -197,10 +199,10 @@ Services implement business logic and coordinate operations:
 - **PopulationService**: Manages population CRUD operations (admin only for create/update/delete), validates uniqueness, prevents deletion of referenced populations, manages participant-population associations (many-to-many), validates participant and population existence, prevents duplicate associations
 - **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction, handles user deletion with cascade deletion of associated geographic authorization rules, prevents deletion of the last administrator user
 - **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
-- **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries
+- **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports comprehensive filtering for list queries (geographic area, activity type, activity category, status, populations, date range) with OR logic within dimensions and AND logic across dimensions
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
-- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context)
+- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context), provides batch ancestor fetching for multiple areas in a single request, provides batch details fetching for complete entity data of multiple areas in a single request
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering with OR logic within dimensions and AND logic across dimensions (array filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data, supports growth metrics with multi-dimensional filtering (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) where multiple values within a dimension use OR logic and multiple dimensions use AND logic
 - **MapDataService**: Provides optimized map visualization data with lightweight marker endpoints, batched pagination (100 items per batch), and lazy-loaded popup content, returns minimal fields for fast marker rendering (coordinates and IDs only), supports incremental rendering through paginated responses with total count metadata, fetches detailed popup content on-demand when markers are clicked, supports all filtering dimensions (geographic area, activity category, activity type, venue, population, date range, status), applies geographic authorization filtering, excludes entities without coordinates from marker responses, groups participant homes by venue to avoid duplicate markers
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
@@ -300,6 +302,19 @@ ActivityCreateSchema = {
   startDate: date (required),
   endDate: date (optional, must be after startDate if provided),
   status: enum (optional, defaults to PLANNED)
+}
+
+// Activity Query Schema
+ActivityQuerySchema = {
+  page: number (optional, default 1),
+  limit: number (optional, default 100, max 100),
+  geographicAreaId: string (optional, valid UUID, filters to specific area + descendants),
+  activityTypeIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  activityCategoryIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  status: string[] (optional, array of PLANNED | ACTIVE | COMPLETED | CANCELLED, OR logic within dimension),
+  populationIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
+  startDate: string (optional, ISO 8601 datetime format, filters activities starting on or after this date),
+  endDate: string (optional, ISO 8601 datetime format, filters activities ending on or before this date)
 }
 
 // Assignment Schema
@@ -526,6 +541,179 @@ Returns activity lifecycle event data showing activities started and completed w
 - When multiple filters provided, applies AND logic
 - Results sorted alphabetically by groupName
 - Returns empty array when no activities match filters
+
+### Batch Ancestors Endpoint
+
+**POST /api/v1/geographic-areas/batch-ancestors**
+
+Returns ancestor data for multiple geographic areas in a single optimized request, minimizing backend round trips for the frontend's intelligent ancestor batching.
+
+**Request Body:**
+```typescript
+{
+  areaIds: string[]  // Array of geographic area UUIDs (max 100)
+}
+```
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: {
+    [areaId: string]: Array<{
+      id: string,
+      name: string,
+      areaType: string,
+      parentGeographicAreaId: string | null
+    }>
+  }
+}
+```
+
+**Example:**
+```typescript
+// Request
+POST /api/v1/geographic-areas/batch-ancestors
+{
+  "areaIds": ["area-1-id", "area-2-id", "area-3-id"]
+}
+
+// Response
+{
+  "success": true,
+  "data": {
+    "area-1-id": [
+      { "id": "parent-1", "name": "City A", "areaType": "CITY", "parentGeographicAreaId": "province-1" },
+      { "id": "province-1", "name": "Province B", "areaType": "PROVINCE", "parentGeographicAreaId": null }
+    ],
+    "area-2-id": [
+      { "id": "parent-2", "name": "City C", "areaType": "CITY", "parentGeographicAreaId": null }
+    ],
+    "area-3-id": []  // No ancestors (top-level area)
+  }
+}
+```
+
+**Business Logic:**
+- Validates all provided area IDs are valid UUIDs (returns 400 if invalid)
+- Limits request to maximum 100 area IDs (returns 400 if exceeded)
+- For each area ID, fetches complete ancestor chain from immediate parent to root
+- Optimizes query by collecting all unique ancestor IDs and fetching in a single database query
+- Returns ancestors ordered from closest (immediate parent) to most distant (root)
+- Returns empty array for areas with no parent (top-level areas)
+- Handles non-existent area IDs gracefully (returns empty array for that ID)
+- Uses efficient recursive CTE query or iterative parent traversal to fetch all ancestors
+- Applies geographic authorization filtering (only returns ancestors user is authorized to see)
+
+**Performance Optimizations:**
+- Single database query fetches all unique ancestors across all requested areas
+- Deduplicates ancestor IDs before querying to avoid redundant fetches
+- Uses database indexes on parentGeographicAreaId for fast traversal
+- Returns minimal fields (id, name, areaType, parentGeographicAreaId) for efficiency
+
+### Batch Details Endpoint
+
+**POST /api/v1/geographic-areas/batch-details**
+
+Returns complete entity details for multiple geographic areas in a single optimized request, complementing the batch-ancestors endpoint by allowing the frontend to fetch full geographic area data after obtaining ancestor IDs.
+
+**Request Body:**
+```typescript
+{
+  areaIds: string[]  // Array of geographic area UUIDs (max 100)
+}
+```
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: {
+    [areaId: string]: {
+      id: string,
+      name: string,
+      areaType: string,
+      parentGeographicAreaId: string | null,
+      childCount: number,
+      createdAt: string,
+      updatedAt: string
+    }
+  }
+}
+```
+
+**Example:**
+```typescript
+// Request
+POST /api/v1/geographic-areas/batch-details
+{
+  "areaIds": ["area-1-id", "area-2-id", "area-3-id"]
+}
+
+// Response
+{
+  "success": true,
+  "data": {
+    "area-1-id": {
+      "id": "area-1-id",
+      "name": "Downtown",
+      "areaType": "NEIGHBOURHOOD",
+      "parentGeographicAreaId": "city-1-id",
+      "childCount": 0,
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    },
+    "area-2-id": {
+      "id": "area-2-id",
+      "name": "Vancouver",
+      "areaType": "CITY",
+      "parentGeographicAreaId": "province-1-id",
+      "childCount": 15,
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    }
+    // area-3-id omitted (non-existent or unauthorized)
+  }
+}
+```
+
+**Business Logic:**
+- Validates all provided area IDs are valid UUIDs (returns 400 if invalid)
+- Limits request to maximum 100 area IDs (returns 400 if exceeded)
+- Fetches all requested geographic areas in a single database query
+- Returns complete geographic area objects with all fields
+- Omits non-existent area IDs from response map (graceful handling)
+- Applies geographic authorization filtering (omits unauthorized areas)
+- Optimizes query by fetching all areas in a single SELECT with WHERE id IN (...) clause
+
+**Performance Optimizations:**
+- Single database query fetches all requested areas
+- Uses database indexes on id (primary key) for fast lookup
+- Returns complete entity data including childCount for immediate use
+- Complements batch-ancestors by providing full details after ancestor IDs are obtained
+
+**Integration Pattern:**
+```typescript
+// Step 1: Fetch ancestor IDs for a batch of areas
+const ancestorResponse = await fetch('/api/v1/geographic-areas/batch-ancestors', {
+  method: 'POST',
+  body: JSON.stringify({ areaIds: ['area-1', 'area-2', 'area-3'] })
+});
+
+// Step 2: Collect all unique ancestor IDs from the response
+const allAncestorIds = new Set();
+Object.values(ancestorResponse.data).forEach(ancestors => {
+  ancestors.forEach(ancestor => allAncestorIds.add(ancestor.id));
+});
+
+// Step 3: Fetch full details for all ancestors in a single request
+const detailsResponse = await fetch('/api/v1/geographic-areas/batch-details', {
+  method: 'POST',
+  body: JSON.stringify({ areaIds: Array.from(allAncestorIds) })
+});
+
+// Now have complete geographic area objects with all fields for display
+```
 
 ### Map Data API Endpoints
 
@@ -1619,6 +1807,42 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Property 19: Activity retrieval by ID**
 *For any* existing activity, retrieving it by ID should return the correct activity data including related activity type.
 **Validates: Requirements 4.2**
+
+**Property 19A: Activity type filter accuracy**
+*For any* activity type filter with one or more activity type IDs, all returned activities should have an activity type ID matching at least one of the specified IDs.
+**Validates: Requirements 4.21, 4.22**
+
+**Property 19B: Activity category filter accuracy**
+*For any* activity category filter with one or more activity category IDs, all returned activities should belong to an activity type whose category ID matches at least one of the specified IDs.
+**Validates: Requirements 4.23, 4.24**
+
+**Property 19C: Activity status filter accuracy**
+*For any* status filter with one or more status values, all returned activities should have a status matching at least one of the specified values.
+**Validates: Requirements 4.25, 4.26**
+
+**Property 19D: Activity population filter accuracy**
+*For any* population filter with one or more population IDs, all returned activities should have at least one participant who belongs to at least one of the specified populations.
+**Validates: Requirements 4.27, 4.28**
+
+**Property 19E: Activity start date filter accuracy**
+*For any* startDate filter, all returned activities should have a startDate greater than or equal to the specified date.
+**Validates: Requirements 4.29, 4.30**
+
+**Property 19F: Activity end date filter accuracy**
+*For any* endDate filter, all returned activities should have an endDate less than or equal to the specified date or have a null endDate (ongoing activities).
+**Validates: Requirements 4.31, 4.32**
+
+**Property 19G: Activity multi-dimensional filter AND logic**
+*For any* combination of activity filters (e.g., activityTypeIds AND status AND populationIds), all returned activities should satisfy all specified filter conditions.
+**Validates: Requirements 4.33**
+
+**Property 19H: Activity within-dimension OR logic**
+*For any* filter dimension with multiple values (e.g., status=[ACTIVE, PLANNED]), all returned activities should match at least one value within that dimension.
+**Validates: Requirements 4.34**
+
+**Property 19I: Activity filter array parameter normalization**
+*For any* activity filter request with array parameters provided as single values, multiple parameters, or comma-separated values, the API should correctly parse them into arrays and apply the filters.
+**Validates: Requirements 4.35, 4.36, 4.37, 4.38**
 
 ### Analytics Properties
 

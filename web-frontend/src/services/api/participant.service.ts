@@ -24,6 +24,16 @@ interface UpdateParticipantData {
     version?: number;
 }
 
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
 export class ParticipantService {
     static async getParticipants(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<Participant[]> {
         const params = new URLSearchParams();
@@ -33,6 +43,16 @@ export class ParticipantService {
         if (search) params.append('search', search);
         const query = params.toString();
         return ApiClient.get<Participant[]>(`/participants${query ? `?${query}` : ''}`);
+    }
+
+    static async getParticipantsPaginated(page: number = 1, limit: number = 100, geographicAreaId?: string | null, search?: string): Promise<PaginatedResponse<Participant>> {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
+        if (search) params.append('search', search);
+        const query = params.toString();
+        return ApiClient.get<PaginatedResponse<Participant>>(`/participants${query ? `?${query}` : ''}`);
     }
 
     static async getParticipant(id: string): Promise<Participant> {

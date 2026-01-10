@@ -22,12 +22,24 @@ import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 import styles from './GeographicAreaList.module.scss';
 
+const BATCH_SIZE = 100;
+
 interface TreeNode {
   id: string;
   text: string;
   data: GeographicArea;
   children?: TreeNode[];
   isLoading?: boolean;
+  loadingProgress?: { loaded: number; total: number };
+}
+
+interface BatchLoadingState {
+  [nodeId: string]: {
+    currentPage: number;
+    totalPages: number;
+    loadedChildren: GeographicArea[];
+    isLoading: boolean;
+  };
 }
 
 export function GeographicAreaList() {
@@ -46,10 +58,10 @@ export function GeographicAreaList() {
   
   // Cache for fetched children to avoid redundant API calls
   const [childrenCache, setChildrenCache] = useState<Map<string, GeographicArea[]>>(new Map());
-  const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
+  const [batchLoadingState, setBatchLoadingState] = useState<BatchLoadingState>({});
 
   // Fetch initial geographic areas with depth=1 (top-level + immediate children)
-  const { data: geographicAreas = [], isLoading } = useQuery({
+  const { data: geographicAreasResponse, isLoading } = useQuery({
     queryKey: ['geographicAreas', selectedGeographicAreaId, 'depth-1'],
     queryFn: () => GeographicAreaService.getGeographicAreas(
       undefined, 
@@ -60,6 +72,11 @@ export function GeographicAreaList() {
     ),
   });
 
+  // Extract array from response (handle both paginated and non-paginated)
+  const geographicAreas = geographicAreasResponse 
+    ? (Array.isArray(geographicAreasResponse) ? geographicAreasResponse : geographicAreasResponse.data)
+    : [];
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => GeographicAreaService.deleteGeographicArea(id),
     onSuccess: () => {
@@ -67,42 +84,155 @@ export function GeographicAreaList() {
       setDeleteError('');
       // Clear children cache on delete
       setChildrenCache(new Map());
+      setBatchLoadingState({});
     },
     onError: (error: Error) => {
       setDeleteError(error.message || 'Failed to delete geographic area. It may be referenced by venues or child areas.');
     },
   });
 
-  // Fetch children for a specific node on demand
-  const fetchChildren = useCallback(async (parentId: string) => {
-    // Check cache first
+  // Fetch children for a specific node with batched loading support
+  const fetchChildrenBatch = useCallback(async (parentId: string, page: number = 1) => {
+    try {
+      const response = await GeographicAreaService.getChildrenPaginated(parentId, page, BATCH_SIZE);
+      return response;
+    } catch (error) {
+      console.error('Error fetching children batch:', error);
+      throw error;
+    }
+  }, []);
+
+  // Start or continue batched loading for a node
+  const loadChildrenBatched = useCallback(async (parentId: string) => {
+    // Check if already in cache
     if (childrenCache.has(parentId)) {
-      return childrenCache.get(parentId)!;
+      return;
     }
 
-    // Mark as loading
-    setLoadingNodes(prev => new Set(prev).add(parentId));
+    // Check if already loading
+    const currentState = batchLoadingState[parentId];
+    if (currentState?.isLoading) {
+      return;
+    }
+
+    // Start loading first batch
+    setBatchLoadingState(prev => ({
+      ...prev,
+      [parentId]: {
+        currentPage: 1,
+        totalPages: 1,
+        loadedChildren: [],
+        isLoading: true,
+      },
+    }));
 
     try {
-      const children = await GeographicAreaService.getChildren(parentId);
+      const response = await fetchChildrenBatch(parentId, 1);
       
-      // Update cache - create new Map to trigger React re-render
-      setChildrenCache(prev => {
-        const newCache = new Map(prev);
-        newCache.set(parentId, children);
-        return newCache;
-      });
-      
-      return children;
-    } finally {
-      // Remove from loading
-      setLoadingNodes(prev => {
-        const next = new Set(prev);
-        next.delete(parentId);
-        return next;
+      setBatchLoadingState(prev => ({
+        ...prev,
+        [parentId]: {
+          currentPage: 1,
+          totalPages: response.pagination.totalPages,
+          loadedChildren: response.data,
+          isLoading: false,
+        },
+      }));
+
+      // If only one page, cache immediately
+      if (response.pagination.totalPages === 1) {
+        setChildrenCache(prev => {
+          const newCache = new Map(prev);
+          newCache.set(parentId, response.data);
+          return newCache;
+        });
+        setBatchLoadingState(prev => {
+          const newState = { ...prev };
+          delete newState[parentId];
+          return newState;
+        });
+      }
+    } catch (error) {
+      setBatchLoadingState(prev => {
+        const newState = { ...prev };
+        delete newState[parentId];
+        return newState;
       });
     }
-  }, [childrenCache]);
+  }, [childrenCache, batchLoadingState, fetchChildrenBatch]);
+
+  // Continue loading next batch for a node
+  const loadNextBatch = useCallback(async (parentId: string) => {
+    const currentState = batchLoadingState[parentId];
+    if (!currentState || currentState.isLoading) {
+      return;
+    }
+
+    const nextPage = currentState.currentPage + 1;
+    if (nextPage > currentState.totalPages) {
+      // All batches loaded, move to cache
+      setChildrenCache(prev => {
+        const newCache = new Map(prev);
+        newCache.set(parentId, currentState.loadedChildren);
+        return newCache;
+      });
+      setBatchLoadingState(prev => {
+        const newState = { ...prev };
+        delete newState[parentId];
+        return newState;
+      });
+      return;
+    }
+
+    setBatchLoadingState(prev => ({
+      ...prev,
+      [parentId]: {
+        ...currentState,
+        isLoading: true,
+      },
+    }));
+
+    try {
+      const response = await fetchChildrenBatch(parentId, nextPage);
+      
+      const allLoadedChildren = [...currentState.loadedChildren, ...response.data];
+      
+      setBatchLoadingState(prev => ({
+        ...prev,
+        [parentId]: {
+          currentPage: nextPage,
+          totalPages: response.pagination.totalPages,
+          loadedChildren: allLoadedChildren,
+          isLoading: false,
+        },
+      }));
+
+      // If this was the last page, move to cache
+      if (nextPage >= response.pagination.totalPages) {
+        setChildrenCache(prev => {
+          const newCache = new Map(prev);
+          newCache.set(parentId, allLoadedChildren);
+          return newCache;
+        });
+        setBatchLoadingState(prev => {
+          const newState = { ...prev };
+          delete newState[parentId];
+          return newState;
+        });
+      } else {
+        // Auto-load next batch after a short delay
+        setTimeout(() => loadNextBatch(parentId), 100);
+      }
+    } catch (error) {
+      setBatchLoadingState(prev => ({
+        ...prev,
+        [parentId]: {
+          ...currentState,
+          isLoading: false,
+        },
+      }));
+    }
+  }, [batchLoadingState, fetchChildrenBatch]);
 
   // Build tree structure from flat list with lazy loading support
   const buildTree = useCallback((areas: GeographicArea[]): TreeNode[] => {
@@ -114,22 +244,36 @@ export function GeographicAreaList() {
 
     // Helper function to recursively build a node with its cached children
     const buildNodeWithCache = (area: GeographicArea): TreeNode => {
+      const loadingState = batchLoadingState[area.id];
       const node: TreeNode = {
         id: area.id,
         text: area.name,
         data: area,
-        isLoading: loadingNodes.has(area.id),
+        isLoading: loadingState?.isLoading || false,
       };
+
+      // Add loading progress if batched loading is in progress
+      if (loadingState && loadingState.totalPages > 1) {
+        node.loadingProgress = {
+          loaded: loadingState.loadedChildren.length,
+          total: loadingState.totalPages * BATCH_SIZE, // Approximate
+        };
+      }
 
       // Check if we have cached children for this node
       const cachedChildren = childrenCache.get(area.id);
+      const batchedChildren = loadingState?.loadedChildren;
+
       if (cachedChildren && cachedChildren.length > 0) {
         // Build child nodes from cache recursively
         node.children = cachedChildren.map(child => buildNodeWithCache(child));
+      } else if (batchedChildren && batchedChildren.length > 0) {
+        // Build child nodes from batched loading state
+        node.children = batchedChildren.map(child => buildNodeWithCache(child));
       } else if (area.children && area.children.length > 0) {
         // Use children from initial fetch recursively
         node.children = area.children.map(child => buildNodeWithCache(child));
-      } else if (area.childCount && area.childCount > 0 && !loadingNodes.has(area.id)) {
+      } else if (area.childCount && area.childCount > 0 && !loadingState) {
         // Has children but not loaded yet - add placeholder to enable expansion
         node.children = [
           {
@@ -163,14 +307,19 @@ export function GeographicAreaList() {
         if (parentNode) {
           // Replace the entire children array from cache if available
           const cachedChildren = childrenCache.get(area.parentGeographicAreaId);
+          const batchedChildren = batchLoadingState[area.parentGeographicAreaId]?.loadedChildren;
+          
           if (cachedChildren) {
             // Parent has cached children - rebuild from cache
             parentNode.children = cachedChildren.map(child => buildNodeWithCache(child));
+          } else if (batchedChildren) {
+            // Parent has batched children - rebuild from batched state
+            parentNode.children = batchedChildren.map(child => buildNodeWithCache(child));
           } else if (!parentNode.children) {
             parentNode.children = [];
           }
           // Only add if not already present (for non-cached scenarios)
-          if (!cachedChildren && !parentNode.children.find(c => c.id === node.id)) {
+          if (!cachedChildren && !batchedChildren && !parentNode.children.find(c => c.id === node.id)) {
             parentNode.children.push(node);
           }
         } else {
@@ -181,33 +330,28 @@ export function GeographicAreaList() {
     });
 
     return rootNodes;
-  }, [childrenCache, loadingNodes]);
+  }, [childrenCache, batchLoadingState]);
 
   const treeData = buildTree(geographicAreas);
 
   // Helper function to check if an area is a read-only ancestor
   const isReadOnlyAncestor = (areaId: string): boolean => {
-    // If no authorization restrictions, no areas are read-only
     if (authorizedAreaIds.size === 0) {
       return false;
     }
     
-    // If this area is directly authorized, it's not a read-only ancestor
     if (authorizedAreaIds.has(areaId)) {
       return false;
     }
     
-    // If we have a filter active, check if it's an ancestor of the filtered area
     if (selectedGeographicAreaId) {
       const area = geographicAreas.find(a => a.id === areaId);
       if (!area) return false;
       
-      // If this is the filtered area itself, it's not an ancestor
       if (areaId === selectedGeographicAreaId) {
         return false;
       }
       
-      // Check if filtered area is a descendant of this area
       const isAncestor = geographicAreas.some(a => 
         a.id === selectedGeographicAreaId && 
         isDescendantOf(a, areaId, geographicAreas)
@@ -216,8 +360,6 @@ export function GeographicAreaList() {
       return isAncestor;
     }
     
-    // No explicit filter, but user has restrictions
-    // This area is displayed but not in authorizedAreaIds, so it must be a read-only ancestor
     return true;
   };
 
@@ -230,7 +372,6 @@ export function GeographicAreaList() {
       return true;
     }
     
-    // Recursively check parent
     const parent = areas.find(a => a.id === area.parentGeographicAreaId);
     if (!parent) return false;
     
@@ -286,6 +427,7 @@ export function GeographicAreaList() {
         queryClient.invalidateQueries({ queryKey: ['geographicAreas'] });
         // Clear children cache on import
         setChildrenCache(new Map());
+        setBatchLoadingState({});
       }
     } catch (error) {
       setCsvError(error instanceof Error ? error.message : 'Failed to import geographic areas');
@@ -316,12 +458,13 @@ export function GeographicAreaList() {
         const hasPlaceholder = node.children && node.children.length > 0 && 
                               node.children[0].id.endsWith('-loading-placeholder');
         const notInCache = !childrenCache.has(id);
+        const notBatchLoading = !batchLoadingState[id];
         
-        if (hasPlaceholder || notInCache) {
-          // Children not loaded yet - fetch them
-          await fetchChildren(id);
-          // The children are now in cache, which will trigger a re-render via state update
-          // The buildTree function will use the cache to replace the placeholder
+        if ((hasPlaceholder || notInCache) && notBatchLoading) {
+          // Children not loaded yet - start batched loading
+          await loadChildrenBatched(id);
+          // Start auto-loading next batches if needed
+          setTimeout(() => loadNextBatch(id), 100);
         }
       }
     } else {
@@ -357,14 +500,11 @@ export function GeographicAreaList() {
     }
     
     const area = node.data;
-    
-    // Determine if this area is a read-only ancestor
     const isAncestor = isReadOnlyAncestor(area.id);
     
-    // Build action buttons - no View button
+    // Build action buttons
     const actionButtons = [];
     
-    // Only show edit/delete for non-ancestor areas
     if (canEdit() && !isAncestor) {
       actionButtons.push(
         <Button
@@ -400,7 +540,7 @@ export function GeographicAreaList() {
         <div
           style={{
             padding: '8px 0',
-            opacity: isAncestor ? 0.7 : 1, // Muted styling for ancestors
+            opacity: isAncestor ? 0.7 : 1,
           }}
         >
           <SpaceBetween direction="horizontal" size="xs">
@@ -417,7 +557,12 @@ export function GeographicAreaList() {
             {isAncestor && (
               <Badge color="grey">Read-Only</Badge>
             )}
-            {node.isLoading && (
+            {node.isLoading && node.loadingProgress && (
+              <Badge color="blue">
+                Loading: {node.loadingProgress.loaded} / ~{node.loadingProgress.total}
+              </Badge>
+            )}
+            {node.isLoading && !node.loadingProgress && (
               <Badge color="blue">Loading...</Badge>
             )}
           </SpaceBetween>

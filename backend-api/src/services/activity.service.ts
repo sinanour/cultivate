@@ -209,6 +209,52 @@ export class ActivityService {
     return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);
   }
 
+  async getAllActivitiesWithFilters(
+    page?: number,
+    limit?: number,
+    filters?: {
+      geographicAreaId?: string;
+      activityTypeIds?: string[];
+      activityCategoryIds?: string[];
+      status?: ActivityStatus[];
+      populationIds?: string[];
+      startDate?: Date;
+      endDate?: Date;
+    },
+    authorizedAreaIds: string[] = [],
+    hasGeographicRestrictions: boolean = false
+  ): Promise<PaginatedResponse<Activity>> {
+    const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
+
+    // Determine effective geographic area IDs
+    const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+      filters?.geographicAreaId,
+      authorizedAreaIds,
+      hasGeographicRestrictions
+    );
+
+    // Build filter object for repository
+    const repositoryFilters: any = {
+      activityTypeIds: filters?.activityTypeIds,
+      activityCategoryIds: filters?.activityCategoryIds,
+      status: filters?.status,
+      populationIds: filters?.populationIds,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate,
+      geographicAreaIds: effectiveAreaIds,
+    };
+
+    // Use repository's comprehensive filtering method
+    const { data, total } = await this.activityRepository.findWithFilters(
+      repositoryFilters,
+      validPage,
+      validLimit
+    );
+
+    const activitiesWithComputed = data.map((a) => this.addComputedFields(a));
+    return PaginationHelper.createResponse(activitiesWithComputed, validPage, validLimit, total);
+  }
+
   async getActivityById(id: string, userId?: string, userRole?: string): Promise<Activity> {
     const activity = await this.activityRepository.findById(id);
     if (!activity) {

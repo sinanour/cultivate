@@ -63,8 +63,16 @@ export class ApiClient {
         }
 
         // Handle success response with wrapper
-        if (body && typeof body === 'object' && 'success' in body && 'data' in body) {
-            return body.data as T;
+        if (body && typeof body === 'object' && 'success' in body) {
+            // Check if this is a paginated response (has both data and pagination)
+            if ('data' in body && 'pagination' in body) {
+                // Return the full paginated response (data + pagination)
+                return { data: body.data, pagination: body.pagination } as T;
+            }
+            // Regular response - return just the data
+            if ('data' in body) {
+                return body.data as T;
+            }
         }
 
         // Fallback for responses without wrapper

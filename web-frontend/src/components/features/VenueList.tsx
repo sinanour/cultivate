@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
@@ -10,6 +10,7 @@ import Link from '@cloudscape-design/components/link';
 import TextFilter from '@cloudscape-design/components/text-filter';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
+import Spinner from '@cloudscape-design/components/spinner';
 import type { Venue } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -19,6 +20,7 @@ import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
 const ITEMS_PER_PAGE = 10;
+const BATCH_SIZE = 100;
 
 export function VenueList() {
   const queryClient = useQueryClient();
@@ -34,40 +36,108 @@ export function VenueList() {
   const [showImportResults, setShowImportResults] = useState(false);
   const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isFetchingRef = useRef(false); // Track if we're currently in a fetch cycle
 
-  const { data: venues = [], isLoading } = useQuery({
-    queryKey: ['venues', selectedGeographicAreaId],
-    queryFn: () => VenueService.getVenues(undefined, undefined, selectedGeographicAreaId),
-  });
+  // Batched loading state
+  const [allVenues, setAllVenues] = useState<Venue[]>([]);
+  const [currentBatchPage, setCurrentBatchPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoadingBatch, setIsLoadingBatch] = useState(false);
+  const [loadingError, setLoadingError] = useState<string | undefined>();
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isCancelled, setIsCancelled] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => VenueService.deleteVenue(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['venues'] });
       setDeleteError('');
+      // Reset batched loading
+      setAllVenues([]);
+      setCurrentBatchPage(1);
+      setHasMorePages(true);
     },
     onError: (error: Error) => {
       setDeleteError(error.message || 'Failed to delete venue. It may be referenced by activities or participants.');
     },
   });
 
-  // Client-side search
-  const filteredVenues = useMemo(() => {
-    if (!filteringText) return venues;
-    
-    const searchTerm = filteringText.toLowerCase();
-    return venues.filter(
-      (v) =>
-        v.name.toLowerCase().includes(searchTerm) ||
-        v.address.toLowerCase().includes(searchTerm)
-    );
-  }, [venues, filteringText]);
+  // Reset state when filters change
+  useEffect(() => {
+    setAllVenues([]);
+    setCurrentBatchPage(1);
+    setTotalCount(0);
+    setIsLoadingBatch(false);
+    setLoadingError(undefined);
+    setHasMorePages(true);
+    setIsCancelled(false);
+    isFetchingRef.current = false; // Reset fetch tracking
+  }, [selectedGeographicAreaId, filteringText]);
 
-  // Pagination
+  // Cancel loading handler
+  const handleCancelLoading = useCallback(() => {
+    setIsCancelled(true);
+    setHasMorePages(false);
+    isFetchingRef.current = false;
+  }, []);
+
+  // Function to fetch next batch
+  const fetchNextBatch = useCallback(async () => {
+    if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
+
+    isFetchingRef.current = true;
+    setIsLoadingBatch(true);
+    setLoadingError(undefined);
+
+    try {
+      const response = await VenueService.getVenuesPaginated(
+        currentBatchPage,
+        BATCH_SIZE,
+        selectedGeographicAreaId,
+        filteringText || undefined
+      );
+      
+      setAllVenues(prev => [...prev, ...response.data]);
+      setTotalCount(response.pagination.total);
+      setHasMorePages(currentBatchPage < response.pagination.totalPages);
+      setCurrentBatchPage(prev => prev + 1);
+    } catch (error) {
+      console.error('Error fetching venues batch:', error);
+      setLoadingError(error instanceof Error ? error.message : 'Failed to load venues');
+    } finally {
+      setIsLoadingBatch(false);
+      isFetchingRef.current = false;
+    }
+  }, [currentBatchPage, isLoadingBatch, hasMorePages, selectedGeographicAreaId, filteringText, isCancelled]);
+
+  // Fetch first batch on mount or when dependencies change
+  useEffect(() => {
+    if (currentBatchPage === 1 && hasMorePages && !isLoadingBatch && allVenues.length === 0 && !isFetchingRef.current) {
+      fetchNextBatch();
+    }
+  }, [currentBatchPage, hasMorePages, isLoadingBatch, allVenues.length, fetchNextBatch]);
+
+  // Auto-fetch next batch after previous batch renders
+  useEffect(() => {
+    if (!isLoadingBatch && hasMorePages && currentBatchPage > 1) {
+      const timer = setTimeout(() => {
+        fetchNextBatch();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingBatch, hasMorePages, currentBatchPage, fetchNextBatch]);
+
+  // Retry function
+  const handleRetry = useCallback(() => {
+    setLoadingError(undefined);
+    fetchNextBatch();
+  }, [fetchNextBatch]);
+
+  // Pagination for display
   const paginatedVenues = useMemo(() => {
     const startIndex = (currentPageIndex - 1) * ITEMS_PER_PAGE;
-    return filteredVenues.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredVenues, currentPageIndex]);
+    return allVenues.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [allVenues, currentPageIndex]);
 
   const handleEdit = (venue: Venue) => {
     navigate(`/venues/${venue.id}/edit`);
@@ -116,6 +186,10 @@ export function VenueList() {
 
       if (result.successCount > 0) {
         queryClient.invalidateQueries({ queryKey: ['venues'] });
+        // Reset batched loading
+        setAllVenues([]);
+        setCurrentBatchPage(1);
+        setHasMorePages(true);
       }
     } catch (error) {
       setCsvError(error instanceof Error ? error.message : 'Failed to import venues');
@@ -126,6 +200,9 @@ export function VenueList() {
       }
     }
   };
+
+  const isLoading = isLoadingBatch && currentBatchPage === 1;
+  const loadedCount = allVenues.length;
 
   return (
     <SpaceBetween size="l">
@@ -145,6 +222,20 @@ export function VenueList() {
           onDismiss={() => setCsvError('')}
         >
           {csvError}
+        </Alert>
+      )}
+      {loadingError && (
+        <Alert
+          type="error"
+          dismissible
+          onDismiss={() => setLoadingError(undefined)}
+          action={
+            <Button onClick={handleRetry} iconName="refresh">
+              Retry
+            </Button>
+          }
+        >
+          {loadingError}
         </Alert>
       )}
       <Table
@@ -228,7 +319,6 @@ export function VenueList() {
         }
         header={
           <Header
-            counter={`(${filteredVenues.length})`}
             actions={
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
@@ -266,13 +356,38 @@ export function VenueList() {
               </SpaceBetween>
             }
           >
-            Venues
+            <Box display="inline" fontSize="heading-l" fontWeight="bold">
+              <SpaceBetween direction="horizontal" size="xs">
+                <span>Venues</span>
+                <Box display="inline" color="text-status-inactive">
+                  {isCancelled && totalCount > loadedCount 
+                    ? `(${loadedCount} / ${totalCount})`
+                    : `(${loadedCount})`
+                  }
+                </Box>
+                {!isCancelled && loadedCount < totalCount && totalCount > 0 && (
+                  <SpaceBetween direction="horizontal" size="xs">
+                    <Spinner size="normal" />
+                    <Box display="inline" color="text-status-inactive">
+                      Loading: {loadedCount} / {totalCount}
+                    </Box>
+                    <Button
+                      variant="inline-link"
+                      onClick={handleCancelLoading}
+                      ariaLabel="Cancel loading"
+                    >
+                      Cancel
+                    </Button>
+                  </SpaceBetween>
+                )}
+              </SpaceBetween>
+            </Box>
           </Header>
         }
         pagination={
           <Pagination
             currentPageIndex={currentPageIndex}
-            pagesCount={Math.ceil(filteredVenues.length / ITEMS_PER_PAGE)}
+            pagesCount={Math.ceil(allVenues.length / ITEMS_PER_PAGE)}
             onChange={({ detail }) => setCurrentPageIndex(detail.currentPageIndex)}
           />
         }

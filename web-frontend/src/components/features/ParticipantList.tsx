@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
@@ -10,6 +10,7 @@ import Link from '@cloudscape-design/components/link';
 import TextFilter from '@cloudscape-design/components/text-filter';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
+import Spinner from '@cloudscape-design/components/spinner';
 import type { Participant } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -19,6 +20,7 @@ import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
 const ITEMS_PER_PAGE = 10;
+const BATCH_SIZE = 100;
 
 export function ParticipantList() {
   const queryClient = useQueryClient();
@@ -34,40 +36,108 @@ export function ParticipantList() {
   const [showImportResults, setShowImportResults] = useState(false);
   const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isFetchingRef = useRef(false); // Track if we're currently in a fetch cycle
 
-  const { data: participants = [], isLoading } = useQuery({
-    queryKey: ['participants', selectedGeographicAreaId],
-    queryFn: () => ParticipantService.getParticipants(undefined, undefined, selectedGeographicAreaId),
-  });
+  // Batched loading state
+  const [allParticipants, setAllParticipants] = useState<Participant[]>([]);
+  const [currentBatchPage, setCurrentBatchPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoadingBatch, setIsLoadingBatch] = useState(false);
+  const [loadingError, setLoadingError] = useState<string | undefined>();
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isCancelled, setIsCancelled] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => ParticipantService.deleteParticipant(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['participants'] });
       setDeleteError('');
+      // Reset batched loading
+      setAllParticipants([]);
+      setCurrentBatchPage(1);
+      setHasMorePages(true);
     },
     onError: (error: Error) => {
       setDeleteError(error.message || 'Failed to delete participant.');
     },
   });
 
-  // Client-side search
-  const filteredParticipants = useMemo(() => {
-    if (!filteringText) return participants;
-    
-    const searchTerm = filteringText.toLowerCase();
-    return participants.filter(
-      (p) =>
-        p.name.toLowerCase().includes(searchTerm) ||
-        (p.email && p.email.toLowerCase().includes(searchTerm))
-    );
-  }, [participants, filteringText]);
+  // Reset state when filters change
+  useEffect(() => {
+    setAllParticipants([]);
+    setCurrentBatchPage(1);
+    setTotalCount(0);
+    setIsLoadingBatch(false);
+    setLoadingError(undefined);
+    setHasMorePages(true);
+    setIsCancelled(false);
+    isFetchingRef.current = false; // Reset fetch tracking
+  }, [selectedGeographicAreaId, filteringText]);
 
-  // Pagination
+  // Cancel loading handler
+  const handleCancelLoading = useCallback(() => {
+    setIsCancelled(true);
+    setHasMorePages(false);
+    isFetchingRef.current = false;
+  }, []);
+
+  // Function to fetch next batch
+  const fetchNextBatch = useCallback(async () => {
+    if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
+
+    isFetchingRef.current = true;
+    setIsLoadingBatch(true);
+    setLoadingError(undefined);
+
+    try {
+      const response = await ParticipantService.getParticipantsPaginated(
+        currentBatchPage,
+        BATCH_SIZE,
+        selectedGeographicAreaId,
+        filteringText || undefined
+      );
+      
+      setAllParticipants(prev => [...prev, ...response.data]);
+      setTotalCount(response.pagination.total);
+      setHasMorePages(currentBatchPage < response.pagination.totalPages);
+      setCurrentBatchPage(prev => prev + 1);
+    } catch (error) {
+      console.error('Error fetching participants batch:', error);
+      setLoadingError(error instanceof Error ? error.message : 'Failed to load participants');
+    } finally {
+      setIsLoadingBatch(false);
+      isFetchingRef.current = false;
+    }
+  }, [currentBatchPage, isLoadingBatch, hasMorePages, selectedGeographicAreaId, filteringText, isCancelled]);
+
+  // Fetch first batch on mount or when dependencies change
+  useEffect(() => {
+    if (currentBatchPage === 1 && hasMorePages && !isLoadingBatch && allParticipants.length === 0 && !isFetchingRef.current) {
+      fetchNextBatch();
+    }
+  }, [currentBatchPage, hasMorePages, isLoadingBatch, allParticipants.length, fetchNextBatch]);
+
+  // Auto-fetch next batch after previous batch renders
+  useEffect(() => {
+    if (!isLoadingBatch && hasMorePages && currentBatchPage > 1) {
+      const timer = setTimeout(() => {
+        fetchNextBatch();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingBatch, hasMorePages, currentBatchPage, fetchNextBatch]);
+
+  // Retry function
+  const handleRetry = useCallback(() => {
+    setLoadingError(undefined);
+    fetchNextBatch();
+  }, [fetchNextBatch]);
+
+  // Pagination for display
   const paginatedParticipants = useMemo(() => {
     const startIndex = (currentPageIndex - 1) * ITEMS_PER_PAGE;
-    return filteredParticipants.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredParticipants, currentPageIndex]);
+    return allParticipants.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [allParticipants, currentPageIndex]);
 
   const handleEdit = (participant: Participant) => {
     navigate(`/participants/${participant.id}/edit`);
@@ -89,7 +159,6 @@ export function ParticipantList() {
     
     try {
       await ParticipantService.exportParticipants(selectedGeographicAreaId);
-      // Success - file download is triggered automatically
     } catch (error) {
       setCsvError(error instanceof Error ? error.message : 'Failed to export participants');
     } finally {
@@ -101,7 +170,6 @@ export function ParticipantList() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file
     const validation = validateCSVFile(file);
     if (!validation.valid) {
       setCsvError(validation.error || 'Invalid file');
@@ -116,20 +184,25 @@ export function ParticipantList() {
       setImportResult(result);
       setShowImportResults(true);
 
-      // Refresh list if any records were imported
       if (result.successCount > 0) {
         queryClient.invalidateQueries({ queryKey: ['participants'] });
+        // Reset batched loading
+        setAllParticipants([]);
+        setCurrentBatchPage(1);
+        setHasMorePages(true);
       }
     } catch (error) {
       setCsvError(error instanceof Error ? error.message : 'Failed to import participants');
     } finally {
       setIsImporting(false);
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   };
+
+  const isLoading = isLoadingBatch && currentBatchPage === 1;
+  const loadedCount = allParticipants.length;
 
   return (
     <SpaceBetween size="l">
@@ -149,6 +222,20 @@ export function ParticipantList() {
           onDismiss={() => setCsvError('')}
         >
           {csvError}
+        </Alert>
+      )}
+      {loadingError && (
+        <Alert
+          type="error"
+          dismissible
+          onDismiss={() => setLoadingError(undefined)}
+          action={
+            <Button onClick={handleRetry} iconName="refresh">
+              Retry
+            </Button>
+          }
+        >
+          {loadingError}
         </Alert>
       )}
       <Table
@@ -227,7 +314,6 @@ export function ParticipantList() {
         }
         header={
           <Header
-            counter={`(${filteredParticipants.length})`}
             actions={
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
@@ -265,13 +351,38 @@ export function ParticipantList() {
               </SpaceBetween>
             }
           >
-            Participants
+            <Box display="inline" fontSize="heading-l" fontWeight="bold">
+              <SpaceBetween direction="horizontal" size="xs">
+                <span>Participants</span>
+                <Box display="inline" color="text-status-inactive">
+                  {isCancelled && totalCount > loadedCount 
+                    ? `(${loadedCount} / ${totalCount})`
+                    : `(${loadedCount})`
+                  }
+                </Box>
+                {!isCancelled && loadedCount < totalCount && totalCount > 0 && (
+                  <SpaceBetween direction="horizontal" size="xs">
+                    <Spinner size="normal" />
+                    <Box display="inline" color="text-status-inactive">
+                      Loading: {loadedCount} / {totalCount}
+                    </Box>
+                    <Button
+                      variant="inline-link"
+                      onClick={handleCancelLoading}
+                      ariaLabel="Cancel loading"
+                    >
+                      Cancel
+                    </Button>
+                  </SpaceBetween>
+                )}
+              </SpaceBetween>
+            </Box>
           </Header>
         }
         pagination={
           <Pagination
             currentPageIndex={currentPageIndex}
-            pagesCount={Math.ceil(filteredParticipants.length / ITEMS_PER_PAGE)}
+            pagesCount={Math.ceil(allParticipants.length / ITEMS_PER_PAGE)}
             onChange={({ detail }) => setCurrentPageIndex(detail.currentPageIndex)}
           />
         }

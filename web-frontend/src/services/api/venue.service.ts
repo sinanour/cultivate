@@ -14,6 +14,16 @@ interface UpdateVenueData extends Partial<CreateVenueData> {
     version?: number;
 }
 
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
 export class VenueService {
     static async getVenues(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<Venue[]> {
         const params = new URLSearchParams();
@@ -24,6 +34,16 @@ export class VenueService {
         const query = params.toString();
         return ApiClient.get<Venue[]>(`/venues${query ? `?${query}` : ''}`);
   }
+
+    static async getVenuesPaginated(page: number = 1, limit: number = 100, geographicAreaId?: string | null, search?: string): Promise<PaginatedResponse<Venue>> {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
+        if (search) params.append('search', search);
+        const query = params.toString();
+        return ApiClient.get<PaginatedResponse<Venue>>(`/venues${query ? `?${query}` : ''}`);
+    }
 
   static async getVenue(id: string): Promise<Venue> {
     return ApiClient.get<Venue>(`/venues/${id}`);

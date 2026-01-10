@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import ContentLayout from '@cloudscape-design/components/content-layout';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
+import Box from '@cloudscape-design/components/box';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import Multiselect from '@cloudscape-design/components/multiselect';
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
@@ -14,6 +15,13 @@ type MapMode = 'activitiesByType' | 'activitiesByCategory' | 'participantHomes' 
 
 export default function MapViewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Map loading state
+  const [mapLoadingState, setMapLoadingState] = useState<{ 
+    loadedCount: number; 
+    totalCount: number; 
+    isCancelled: boolean;
+  }>({ loadedCount: 0, totalCount: 0, isCancelled: false });
   
   // Initialize from URL
   const [mapMode, setMapMode] = useState<MapMode>(() => {
@@ -105,7 +113,20 @@ export default function MapViewPage() {
               </div>
             }
           >
-            Map View
+            <Box display="inline" fontSize="heading-l" fontWeight="bold">
+              <span>Map View</span>
+              {mapLoadingState.totalCount > 0 && (
+                <Box display="inline" color="text-status-inactive">
+                  {' '}
+                  {mapLoadingState.isCancelled && mapLoadingState.totalCount > mapLoadingState.loadedCount
+                    ? `(${mapLoadingState.loadedCount} / ${mapLoadingState.totalCount})`
+                    : mapLoadingState.loadedCount === mapLoadingState.totalCount
+                    ? `(${mapLoadingState.loadedCount})`
+                    : ''
+                  }
+                </Box>
+              )}
+            </Box>
           </Header>
         }
         disableContentPaddings
@@ -114,6 +135,7 @@ export default function MapViewPage() {
           <MapView 
             mode={mapMode}
             populationIds={selectedPopulationIds}
+            onLoadingStateChange={setMapLoadingState}
           />
         </div>
       </Container>

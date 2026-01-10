@@ -1,5 +1,17 @@
 import { ApiClient } from './api.client';
 
+export interface PaginationMetadata {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
 export interface ActivityMarker {
     id: string;
     latitude: number;
@@ -59,10 +71,18 @@ export class MapDataService {
     private static readonly BASE_PATH = '/map';
 
     /**
-     * Get lightweight activity marker data for map rendering
+     * Get lightweight activity marker data for map rendering with pagination
      */
-    static async getActivityMarkers(filters: MapFilters = {}): Promise<ActivityMarker[]> {
+    static async getActivityMarkers(
+        filters: MapFilters = {},
+        page: number = 1,
+        limit: number = 100
+    ): Promise<PaginatedResponse<ActivityMarker>> {
         const params = new URLSearchParams();
+
+        // Add pagination parameters
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
 
         // Add array filters
         if (filters.geographicAreaIds) {
@@ -94,8 +114,7 @@ export class MapDataService {
             params.append('status', filters.status);
         }
 
-        const queryString = params.toString();
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/activities${queryString ? `?${queryString}` : ''}`;
+        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/activities?${params.toString()}`;
 
         const response = await fetch(url, {
             headers: ApiClient.getAuthHeaders(),
@@ -106,7 +125,10 @@ export class MapDataService {
         }
 
         const result = await response.json();
-        return result.data;
+        return {
+            data: result.data,
+            pagination: result.pagination,
+        };
     }
 
     /**
@@ -128,12 +150,18 @@ export class MapDataService {
     }
 
     /**
-     * Get lightweight participant home marker data grouped by venue
+     * Get lightweight participant home marker data grouped by venue with pagination
      */
     static async getParticipantHomeMarkers(
-        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds'> = {}
-    ): Promise<ParticipantHomeMarker[]> {
+        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds'> = {},
+        page: number = 1,
+        limit: number = 100
+    ): Promise<PaginatedResponse<ParticipantHomeMarker>> {
         const params = new URLSearchParams();
+
+        // Add pagination parameters
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
 
         if (filters.geographicAreaIds) {
             filters.geographicAreaIds.forEach(id => params.append('geographicAreaIds', id));
@@ -142,8 +170,7 @@ export class MapDataService {
             filters.populationIds.forEach(id => params.append('populationIds', id));
         }
 
-        const queryString = params.toString();
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/participant-homes${queryString ? `?${queryString}` : ''}`;
+        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/participant-homes?${params.toString()}`;
 
         const response = await fetch(url, {
             headers: ApiClient.getAuthHeaders(),
@@ -154,7 +181,10 @@ export class MapDataService {
         }
 
         const result = await response.json();
-        return result.data;
+        return {
+            data: result.data,
+            pagination: result.pagination,
+        };
     }
 
     /**
@@ -176,19 +206,24 @@ export class MapDataService {
     }
 
     /**
-     * Get lightweight venue marker data for map rendering
+     * Get lightweight venue marker data for map rendering with pagination
      */
     static async getVenueMarkers(
-        filters: Pick<MapFilters, 'geographicAreaIds'> = {}
-    ): Promise<VenueMarker[]> {
+        filters: Pick<MapFilters, 'geographicAreaIds'> = {},
+        page: number = 1,
+        limit: number = 100
+    ): Promise<PaginatedResponse<VenueMarker>> {
         const params = new URLSearchParams();
+
+        // Add pagination parameters
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
 
         if (filters.geographicAreaIds) {
             filters.geographicAreaIds.forEach(id => params.append('geographicAreaIds', id));
         }
 
-        const queryString = params.toString();
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/venues${queryString ? `?${queryString}` : ''}`;
+        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/venues?${params.toString()}`;
 
         const response = await fetch(url, {
             headers: ApiClient.getAuthHeaders(),
@@ -199,7 +234,10 @@ export class MapDataService {
         }
 
         const result = await response.json();
-        return result.data;
+        return {
+            data: result.data,
+            pagination: result.pagination,
+        };
     }
 
     /**

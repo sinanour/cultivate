@@ -148,15 +148,18 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
   const { data: geographicAreas = [], isLoading: isLoadingAreas, refetch: refetchAreas } = useQuery({
     queryKey: ['geographicAreas', 'withHierarchy'],
     queryFn: async () => {
-      const areas = await GeographicAreaService.getGeographicAreas();
+      const response = await GeographicAreaService.getGeographicAreas();
+      
+      // Handle both paginated and non-paginated responses
+      const areas = Array.isArray(response) ? response : response.data;
       
       // Fetch ancestors for each area to build hierarchy
       const areasWithHierarchy = await Promise.all(
-        areas.map(async (area) => {
+        areas.map(async (area: GeographicArea) => {
           try {
             const ancestors = await GeographicAreaService.getAncestors(area.id);
             const hierarchyPath = ancestors.length > 0
-              ? ancestors.map(a => a.name).join(' > ')
+              ? ancestors.map((a: GeographicArea) => a.name).join(' > ')
               : '';
             
             return {
@@ -177,7 +180,7 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
       
       // Filter out current area to prevent self-reference
       return geographicArea 
-        ? areasWithHierarchy.filter((a) => a.id !== geographicArea.id)
+        ? areasWithHierarchy.filter((a: GeographicAreaWithHierarchy) => a.id !== geographicArea.id)
         : areasWithHierarchy;
     },
   });

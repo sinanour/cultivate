@@ -49,6 +49,22 @@ export class GeographicAreaRoutes {
             this.importCSV.bind(this)
         );
 
+        // Batch ancestors endpoint - must come before /:id to avoid route conflicts
+        this.router.post(
+            '/batch-ancestors',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
+            this.getBatchAncestors.bind(this)
+        );
+
+        // Batch details endpoint - must come before /:id to avoid route conflicts
+        this.router.post(
+            '/batch-details',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
+            this.getBatchDetails.bind(this)
+        );
+
         this.router.get(
             '/:id',
             this.authMiddleware.authenticate(),
@@ -225,11 +241,24 @@ export class GeographicAreaRoutes {
     private async getChildren(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
+            const { page, limit } = req.query;
             const userId = req.user?.userId;
             const userRole = req.user?.role;
 
-            const children = await this.geographicAreaService.getChildren(id, userId, userRole);
-            res.status(200).json({ success: true, data: children });
+            // Check if pagination parameters are provided
+            if (page !== undefined || limit !== undefined) {
+                const result = await this.geographicAreaService.getChildrenPaginated(
+                    id,
+                    page ? parseInt(page as string) : undefined,
+                    limit ? parseInt(limit as string) : undefined,
+                    userId,
+                    userRole
+                );
+                res.status(200).json({ success: true, ...result });
+            } else {
+                const children = await this.geographicAreaService.getChildren(id, userId, userRole);
+                res.status(200).json({ success: true, data: children });
+            }
         } catch (error) {
             if (error instanceof Error && error.message === 'Geographic area not found') {
                 return res.status(404).json({
@@ -279,6 +308,110 @@ export class GeographicAreaRoutes {
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while fetching ancestors',
+                details: {},
+            });
+        }
+    }
+
+    private async getBatchAncestors(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { areaIds } = req.body;
+
+            // Validate request body
+            if (!areaIds || !Array.isArray(areaIds)) {
+                return res.status(400).json({
+                    code: 'VALIDATION_ERROR',
+                    message: 'Request body must contain an areaIds array',
+                    details: {},
+                });
+            }
+
+            if (areaIds.length === 0) {
+                return res.status(200).json({ success: true, data: {} });
+            }
+
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const batchAncestors = await this.geographicAreaService.getBatchAncestors(
+                areaIds,
+                userId,
+                userRole
+            );
+
+            res.status(200).json({ success: true, data: batchAncestors });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('VALIDATION_ERROR') || error.message.includes('Invalid UUID')) {
+                    return res.status(400).json({
+                        code: 'VALIDATION_ERROR',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('more than 100')) {
+                    return res.status(400).json({
+                        code: 'VALIDATION_ERROR',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while fetching batch ancestors',
+                details: {},
+            });
+        }
+    }
+
+    private async getBatchDetails(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { areaIds } = req.body;
+
+            // Validate request body
+            if (!areaIds || !Array.isArray(areaIds)) {
+                return res.status(400).json({
+                    code: 'VALIDATION_ERROR',
+                    message: 'Request body must contain an areaIds array',
+                    details: {},
+                });
+            }
+
+            if (areaIds.length === 0) {
+                return res.status(200).json({ success: true, data: {} });
+            }
+
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            const batchDetails = await this.geographicAreaService.getBatchDetails(
+                areaIds,
+                userId,
+                userRole
+            );
+
+            res.status(200).json({ success: true, data: batchDetails });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('VALIDATION_ERROR') || error.message.includes('Invalid UUID')) {
+                    return res.status(400).json({
+                        code: 'VALIDATION_ERROR',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+                if (error.message.includes('more than 100')) {
+                    return res.status(400).json({
+                        code: 'VALIDATION_ERROR',
+                        message: error.message,
+                        details: {},
+                    });
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while fetching batch details',
                 details: {},
             });
         }

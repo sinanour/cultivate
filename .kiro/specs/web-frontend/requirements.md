@@ -39,6 +39,8 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Batched_Loading**: A technique where large datasets are fetched in multiple smaller requests (batches of 100 items) and rendered progressively as each batch arrives
 - **Incremental_Rendering**: A UI pattern where entities are displayed on screen as soon as they are fetched, without waiting for all data to be loaded
 - **Auto_Zoom**: Automatic adjustment of map zoom level to fit all visible markers within the viewport
+- **Server_Side_Filtering**: A filtering approach where filter criteria are sent to the backend API as query parameters, and the backend returns only matching records, reducing data transfer and improving performance
+- **PropertyFilter**: A CloudScape Design System component that provides a unified interface for filtering data by multiple properties with support for lazy-loading values, token-based filter display, and URL synchronization
 
 ## Requirements
 
@@ -164,41 +166,97 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 5: Activity Management UI
 
-**User Story:** As a community organizer, I want to manage activities in the web interface, so that I can track community events.
+**User Story:** As a community organizer, I want to manage activities in the web interface with comprehensive filtering capabilities, so that I can track community events and find specific activities efficiently.
 
 #### Acceptance Criteria
 
 1. THE Web_App SHALL display a list of all activities with category, type, dates, and status
-2. THE Web_App SHALL provide filtering by activity category, activity type, and status
-3. THE Web_App SHALL provide sorting for the activity list
-4. THE Web_App SHALL distinguish finite and ongoing activities visually
-5. THE Web_App SHALL provide a dedicated page to create new activities
-6. THE Web_App SHALL provide a dedicated page to edit existing activities
-7. THE Web_App SHALL provide a delete button for activities
-8. WHEN creating a finite activity, THE Web_App SHALL require an end date
-9. WHEN creating an ongoing activity, THE Web_App SHALL allow null end date
-10. THE Web_App SHALL validate that activity name, type, and start date are provided
-11. THE Web_App SHALL support activity statuses: PLANNED, ACTIVE, COMPLETED, CANCELLED
-12. THE Web_App SHALL provide a button to update activity status
-12a. WHEN marking an activity as COMPLETED, THE Web_App SHALL implicitly set the end date to today if the end date is null
-12b. WHEN marking an activity as CANCELLED, THE Web_App SHALL implicitly set the end date to today if the end date is null
-12c. WHEN marking an activity as CANCELLED, THE Web_App SHALL implicitly set the start date to today if the start date is in the future
-13. THE Web_App SHALL display a detail view showing activity information and assigned participants
-14. THE Web_App SHALL allow selection of one or more venues for each activity
-15. THE Web_App SHALL display the activity's venue history in reverse chronological order when venues have changed over time
-16. WHEN creating a new activity, THE Web_App SHALL allow adding venue associations with optional effective start dates within the activity creation page
-17. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and deleting venue associations within the activity edit page
-18. WHEN adding a venue association to a new activity before the activity is created, THE Web_App SHALL fetch and display the venue name in the venue history table
-19. WHEN a venue is selected for a new venue association, THE Web_App SHALL retrieve the venue details from the backend and store them for display purposes
-20. WHEN a venue association has a null effective start date, THE Web_App SHALL treat the venue association start date as the same as the activity start date
-21. THE Web_App SHALL enforce that at most one venue association can have a null effective start date for any given activity
-22. THE Web_App SHALL prevent duplicate venue associations with the same effective start date (including null) for the same activity
-23. WHEN creating a new activity, THE Web_App SHALL allow assigning participants with roles and optional notes within the activity creation page
-24. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit page
-25. WHEN adding a participant assignment to a new activity before the activity is created, THE Web_App SHALL fetch and display the participant name and role in the participant assignments table
-26. WHEN a participant is selected for a new assignment, THE Web_App SHALL retrieve the participant details from the backend and store them for display purposes
-27. THE Web_App SHALL display the venue associations table and participant assignments table stacked vertically within the activity form page, with venue associations appearing above participant assignments
-28. THE Web_App SHALL provide an atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
+2. THE Web_App SHALL provide server-side filtering by activity category using query parameters
+3. THE Web_App SHALL provide server-side filtering by activity type using query parameters
+4. THE Web_App SHALL provide server-side filtering by activity status (PLANNED, ACTIVE, COMPLETED, CANCELLED) using query parameters
+5. THE Web_App SHALL provide server-side filtering by date range (start date and end date) using query parameters
+6. THE Web_App SHALL provide server-side filtering by population (showing only activities with participants in specified populations) using query parameters
+7. WHEN multiple activity categories are selected, THE Web_App SHALL apply OR logic within the category filter dimension
+8. WHEN multiple activity types are selected, THE Web_App SHALL apply OR logic within the type filter dimension
+9. WHEN multiple statuses are selected, THE Web_App SHALL apply OR logic within the status filter dimension
+10. WHEN multiple populations are selected, THE Web_App SHALL apply OR logic within the population filter dimension
+11. WHEN multiple filter dimensions are applied (e.g., categories AND statuses AND populations), THE Web_App SHALL apply AND logic across different filter dimensions
+12. THE Web_App SHALL send all filter parameters to the backend API via query string parameters
+13. THE Web_App SHALL persist filter selections in URL query parameters for shareability and browser navigation
+14. WHEN a user navigates to a URL with filter query parameters, THE Web_App SHALL apply those filters automatically to the activity list
+15. THE Web_App SHALL provide a way to clear all filters and return to the unfiltered view
+16. THE Web_App SHALL provide sorting for the activity list
+16. THE Web_App SHALL provide sorting for the activity list
+17. THE Web_App SHALL distinguish finite and ongoing activities visually
+18. THE Web_App SHALL provide a dedicated page to create new activities
+19. THE Web_App SHALL provide a dedicated page to edit existing activities
+20. THE Web_App SHALL provide a delete button for activities
+21. WHEN creating a finite activity, THE Web_App SHALL require an end date
+22. WHEN creating an ongoing activity, THE Web_App SHALL allow null end date
+23. THE Web_App SHALL validate that activity name, type, and start date are provided
+24. THE Web_App SHALL support activity statuses: PLANNED, ACTIVE, COMPLETED, CANCELLED
+25. THE Web_App SHALL provide a button to update activity status
+25a. WHEN marking an activity as COMPLETED, THE Web_App SHALL implicitly set the end date to today if the end date is null
+25b. WHEN marking an activity as CANCELLED, THE Web_App SHALL implicitly set the end date to today if the end date is null
+25c. WHEN marking an activity as CANCELLED, THE Web_App SHALL implicitly set the start date to today if the start date is in the future
+26. THE Web_App SHALL display a detail view showing activity information and assigned participants
+27. THE Web_App SHALL allow selection of one or more venues for each activity
+28. THE Web_App SHALL display the activity's venue history in reverse chronological order when venues have changed over time
+29. WHEN creating a new activity, THE Web_App SHALL allow adding venue associations with optional effective start dates within the activity creation page
+30. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and deleting venue associations within the activity edit page
+31. WHEN adding a venue association to a new activity before the activity is created, THE Web_App SHALL fetch and display the venue name in the venue history table
+32. WHEN a venue is selected for a new venue association, THE Web_App SHALL retrieve the venue details from the backend and store them for display purposes
+33. WHEN a venue association has a null effective start date, THE Web_App SHALL treat the venue association start date as the same as the activity start date
+34. THE Web_App SHALL enforce that at most one venue association can have a null effective start date for any given activity
+35. THE Web_App SHALL prevent duplicate venue associations with the same effective start date (including null) for the same activity
+36. WHEN creating a new activity, THE Web_App SHALL allow assigning participants with roles and optional notes within the activity creation page
+37. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit page
+38. WHEN adding a participant assignment to a new activity before the activity is created, THE Web_App SHALL fetch and display the participant name and role in the participant assignments table
+39. WHEN a participant is selected for a new assignment, THE Web_App SHALL retrieve the participant details from the backend and store them for display purposes
+40. THE Web_App SHALL display the venue associations table and participant assignments table stacked vertically within the activity form page, with venue associations appearing above participant assignments
+41. THE Web_App SHALL provide an atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
+
+### Requirement 5A: Activity List Filtering UX with PropertyFilter
+
+**User Story:** As a community organizer, I want to filter the activity list using a consistent PropertyFilter interface matching the analytics dashboards, so that I can efficiently find specific activities with a familiar and powerful filtering experience.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL use CloudScape PropertyFilter component for activity list filtering
+2. THE Web_App SHALL use CloudScape DateRangePicker component for date range filtering
+3. THE PropertyFilter SHALL support filtering by Activity Category property
+4. THE PropertyFilter SHALL support filtering by Activity Type property
+5. THE PropertyFilter SHALL support filtering by Status property (PLANNED, ACTIVE, COMPLETED, CANCELLED)
+6. THE PropertyFilter SHALL support filtering by Population property
+7. THE PropertyFilter SHALL implement lazy loading of property values when the user types in the filter input
+8. WHEN a user types in the PropertyFilter, THE Web_App SHALL asynchronously fetch matching values from the backend APIs
+9. THE PropertyFilter SHALL debounce user input to avoid excessive API requests (minimum 300ms delay)
+10. THE PropertyFilter SHALL display a loading indicator while fetching property values
+11. THE PropertyFilter SHALL support only the equals (=) operator for all properties
+12. THE PropertyFilter SHALL NOT support the not equals (!=) operator
+13. WHEN multiple values are selected for a single property dimension, THE PropertyFilter SHALL display a single token showing all values as a comma-separated list
+14. THE PropertyFilter SHALL maintain a one-to-one mapping between property name and filter token
+15. WHEN a user filters by Activity Category with values "Study Circles" and "Devotional Gatherings", THE PropertyFilter SHALL display a single token reading "Activity Category = Study Circles, Devotional Gatherings"
+16. THE PropertyFilter SHALL NOT create separate tokens for each value within the same property dimension
+17. THE PropertyFilter SHALL display human-readable display names in filter tokens instead of UUIDs
+18. WHEN displaying Activity Category values in tokens, THE PropertyFilter SHALL show the category name (e.g., "Study Circles") not the category ID
+19. WHEN displaying Activity Type values in tokens, THE PropertyFilter SHALL show the type name (e.g., "Children's Class") not the type ID
+20. WHEN displaying Population values in tokens, THE PropertyFilter SHALL show the population name (e.g., "Youth") not the population ID
+21. THE PropertyFilter SHALL prevent duplicate values within a single property dimension
+22. WHEN a user attempts to add a value that already exists in a property dimension's token, THE PropertyFilter SHALL ignore the duplicate and maintain only unique values
+23. THE PropertyFilter SHALL persist all filter tokens to URL query parameters
+24. THE PropertyFilter SHALL persist date range selections to URL query parameters
+25. WHEN a user navigates to a URL with PropertyFilter query parameters, THE Web_App SHALL restore the filter tokens and date range
+26. THE PropertyFilter SHALL extract filter values from tokens and convert display names back to IDs for API requests
+27. WHEN multiple filter tokens are added, THE Web_App SHALL apply all filters using AND logic across dimensions
+28. WHEN multiple values exist within a single token, THE Web_App SHALL apply OR logic within that dimension
+29. THE PropertyFilter SHALL allow users to clear all filters at once
+30. WHEN the PropertyFilter is empty and no date range is selected, THE Web_App SHALL display all activities without filtering
+31. THE PropertyFilter SHALL provide clear labels for each property (Activity Category, Activity Type, Status, Population)
+32. THE PropertyFilter SHALL integrate with the global geographic area filter from the application header
+33. WHEN both PropertyFilter and global geographic area filter are active, THE Web_App SHALL apply both filters using AND logic
+34. THE Web_App SHALL position the DateRangePicker and PropertyFilter components together in a consistent layout matching the analytics dashboards
+35. THE Web_App SHALL provide comprehensive i18nStrings for PropertyFilter accessibility and localization
 
 ### Requirement 2A: Form Presentation Pattern for Major Entities
 
@@ -1008,6 +1066,17 @@ The Web Frontend package provides a responsive React-based web application that 
 23. THE Web_App SHALL NOT allow users to apply geographic area filters to read-only ancestor areas, as this would result in incomplete analytics data
 24. WHEN an API request returns a 403 Forbidden error with code GEOGRAPHIC_AUTHORIZATION_DENIED while a global geographic area filter is active, THE Web_App SHALL automatically clear the global filter and revert to "Global" (no filter)
 25. WHEN clearing the filter due to a 403 authorization error, THE Web_App SHALL display a notification to the user explaining that the filter was cleared due to authorization restrictions
+26. WHEN displaying N geographic areas in the filter selector dropdown, THE Web_App SHALL ensure it has the complete ancestor hierarchy for all N areas to render hierarchy paths correctly
+27. THE Web_App SHALL identify unique parent geographic area IDs from all fetched areas in the current batch
+28. THE Web_App SHALL determine which parent areas are missing complete ancestor metadata
+29. WHEN parent areas are missing ancestor metadata, THE Web_App SHALL fetch ancestor IDs using the batch-ancestors endpoint in a single batched request
+30. THE Web_App SHALL use POST /geographic-areas/batch-ancestors to fetch ancestor IDs for multiple parent areas simultaneously
+31. WHEN ancestor IDs are fetched, THE Web_App SHALL collect all unique ancestor IDs from the batch-ancestors response
+32. THE Web_App SHALL fetch complete entity details for all ancestors using the batch-details endpoint in a single batched request
+33. THE Web_App SHALL use POST /geographic-areas/batch-details to fetch full geographic area objects (id, name, areaType, parentGeographicAreaId, childCount, createdAt, updatedAt) for multiple ancestor IDs simultaneously
+34. THE Web_App SHALL cache fetched ancestor data to avoid redundant requests when the same areas appear in subsequent batches
+35. THE Web_App SHALL minimize backend round trips by using two batched operations: first fetch ancestor IDs via batch-ancestors, then fetch full details via batch-details
+36. WHEN rendering dropdown options, THE Web_App SHALL use the cached ancestor data to build complete hierarchy paths for all visible areas
 
 ### Requirement 26: High-Cardinality Dropdown Filtering
 
@@ -1083,6 +1152,39 @@ The Web Frontend package provides a responsive React-based web application that 
 28. WHEN search or filter parameters are applied, THE Web_App SHALL restart batched loading with the new filter criteria
 29. THE Web_App SHALL use the total count from the API response to show accurate progress during filtered loading
 30. THE Web_App SHALL clear existing items and start fresh batched loading when filters change significantly
+
+### Requirement 26B: Subtle Loading Indicators for Batched Loading with Cancellation
+
+**User Story:** As a user, I want subtle, non-intrusive loading indicators with the ability to cancel during batched loading, so that I can see loading progress without being distracted and can interrupt long-running loads if needed.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL NOT use Alert components to indicate batched loading progress
+2. THE Web_App SHALL display a subtle loading indicator next to the container or table header during batched loading
+3. THE loading indicator SHALL consist of a Spinner component and a text label showing progress (e.g., "Loading: 24 / 100")
+4. THE loading indicator SHALL be positioned near the entity count in the header (e.g., "Participants (24 / 100)" with spinner)
+5. THE loading indicator SHALL remain mounted and visible for the entire duration of the batched loading process
+6. WHEN all batches have been fetched, THE Web_App SHALL hide the loading indicator
+7. WHEN all batches have been fetched, THE Web_App SHALL display only the final count without the spinner (e.g., "Participants (100)")
+8. THE loading indicator SHALL use a small or normal-sized Spinner component (not large)
+9. THE loading indicator SHALL use muted or secondary text styling to avoid drawing excessive attention
+10. THE Web_App SHALL apply this subtle loading indicator pattern to ActivityList, ParticipantList, VenueList, GeographicAreaList, and MapView components
+11. THE Web_App SHALL NOT display Alert components with "Loading activities: X / Y" messages during normal batched loading
+12. THE Web_App SHALL reserve Alert components for error states, warnings, and important user notifications only
+13. THE loading indicator SHALL be visually integrated into the header area without disrupting the layout
+14. THE loading indicator SHALL NOT cause layout shifts or content jumping when it appears or disappears
+15. THE loading indicator SHALL include a "Cancel" button positioned next to the progress text
+16. THE "Cancel" button SHALL be visible for the entire duration of the batched loading process
+17. WHEN a user clicks the "Cancel" button, THE Web_App SHALL immediately stop fetching additional batches
+18. WHEN a user clicks the "Cancel" button, THE Web_App SHALL keep all already-loaded entities visible in the list or map
+19. WHEN a user clicks the "Cancel" button, THE Web_App SHALL hide the loading indicator
+20. WHEN a user clicks the "Cancel" button, THE Web_App SHALL update the entity count to reflect only the loaded entities
+21. THE "Cancel" button SHALL use a subtle, inline-link or icon-only style to match the loading indicator's non-intrusive appearance
+22. THE "Cancel" button SHALL be keyboard accessible and include appropriate ARIA labels for screen readers (e.g., "Cancel loading")
+23. WHEN batched loading is cancelled, THE Web_App SHALL allow the user to manually trigger a reload or apply new filters to restart loading
+24. THE Web_App SHALL NOT automatically resume batched loading after cancellation unless the user explicitly changes filters or refreshes the view
+25. THE "Cancel" button SHALL be positioned inline with the loading progress text to maintain horizontal layout
+26. THE "Cancel" button SHALL use muted styling (e.g., variant="inline-link" or icon-only with subdued color) to avoid visual prominence
 
 
 ### Requirement 27: Clear Optional Fields

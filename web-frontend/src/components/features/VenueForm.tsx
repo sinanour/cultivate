@@ -12,7 +12,7 @@ import Modal from '@cloudscape-design/components/modal';
 import Box from '@cloudscape-design/components/box';
 import Grid from '@cloudscape-design/components/grid';
 import Container from '@cloudscape-design/components/container';
-import type { Venue, GeocodingResult, GeographicAreaWithHierarchy } from '../../types';
+import type { Venue, GeographicArea, GeocodingResult, GeographicAreaWithHierarchy } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeocodingService } from '../../services/geocoding.service';
@@ -198,15 +198,18 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const { data: geographicAreas = [], isLoading: isLoadingAreas, refetch: refetchAreas } = useQuery({
     queryKey: ['geographicAreas', 'withHierarchy'],
     queryFn: async () => {
-      const areas = await GeographicAreaService.getGeographicAreas();
+      const response = await GeographicAreaService.getGeographicAreas();
+      
+      // Handle both paginated and non-paginated responses
+      const areas = Array.isArray(response) ? response : response.data;
       
       // Fetch ancestors for each area to build hierarchy
       const areasWithHierarchy = await Promise.all(
-        areas.map(async (area) => {
+        areas.map(async (area: GeographicArea) => {
           try {
             const ancestors = await GeographicAreaService.getAncestors(area.id);
             const hierarchyPath = ancestors.length > 0
-              ? ancestors.map(a => a.name).join(' > ')
+              ? ancestors.map((a: GeographicArea) => a.name).join(' > ')
               : '';
             
             return {

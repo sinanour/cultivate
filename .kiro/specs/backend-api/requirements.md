@@ -30,6 +30,7 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Lazy_Loading**: A performance optimization strategy where data is fetched in batches of 100 items using paginated APIs and rendered incrementally to reduce latency and provide continuous loading feedback to the user
 - **Batched_Loading**: A technique where large datasets are fetched in multiple smaller requests (batches of 100 items) and rendered progressively as each batch arrives
 - **Incremental_Rendering**: A UI pattern where entities are displayed on screen as soon as they are fetched, without waiting for all data to be loaded
+- **Batch_Details_Endpoint**: An API endpoint that accepts multiple entity IDs and returns complete entity details for all specified entities in a single request, complementing the batch-ancestors endpoint by providing full geographic area data after ancestor IDs are fetched
 
 ## Requirements
 
@@ -131,7 +132,7 @@ The Backend API package provides the RESTful API service that implements all bus
 
 ### Requirement 4: Create and Manage Activities
 
-**User Story:** As a community organizer, I want to create and manage activities via API, so that I can track what's happening in my community.
+**User Story:** As a community organizer, I want to create and manage activities via API with flexible filtering capabilities, so that I can track what's happening in my community and find specific activities based on multiple criteria.
 
 #### Acceptance Criteria
 
@@ -154,7 +155,25 @@ The Backend API package provides the RESTful API service that implements all bus
 17. WHEN creating an activity-venue association with a null effectiveFrom date, THE API SHALL treat the venue association start date as the same as the activity start date
 18. THE API SHALL enforce that at most one activity-venue association can have a null effectiveFrom date for any given activity
 19. WHEN creating an activity-venue association, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same activity
-17. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only activities whose current venue is in the specified geographic area or its descendants
+20. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only activities whose current venue is in the specified geographic area or its descendants
+21. THE API SHALL accept an optional activityTypeIds array filter on GET /api/activities endpoint to filter by one or more activity types
+22. WHEN an activityTypeIds filter is provided, THE API SHALL return only activities of at least one of the specified activity types (OR logic within dimension)
+23. THE API SHALL accept an optional activityCategoryIds array filter on GET /api/activities endpoint to filter by one or more activity categories
+24. WHEN an activityCategoryIds filter is provided, THE API SHALL return only activities belonging to at least one of the specified activity categories (OR logic within dimension)
+25. THE API SHALL accept an optional status array filter on GET /api/activities endpoint to filter by one or more activity statuses
+26. WHEN a status filter is provided, THE API SHALL return only activities with at least one of the specified statuses (OR logic within dimension)
+27. THE API SHALL accept an optional populationIds array filter on GET /api/activities endpoint to filter by one or more populations
+28. WHEN a populationIds filter is provided, THE API SHALL return only activities that have at least one participant belonging to at least one of the specified populations (OR logic within dimension)
+29. THE API SHALL accept an optional startDate filter on GET /api/activities endpoint to filter by activities starting on or after the specified date
+30. WHEN a startDate filter is provided, THE API SHALL return only activities whose startDate is greater than or equal to the specified date
+31. THE API SHALL accept an optional endDate filter on GET /api/activities endpoint to filter by activities ending on or before the specified date
+32. WHEN an endDate filter is provided, THE API SHALL return only activities whose endDate is less than or equal to the specified date (or null for ongoing activities)
+33. WHEN multiple filter dimensions are provided on GET /api/activities endpoint (e.g., activityTypeIds AND status AND populationIds), THE API SHALL apply all filters using AND logic across dimensions
+34. WHEN multiple values are provided within a single filter dimension (e.g., status=[ACTIVE, PLANNED]), THE API SHALL apply OR logic within that dimension (status IN (ACTIVE, PLANNED))
+35. THE API SHALL use Zod preprocess to normalize array query parameters (activityTypeIds, activityCategoryIds, status, populationIds) before validation
+36. WHEN a single value is provided for an array parameter, THE API SHALL parse it as an array with one element
+37. WHEN multiple values are provided for an array parameter (e.g., ?status=ACTIVE&status=PLANNED), THE API SHALL parse them as an array with multiple elements
+38. WHEN comma-separated values are provided for an array parameter (e.g., ?status=ACTIVE,PLANNED), THE API SHALL parse them as an array with multiple elements
 
 ### Requirement 5: Assign Participants to Activities
 
@@ -225,6 +244,27 @@ The Backend API package provides the RESTful API service that implements all bus
 25. THE API SHALL provide a GET /api/geographic-areas/:id/venues endpoint that returns all venues in the geographic area and all descendant areas (recursive aggregation)
 26. THE API SHALL provide a GET /api/geographic-areas/:id/statistics endpoint that returns activity and participant statistics for the geographic area and all descendants (recursive aggregation)
 27. WHEN a geographic area filter is provided via geographicAreaId query parameter with depth parameter, THE API SHALL return the specified geographic area with children up to the specified depth, plus all ancestors (to maintain hierarchy context for tree view display)
+28. THE API SHALL provide a POST /api/v1/geographic-areas/batch-ancestors endpoint that accepts an array of geographic area IDs and returns ancestor data for all specified areas
+29. WHEN fetching batch ancestors, THE API SHALL accept a request body with an array of geographic area IDs (areaIds)
+30. WHEN fetching batch ancestors, THE API SHALL return a map/object where each key is a geographic area ID and each value is an array of ancestor geographic areas ordered from closest to most distant
+31. WHEN fetching batch ancestors for an area that has no parent, THE API SHALL return an empty array for that area's ancestors
+32. WHEN fetching batch ancestors for multiple areas, THE API SHALL optimize the query to minimize database round trips by fetching all unique ancestors in a single operation
+33. THE API SHALL validate that all provided area IDs in the batch ancestors request are valid UUIDs
+34. WHEN an invalid UUID is provided in the batch ancestors request, THE API SHALL return 400 Bad Request with a validation error
+35. THE API SHALL limit the batch ancestors request to a maximum of 100 area IDs per request
+36. WHEN more than 100 area IDs are provided in a batch ancestors request, THE API SHALL return 400 Bad Request with an error message
+37. THE API SHALL provide a POST /api/v1/geographic-areas/batch-details endpoint that accepts an array of geographic area IDs and returns full entity details for all specified areas
+38. WHEN fetching batch details, THE API SHALL accept a request body with an array of geographic area IDs (areaIds)
+39. WHEN fetching batch details, THE API SHALL return a map/object where each key is a geographic area ID and each value is a complete geographic area object with all fields (id, name, areaType, parentGeographicAreaId, childCount, createdAt, updatedAt)
+40. WHEN fetching batch details for multiple areas, THE API SHALL optimize the query to fetch all requested areas in a single database operation
+41. THE API SHALL validate that all provided area IDs in the batch details request are valid UUIDs
+42. WHEN an invalid UUID is provided in the batch details request, THE API SHALL return 400 Bad Request with a validation error
+43. THE API SHALL limit the batch details request to a maximum of 100 area IDs per request
+44. WHEN more than 100 area IDs are provided in a batch details request, THE API SHALL return 400 Bad Request with an error message
+45. WHEN fetching batch details for a non-existent area ID, THE API SHALL omit that ID from the response map (not return null or error for individual missing IDs)
+46. THE API SHALL apply geographic authorization filtering to the batch details endpoint
+47. WHEN a user requests batch details for areas they are not authorized to access, THE API SHALL omit unauthorized areas from the response map
+48. THE batch details endpoint SHALL complement the batch ancestors endpoint by allowing the frontend to first fetch ancestor IDs via batch-ancestors, then fetch full details for those ancestors via batch-details in a single round trip
 
 ### Requirement 6: Analyze Community Engagement
 

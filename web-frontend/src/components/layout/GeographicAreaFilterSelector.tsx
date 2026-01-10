@@ -13,10 +13,18 @@ export function GeographicAreaFilterSelector() {
     clearFilter,
     isLoading,
     isAuthorizedArea,
+    setSearchQuery,
+    isSearching,
   } = useGlobalGeographicFilter();
 
   const handleChange = (areaId: string | null) => {
     setGeographicAreaFilter(areaId);
+    // Clear search query when selection is made
+    setSearchQuery('');
+  };
+
+  const handleLoadItems = (filteringText: string) => {
+    setSearchQuery(filteringText);
   };
 
   // Build breadcrumb items from the selected area's ancestry
@@ -78,9 +86,11 @@ export function GeographicAreaFilterSelector() {
           value={selectedGeographicAreaId}
           onChange={handleChange}
           options={availableAreas}
-          loading={isLoading}
+          loading={isLoading || isSearching}
           placeholder={selectedGeographicAreaId ? undefined : 'Global (All Areas)'}
           inlineLabelText="Region Filter"
+          onLoadItems={handleLoadItems}
+          filteringType="manual"
         />
       </div>
       {selectedGeographicAreaId && breadcrumbItems.length > 0 && (

@@ -182,6 +182,58 @@ export const ActivityUpdateSchema = z.object({
   version: z.number().int().positive().optional(),
 });
 
+export const ActivityQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(100),
+  geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  activityTypeIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity type ID format')).optional()
+  ),
+  activityCategoryIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity category ID format')).optional()
+  ),
+  status: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.nativeEnum(ActivityStatus)).optional()
+  ),
+  populationIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid population ID format')).optional()
+  ),
+  startDate: z.string().datetime('Invalid start date format').optional(),
+  endDate: z.string().datetime('Invalid end date format').optional(),
+});
+
 export const ActivityVenueAssociationSchema = z.object({
   venueId: z.string().uuid('Invalid venue ID format'),
   effectiveFrom: z.string().datetime('Invalid effectiveFrom date format').nullable().optional(),
@@ -406,6 +458,8 @@ const arrayPreprocessor = (val: any) => {
 };
 
 export const MapActivityMarkersQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(100),
   geographicAreaIds: z.preprocess(
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid geographic area ID format')).optional()
@@ -432,6 +486,8 @@ export const MapActivityMarkersQuerySchema = z.object({
 });
 
 export const MapParticipantHomeMarkersQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(100),
   geographicAreaIds: z.preprocess(
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid geographic area ID format')).optional()
@@ -443,6 +499,8 @@ export const MapParticipantHomeMarkersQuerySchema = z.object({
 });
 
 export const MapVenueMarkersQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(100),
   geographicAreaIds: z.preprocess(
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid geographic area ID format')).optional()
@@ -499,6 +557,7 @@ export type VenueUpdateInput = z.infer<typeof VenueUpdateSchema>;
 export type VenueSearchQuery = z.infer<typeof VenueSearchSchema>;
 export type ActivityCreateInput = z.infer<typeof ActivityCreateSchema>;
 export type ActivityUpdateInput = z.infer<typeof ActivityUpdateSchema>;
+export type ActivityQueryInput = z.infer<typeof ActivityQuerySchema>;
 export type ActivityVenueAssociationInput = z.infer<typeof ActivityVenueAssociationSchema>;
 export type AssignmentCreateInput = z.infer<typeof AssignmentCreateSchema>;
 export type AssignmentUpdateInput = z.infer<typeof AssignmentUpdateSchema>;

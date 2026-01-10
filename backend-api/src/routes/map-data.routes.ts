@@ -74,6 +74,10 @@ export class MapDataRoutes {
         try {
             const query = req.query as any;
 
+            // Extract pagination parameters
+            const page = query.page ? parseInt(query.page as string, 10) : 1;
+            const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
+
             // Convert query to filters
             const filters = {
                 geographicAreaIds: query.geographicAreaIds,
@@ -86,9 +90,11 @@ export class MapDataRoutes {
                 status: query.status as ActivityStatus | undefined,
             };
 
-            const markers = await this.mapDataService.getActivityMarkers(
+            const result = await this.mapDataService.getActivityMarkers(
                 filters,
-                req.user!.userId
+                req.user!.userId,
+                page,
+                limit
             );
 
             // Set cache headers
@@ -96,7 +102,8 @@ export class MapDataRoutes {
 
             res.json({
                 success: true,
-                data: markers,
+                data: result.data,
+                pagination: result.pagination,
             });
         } catch (error) {
             throw error;
@@ -132,14 +139,20 @@ export class MapDataRoutes {
         try {
             const query = req.query as any;
 
+            // Extract pagination parameters
+            const page = query.page ? parseInt(query.page as string, 10) : 1;
+            const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
+
             const filters = {
                 geographicAreaIds: query.geographicAreaIds,
                 populationIds: query.populationIds,
             };
 
-            const markers = await this.mapDataService.getParticipantHomeMarkers(
+            const result = await this.mapDataService.getParticipantHomeMarkers(
                 filters,
-                req.user!.userId
+                req.user!.userId,
+                page,
+                limit
             );
 
             // Set cache headers
@@ -147,7 +160,8 @@ export class MapDataRoutes {
 
             res.json({
                 success: true,
-                data: markers,
+                data: result.data,
+                pagination: result.pagination,
             });
         } catch (error) {
             throw error;
@@ -183,13 +197,19 @@ export class MapDataRoutes {
         try {
             const query = req.query as any;
 
+            // Extract pagination parameters
+            const page = query.page ? parseInt(query.page as string, 10) : 1;
+            const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
+
             const filters = {
                 geographicAreaIds: query.geographicAreaIds,
             };
 
-            const markers = await this.mapDataService.getVenueMarkers(
+            const result = await this.mapDataService.getVenueMarkers(
                 filters,
-                req.user!.userId
+                req.user!.userId,
+                page,
+                limit
             );
 
             // Set cache headers
@@ -197,7 +217,8 @@ export class MapDataRoutes {
 
             res.json({
                 success: true,
-                data: markers,
+                data: result.data,
+                pagination: result.pagination,
             });
         } catch (error) {
             throw error;

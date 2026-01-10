@@ -16,7 +16,7 @@ import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { useNotification } from '../../hooks/useNotification';
 import { useAuth } from '../../hooks/useAuth';
-import type { GeographicAreaWithHierarchy } from '../../types';
+import type { GeographicArea, GeographicAreaWithHierarchy } from '../../types';
 
 interface GeographicAuthorizationFormProps {
   userId: string;
@@ -57,15 +57,18 @@ export function GeographicAuthorizationForm({
   const { data: geographicAreas = [], isLoading: isLoadingAreas } = useQuery({
     queryKey: ['geographicAreas', 'withHierarchy'],
     queryFn: async () => {
-      const areas = await GeographicAreaService.getGeographicAreas();
+      const response = await GeographicAreaService.getGeographicAreas();
+      
+      // Handle both paginated and non-paginated responses
+      const areas = Array.isArray(response) ? response : response.data;
       
       // Fetch ancestors for each area to build hierarchy
       const areasWithHierarchy = await Promise.all(
-        areas.map(async (area) => {
+        areas.map(async (area: GeographicArea) => {
           try {
             const ancestors = await GeographicAreaService.getAncestors(area.id);
             const hierarchyPath = ancestors.length > 0
-              ? ancestors.map(a => a.name).join(' > ')
+              ? ancestors.map((a: GeographicArea) => a.name).join(' > ')
               : '';
             
             return {

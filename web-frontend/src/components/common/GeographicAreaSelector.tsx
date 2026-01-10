@@ -33,6 +33,8 @@ export interface GeographicAreaSelectorProps {
   placeholder?: string;
   inlineLabelText?: string;
   ariaLabel?: string;
+  onLoadItems?: (filteringText: string) => void;
+  filteringType?: 'auto' | 'manual';
 }
 
 export function GeographicAreaSelector({
@@ -45,6 +47,8 @@ export function GeographicAreaSelector({
   placeholder = 'Select a geographic area',
   inlineLabelText,
   ariaLabel = 'Geographic area',
+  onLoadItems,
+  filteringType = 'auto',
 }: GeographicAreaSelectorProps) {
   const options = useMemo((): HierarchicalOption[] => {
     return areas.map(area => {
@@ -73,6 +77,12 @@ export function GeographicAreaSelector({
     onChange(newValue);
   };
 
+  const handleLoadItems: SelectProps['onLoadItems'] = ({ detail }) => {
+    if (onLoadItems) {
+      onLoadItems(detail.filteringText);
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -84,12 +94,13 @@ export function GeographicAreaSelector({
       <Select
         selectedOption={selectedOption}
         onChange={handleChange}
+        onLoadItems={filteringType === 'manual' ? handleLoadItems : undefined}
         options={options}
         placeholder={placeholder}
         loadingText="Loading areas..."
         statusType={loading ? 'loading' : 'finished'}
         disabled={disabled || loading}
-        filteringType="auto"
+        filteringType={filteringType}
         expandToViewport
         selectedAriaLabel="Selected"
         inlineLabelText={inlineLabelText}

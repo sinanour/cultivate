@@ -531,11 +531,169 @@ export class GeographicAreaService {
         return children;
     }
 
+    async getChildrenPaginated(
+        id: string,
+        page?: number,
+        limit?: number,
+        userId?: string,
+        userRole?: string
+    ): Promise<PaginatedResponse<GeographicArea>> {
+        // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
+        await this.getGeographicAreaById(id, userId, userRole);
+
+        const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
+
+        // Get all children first
+        const allChildren = await this.geographicAreaRepository.findChildren(id);
+
+        // Filter out denied children if user has geographic restrictions
+        let filteredChildren = allChildren;
+        if (userId && userRole !== 'ADMINISTRATOR') {
+            const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
+
+            if (authInfo.hasGeographicRestrictions) {
+                // Only include children that are in the authorized list
+                filteredChildren = allChildren.filter(child => authInfo.authorizedAreaIds.includes(child.id));
+            }
+        }
+
+        // Apply pagination
+        const total = filteredChildren.length;
+        const skip = (validPage - 1) * validLimit;
+        const paginatedChildren = filteredChildren.slice(skip, skip + validLimit);
+
+        return PaginationHelper.createResponse(paginatedChildren, validPage, validLimit, total);
+    }
+
     async getAncestors(id: string, userId?: string, userRole?: string): Promise<GeographicArea[]> {
         // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
         await this.getGeographicAreaById(id, userId, userRole);
 
         return this.geographicAreaRepository.findAncestors(id);
+    }
+
+    /**
+     * Get batch ancestors for multiple geographic areas.
+     * Returns a simplified parent map where each area ID maps to its parent ID.
+     * Clients can traverse the hierarchy by following parent IDs.
+     * 
+     * @param areaIds - Array of geographic area IDs (max 100)
+     * @param userId - Optional user ID for authorization filtering
+     * @param userRole - Optional user role for authorization bypass
+     * @returns Map of area ID to parent ID (e.g., { "area-1": "parent-1", "parent-1": null })
+     */
+    async getBatchAncestors(
+        areaIds: string[],
+        userId?: string,
+        userRole?: string
+    ): Promise<Record<string, string | null>> {
+        // Validate array length
+        if (areaIds.length > 100) {
+            throw new AppError(
+                'VALIDATION_ERROR',
+                'Cannot fetch ancestors for more than 100 areas at once',
+                400
+            );
+        }
+
+        // Validate all IDs are valid UUIDs (basic format check)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        for (const areaId of areaIds) {
+            if (!uuidRegex.test(areaId)) {
+                throw new AppError(
+                    'VALIDATION_ERROR',
+                    `Invalid UUID format: ${areaId}`,
+                    400
+                );
+            }
+        }
+
+        // Call repository method to fetch batch ancestors (returns parent map)
+        const parentMap = await this.geographicAreaRepository.findBatchAncestors(areaIds);
+
+        // Apply geographic authorization filtering if user is not an administrator
+        if (userId && userRole !== 'ADMINISTRATOR') {
+            const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
+
+            if (authInfo.hasGeographicRestrictions) {
+                // Filter parent map to only include authorized areas
+                const filteredResult: Record<string, string | null> = {};
+                const authorizedSet = new Set([...authInfo.authorizedAreaIds, ...authInfo.readOnlyAreaIds]);
+
+                for (const [areaId, parentId] of Object.entries(parentMap)) {
+                    // Only include this entry if the area itself is authorized
+                    if (authorizedSet.has(areaId)) {
+                        // If parent is not authorized, set to null (appears as root)
+                        filteredResult[areaId] = parentId && authorizedSet.has(parentId) ? parentId : null;
+                    }
+                }
+
+                return filteredResult;
+            }
+        }
+
+        return parentMap;
+    }
+
+    /**
+     * Fetches complete entity details for multiple geographic areas in a single optimized request.
+     * Complements getBatchAncestors by providing full geographic area objects after ancestor IDs are obtained.
+     * 
+     * @param areaIds - Array of geographic area IDs (max 100)
+     * @param userId - Optional user ID for authorization filtering
+     * @param userRole - Optional user role for authorization bypass
+     * @returns Map of area ID to complete geographic area object with childCount
+     */
+    async getBatchDetails(
+        areaIds: string[],
+        userId?: string,
+        userRole?: string
+    ): Promise<Record<string, GeographicArea & { childCount: number }>> {
+        // Validate array length
+        if (areaIds.length > 100) {
+            throw new AppError(
+                'VALIDATION_ERROR',
+                'Cannot fetch details for more than 100 areas at once',
+                400
+            );
+        }
+
+        // Validate all IDs are valid UUIDs (basic format check)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        for (const areaId of areaIds) {
+            if (!uuidRegex.test(areaId)) {
+                throw new AppError(
+                    'VALIDATION_ERROR',
+                    `Invalid UUID format: ${areaId}`,
+                    400
+                );
+            }
+        }
+
+        // Call repository method to fetch batch details
+        const detailsMap = await this.geographicAreaRepository.findBatchDetails(areaIds);
+
+        // Apply geographic authorization filtering if user is not an administrator
+        if (userId && userRole !== 'ADMINISTRATOR') {
+            const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
+
+            if (authInfo.hasGeographicRestrictions) {
+                // Filter details map to only include authorized areas
+                const filteredResult: Record<string, GeographicArea & { childCount: number }> = {};
+                const authorizedSet = new Set([...authInfo.authorizedAreaIds, ...authInfo.readOnlyAreaIds]);
+
+                for (const [areaId, areaData] of Object.entries(detailsMap)) {
+                    // Only include this entry if the area is authorized
+                    if (authorizedSet.has(areaId)) {
+                        filteredResult[areaId] = areaData;
+                    }
+                }
+
+                return filteredResult;
+            }
+        }
+
+        return detailsMap;
     }
 
     async getVenues(id: string, userId?: string, userRole?: string) {

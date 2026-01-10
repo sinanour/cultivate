@@ -446,6 +446,78 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - GET /api/geographic-areas/:id/statistics
     - _Requirements: 5B.1, 5B.2, 5B.9, 5B.13, 5B.14, 5B.15, 5B.22, 5B.23, 5B.24, 5B.25, 5B.26_
 
+  - [x] 9.5 Implement batch ancestors endpoint
+    - [x] 9.5.1 Add getBatchAncestors method to GeographicAreaRepository
+      - Accept array of area IDs (max 100)
+      - Collect all unique parent IDs from the requested areas
+      - Recursively fetch all ancestors using efficient query (CTE or iterative traversal)
+      - Build map of areaId → ancestors array
+      - Return ancestors ordered from closest to most distant for each area
+      - Optimize by fetching all unique ancestors in a single database query
+      - _Requirements: 5B.28, 5B.29, 5B.30, 5B.32_
+
+    - [x] 9.5.2 Add getBatchAncestors method to GeographicAreaService
+      - Validate all area IDs are valid UUIDs
+      - Validate array length does not exceed 100 items
+      - Call repository method to fetch batch ancestors
+      - Return formatted response with areaId → ancestors mapping
+      - Handle non-existent area IDs gracefully (return empty array)
+      - _Requirements: 5B.28, 5B.29, 5B.30, 5B.31, 5B.33, 5B.34, 5B.35, 5B.36_
+
+    - [x] 9.5.3 Create POST /api/v1/geographic-areas/batch-ancestors route
+      - Create validation schema for request body (areaIds array, max 100 UUIDs)
+      - Implement route handler that calls service method
+      - Return 200 OK with batch ancestors data
+      - Return 400 Bad Request for validation errors
+      - Apply authentication middleware (require valid JWT)
+      - _Requirements: 5B.28, 5B.33, 5B.34, 5B.35, 5B.36_
+
+    - [ ]* 9.5.4 Write property tests for batch ancestors
+      - **Property 220: Batch Ancestors Response Format**
+      - **Property 221: Batch Ancestors Ordering**
+      - **Property 222: Batch Ancestors Empty Array for Top-Level**
+      - **Property 223: Batch Ancestors Query Optimization**
+      - **Property 224: Batch Ancestors UUID Validation**
+      - **Property 225: Batch Ancestors Size Limit**
+      - **Validates: Requirements 5B.28, 5B.29, 5B.30, 5B.31, 5B.32, 5B.33, 5B.34, 5B.35, 5B.36**
+
+  - [x] 9.6 Implement batch details endpoint
+    - [x] 9.6.1 Add getBatchDetails method to GeographicAreaRepository
+      - Accept array of area IDs (max 100)
+      - Fetch all requested geographic areas in a single database query using WHERE id IN (...)
+      - Return map of areaId → complete geographic area object
+      - Include all fields: id, name, areaType, parentGeographicAreaId, childCount, createdAt, updatedAt
+      - Omit non-existent area IDs from response map (graceful handling)
+      - _Requirements: 5B.37, 5B.38, 5B.39, 5B.40, 5B.45_
+
+    - [x] 9.6.2 Add getBatchDetails method to GeographicAreaService
+      - Validate all area IDs are valid UUIDs
+      - Validate array length does not exceed 100 items
+      - Call repository method to fetch batch details
+      - Apply geographic authorization filtering (omit unauthorized areas)
+      - Return formatted response with areaId → geographic area object mapping
+      - Handle non-existent area IDs gracefully (omit from response)
+      - _Requirements: 5B.37, 5B.38, 5B.39, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47_
+
+    - [x] 9.6.3 Create POST /api/v1/geographic-areas/batch-details route
+      - Create validation schema for request body (areaIds array, max 100 UUIDs)
+      - Implement route handler that calls service method
+      - Return 200 OK with batch details data
+      - Return 400 Bad Request for validation errors
+      - Apply authentication middleware (require valid JWT)
+      - _Requirements: 5B.37, 5B.41, 5B.42, 5B.43, 5B.44_
+
+    - [ ]* 9.6.4 Write property tests for batch details
+      - **Property 226: Batch Details Response Format**
+      - **Property 227: Batch Details Complete Entity Data**
+      - **Property 228: Batch Details Query Optimization**
+      - **Property 229: Batch Details UUID Validation**
+      - **Property 230: Batch Details Size Limit**
+      - **Property 231: Batch Details Graceful Non-Existent ID Handling**
+      - **Property 232: Batch Details Authorization Filtering**
+      - **Property 233: Batch Details Complements Batch Ancestors**
+      - **Validates: Requirements 5B.37, 5B.38, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48**
+
 - [x] 10. Checkpoint - Verify core entity management
   - Ensure all tests pass, ask the user if questions arise.
 
@@ -483,6 +555,32 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - POST /api/activities/:id/venues
     - DELETE /api/activities/:id/venues/:venueId
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.12, 4.13, 4.14_
+
+  - [x] 11.4a Implement comprehensive activity filtering
+    - Create ActivityQuerySchema validation schema with optional filter arrays (activityTypeIds, activityCategoryIds, status, populationIds) and date range filters (startDate, endDate)
+    - Use Zod preprocess to normalize array parameters (single value, multiple parameters, comma-separated)
+    - Update ActivityService.getActivities() to accept all filter parameters
+    - Implement activity type filter (OR logic: type IN (A, B))
+    - Implement activity category filter (OR logic: category IN (A, B))
+    - Implement status filter (OR logic: status IN (ACTIVE, PLANNED))
+    - Implement population filter (OR logic: activity has at least one participant in specified populations)
+    - Implement startDate filter (activity.startDate >= startDate)
+    - Implement endDate filter (activity.endDate <= endDate OR activity.endDate IS NULL)
+    - Apply AND logic across all filter dimensions
+    - Update ActivityRepository to support all filter combinations
+    - Update GET /api/activities route handler to accept and validate all filter parameters
+    - _Requirements: 4.20, 4.21, 4.22, 4.23, 4.24, 4.25, 4.26, 4.27, 4.28, 4.29, 4.30, 4.31, 4.32, 4.33, 4.34, 4.35, 4.36, 4.37, 4.38_
+
+  - [ ]* 11.4b Write property tests for activity filtering
+    - **Property 212: Activity Type Filter**
+    - **Property 213: Activity Category Filter**
+    - **Property 214: Activity Status Filter**
+    - **Property 215: Activity Population Filter**
+    - **Property 216: Activity Date Range Filter**
+    - **Property 217: Activity Multi-Dimensional Filter AND Logic**
+    - **Property 218: Activity Within-Dimension OR Logic**
+    - **Property 219: Activity Filter Array Parameter Normalization**
+    - **Validates: Requirements 4.21, 4.22, 4.23, 4.24, 4.25, 4.26, 4.27, 4.28, 4.29, 4.30, 4.31, 4.32, 4.33, 4.34, 4.35, 4.36, 4.37, 4.38**
 
   - [x] 11.5 Create activity venue history repository
     - Implement CRUD operations for venue history

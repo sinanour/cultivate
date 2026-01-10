@@ -627,31 +627,50 @@ This implementation plan covers the React-based web application built with TypeS
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 11. Implement activity management UI
-  - [x] 11.1 Create ActivityList component with batched incremental loading
-    - Display table with filtering by category, type, and status (PLANNED, ACTIVE, COMPLETED, CANCELLED)
-    - Use CloudScape Table with batched pagination (100 items per batch)
-    - Implement batched loading: fetch activities in batches of 100 using pagination
-    - Render table rows incrementally as each batch is fetched
-    - Display progress indicator during loading ("Loading activities: X / Y")
-    - Update progress indicator after each batch is rendered
-    - Allow users to interact with already-loaded rows while additional batches load
-    - Automatically fetch next batch after previous batch is rendered
-    - Use pagination metadata (total count) from API to determine if more batches available
-    - Remove loading indicator when all batches are fetched
-    - Handle batch fetching errors with retry button
-    - Show activity category and type
-    - Visually distinguish finite vs ongoing
-    - Provide sort capabilities
-    - Support optional pagination
-    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.11, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.14, 26A.15, 26A.16_
+  - [x] 11.1 Update ActivityList component with PropertyFilter
+    - Replace existing filter controls with CloudScape PropertyFilter component
+    - Add CloudScape DateRangePicker component for date range filtering
+    - Configure PropertyFilter with four filtering properties:
+      - Activity Category (fetched from ActivityCategoryService)
+      - Activity Type (fetched from ActivityTypeService)
+      - Status (PLANNED, ACTIVE, COMPLETED, CANCELLED)
+      - Population (fetched from PopulationService)
+    - Implement handleLoadItems function for async property value loading with debouncing (300ms)
+    - Configure PropertyFilter to support only equals (=) operator (NOT not-equals)
+    - Implement token consolidation logic: display multiple values for same property as single token with comma-separated display names
+    - Example: "Activity Category = Study Circles, Devotional Gatherings"
+    - Implement de-duplication logic using Set to prevent duplicate values within property dimensions
+    - Ensure one-to-one mapping between property name and filter token
+    - Display human-readable names in tokens (category names, type names, population names) instead of UUIDs
+    - Extract filter values from PropertyFilter tokens (propertyKey and value array)
+    - Convert display names back to IDs for API requests
+    - Apply OR logic within each filter dimension (multiple categories, multiple types, etc.)
+    - Apply AND logic across different filter dimensions (categories AND statuses AND populations)
+    - Persist PropertyFilter tokens and date range to URL query parameters
+    - Restore filters from URL parameters on component mount
+    - Send all filter criteria to backend via ActivityService.getActivities() with query parameters
+    - Integrate with global geographic area filter using AND logic
+    - Position DateRangePicker and PropertyFilter in consistent layout matching analytics dashboards
+    - Provide comprehensive i18nStrings for PropertyFilter accessibility
+    - Maintain existing batched loading behavior (100 items per batch)
+    - Keep progress indicator during batch loading ("Loading activities: X / Y")
+    - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11, 5.12, 5.13, 5.14, 5.15, 5.16, 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.7, 5A.8, 5A.9, 5A.10, 5A.11, 5A.12, 5A.13, 5A.14, 5A.15, 5A.16, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.26, 5A.27, 5A.28, 5A.29, 5A.30, 5A.31, 5A.32, 5A.33, 5A.34, 5A.35_
+
+  - [ ]* 11.1a Write property tests for ActivityList PropertyFilter
+    - **Property 182: PropertyFilter Token Consolidation**
+    - **Property 183: PropertyFilter Display Name Rendering**
+    - **Property 184: PropertyFilter URL Synchronization**
+    - **Property 185: PropertyFilter Multi-Dimensional Logic**
+    - **Property 186: PropertyFilter De-duplication**
+    - **Validates: Requirements 5A.13, 5A.14, 5A.15, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.27, 5A.28**
 
   - [ ]* 11.2 Write property tests for activity list
     - **Property 11: Activity List Display**
     - **Property 12: Activity Filtering**
     - **Property 13: Finite vs Ongoing Activity Distinction**
-    - **Validates: Requirements 5.1, 5.2, 5.4**
+    - **Validates: Requirements 5.1, 5.2, 5.17**
 
-  - [x] 11.2 Create ActivityFormPage component
+  - [x] 11.3 Create ActivityFormPage component
     - Dedicated full-page form for create/edit (not a modal)
     - Accessible via routes: /activities/new and /activities/:id/edit
     - Conditionally require end date for finite activities
@@ -684,14 +703,14 @@ This implementation plan covers the React-based web application built with TypeS
     - Implement navigation guard using useFormNavigationGuard hook
     - Display confirmation dialog when user attempts to navigate away with unsaved changes
     - Allow vertical scrolling for large forms with embedded sections
-    - _Requirements: 5.5, 5.6, 5.8, 5.9, 5.10, 5.11, 5.12, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 6.1, 6.2, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 2A.2, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
+    - _Requirements: 5.18, 5.19, 5.21, 5.22, 5.23, 5.24, 5.25, 5.27, 5.28, 5.29, 5.30, 5.31, 5.32, 5.33, 5.34, 5.35, 5.36, 5.37, 5.38, 5.39, 5.40, 5.41, 6.1, 6.2, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 2A.2, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
 
   - [ ]* 11.3 Write property tests for activity validation
     - **Property 14: Finite Activity End Date Requirement**
     - **Property 15: Ongoing Activity Null End Date**
-    - **Validates: Requirements 5.8, 5.9**
+    - **Validates: Requirements 5.21, 5.22**
 
-  - [x] 11.3 Create ActivityDetail component
+  - [x] 11.4 Create ActivityDetail component
     - Show activity information with all status values
     - List assigned participants with roles from /activities/:id/participants endpoint
     - Display venue history table in reverse chronological order
@@ -701,34 +720,34 @@ This implementation plan covers the React-based web application built with TypeS
     - Support adding/removing venues via /activities/:id/venues endpoints
     - Add primary edit button that navigates to /activities/:id/edit
     - Add delete button with confirmation dialog
-    - _Requirements: 5.11, 5.12, 5.12a, 5.12b, 5.12c, 5.13, 5.14, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
+    - _Requirements: 5.24, 5.25, 5.25a, 5.25b, 5.25c, 5.26, 5.27, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
-  - [ ]* 11.4 Write property test for activity detail view
+  - [ ]* 11.5 Write property test for activity detail view
     - **Property 16: Activity Detail View Completeness**
-    - **Validates: Requirements 5.12**
+    - **Validates: Requirements 5.25**
 
-  - [x] 11.4 Create ActivityVenueHistoryTable component
+  - [x] 11.6 Create ActivityVenueHistoryTable component
     - Display venue history in reverse chronological order by effective start date
     - Show venue name and effective start date (display "Since Activity Start" or activity startDate for null dates)
     - Highlight most recent venue (first record, or null record if no non-null dates exist)
     - Provide delete button for each record
-    - _Requirements: 5.14, 5.20_
+    - _Requirements: 5.27, 5.33_
 
-  - [x] 11.5 Create ActivityVenueHistoryForm component
+  - [x] 11.7 Create ActivityVenueHistoryForm component
     - Modal form for adding venue associations
     - Require venue selection from dropdown
     - Allow optional effective start date using CloudScape DatePicker
     - Validate effective start date is optional (can be null to use activity startDate)
     - Prevent duplicate records with same effective start date (including null)
     - Enforce at most one null effective start date per activity
-    - _Requirements: 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22_
+    - _Requirements: 5.29, 5.30, 5.31, 5.32, 5.33, 5.34, 5.35_
 
-  - [x] 11.6 Implement ActivityVenueHistoryService
+  - [x] 11.8 Implement ActivityVenueHistoryService
     - Implement getActivityVenues(activityId)
     - Implement addActivityVenue(activityId, venueId, effectiveFrom)
     - Implement deleteActivityVenue(activityId, venueId)
     - Use /activities/:id/venues endpoints
-    - _Requirements: 5.13, 5.14_
+    - _Requirements: 5.26, 5.27_
 
 - [x] 12. Implement assignment management UI
   - [x] 12.1 Create AssignmentForm component (embedded in ActivityForm)
@@ -1586,7 +1605,61 @@ This implementation plan covers the React-based web application built with TypeS
     - Test that failed deletion displays error message
     - **Validates: Requirements 24A.1, 24A.2, 24A.3, 24A.4, 24A.5, 24A.6, 24A.7, 24A.8, 24A.9, 24A.10**
 
-- [ ] 23B. Create reusable Geographic_Area_Selector component
+- [x] 23B. Update batched loading indicators to use subtle header pattern
+  - [x] 23B.1 Update ActivityList loading indicator
+    - Remove Alert component for batched loading progress
+    - Add subtle loading indicator in Header with inline layout
+    - Display Spinner + "Loading: X / Y" text + Cancel button next to entity count
+    - Position indicator to integrate seamlessly with header
+    - Use muted/secondary text styling
+    - Ensure indicator stays mounted during entire loading process (check loadedCount < totalCount)
+    - Hide indicator when all batches loaded (loadedCount === totalCount)
+    - Implement Cancel button with inline-link style
+    - When Cancel clicked, stop fetching additional batches and keep loaded entities
+    - _Requirements: 26B.1, 26B.2, 26B.3, 26B.4, 26B.5, 26B.6, 26B.7, 26B.8, 26B.9, 26B.10, 26B.11, 26B.13, 26B.14, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.21, 26B.22, 26B.23, 26B.25, 26B.26_
+
+  - [x] 23B.2 Update ParticipantList loading indicator
+    - Remove Alert component for batched loading progress
+    - Add subtle loading indicator in Header with inline layout
+    - Display Spinner + "Loading: X / Y" text + Cancel button next to entity count
+    - Use same pattern as ActivityList for consistency
+    - Implement Cancel functionality
+    - _Requirements: 26B.1, 26B.2, 26B.3, 26B.4, 26B.5, 26B.6, 26B.7, 26B.8, 26B.9, 26B.10, 26B.11, 26B.13, 26B.14, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.21, 26B.22, 26B.23, 26B.25, 26B.26_
+
+  - [x] 23B.3 Update VenueList loading indicator
+    - Remove Alert component for batched loading progress
+    - Add subtle loading indicator in Header with inline layout
+    - Display Spinner + "Loading: X / Y" text + Cancel button next to entity count
+    - Use same pattern as ActivityList for consistency
+    - Implement Cancel functionality
+    - _Requirements: 26B.1, 26B.2, 26B.3, 26B.4, 26B.5, 26B.6, 26B.7, 26B.8, 26B.9, 26B.10, 26B.11, 26B.13, 26B.14, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.21, 26B.22, 26B.23, 26B.25, 26B.26_
+
+  - [x] 23B.4 Update GeographicAreaList loading indicator
+    - Remove Alert component for batched loading progress (if present)
+    - Add subtle loading indicator in Header with inline layout
+    - Display Spinner + "Loading: X / Y" text + Cancel button next to entity count
+    - Use same pattern as other list components for consistency
+    - Implement Cancel functionality
+    - _Requirements: 26B.1, 26B.2, 26B.3, 26B.4, 26B.5, 26B.6, 26B.7, 26B.8, 26B.9, 26B.10, 26B.11, 26B.13, 26B.14, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.21, 26B.22, 26B.23, 26B.25, 26B.26_
+
+  - [x] 23B.5 Update MapView loading indicator
+    - Remove Alert component for batched loading progress
+    - Add subtle loading indicator near map controls or in map overlay
+    - Display Spinner + "Loading: X / Y" text + Cancel button
+    - Position to avoid obscuring map content
+    - Use muted styling consistent with other components
+    - Keep indicator mounted until loadedCount equals totalCount
+    - Implement Cancel button to stop marker fetching
+    - _Requirements: 26B.1, 26B.2, 26B.3, 26B.5, 26B.6, 26B.7, 26B.8, 26B.9, 26B.10, 26B.11, 26B.12, 26B.13, 26B.14, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.21, 26B.22, 26B.23, 26B.25, 26B.26_
+
+  - [ ]* 23B.6 Write property tests for subtle loading indicators
+    - **Property 187: Loading Indicator Subtlety**
+    - **Property 188: Loading Indicator Header Integration**
+    - **Property 189: Loading Indicator Visibility Duration**
+    - **Property 190: No Alert Components for Loading**
+    - **Validates: Requirements 26B.1, 26B.2, 26B.3, 26B.4, 26B.5, 26B.6, 26B.11, 26B.12, 26B.13, 26B.14**
+
+- [ ] 23C. Create reusable Geographic_Area_Selector component
   - [ ] 23B.1 Extract Geographic_Area_Selector from GeographicAreaFilterSelector
     - Create new file: web-frontend/src/components/common/GeographicAreaSelector.tsx
     - Extract the Select portion from GeographicAreaFilterSelector.tsx
@@ -1623,6 +1696,45 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 181: Geographic Area Selector Accessibility**
     - **Validates: Requirements 6B1.3, 6B1.4, 6B1.5, 6B1.6, 6B1.7, 6B1.8, 6B1.9, 6B1.17, 6B1.18, 6B1.19, 6B1.22, 6B1.24, 6B1.25, 6B1.26_
 
+- [x] 23D. Fix global geographic filter search functionality
+  - [x] 23D.1 Update GlobalGeographicFilterContext to support server-side search
+    - Add search state management (searchQuery, setSearchQuery)
+    - Implement debounced search with 300ms delay
+    - When search query changes, fetch matching geographic areas from backend using search parameter
+    - Pass search query to GeographicAreaService.getGeographicAreas() as search parameter
+    - Update availableAreas state with search results
+    - Remove depth=1 limitation - fetch up to 100 matching areas regardless of depth
+    - Implement pagination support with page tracking and hasMorePages state
+    - Add loadMoreAreas() function to fetch additional pages
+    - Update GeographicAreaService.getGeographicAreas() to handle paginated responses
+    - Clear search results when search query is empty (revert to default behavior)
+    - Expose search-related state and handlers in context value
+    - _Requirements: 26.3, 26.8, 26.9, 26.10, 26.11_
+
+  - [x] 23D.2 Update GeographicAreaSelector to support server-side filtering
+    - Change filteringType from "auto" (client-side) to "manual" (server-side)
+    - Add onLoadItems prop to handle async filtering
+    - Implement filteringText state to track user input
+    - When filteringText changes, call onLoadItems callback with search query
+    - Display loading indicator while fetching filtered results
+    - Update options prop with filtered results from parent component
+    - Maintain existing option rendering and accessibility features
+    - _Requirements: 26.3, 26.8, 26.9, 26.10_
+
+  - [x] 23D.3 Wire GlobalGeographicFilterContext search to GeographicAreaSelector
+    - Pass onLoadItems callback from context to GeographicAreaSelector
+    - Implement callback to update search query in context
+    - Ensure debounced search triggers API requests
+    - Display filtered results in dropdown
+    - Clear search when dropdown is closed or selection is made
+    - _Requirements: 26.3, 26.8, 26.9, 26.10_
+
+  - [ ]* 23D.4 Write property tests for server-side search
+    - **Property 191: Geographic Filter Search API Requests**
+    - **Property 192: Geographic Filter Search Debouncing**
+    - **Property 193: Geographic Filter Search Results Display**
+    - **Validates: Requirements 26.3, 26.8, 26.9, 26.10**
+
 - [x] 24. Implement global persistent geographic area filter
   - [x] 24.1 Create GlobalGeographicFilterContext
     - Create React context for global geographic area filter state
@@ -1644,13 +1756,22 @@ This implementation plan covers the React-based web application built with TypeS
     - Fetch user's authorized areas from /users/:id/authorized-areas endpoint
     - Extract directly authorized area IDs (accessLevel === 'FULL' and !isDescendant)
     - Fetch full geographic area details when filter is set
-    - Fetch available areas based on current filter scope:
+    - Fetch available areas based on current filter scope in batches of 100:
       - When filter is "Global": fetch all geographic areas
       - When filter is active: fetch only descendants of filtered area
-    - For each area, fetch ancestor hierarchy using /geographic-areas/:id/ancestors endpoint
-    - Build hierarchyPath string with format "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
-    - Store areas with hierarchy information in availableAreas state
-    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.20, 25.21, 25.22_
+    - **Implement intelligent ancestor batching:**
+      - Maintain in-memory cache (Map<areaId, ancestors[]>) for areas with complete ancestor metadata
+      - After fetching each batch of N geographic areas, extract unique parent IDs from all areas
+      - Check ancestor cache to determine which parent areas are missing complete ancestor data
+      - Batch fetch missing parent areas and their ancestors in a single API request
+      - Use /geographic-areas/:id/ancestors endpoint or create batch ancestors endpoint
+      - Update ancestor cache with newly fetched ancestor chains
+      - Repeat ancestor fetching until all areas in current batch have complete ancestry
+      - Build hierarchyPath string for each area using cached ancestor data
+      - Format: "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
+      - Store areas with complete hierarchy information in availableAreas state
+      - Reuse cached ancestor data across batches to minimize redundant requests
+    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.20, 25.21, 25.22, 25.26, 25.27, 25.28, 25.29, 25.30, 25.31, 25.32, 25.33_
 
   - [ ] 24.2 Create useGlobalGeographicFilter hook
     - Export custom hook to access GlobalGeographicFilterContext

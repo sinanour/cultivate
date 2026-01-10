@@ -210,7 +210,10 @@ src/
 - Displays table with search, sort, and filter capabilities
 - Uses CloudScape Table with batched pagination (100 items per batch)
 - Fetches participants in batches and renders incrementally
-- Displays progress indicator during batch loading ("Loading participants: X / Y")
+- Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
+- Loading indicator positioned next to entity count in header
+- Cancel button allows user to interrupt batched loading at any point
+- Does NOT use Alert components for loading progress
 - Allows interaction with already-loaded participants while additional batches load
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
 - Provides actions for edit and delete (no separate View button)
@@ -289,10 +292,29 @@ src/
 #### 6. Activity Management
 
 **ActivityList**
-- Displays table with filtering by category, type, and status
+- Displays table with comprehensive server-side filtering capabilities
+- Uses CloudScape PropertyFilter component for multi-dimensional filtering
+- Uses CloudScape DateRangePicker component for date range filtering
+- PropertyFilter supports filtering by: Activity Category, Activity Type, Status, Population
+- Implements lazy loading of property values with debounced async fetching (300ms delay)
+- Displays human-readable names in filter tokens instead of UUIDs
+- Groups multiple values for same dimension in single token with comma-separated display
+- Example token: "Activity Category = Study Circles, Devotional Gatherings"
+- Maintains one-to-one mapping between property name and filter token
+- Prevents duplicate values within property dimensions using Set-based de-duplication
+- Supports only equals (=) operator, NOT not-equals (!=) operator
+- Applies OR logic within each filter dimension (e.g., multiple categories)
+- Applies AND logic across different filter dimensions (e.g., categories AND statuses AND populations)
+- Persists all filter tokens and date range to URL query parameters for shareability
+- Restores filters from URL parameters on page load
+- Sends filter criteria to backend API as query parameters
 - Uses CloudScape Table with batched pagination (100 items per batch)
 - Fetches activities in batches and renders incrementally
-- Displays progress indicator during batch loading ("Loading activities: X / Y")
+- Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
+- Loading indicator positioned next to entity count in header
+- Cancel button allows user to interrupt batched loading at any point
+- When cancelled, keeps already-loaded entities visible and stops fetching additional batches
+- Does NOT use Alert components for loading progress
 - Allows interaction with already-loaded activities while additional batches load
 - Renders activity name as hyperlink in primary column (links to /activities/:id)
 - Shows activity category and type
@@ -302,6 +324,7 @@ src/
 - Shows activity dates and status badges
 - Applies global geographic area filter from context when active
 - Filters to show only activities whose current venue is in the filtered geographic area or its descendants
+- Integrates PropertyFilter with global geographic area filter using AND logic
 
 **ActivityFormPage**
 - Dedicated full-page form for creating/editing activities (not a modal)
@@ -393,7 +416,10 @@ src/
 - Uses CloudScape Table with search, sort, and filter capabilities
 - Uses batched pagination (100 items per batch)
 - Fetches venues in batches and renders incrementally
-- Displays progress indicator during batch loading ("Loading venues: X / Y")
+- Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
+- Loading indicator positioned next to entity count in header
+- Cancel button allows user to interrupt batched loading at any point
+- Does NOT use Alert components for loading progress
 - Allows interaction with already-loaded venues while additional batches load
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
 - Renders geographic area name as hyperlink in geographic area column (links to /geographic-areas/:id)
@@ -466,7 +492,10 @@ src/
 - When global filter active: fetches filtered area's immediate children using depth=1
 - Implements lazy loading with batched fetching: fetches children in batches of 100 items on-demand when user expands a node
 - When expanding nodes with many children (>100), renders children incrementally as batches arrive
-- Displays progress indicator during batch loading ("Loading areas: X / Y")
+- Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
+- Loading indicator positioned next to entity count in header
+- Cancel button allows user to interrupt batched loading at any point
+- Does NOT use Alert components for loading progress
 - Uses childCount field from API to determine if node has children
 - Shows expansion affordance (arrow) only when childCount > 0
 - Hides expansion affordance when childCount = 0 (leaf node)
@@ -527,7 +556,9 @@ src/
 - Keeps map interactive (zoomable and pannable) during marker loading
 - Fetches markers in batches of 100 items using paginated API requests
 - Renders markers incrementally as each batch is fetched, without waiting for all batches
-- Displays progress indicator showing loaded/total marker count ("Loading markers: 300 / 1,500")
+- Displays subtle loading indicator showing loaded/total marker count (Spinner + "Loading: X / Y" text + Cancel button)
+- Loading indicator positioned near map controls, not as Alert component
+- Cancel button allows user to interrupt batched loading at any point
 - Updates progress indicator after each batch is rendered
 - Allows users to interact with already-rendered markers while additional batches load
 - Automatically fetches next batch after previous batch is rendered
@@ -1095,10 +1126,22 @@ src/
 - Prevents filtering by read-only ancestor areas to avoid incomplete analytics data
 - Fetches full geographic area details when filter is set for display in header
 - Fetches available areas based on current filter scope:
-  - When filter is "Global": fetches all geographic areas
-  - When filter is active: fetches only descendants of the filtered area
-- Fetches ancestor hierarchy for each area to build hierarchy path display
+  - When filter is "Global": fetches all geographic areas in batches of 100
+  - When filter is active: fetches only descendants of the filtered area in batches of 100
+- **Intelligent Ancestor Batching:**
+  - After fetching each batch of N geographic areas, identifies unique parent IDs from all areas in the batch
+  - Maintains an in-memory cache of areas with complete ancestor metadata (Map<areaId, ancestors[]>)
+  - Determines which parent areas are missing from the ancestor cache
+  - Fetches missing parent areas and their complete ancestor chains using batch-ancestors endpoint
+  - Uses POST `/geographic-areas/batch-ancestors` to fetch ancestor IDs for multiple areas in a single request
+  - Collects all unique ancestor IDs from the batch-ancestors response
+  - Fetches complete entity details for all ancestors using batch-details endpoint
+  - Uses POST `/geographic-areas/batch-details` to fetch full geographic area objects for multiple ancestor IDs in a single request
+  - Caches all fetched ancestor data to avoid redundant requests across subsequent batches
+  - Ensures every area in `availableAreas` has complete ancestor hierarchy before rendering dropdown options
+  - Minimizes backend round trips by grouping multiple ancestor fetch requests into two batched operations (IDs first, then details)
 - Formats options for Geographic_Area_Selector with label (area name) and description (hierarchy path)
+- Builds hierarchy paths using cached ancestor data for all visible areas
 
 #### API Service
 
@@ -1153,7 +1196,11 @@ src/
 - `deleteAddressHistory(participantId, historyId)`: Deletes address history record via `/participants/:id/address-history/:historyId`
 
 **ActivityService**
-- `getActivities(page?, limit?, geographicAreaId?)`: Fetches all activities with optional pagination and optional geographic area filter
+- `getActivities(params)`: Fetches all activities with comprehensive filtering support
+  - Parameters: `page?`, `limit?`, `geographicAreaId?`, `activityCategoryIds?` (array), `activityTypeIds?` (array), `status?` (array), `populationIds?` (array), `startDate?`, `endDate?`
+  - Supports OR logic within each filter dimension (e.g., `activityCategoryIds=[A, B]` means category IN (A, B))
+  - Applies AND logic across filter dimensions (e.g., categories AND statuses AND populations)
+  - Returns paginated response with activities matching all filter criteria
 - `getActivity(id)`: Fetches single activity with activityType populated
 - `createActivity(data)`: Creates new activity (status defaults to PLANNED if not provided)
 - `updateActivity(id, data, version?)`: Updates existing activity with optional version for optimistic locking
@@ -1198,6 +1245,8 @@ src/
 - `deleteGeographicArea(id)`: Deletes geographic area (validates references, returns REFERENCED_ENTITY error if referenced)
 - `getChildren(id)`: Fetches child geographic areas from `/geographic-areas/:id/children` (includes childCount for each child)
 - `getAncestors(id)`: Fetches hierarchy path to root from `/geographic-areas/:id/ancestors`
+- `getBatchAncestors(areaIds)`: Fetches ancestors for multiple areas in a single request via POST `/geographic-areas/batch-ancestors`, returns map of areaId to ancestors array, optimizes query to fetch all unique ancestors efficiently, validates all IDs are valid UUIDs, limits to 100 area IDs per request
+- `getBatchDetails(areaIds)`: Fetches complete entity details for multiple areas in a single request via POST `/geographic-areas/batch-details`, returns map of areaId to complete geographic area object (id, name, areaType, parentGeographicAreaId, childCount, createdAt, updatedAt), optimizes query to fetch all areas in single database operation, validates all IDs are valid UUIDs, limits to 100 area IDs per request, omits non-existent or unauthorized areas from response
 - `getVenues(id)`: Fetches venues in geographic area from `/geographic-areas/:id/venues`
 - `getStatistics(id)`: Fetches statistics for geographic area and descendants from `/geographic-areas/:id/statistics`
 - `getDescendantIds(id)`: Fetches all descendant area IDs for recursive filtering (used by global filter)

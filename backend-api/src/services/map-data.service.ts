@@ -3,6 +3,18 @@ import { GeographicAreaRepository } from '../repositories/geographic-area.reposi
 import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
 import { ActivityStatus } from '../utils/constants';
 
+export interface PaginationMetadata {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: PaginationMetadata;
+}
+
 export interface ActivityMarker {
     id: string;
     latitude: number;
@@ -66,12 +78,18 @@ export class MapDataService {
     ) { }
 
     /**
-     * Get lightweight activity marker data for map rendering
+     * Get lightweight activity marker data for map rendering with pagination
      */
     async getActivityMarkers(
         filters: MapFilters,
-        userId: string
-    ): Promise<ActivityMarker[]> {
+        userId: string,
+        page: number = 1,
+        limit: number = 100
+    ): Promise<PaginatedResponse<ActivityMarker>> {
+        // Enforce maximum limit
+        const effectiveLimit = Math.min(limit, 100);
+        const skip = (page - 1) * effectiveLimit;
+
         // Get effective geographic area IDs based on authorization
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
             filters.geographicAreaIds,
@@ -80,7 +98,15 @@ export class MapDataService {
 
         // If user has restrictions and no authorized areas, return empty
         if (effectiveAreaIds !== undefined && effectiveAreaIds.length === 0) {
-            return [];
+            return {
+                data: [],
+                pagination: {
+                    page,
+                    limit: effectiveLimit,
+                    total: 0,
+                    totalPages: 0,
+                },
+            };
         }
 
         // Get venue IDs in authorized geographic areas
@@ -88,7 +114,15 @@ export class MapDataService {
         if (effectiveAreaIds) {
             effectiveVenueIds = await this.getVenueIdsForAreas(effectiveAreaIds);
             if (effectiveVenueIds.length === 0) {
-                return [];
+                return {
+                    data: [],
+                    pagination: {
+                        page,
+                        limit: effectiveLimit,
+                        total: 0,
+                        totalPages: 0,
+                    },
+                };
             }
         }
 
@@ -155,9 +189,16 @@ export class MapDataService {
             };
         }
 
-        // Fetch activities with venue history
+        // Get total count
+        const total = await this.prisma.activity.count({
+            where: activityWhere,
+        });
+
+        // Fetch activities with venue history (paginated)
         const activities = await this.prisma.activity.findMany({
             where: activityWhere,
+            skip,
+            take: effectiveLimit,
             include: {
                 activityType: {
                     select: {
@@ -204,7 +245,15 @@ export class MapDataService {
             });
         }
 
-        return markers;
+        return {
+            data: markers,
+            pagination: {
+                page,
+                limit: effectiveLimit,
+                total,
+                totalPages: Math.ceil(total / effectiveLimit),
+            },
+        };
     }
 
     /**
@@ -270,12 +319,18 @@ export class MapDataService {
     }
 
     /**
-     * Get lightweight participant home marker data grouped by venue
+     * Get lightweight participant home marker data grouped by venue with pagination
      */
     async getParticipantHomeMarkers(
         filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds'>,
-        userId: string
-    ): Promise<ParticipantHomeMarker[]> {
+        userId: string,
+        page: number = 1,
+        limit: number = 100
+    ): Promise<PaginatedResponse<ParticipantHomeMarker>> {
+        // Enforce maximum limit
+        const effectiveLimit = Math.min(limit, 100);
+        const skip = (page - 1) * effectiveLimit;
+
         // Get effective geographic area IDs based on authorization
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
             filters.geographicAreaIds,
@@ -284,7 +339,15 @@ export class MapDataService {
 
         // If user has restrictions and no authorized areas, return empty
         if (effectiveAreaIds !== undefined && effectiveAreaIds.length === 0) {
-            return [];
+            return {
+                data: [],
+                pagination: {
+                    page,
+                    limit: effectiveLimit,
+                    total: 0,
+                    totalPages: 0,
+                },
+            };
         }
 
         // Get venue IDs in authorized geographic areas
@@ -292,7 +355,15 @@ export class MapDataService {
         if (effectiveAreaIds) {
             effectiveVenueIds = await this.getVenueIdsForAreas(effectiveAreaIds);
             if (effectiveVenueIds.length === 0) {
-                return [];
+                return {
+                    data: [],
+                    pagination: {
+                        page,
+                        limit: effectiveLimit,
+                        total: 0,
+                        totalPages: 0,
+                    },
+                };
             }
         }
 
@@ -361,11 +432,17 @@ export class MapDataService {
             venueParticipantMap.set(currentHome.venue.id, count + 1);
         }
 
-        // Fetch venue coordinates for markers
+        // Get total count of unique venues
         const venueIds = Array.from(venueParticipantMap.keys());
+        const total = venueIds.length;
+
+        // Apply pagination to venue IDs
+        const paginatedVenueIds = venueIds.slice(skip, skip + effectiveLimit);
+
+        // Fetch venue coordinates for markers
         const venues = await this.prisma.venue.findMany({
             where: {
-                id: { in: venueIds },
+                id: { in: paginatedVenueIds },
             },
             select: {
                 id: true,
@@ -382,7 +459,15 @@ export class MapDataService {
             participantCount: venueParticipantMap.get(venue.id) || 0,
         }));
 
-        return markers;
+        return {
+            data: markers,
+            pagination: {
+                page,
+                limit: effectiveLimit,
+                total,
+                totalPages: Math.ceil(total / effectiveLimit),
+            },
+        };
     }
 
     /**
@@ -454,12 +539,18 @@ export class MapDataService {
     }
 
     /**
-     * Get lightweight venue marker data for map rendering
+     * Get lightweight venue marker data for map rendering with pagination
      */
     async getVenueMarkers(
         filters: Pick<MapFilters, 'geographicAreaIds'>,
-        userId: string
-    ): Promise<VenueMarker[]> {
+        userId: string,
+        page: number = 1,
+        limit: number = 100
+    ): Promise<PaginatedResponse<VenueMarker>> {
+        // Enforce maximum limit
+        const effectiveLimit = Math.min(limit, 100);
+        const skip = (page - 1) * effectiveLimit;
+
         // Get effective geographic area IDs based on authorization
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
             filters.geographicAreaIds,
@@ -468,7 +559,15 @@ export class MapDataService {
 
         // If user has restrictions and no authorized areas, return empty
         if (effectiveAreaIds !== undefined && effectiveAreaIds.length === 0) {
-            return [];
+            return {
+                data: [],
+                pagination: {
+                    page,
+                    limit: effectiveLimit,
+                    total: 0,
+                    totalPages: 0,
+                },
+            };
         }
 
         // Build venue where clause
@@ -483,9 +582,16 @@ export class MapDataService {
             venueWhere.geographicAreaId = { in: effectiveAreaIds };
         }
 
-        // Fetch venues
+        // Get total count
+        const total = await this.prisma.venue.count({
+            where: venueWhere,
+        });
+
+        // Fetch venues (paginated)
         const venues = await this.prisma.venue.findMany({
             where: venueWhere,
+            skip,
+            take: effectiveLimit,
             select: {
                 id: true,
                 latitude: true,
@@ -494,11 +600,21 @@ export class MapDataService {
         });
 
         // Transform to markers
-        return venues.map(venue => ({
+        const markers = venues.map(venue => ({
             id: venue.id,
             latitude: venue.latitude!.toNumber(),
             longitude: venue.longitude!.toNumber(),
         }));
+
+        return {
+            data: markers,
+            pagination: {
+                page,
+                limit: effectiveLimit,
+                total,
+                totalPages: Math.ceil(total / effectiveLimit),
+            },
+        };
     }
 
     /**

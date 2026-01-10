@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { GeographicArea, GeographicAreaWithHierarchy } from '../types';
 import { GeographicAreaService } from '../services/api/geographic-area.service';
@@ -15,6 +15,11 @@ interface GlobalGeographicFilterContextType {
   clearFilter: () => void;
   isLoading: boolean;
   isAuthorizedArea: (areaId: string) => boolean;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  isSearching: boolean;
+  loadMoreAreas: () => Promise<void>;
+  hasMorePages: boolean;
 }
 
 export const GlobalGeographicFilterContext = createContext<GlobalGeographicFilterContextType | undefined>(undefined);
@@ -32,9 +37,119 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
   const [authorizedAreaIds, setAuthorizedAreaIds] = useState<Set<string>>(new Set());
   const [hasAuthorizationRules, setHasAuthorizationRules] = useState<boolean | null>(null); // null = not loaded yet
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Helper function to build hierarchy paths with intelligent ancestor batching
+  const buildHierarchyPathsWithBatching = useCallback(async (
+    newAreas: GeographicArea[],
+    existingMap: Map<string, GeographicArea>
+  ): Promise<GeographicAreaWithHierarchy[]> => {
+    // Create a map of all areas we have (from existing + new batch)
+    const areaMap = new Map<string, GeographicArea>(existingMap);
+    
+    // Add new areas to map
+    newAreas.forEach(area => areaMap.set(area.id, area));
+
+    // Identify unique parent IDs from new areas
+    const uniqueParentIds = new Set<string>();
+    for (const area of newAreas) {
+      if (area.parentGeographicAreaId) {
+        uniqueParentIds.add(area.parentGeographicAreaId);
+      }
+    }
+
+    // Determine which parent areas are missing from our map
+    const missingParentIds = Array.from(uniqueParentIds).filter(parentId => !areaMap.has(parentId));
+
+    // If we have missing parents, fetch their complete ancestor chains in a batch
+    if (missingParentIds.length > 0) {
+      try {
+        console.log(`Fetching ancestors for ${missingParentIds.length} missing parents:`, missingParentIds);
+        
+        // Step 1: Fetch ancestor IDs using batch-ancestors endpoint
+        const parentMap = await GeographicAreaService.getBatchAncestors(missingParentIds);
+        console.log('Batch ancestors parent map:', parentMap);
+        
+        // Step 2: Collect all unique area IDs from the parent map (both keys and values)
+        const allAncestorIds = new Set<string>();
+        for (const [areaId, parentId] of Object.entries(parentMap)) {
+          allAncestorIds.add(areaId);
+          if (parentId) {
+            allAncestorIds.add(parentId);
+          }
+        }
+        
+        // Filter to only IDs we don't already have
+        const ancestorIdsToFetch = Array.from(allAncestorIds).filter(id => !areaMap.has(id));
+        
+        // Step 3: Fetch full geographic area objects for all ancestors using batch-details endpoint
+        if (ancestorIdsToFetch.length > 0) {
+          console.log(`Fetching ${ancestorIdsToFetch.length} ancestor area objects using batch-details`);
+          
+          // Use the new batch-details endpoint for efficient fetching
+          const ancestorDetailsMap = await GeographicAreaService.getBatchDetails(ancestorIdsToFetch);
+          
+          // Add fetched ancestors to our area map
+          let ancestorCount = 0;
+          for (const [ancestorId, ancestorData] of Object.entries(ancestorDetailsMap)) {
+            if (ancestorData && !areaMap.has(ancestorId)) {
+              areaMap.set(ancestorId, ancestorData);
+              ancestorCount++;
+            }
+          }
+          console.log(`Added ${ancestorCount} unique ancestors to area map (total map size: ${areaMap.size})`);
+        }
+      } catch (error) {
+        console.error('Failed to fetch batch ancestors:', error);
+        // Continue without ancestor data - paths will be incomplete but functional
+      }
+    } else {
+      console.log('No missing parents - all parent data already available');
+    }
+
+    // Build hierarchy paths and ancestor arrays for all areas using the complete area map
+    const buildHierarchyData = (area: GeographicArea): { hierarchyPath: string; ancestors: GeographicArea[] } => {
+      const ancestorNames: string[] = [];
+      const ancestorObjects: GeographicArea[] = [];
+      let currentId = area.parentGeographicAreaId;
+      
+      while (currentId) {
+        const parent = areaMap.get(currentId);
+        if (!parent) {
+          console.warn(`Missing parent ${currentId} for area ${area.name} (${area.id})`);
+          break;
+        }
+        ancestorNames.push(parent.name);
+        ancestorObjects.push(parent);
+        currentId = parent.parentGeographicAreaId;
+      }
+      
+      return {
+        hierarchyPath: ancestorNames.length > 0 ? ancestorNames.join(' > ') : '',
+        ancestors: ancestorObjects, // Ordered from closest parent to most distant ancestor
+      };
+    };
+
+    const result = newAreas.map(area => {
+      const { hierarchyPath, ancestors } = buildHierarchyData(area);
+      console.log(`Area ${area.name}: hierarchy path = "${hierarchyPath}", ancestors count = ${ancestors.length}`);
+      return {
+        ...area,
+        ancestors,
+        hierarchyPath,
+      } as GeographicAreaWithHierarchy;
+    });
+
+    return result;
+  }, []);
 
   // Fetch user's authorized areas
   useEffect(() => {
@@ -197,59 +312,122 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     fetchGeographicArea();
   }, [selectedGeographicAreaId]);
 
-  // Fetch available areas based on current filter scope
+  // Fetch available areas based on current filter scope and search query
   useEffect(() => {
+    // Clear any pending search timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Abort any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     const fetchAvailableAreas = async () => {
       try {
-        // Fetch areas based on current filter with depth=1 for lazy loading
-        // When filter is active, only fetch descendants with depth=1
-        // When filter is "Global", fetch all top-level areas with depth=1
-        // The backend will include childCount for each area
-        const areas = await GeographicAreaService.getGeographicAreas(
-          undefined, 
-          undefined, 
-          selectedGeographicAreaId,
-          undefined,
-          1  // depth=1 for lazy loading in dropdown too
+        setIsSearching(true);
+        abortControllerRef.current = new AbortController();
+        
+        // Fetch first page of areas with pagination
+        const response = await GeographicAreaService.getGeographicAreas(
+          1,  // page 1
+          100,  // limit 100 per page
+          selectedGeographicAreaId,  // geographicAreaId filter
+          searchQuery || undefined,  // search query
+          undefined  // depth - no limit, fetch all matching areas
         );
 
-        // For dropdown display, we need hierarchy paths
-        // Instead of fetching ancestors for each area (thousands of API calls),
-        // we'll build the hierarchy path from the parent relationships in the data
-        const areaMap = new Map<string, GeographicArea>();
-        areas.forEach(area => areaMap.set(area.id, area));
+        // Handle both paginated and non-paginated responses
+        const areas = Array.isArray(response) ? response : response.data;
+        const pagination = Array.isArray(response) ? null : response.pagination;
 
-        const buildHierarchyPath = (area: GeographicArea): string => {
-          const ancestors: string[] = [];
-          let currentId = area.parentGeographicAreaId;
-          
-          // Walk up the parent chain using the data we already have
-          while (currentId) {
-            const parent = areaMap.get(currentId);
-            if (!parent) break;
-            ancestors.push(parent.name);
-            currentId = parent.parentGeographicAreaId;
-          }
-          
-          // Return path from closest to most distant
-          return ancestors.length > 0 ? ancestors.join(' > ') : '';
-        };
+        // Check if there are more pages
+        const hasMore = pagination ? pagination.page < pagination.totalPages : false;
+        setHasMorePages(hasMore);
+        setCurrentPage(1);
 
-        const areasWithHierarchy = areas.map(area => ({
-          ...area,
-          ancestors: [], // We don't need the full ancestor objects for dropdown
-          hierarchyPath: buildHierarchyPath(area),
-        } as GeographicAreaWithHierarchy));
+        // Implement intelligent ancestor batching
+        const areasWithHierarchy = await buildHierarchyPathsWithBatching(areas, new Map());
 
         setAvailableAreas(areasWithHierarchy);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          // Request was aborted, ignore
+          return;
+        }
         console.error('Failed to fetch available geographic areas:', error);
         setAvailableAreas([]);
+        setHasMorePages(false);
+      } finally {
+        setIsSearching(false);
+        abortControllerRef.current = null;
       }
     };
 
-    fetchAvailableAreas();
-  }, [selectedGeographicAreaId]);
+    // Debounce search queries (300ms delay)
+    if (searchQuery) {
+      searchTimeoutRef.current = setTimeout(() => {
+        fetchAvailableAreas();
+      }, 300);
+    } else {
+      // No search query - fetch immediately
+      fetchAvailableAreas();
+    }
+
+    // Cleanup timeout and abort controller on unmount or when dependencies change
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [selectedGeographicAreaId, searchQuery, buildHierarchyPathsWithBatching]);
+
+  // Load more areas when user scrolls to bottom (if more pages available)
+  const loadMoreAreas = useCallback(async () => {
+    if (!hasMorePages || isSearching) {
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      const nextPage = currentPage + 1;
+
+      const response = await GeographicAreaService.getGeographicAreas(
+        nextPage,
+        100,
+        selectedGeographicAreaId,
+        searchQuery || undefined,
+        undefined  // No depth limit
+      );
+
+      // Handle both paginated and non-paginated responses
+      const areas = Array.isArray(response) ? response : response.data;
+      const pagination = Array.isArray(response) ? null : response.pagination;
+
+      // Check if there are more pages after this one
+      const hasMore = pagination ? pagination.page < pagination.totalPages : false;
+      setHasMorePages(hasMore);
+      setCurrentPage(nextPage);
+
+      // Build existing area map from current availableAreas
+      const existingAreaMap = new Map<string, GeographicArea>();
+      availableAreas.forEach(area => existingAreaMap.set(area.id, area));
+
+      // Use the shared helper function
+      const newAreasWithHierarchy = await buildHierarchyPathsWithBatching(areas, existingAreaMap);
+
+      // Append new areas to existing ones
+      setAvailableAreas(prev => [...prev, ...newAreasWithHierarchy]);
+    } catch (error) {
+      console.error('Failed to load more geographic areas:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [hasMorePages, isSearching, currentPage, selectedGeographicAreaId, searchQuery, availableAreas, buildHierarchyPathsWithBatching]);
 
   const setGeographicAreaFilter = (id: string | null) => {
     // Validate authorization before setting filter
@@ -306,6 +484,11 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
         clearFilter,
         isLoading,
         isAuthorizedArea,
+        searchQuery,
+        setSearchQuery,
+        isSearching,
+        loadMoreAreas,
+        hasMorePages,
       }}
     >
       {children}

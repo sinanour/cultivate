@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
@@ -8,7 +8,9 @@ import Box from '@cloudscape-design/components/box';
 import Link from '@cloudscape-design/components/link';
 import Spinner from '@cloudscape-design/components/spinner';
 import SpaceBetween from '@cloudscape-design/components/space-between';
-import { MapDataService, type MapFilters } from '../../services/api/map-data.service';
+import Button from '@cloudscape-design/components/button';
+import Alert from '@cloudscape-design/components/alert';
+import { MapDataService, type MapFilters, type ActivityMarker, type ParticipantHomeMarker, type VenueMarker } from '../../services/api/map-data.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
@@ -98,6 +100,7 @@ interface MapViewProps {
   startDate?: string;
   endDate?: string;
   status?: string;
+  onLoadingStateChange?: (state: { loadedCount: number; totalCount: number; isCancelled: boolean }) => void;
 }
 
 // Component to handle map bounds adjustment and auto-zoom
@@ -117,9 +120,28 @@ function MapBoundsAdjuster({ markers, isLoading }: { markers: Array<{ position: 
   return null;
 }
 
-// Loading overlay component
-function MapLoadingOverlay({ isLoading }: { isLoading: boolean }) {
-  if (!isLoading) return null;
+// Loading overlay component with progress indicator
+function MapLoadingOverlay({ 
+  isLoading, 
+  loadedCount, 
+  totalCount,
+  error,
+  onRetry,
+  onCancel,
+  isCancelled
+}: { 
+  isLoading: boolean;
+  loadedCount: number;
+  totalCount: number;
+  error?: string;
+  onRetry?: () => void;
+  onCancel?: () => void;
+  isCancelled?: boolean;
+}) {
+  // Show loading overlay if there's an error OR if we haven't loaded all markers yet AND not cancelled
+  const showLoading = !isCancelled && ((loadedCount < totalCount && totalCount > 0) || (isLoading && totalCount === 0));
+  
+  if (!showLoading && !error) return null;
 
   return (
     <div style={{
@@ -132,11 +154,37 @@ function MapLoadingOverlay({ isLoading }: { isLoading: boolean }) {
       padding: '20px',
       borderRadius: '8px',
       boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      minWidth: '250px',
     }}>
-      <SpaceBetween size="s" direction="horizontal">
-        <Spinner />
-        <Box>Loading markers...</Box>
-      </SpaceBetween>
+      {error ? (
+        <SpaceBetween size="s" direction="vertical">
+          <Alert type="error" header="Failed to load markers">
+            {error}
+          </Alert>
+          {onRetry && (
+            <Button onClick={onRetry} iconName="refresh">
+              Retry
+            </Button>
+          )}
+        </SpaceBetween>
+      ) : (
+        <SpaceBetween size="s" direction="vertical">
+          <SpaceBetween size="s" direction="horizontal">
+            <Spinner />
+            <Box>Loading markers...</Box>
+          </SpaceBetween>
+          {totalCount > 0 && (
+            <Box textAlign="center" variant="small">
+              {loadedCount} / {totalCount}
+            </Box>
+          )}
+          {onCancel && (
+            <Button onClick={onCancel} variant="link">
+              Cancel
+            </Button>
+          )}
+        </SpaceBetween>
+      )}
     </div>
   );
 }
@@ -305,9 +353,24 @@ export function MapView({
   venueIds = [],
   startDate,
   endDate,
-  status
+  status,
+  onLoadingStateChange
 }: MapViewProps) {
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+
+  // State for batched loading
+  const [allActivityMarkers, setAllActivityMarkers] = useState<ActivityMarker[]>([]);
+  const [allParticipantHomeMarkers, setAllParticipantHomeMarkers] = useState<ParticipantHomeMarker[]>([]);
+  const [allVenueMarkers, setAllVenueMarkers] = useState<VenueMarker[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoadingBatch, setIsLoadingBatch] = useState(false);
+  const [loadingError, setLoadingError] = useState<string | undefined>();
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isCancelled, setIsCancelled] = useState(false);
+  const isFetchingRef = useRef(false); // Track if we're currently in a fetch cycle
+
+  const BATCH_SIZE = 100;
 
   // Build filters
   const filters: MapFilters = {
@@ -321,29 +384,94 @@ export function MapView({
     status,
   };
 
-  // Fetch markers based on mode
-  const { data: activityMarkers = [], isLoading: isLoadingActivities } = useQuery({
-    queryKey: ['activityMarkers', mode, filters],
-    queryFn: () => MapDataService.getActivityMarkers(filters),
-    enabled: mode === 'activitiesByType' || mode === 'activitiesByCategory',
-  });
+  // Reset state when filters or mode change
+  useEffect(() => {
+    setAllActivityMarkers([]);
+    setAllParticipantHomeMarkers([]);
+    setAllVenueMarkers([]);
+    setCurrentPage(1);
+    setTotalCount(0);
+    setIsLoadingBatch(false);
+    setLoadingError(undefined);
+    setHasMorePages(true);
+    setIsCancelled(false);
+    isFetchingRef.current = false; // Reset fetch tracking
+  }, [mode, selectedGeographicAreaId, JSON.stringify(activityCategoryIds), JSON.stringify(activityTypeIds), 
+      JSON.stringify(venueIds), JSON.stringify(populationIds), startDate, endDate, status]);
 
-  const { data: participantHomeMarkers = [], isLoading: isLoadingHomes } = useQuery({
-    queryKey: ['participantHomeMarkers', filters.geographicAreaIds, filters.populationIds],
-    queryFn: () => MapDataService.getParticipantHomeMarkers({
-      geographicAreaIds: filters.geographicAreaIds,
-      populationIds: filters.populationIds,
-    }),
-    enabled: mode === 'participantHomes',
-  });
+  // Cancel loading handler
+  const handleCancelLoading = useCallback(() => {
+    setIsCancelled(true);
+    setHasMorePages(false);
+    isFetchingRef.current = false;
+  }, []);
 
-  const { data: venueMarkers = [], isLoading: isLoadingVenues } = useQuery({
-    queryKey: ['venueMarkers', filters.geographicAreaIds],
-    queryFn: () => MapDataService.getVenueMarkers({
-      geographicAreaIds: filters.geographicAreaIds,
-    }),
-    enabled: mode === 'venues',
-  });
+  // Function to fetch next batch
+  const fetchNextBatch = useCallback(async () => {
+    if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
+
+    isFetchingRef.current = true;
+    setIsLoadingBatch(true);
+    setLoadingError(undefined);
+
+    try {
+      if (mode === 'activitiesByType' || mode === 'activitiesByCategory') {
+        const response = await MapDataService.getActivityMarkers(filters, currentPage, BATCH_SIZE);
+        setAllActivityMarkers(prev => [...prev, ...response.data]);
+        setTotalCount(response.pagination.total);
+        setHasMorePages(currentPage < response.pagination.totalPages);
+        setCurrentPage(prev => prev + 1);
+      } else if (mode === 'participantHomes') {
+        const response = await MapDataService.getParticipantHomeMarkers({
+          geographicAreaIds: filters.geographicAreaIds,
+          populationIds: filters.populationIds,
+        }, currentPage, BATCH_SIZE);
+        setAllParticipantHomeMarkers(prev => [...prev, ...response.data]);
+        setTotalCount(response.pagination.total);
+        setHasMorePages(currentPage < response.pagination.totalPages);
+        setCurrentPage(prev => prev + 1);
+      } else if (mode === 'venues') {
+        const response = await MapDataService.getVenueMarkers({
+          geographicAreaIds: filters.geographicAreaIds,
+        }, currentPage, BATCH_SIZE);
+        setAllVenueMarkers(prev => [...prev, ...response.data]);
+        setTotalCount(response.pagination.total);
+        setHasMorePages(currentPage < response.pagination.totalPages);
+        setCurrentPage(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error fetching markers batch:', error);
+      setLoadingError(error instanceof Error ? error.message : 'Failed to load markers');
+    } finally {
+      setIsLoadingBatch(false);
+      isFetchingRef.current = false;
+    }
+  }, [mode, filters, currentPage, isLoadingBatch, hasMorePages, BATCH_SIZE]);
+
+  // Fetch first batch on mount or when dependencies change
+  useEffect(() => {
+    const hasAnyMarkers = allActivityMarkers.length > 0 || allParticipantHomeMarkers.length > 0 || allVenueMarkers.length > 0;
+    if (currentPage === 1 && hasMorePages && !isLoadingBatch && !hasAnyMarkers && !isFetchingRef.current) {
+      fetchNextBatch();
+    }
+  }, [currentPage, hasMorePages, isLoadingBatch, allActivityMarkers.length, allParticipantHomeMarkers.length, allVenueMarkers.length, fetchNextBatch]);
+
+  // Auto-fetch next batch after previous batch renders
+  useEffect(() => {
+    if (!isLoadingBatch && hasMorePages && currentPage > 1) {
+      // Small delay to allow rendering of current batch
+      const timer = setTimeout(() => {
+        fetchNextBatch();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingBatch, hasMorePages, currentPage, fetchNextBatch]);
+
+  // Retry function
+  const handleRetry = useCallback(() => {
+    setLoadingError(undefined);
+    fetchNextBatch();
+  }, [fetchNextBatch]);
 
   // Fetch activity types and categories for legend
   const { data: activityTypesData = [] } = useQuery({
@@ -362,8 +490,19 @@ export function MapView({
     }
   });
 
-  // Determine loading state
-  const isLoading = isLoadingActivities || isLoadingHomes || isLoadingVenues;
+  // Calculate loaded count
+  const loadedCount = mode === 'activitiesByType' || mode === 'activitiesByCategory' 
+    ? allActivityMarkers.length 
+    : mode === 'participantHomes' 
+    ? allParticipantHomeMarkers.length 
+    : allVenueMarkers.length;
+
+  // Notify parent of loading state changes
+  useEffect(() => {
+    if (onLoadingStateChange) {
+      onLoadingStateChange({ loadedCount, totalCount, isCancelled });
+    }
+  }, [loadedCount, totalCount, isCancelled, onLoadingStateChange]);
 
   // Prepare markers for rendering
   const markers: Array<{ 
@@ -375,7 +514,7 @@ export function MapView({
   }> = [];
 
   if (mode === 'activitiesByType') {
-    activityMarkers.forEach(marker => {
+    allActivityMarkers.forEach((marker: ActivityMarker) => {
       const color = getActivityTypeColor(marker.activityTypeId);
       markers.push({
         position: [marker.latitude, marker.longitude],
@@ -385,7 +524,7 @@ export function MapView({
       });
     });
   } else if (mode === 'activitiesByCategory') {
-    activityMarkers.forEach(marker => {
+    allActivityMarkers.forEach((marker: ActivityMarker) => {
       const color = getActivityCategoryColor(marker.activityCategoryId);
       markers.push({
         position: [marker.latitude, marker.longitude],
@@ -395,7 +534,7 @@ export function MapView({
       });
     });
   } else if (mode === 'participantHomes') {
-    participantHomeMarkers.forEach(marker => {
+    allParticipantHomeMarkers.forEach((marker: ParticipantHomeMarker) => {
       markers.push({
         position: [marker.latitude, marker.longitude],
         id: marker.venueId,
@@ -403,7 +542,7 @@ export function MapView({
       });
     });
   } else if (mode === 'venues') {
-    venueMarkers.forEach(marker => {
+    allVenueMarkers.forEach((marker: VenueMarker) => {
       markers.push({
         position: [marker.latitude, marker.longitude],
         id: marker.id,
@@ -423,8 +562,8 @@ export function MapView({
   );
   const visibleCategories = Array.from(uniqueCategories.values()).filter(cat => visibleCategoryIds.has(cat.id));
 
-  // Show empty state if no markers
-  if (markers.length === 0 && !isLoading) {
+  // Show empty state if no markers and not loading
+  if (markers.length === 0 && !isLoadingBatch && !loadingError) {
     const emptyMessages = {
       activitiesByType: 'Activities need venues with coordinates to display on the map.',
       activitiesByCategory: 'Activities need venues with coordinates to display on the map.',
@@ -444,7 +583,15 @@ export function MapView({
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-      <MapLoadingOverlay isLoading={isLoading} />
+      <MapLoadingOverlay 
+        isLoading={isLoadingBatch} 
+        loadedCount={loadedCount}
+        totalCount={totalCount}
+        error={loadingError}
+        onRetry={handleRetry}
+        onCancel={handleCancelLoading}
+        isCancelled={isCancelled}
+      />
       
       {/* Legend - positioned absolutely over the map */}
       {mode === 'activitiesByType' && visibleActivityTypes.length > 0 && (
@@ -538,7 +685,7 @@ export function MapView({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <MapBoundsAdjuster markers={markers} isLoading={isLoading} />
+        <MapBoundsAdjuster markers={markers} isLoading={isLoadingBatch && currentPage === 1} />
         
         <MarkerClusterGroup
           chunkedLoading

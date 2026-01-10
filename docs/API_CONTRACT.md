@@ -793,13 +793,133 @@ Clients should refresh the access token before it expires using the refresh toke
 
 **Endpoint**: `GET /geographic-areas/:id/children`
 
-**Response** (200 OK): Array of child geographic areas wrapped in `{ success: true, data: [...] }`
+**Query Parameters**:
+- `page` (optional, default: 1): Page number
+- `limit` (optional, default: 50, max: 100): Items per page
+
+**Response** (200 OK):
+
+**Without Pagination** (when page and limit not provided):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (UUID)",
+      "name": "string",
+      "areaType": "NEIGHBOURHOOD | COMMUNITY | CITY | ...",
+      "parentGeographicAreaId": "string (UUID)",
+      "childCount": "number",
+      "version": "number",
+      "createdAt": "string (ISO 8601)",
+      "updatedAt": "string (ISO 8601)"
+    }
+  ]
+}
+```
+
+**With Pagination** (when page or limit provided):
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "page": "number",
+    "limit": "number",
+    "total": "number",
+    "totalPages": "number"
+  }
+}
+```
+
+**Notes**:
+- Returns immediate children only (not recursive)
+- Respects geographic authorization rules (filters out denied areas)
+- Supports batched loading for large child sets
+- Each child includes `childCount` field for lazy loading support
 
 ### Get Geographic Area Ancestors
 
 **Endpoint**: `GET /geographic-areas/:id/ancestors`
 
 **Response** (200 OK): Array of ancestor geographic areas (from parent to root) wrapped in `{ success: true, data: [...] }`
+
+### Get Batch Ancestors
+
+**Endpoint**: `POST /geographic-areas/batch-ancestors`
+
+**Description**: Fetches ancestor data for multiple geographic areas in a single optimized request. Returns a simplified parent map where each area ID maps to its parent ID. Clients can traverse the hierarchy by following parent IDs.
+
+**Request**:
+```json
+{
+  "areaIds": ["string (UUID)", "string (UUID)", ...]
+}
+```
+
+**Query Parameters**: None
+
+**Request Body**:
+- `areaIds` (required): Array of geographic area UUIDs (maximum 100)
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "area-id-1": "parent-id-1",
+    "parent-id-1": "grandparent-id-1",
+    "grandparent-id-1": null,
+    "area-id-2": "parent-id-2",
+    "parent-id-2": null,
+    "area-id-3": null
+  }
+}
+```
+
+**Response Format**:
+- Returns a map/object where each key is a geographic area ID
+- Each value is the parent ID of that area (string UUID or null for root areas)
+- Clients traverse the hierarchy by following parent IDs
+- Example: To get all ancestors of "area-id-1", follow: area-id-1 → parent-id-1 → grandparent-id-1 → null
+
+**Performance Optimizations**:
+- Uses iterative batch fetching with set subtraction to minimize database round trips
+- Maximum queries = depth of deepest hierarchy (typically 3-5 levels)
+- Deduplicates ancestor IDs before querying
+- Returns minimal data (parent IDs only, not full objects)
+
+**Errors**:
+- 400: Invalid UUID format or more than 100 area IDs provided
+- 401: Unauthorized (missing or invalid token)
+
+**Example Usage**:
+```typescript
+// Request ancestors for 3 areas
+POST /geographic-areas/batch-ancestors
+{
+  "areaIds": ["area-1-id", "area-2-id", "area-3-id"]
+}
+
+// Response shows parent relationships
+{
+  "success": true,
+  "data": {
+    "area-1-id": "city-id",
+    "city-id": "province-id",
+    "province-id": "country-id",
+    "country-id": null,
+    "area-2-id": "city-2-id",
+    "city-2-id": null,
+    "area-3-id": null
+  }
+}
+
+// Client traverses hierarchy:
+// area-1-id → city-id → province-id → country-id → null (4 levels)
+// area-2-id → city-2-id → null (2 levels)
+// area-3-id → null (top-level area, 0 levels)
+```
 
 ### Get Geographic Area Venues
 

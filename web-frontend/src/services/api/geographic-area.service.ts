@@ -11,8 +11,18 @@ interface UpdateGeographicAreaData extends Partial<CreateGeographicAreaData> {
   version?: number;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export class GeographicAreaService {
-  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null, search?: string, depth?: number): Promise<GeographicArea[]> {
+  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null, search?: string, depth?: number): Promise<PaginatedResponse<GeographicArea> | GeographicArea[]> {
     const params = new URLSearchParams();
     if (page) params.append('page', page.toString());
     if (limit) params.append('limit', limit.toString());
@@ -20,7 +30,22 @@ export class GeographicAreaService {
     if (search) params.append('search', search);
     if (depth !== undefined) params.append('depth', depth.toString());
     const query = params.toString();
+
+    // If page or limit is provided, expect paginated response
+    if (page || limit) {
+      return ApiClient.get<PaginatedResponse<GeographicArea>>(`/geographic-areas${query ? `?${query}` : ''}`);
+    }
+
+    // Otherwise, expect array response
     return ApiClient.get<GeographicArea[]>(`/geographic-areas${query ? `?${query}` : ''}`);
+  }
+
+  static async getChildrenPaginated(parentId: string, page: number = 1, limit: number = 100): Promise<PaginatedResponse<GeographicArea>> {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+    const query = params.toString();
+    return ApiClient.get<PaginatedResponse<GeographicArea>>(`/geographic-areas/${parentId}/children${query ? `?${query}` : ''}`);
   }
 
   static async getGeographicArea(id: string): Promise<GeographicArea> {
@@ -49,6 +74,29 @@ export class GeographicAreaService {
 
   static async getAncestors(id: string): Promise<GeographicArea[]> {
     return ApiClient.get<GeographicArea[]>(`/geographic-areas/${id}/ancestors`);
+  }
+
+  /**
+   * Fetches batch ancestors for multiple geographic areas.
+   * Returns a simplified parent map where each area ID maps to its parent ID.
+   * Clients can traverse the hierarchy by following parent IDs.
+   * 
+   * @param areaIds - Array of geographic area IDs (max 100)
+   * @returns Map of area ID to parent ID (e.g., { "area-1": "parent-1", "parent-1": null })
+   */
+  static async getBatchAncestors(areaIds: string[]): Promise<Record<string, string | null>> {
+    return ApiClient.post<Record<string, string | null>>('/geographic-areas/batch-ancestors', { areaIds });
+  }
+
+  /**
+   * Fetches complete entity details for multiple geographic areas in a single request.
+   * Complements getBatchAncestors by providing full geographic area objects after ancestor IDs are obtained.
+   * 
+   * @param areaIds - Array of geographic area IDs (max 100)
+   * @returns Map of area ID to complete geographic area object with childCount
+   */
+  static async getBatchDetails(areaIds: string[]): Promise<Record<string, GeographicArea>> {
+    return ApiClient.post<Record<string, GeographicArea>>('/geographic-areas/batch-details', { areaIds });
   }
 
   static async getVenues(id: string): Promise<any[]> {

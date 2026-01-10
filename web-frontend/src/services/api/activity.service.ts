@@ -13,6 +13,28 @@ interface UpdateActivityData extends Partial<CreateActivityData> {
     version?: number;
 }
 
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+export interface ActivityFilterParams {
+    page?: number;
+    limit?: number;
+    geographicAreaId?: string | null;
+    activityCategoryIds?: string[];
+    activityTypeIds?: string[];
+    status?: string[];
+    populationIds?: string[];
+    startDate?: string;
+    endDate?: string;
+}
+
 export class ActivityService {
     static async getActivities(page?: number, limit?: number, geographicAreaId?: string | null): Promise<Activity[]> {
         const params = new URLSearchParams();
@@ -21,6 +43,59 @@ export class ActivityService {
         if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
         const query = params.toString();
         return ApiClient.get<Activity[]>(`/activities${query ? `?${query}` : ''}`);
+    }
+
+    static async getActivitiesPaginated(
+        page: number = 1,
+        limit: number = 100,
+        filters?: ActivityFilterParams
+    ): Promise<PaginatedResponse<Activity>> {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+
+        if (filters?.geographicAreaId) {
+            params.append('geographicAreaId', filters.geographicAreaId);
+        }
+
+        // Activity category filter (OR logic within dimension)
+        if (filters?.activityCategoryIds && filters.activityCategoryIds.length > 0) {
+            filters.activityCategoryIds.forEach(id => {
+                params.append('activityCategoryId', id);
+            });
+        }
+
+        // Activity type filter (OR logic within dimension)
+        if (filters?.activityTypeIds && filters.activityTypeIds.length > 0) {
+            filters.activityTypeIds.forEach(id => {
+                params.append('activityTypeId', id);
+            });
+        }
+
+        // Status filter (OR logic within dimension)
+        if (filters?.status && filters.status.length > 0) {
+            filters.status.forEach(s => {
+                params.append('status', s);
+            });
+        }
+
+        // Population filter (OR logic within dimension)
+        if (filters?.populationIds && filters.populationIds.length > 0) {
+            filters.populationIds.forEach(id => {
+                params.append('populationId', id);
+            });
+        }
+
+        // Date range filter
+        if (filters?.startDate) {
+            params.append('startDate', filters.startDate);
+        }
+        if (filters?.endDate) {
+            params.append('endDate', filters.endDate);
+        }
+
+        const query = params.toString();
+        return ApiClient.get<PaginatedResponse<Activity>>(`/activities${query ? `?${query}` : ''}`);
     }
 
     static async getActivity(id: string): Promise<Activity> {

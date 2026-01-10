@@ -7,6 +7,7 @@ import { ValidationMiddleware } from '../middleware/validation.middleware';
 import {
     ActivityCreateSchema,
     ActivityUpdateSchema,
+    ActivityQuerySchema,
     ActivityVenueAssociationSchema,
     UuidParamSchema,
 } from '../utils/validation.schemas';
@@ -32,6 +33,7 @@ export class ActivityRoutes {
             '/',
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireAuthenticated(),
+            ValidationMiddleware.validateQuery(ActivityQuerySchema),
             this.getAll.bind(this)
         );
 
@@ -115,9 +117,22 @@ export class ActivityRoutes {
 
     private async getAll(req: AuthenticatedRequest, res: Response) {
         try {
-            const page = req.query.page ? parseInt(req.query.page as string) : undefined;
-            const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-            const geographicAreaId = req.query.geographicAreaId as string | undefined;
+            // Query parameters are already validated and normalized by ActivityQuerySchema
+            const {
+                page,
+                limit,
+                geographicAreaId,
+                activityTypeIds,
+                activityCategoryIds,
+                status,
+                populationIds,
+                startDate: startDateStr,
+                endDate: endDateStr
+            } = req.query as any;
+
+            // Convert date strings to Date objects
+            const startDate = startDateStr ? new Date(startDateStr) : undefined;
+            const endDate = endDateStr ? new Date(endDateStr) : undefined;
 
             // Extract authorization info from request
             const authorizedAreaIds = req.user?.authorizedAreaIds || [];
@@ -135,7 +150,29 @@ export class ActivityRoutes {
                 }
             }
 
-            if (page !== undefined || limit !== undefined) {
+            // Check if any filters are provided (beyond pagination and geographic area)
+            const hasAdvancedFilters = activityTypeIds || activityCategoryIds || status || populationIds || startDate || endDate;
+
+            if (hasAdvancedFilters) {
+                // Use comprehensive filtering method
+                const result = await this.activityService.getAllActivitiesWithFilters(
+                    page,
+                    limit,
+                    {
+                        geographicAreaId,
+                        activityTypeIds,
+                        activityCategoryIds,
+                        status,
+                        populationIds,
+                        startDate,
+                        endDate,
+                    },
+                    authorizedAreaIds,
+                    hasGeographicRestrictions
+                );
+                res.status(200).json({ success: true, ...result });
+            } else if (page !== undefined || limit !== undefined) {
+            // Use simple pagination with geographic filter only
                 const result = await this.activityService.getAllActivitiesPaginated(
                     page,
                     limit,
@@ -145,6 +182,7 @@ export class ActivityRoutes {
                 );
                 res.status(200).json({ success: true, ...result });
             } else {
+                // No pagination, no advanced filters
                 const activities = await this.activityService.getAllActivities(
                     geographicAreaId,
                     authorizedAreaIds,
