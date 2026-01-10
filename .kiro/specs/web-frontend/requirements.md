@@ -1068,15 +1068,16 @@ The Web Frontend package provides a responsive React-based web application that 
 25. WHEN clearing the filter due to a 403 authorization error, THE Web_App SHALL display a notification to the user explaining that the filter was cleared due to authorization restrictions
 26. WHEN displaying N geographic areas in the filter selector dropdown, THE Web_App SHALL ensure it has the complete ancestor hierarchy for all N areas to render hierarchy paths correctly
 27. THE Web_App SHALL identify unique parent geographic area IDs from all fetched areas in the current batch
-28. THE Web_App SHALL determine which parent areas are missing complete ancestor metadata
-29. WHEN parent areas are missing ancestor metadata, THE Web_App SHALL fetch ancestor IDs using the batch-ancestors endpoint in a single batched request
-30. THE Web_App SHALL use POST /geographic-areas/batch-ancestors to fetch ancestor IDs for multiple parent areas simultaneously
-31. WHEN ancestor IDs are fetched, THE Web_App SHALL collect all unique ancestor IDs from the batch-ancestors response
-32. THE Web_App SHALL fetch complete entity details for all ancestors using the batch-details endpoint in a single batched request
-33. THE Web_App SHALL use POST /geographic-areas/batch-details to fetch full geographic area objects (id, name, areaType, parentGeographicAreaId, childCount, createdAt, updatedAt) for multiple ancestor IDs simultaneously
-34. THE Web_App SHALL cache fetched ancestor data to avoid redundant requests when the same areas appear in subsequent batches
-35. THE Web_App SHALL minimize backend round trips by using two batched operations: first fetch ancestor IDs via batch-ancestors, then fetch full details via batch-details
-36. WHEN rendering dropdown options, THE Web_App SHALL use the cached ancestor data to build complete hierarchy paths for all visible areas
+28. THE Web_App SHALL determine which parent areas are missing complete ancestor metadata from the in-memory cache
+29. WHEN the count of missing parent IDs exceeds 100, THE Web_App SHALL split the missing parent IDs into chunks of 100 IDs each
+30. THE Web_App SHALL call POST /geographic-areas/batch-ancestors for each chunk of up to 100 area IDs to fetch ancestor IDs
+31. THE Web_App SHALL collect all unique ancestor IDs from all batch-ancestors responses across all chunks
+32. WHEN the count of collected ancestor IDs exceeds 100, THE Web_App SHALL split the collected ancestor IDs into chunks of 100 IDs each
+33. THE Web_App SHALL call POST /geographic-areas/batch-details for each chunk of up to 100 ancestor IDs to fetch full geographic area objects
+34. THE Web_App SHALL merge results from all batch-details responses into the ancestor cache
+35. THE Web_App SHALL cache all fetched ancestor data to avoid redundant requests when the same areas appear in subsequent batches
+36. THE Web_App SHALL respect the API endpoint limits of 100 IDs per request for both batch-ancestors and batch-details endpoints
+37. WHEN rendering dropdown options, THE Web_App SHALL use the cached ancestor data to build complete hierarchy paths for all visible areas
 
 ### Requirement 26: High-Cardinality Dropdown Filtering
 

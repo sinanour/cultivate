@@ -47,6 +47,15 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Helper function to chunk an array into smaller arrays of specified size
+  const chunkArray = <T,>(array: T[], chunkSize: number): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+  };
+
   // Helper function to build hierarchy paths with intelligent ancestor batching
   const buildHierarchyPathsWithBatching = useCallback(async (
     newAreas: GeographicArea[],
@@ -69,43 +78,61 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     // Determine which parent areas are missing from our map
     const missingParentIds = Array.from(uniqueParentIds).filter(parentId => !areaMap.has(parentId));
 
-    // If we have missing parents, fetch their complete ancestor chains in a batch
+    // If we have missing parents, fetch their complete ancestor chains in batches
     if (missingParentIds.length > 0) {
       try {
-        console.log(`Fetching ancestors for ${missingParentIds.length} missing parents:`, missingParentIds);
+        console.log(`Fetching ancestors for ${missingParentIds.length} missing parents`);
         
-        // Step 1: Fetch ancestor IDs using batch-ancestors endpoint
-        const parentMap = await GeographicAreaService.getBatchAncestors(missingParentIds);
-        console.log('Batch ancestors parent map:', parentMap);
+        // Step 1: Fetch ancestor IDs using batch-ancestors endpoint (chunked if > 100)
+        const parentIdChunks = chunkArray(missingParentIds, 100);
+        console.log(`Split ${missingParentIds.length} parent IDs into ${parentIdChunks.length} chunks`);
         
-        // Step 2: Collect all unique area IDs from the parent map (both keys and values)
+        const allParentMaps: Record<string, string | null>[] = [];
+        for (let i = 0; i < parentIdChunks.length; i++) {
+          const chunk = parentIdChunks[i];
+          console.log(`Fetching batch-ancestors chunk ${i + 1}/${parentIdChunks.length} (${chunk.length} IDs)`);
+          const parentMap = await GeographicAreaService.getBatchAncestors(chunk);
+          allParentMaps.push(parentMap);
+        }
+        
+        // Step 2: Collect all unique area IDs from all parent maps (both keys and values)
         const allAncestorIds = new Set<string>();
-        for (const [areaId, parentId] of Object.entries(parentMap)) {
-          allAncestorIds.add(areaId);
-          if (parentId) {
-            allAncestorIds.add(parentId);
+        for (const parentMap of allParentMaps) {
+          for (const [areaId, parentId] of Object.entries(parentMap)) {
+            allAncestorIds.add(areaId);
+            if (parentId) {
+              allAncestorIds.add(parentId);
+            }
           }
         }
         
         // Filter to only IDs we don't already have
         const ancestorIdsToFetch = Array.from(allAncestorIds).filter(id => !areaMap.has(id));
         
-        // Step 3: Fetch full geographic area objects for all ancestors using batch-details endpoint
+        // Step 3: Fetch full geographic area objects for all ancestors using batch-details endpoint (chunked if > 100)
         if (ancestorIdsToFetch.length > 0) {
           console.log(`Fetching ${ancestorIdsToFetch.length} ancestor area objects using batch-details`);
           
-          // Use the new batch-details endpoint for efficient fetching
-          const ancestorDetailsMap = await GeographicAreaService.getBatchDetails(ancestorIdsToFetch);
+          const ancestorIdChunks = chunkArray(ancestorIdsToFetch, 100);
+          console.log(`Split ${ancestorIdsToFetch.length} ancestor IDs into ${ancestorIdChunks.length} chunks`);
           
-          // Add fetched ancestors to our area map
-          let ancestorCount = 0;
-          for (const [ancestorId, ancestorData] of Object.entries(ancestorDetailsMap)) {
-            if (ancestorData && !areaMap.has(ancestorId)) {
-              areaMap.set(ancestorId, ancestorData);
-              ancestorCount++;
+          for (let i = 0; i < ancestorIdChunks.length; i++) {
+            const chunk = ancestorIdChunks[i];
+            console.log(`Fetching batch-details chunk ${i + 1}/${ancestorIdChunks.length} (${chunk.length} IDs)`);
+            const ancestorDetailsMap = await GeographicAreaService.getBatchDetails(chunk);
+            
+            // Add fetched ancestors to our area map
+            let chunkAncestorCount = 0;
+            for (const [ancestorId, ancestorData] of Object.entries(ancestorDetailsMap)) {
+              if (ancestorData && !areaMap.has(ancestorId)) {
+                areaMap.set(ancestorId, ancestorData);
+                chunkAncestorCount++;
+              }
             }
+            console.log(`Chunk ${i + 1}: Added ${chunkAncestorCount} ancestors (total map size: ${areaMap.size})`);
           }
-          console.log(`Added ${ancestorCount} unique ancestors to area map (total map size: ${areaMap.size})`);
+          
+          console.log(`Completed ancestor fetching: ${areaMap.size} total areas in map`);
         }
       } catch (error) {
         console.error('Failed to fetch batch ancestors:', error);

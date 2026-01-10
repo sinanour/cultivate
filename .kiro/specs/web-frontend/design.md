@@ -1158,13 +1158,17 @@ src/
   - Maintains an in-memory cache of areas with complete ancestor metadata (Map<areaId, ancestors[]>)
   - Determines which parent areas are missing from the ancestor cache
   - Fetches missing parent areas and their complete ancestor chains using batch-ancestors endpoint
-  - Uses POST `/geographic-areas/batch-ancestors` to fetch ancestor IDs for multiple areas in a single request
-  - Collects all unique ancestor IDs from the batch-ancestors response
-  - Fetches complete entity details for all ancestors using batch-details endpoint
-  - Uses POST `/geographic-areas/batch-details` to fetch full geographic area objects for multiple ancestor IDs in a single request
+  - **Handles large ancestor sets (>100) by batching:**
+    - Splits missing parent IDs into chunks of 100 IDs each
+    - Calls POST `/geographic-areas/batch-ancestors` for each chunk of up to 100 area IDs
+    - Collects all unique ancestor IDs from all batch-ancestors responses
+    - Splits collected ancestor IDs into chunks of 100 IDs each
+    - Calls POST `/geographic-areas/batch-details` for each chunk of up to 100 ancestor IDs
+    - Merges results from all batch-details responses into ancestor cache
   - Caches all fetched ancestor data to avoid redundant requests across subsequent batches
   - Ensures every area in `availableAreas` has complete ancestor hierarchy before rendering dropdown options
-  - Minimizes backend round trips by grouping multiple ancestor fetch requests into two batched operations (IDs first, then details)
+  - Minimizes backend round trips by grouping multiple ancestor fetch requests into batched operations (IDs first, then details)
+  - Respects API endpoint limits of 100 IDs per request for both batch-ancestors and batch-details
 - Formats options for Geographic_Area_Selector with label (area name) and description (hierarchy path)
 - Builds hierarchy paths using cached ancestor data for all visible areas
 

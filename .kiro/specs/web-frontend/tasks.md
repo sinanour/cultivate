@@ -1801,19 +1801,26 @@ This implementation plan covers the React-based web application built with TypeS
     - Fetch available areas based on current filter scope in batches of 100:
       - When filter is "Global": fetch all geographic areas
       - When filter is active: fetch only descendants of filtered area
-    - **Implement intelligent ancestor batching:**
+    - **Implement intelligent ancestor batching with chunking:**
       - Maintain in-memory cache (Map<areaId, ancestors[]>) for areas with complete ancestor metadata
       - After fetching each batch of N geographic areas, extract unique parent IDs from all areas
       - Check ancestor cache to determine which parent areas are missing complete ancestor data
-      - Batch fetch missing parent areas and their ancestors in a single API request
-      - Use /geographic-areas/:id/ancestors endpoint or create batch ancestors endpoint
-      - Update ancestor cache with newly fetched ancestor chains
-      - Repeat ancestor fetching until all areas in current batch have complete ancestry
+      - Split missing parent IDs into chunks of 100 IDs each
+      - For each chunk of parent IDs:
+        - Call POST /geographic-areas/batch-ancestors with up to 100 area IDs
+        - Collect ancestor IDs from response
+      - Merge all ancestor IDs from all chunks into a single unique set
+      - Split collected ancestor IDs into chunks of 100 IDs each
+      - For each chunk of ancestor IDs:
+        - Call POST /geographic-areas/batch-details with up to 100 ancestor IDs
+        - Merge results into ancestor cache
+      - Update ancestor cache with all newly fetched ancestor chains
       - Build hierarchyPath string for each area using cached ancestor data
       - Format: "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
       - Store areas with complete hierarchy information in availableAreas state
       - Reuse cached ancestor data across batches to minimize redundant requests
-    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.20, 25.21, 25.22, 25.26, 25.27, 25.28, 25.29, 25.30, 25.31, 25.32, 25.33_
+      - Respect API endpoint limits of 100 IDs per request for both batch-ancestors and batch-details
+    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.20, 25.21, 25.22, 25.26, 25.27, 25.28, 25.29, 25.30, 25.31, 25.32, 25.33, 25.36_
 
   - [ ] 24.2 Create useGlobalGeographicFilter hook
     - Export custom hook to access GlobalGeographicFilterContext
