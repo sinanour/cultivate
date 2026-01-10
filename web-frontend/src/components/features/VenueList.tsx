@@ -10,12 +10,12 @@ import Link from '@cloudscape-design/components/link';
 import TextFilter from '@cloudscape-design/components/text-filter';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
-import Spinner from '@cloudscape-design/components/spinner';
 import type { Venue } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { ImportResultsModal } from '../common/ImportResultsModal';
+import { ProgressIndicator } from '../common/ProgressIndicator';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
@@ -367,35 +367,19 @@ export function VenueList() {
             <Box display="inline" fontSize="heading-l" fontWeight="bold">
               <SpaceBetween direction="horizontal" size="xs">
                 <span>Venues</span>
-                <Box display="inline" color="text-status-inactive">
-                  {isCancelled && totalCount > loadedCount 
-                    ? `(${loadedCount} / ${totalCount})`
-                    : `(${loadedCount})`
-                  }
-                </Box>
-                {!isCancelled && loadedCount < totalCount && totalCount > 0 && (
-                  <SpaceBetween direction="horizontal" size="xs">
-                    <Spinner size="normal" />
-                    <Box display="inline" color="text-status-inactive">
-                      Loading: {loadedCount} / {totalCount}
-                    </Box>
-                    <Button
-                      variant="inline-link"
-                      onClick={handleCancelLoading}
-                      ariaLabel="Cancel loading"
-                    >
-                      Cancel
-                    </Button>
-                  </SpaceBetween>
+                {loadedCount >= totalCount && totalCount > 0 && (
+                  <Box display="inline" color="text-status-inactive">
+                    ({loadedCount})
+                  </Box>
                 )}
-                {isCancelled && loadedCount < totalCount && totalCount > 0 && (
-                  <Button
-                    variant="icon"
-                    iconName="refresh"
-                    onClick={handleResumeLoading}
-                    ariaLabel="Resume loading venues"
-                  />
-                )}
+                <ProgressIndicator
+                  loadedCount={loadedCount}
+                  totalCount={totalCount}
+                  entityName="venues"
+                  onCancel={handleCancelLoading}
+                  onResume={handleResumeLoading}
+                  isCancelled={isCancelled}
+                />
               </SpaceBetween>
             </Box>
           </Header>

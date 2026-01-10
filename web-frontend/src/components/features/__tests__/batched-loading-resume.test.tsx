@@ -71,31 +71,35 @@ describe('Batched Loading with Resume', () => {
       </QueryClientProvider>
     );
 
-    // Wait for first batch to load
+    // Wait for first batch to load - check for progress bar and pause button
     await waitFor(() => {
-      expect(screen.getByText(/Loading: 100 \/ 250/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Loading \d+ \/ 250 participants\.\.\./)[0]).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Pause loading/i })).toBeInTheDocument();
     }, { timeout: 3000 });
 
-    // Click Cancel button
-    const cancelButton = screen.getByRole('button', { name: /Cancel loading/i });
-    await user.click(cancelButton);
+    // Click Pause button (was Cancel button)
+    const pauseButton = screen.getByRole('button', { name: /Pause loading/i });
+    await user.click(pauseButton);
 
-    // Wait for Resume button to appear
+    // Wait for Resume button to appear (play icon)
     await waitFor(() => {
       const resumeButton = screen.getByRole('button', { name: /Resume loading participants/i });
       expect(resumeButton).toBeInTheDocument();
     });
 
-    // Verify loading stopped (should show partial count)
-    expect(screen.getByText(/\(\d+ \/ 250\)/)).toBeInTheDocument();
+    // Entity count should be hidden while paused (to prevent button shift)
+    expect(screen.queryByText(/\(\d+\)/)).not.toBeInTheDocument();
+    // Progress bar should still be visible when paused, but with "Loaded" label
+    expect(screen.getAllByText(/Loaded \d+ \/ 250 participants\./)[0]).toBeInTheDocument();
 
-    // Click Resume button
+    // Click Resume button (play icon)
     const resumeButton = screen.getByRole('button', { name: /Resume loading participants/i });
     await user.click(resumeButton);
 
-    // Wait for loading to continue
+    // Wait for loading to continue - check for progress bar and pause button again
     await waitFor(() => {
-      expect(screen.getByText(/Loading: 200 \/ 250/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Loading \d+ \/ 250 participants\.\.\./)[0]).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Pause loading/i })).toBeInTheDocument();
     }, { timeout: 3000 });
 
     // Verify Resume button is gone while loading
@@ -108,7 +112,8 @@ describe('Batched Loading with Resume', () => {
     // Mock paginated response with 150 total items (2 pages)
     const mockGetParticipantsPaginated = vi.mocked(ParticipantService.getParticipantsPaginated);
     mockGetParticipantsPaginated.mockImplementation(async (page: number) => {
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Longer delay for page 2 to prevent race condition
+      await new Promise(resolve => setTimeout(resolve, page === 2 ? 500 : 50));
       
       const itemCount = page === 1 ? 100 : 50;
       const items = Array.from({ length: itemCount }, (_, i) => ({
@@ -139,31 +144,39 @@ describe('Batched Loading with Resume', () => {
       </QueryClientProvider>
     );
 
-    // Wait for first batch to load
+    // Wait for first batch to load - check for progress bar and pause button
     await waitFor(() => {
-      expect(screen.getByText(/Loading: 100 \/ 150/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Loading \d+ \/ 150 participants\.\.\./)[0]).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Pause loading/i })).toBeInTheDocument();
     }, { timeout: 3000 });
 
-    // Click Cancel button
-    const cancelButton = screen.getByRole('button', { name: /Cancel loading/i });
-    await user.click(cancelButton);
+    // Click Pause button
+    const pauseButton = screen.getByRole('button', { name: /Pause loading/i });
+    await user.click(pauseButton);
 
-    // Wait for Resume button to appear
+    // Wait for Resume button to appear (play icon)
     await waitFor(() => {
       const resumeButton = screen.getByRole('button', { name: /Resume loading participants/i });
       expect(resumeButton).toBeInTheDocument();
     });
 
-    // Click Resume button
-    const resumeButton = screen.getByRole('button', { name: /Resume loading participants/i });
-    await user.click(resumeButton);
+    // Progress bar should still be visible when paused, but with "Loaded" label
+    expect(screen.getAllByText(/Loaded \d+ \/ 150 participants\./)[0]).toBeInTheDocument();
 
-    // Wait for all items to load
+    // Click Resume button (play icon) - get it fresh to avoid stale reference
+    await user.click(screen.getByRole('button', { name: /Resume loading participants/i }));
+
+    // Wait for all items to load - component should unmount completely
     await waitFor(() => {
       expect(screen.getByText(/\(150\)/)).toBeInTheDocument();
+      // Progress bar should be gone
+      expect(screen.queryByText(/Loading \d+ \/ 150 participants\.\.\./)).not.toBeInTheDocument();
+      // Pause button should be gone
+      expect(screen.queryByRole('button', { name: /Pause loading/i })).not.toBeInTheDocument();
     }, { timeout: 5000 });
 
-    // Verify Resume button is hidden when all items loaded
+    // Verify Resume button is also hidden when all items loaded (component unmounted)
     expect(screen.queryByRole('button', { name: /Resume loading participants/i })).not.toBeInTheDocument();
   });
 });
+

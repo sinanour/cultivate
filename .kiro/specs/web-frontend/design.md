@@ -1061,6 +1061,46 @@ src/
 - Can be used with recharts LineChart, BarChart, AreaChart, PieChart, and other chart types
 - Integrates seamlessly with existing chart configurations
 
+**ProgressIndicator**
+- Reusable component for displaying batched loading progress with pause and resume functionality
+- Encapsulates the common loading UI pattern used across all list views and map view
+- Consists of an icon button (pause/play) followed by a CloudScape ProgressBar component
+- Icon button displays "pause" icon during active loading, "play" icon when paused
+- ProgressBar displays label with entity count: "Loading X / Y {entityName}..." when active
+- ProgressBar displays label with entity count: "Loaded X / Y {entityName}." when paused
+- ProgressBar calculates and displays percentage progress value
+- ProgressBar remains visible when paused (not hidden)
+- Unmounts completely (returns null) when loading is complete
+- Uses CloudScape SpaceBetween for horizontal layout with icon button on left
+- Supports customizable entity names (e.g., "participants", "activities", "venues", "markers")
+- Provides accessible keyboard navigation and ARIA labels for screen readers
+- Entity counts in list headers are hidden during loading and paused states to prevent button position shifts
+- Entity counts only appear after ProgressIndicator unmounts (when loading is complete)
+
+**Implementation Details:**
+- Accepts props:
+  - loadedCount: number - Number of items currently loaded
+  - totalCount: number - Total number of items to load
+  - entityName: string - Name of entity type for display (e.g., "participants", "markers")
+  - onCancel: () => void - Callback invoked when pause button is clicked
+  - onResume: () => void - Callback invoked when play button is clicked
+  - isCancelled: boolean - Whether loading has been paused by user
+- Returns JSX element containing progress UI or null when loading is complete
+- Icon button uses variant="icon" with iconName="pause" or iconName="play"
+- ProgressBar uses status="in-progress" for both active and paused states
+- ProgressBar value calculated as: (loadedCount / totalCount) * 100
+- ProgressBar label when active: "Loading {loadedCount} / {totalCount} {entityName}..."
+- ProgressBar label when paused: "Loaded {loadedCount} / {totalCount} {entityName}."
+- Includes appropriate ARIA labels: "Pause loading" and "Resume loading {entityName}"
+- Parent components conditionally render entity count only when loadedCount >= totalCount
+
+**Usage Examples:**
+- ParticipantList header: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="participants" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
+- ActivityList header: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="activities" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
+- VenueList header: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="venues" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
+- GeographicAreaList: Similar pattern for tree node loading progress
+- MapView overlay: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="markers" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
+
 **NavigationGuard (useFormNavigationGuard hook)**
 - Custom React hook for implementing navigation guards on form pages
 - Uses React Router's useBlocker to intercept navigation attempts

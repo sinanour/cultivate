@@ -1416,6 +1416,76 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 43: Success Message Display**
     - **Validates: Requirements 17.1, 17.2, 17.3, 17.4, 17.5**
 
+- [x] 18A. Refactor batched loading progress UI into reusable component
+  - [x] 18A.1 Create ProgressIndicator component
+    - Create new component file at web-frontend/src/components/common/ProgressIndicator.tsx
+    - Accept props: loadedCount, totalCount, entityName, onCancel, onResume, isCancelled
+    - Display icon button followed by CloudScape ProgressBar component
+    - Icon button displays "pause" icon (iconName="pause") during active loading
+    - Icon button displays "play" icon (iconName="play") when paused
+    - When pause button clicked, invoke onCancel callback
+    - When play button clicked, invoke onResume callback
+    - ProgressBar label: "Loading " + entityName + "..." (e.g., "Loading participants...")
+    - ProgressBar resultText: loadedCount + " / " + totalCount (e.g., "50 / 100")
+    - ProgressBar value: (loadedCount / totalCount) * 100 for percentage
+    - ProgressBar status: "in-progress"
+    - ProgressBar visible only during active loading (hidden when paused)
+    - Icon button uses variant="icon"
+    - Use CloudScape SpaceBetween for horizontal layout (icon button on left)
+    - Include ARIA labels: "Pause loading" and "Resume loading {entityName}"
+    - Return null when loadedCount equals totalCount (unmount completely)
+    - _Requirements: 26C.1, 26C.2, 26C.3, 26C.4, 26C.5, 26C.6, 26C.7, 26C.8, 26C.9, 26C.10, 26C.11, 26C.12, 26C.13, 26C.14, 26C.18, 26C.19, 26C.20, 26C.21, 26C.22_
+
+  - [x] 18A.2 Integrate ProgressIndicator into ParticipantList
+    - Import ProgressIndicator component
+    - Replace inline loading progress UI in header with ProgressIndicator component
+    - Pass loadedCount, totalCount, entityName="participants", onCancel, onResume, isCancelled props
+    - Remove duplicated Spinner, Box, and Button code from header
+    - Verify loading, cancellation, and resume functionality still works correctly
+    - _Requirements: 26C.11, 26C.12_
+
+  - [x] 18A.3 Integrate ProgressIndicator into ActivityList
+    - Import ProgressIndicator component
+    - Replace inline loading progress UI in header with ProgressIndicator component
+    - Pass loadedCount, totalCount, entityName="activities", onCancel, onResume, isCancelled props
+    - Remove duplicated Spinner, Box, and Button code from header
+    - Verify loading, cancellation, and resume functionality still works correctly
+    - _Requirements: 26C.11, 26C.12_
+
+  - [x] 18A.4 Integrate ProgressIndicator into VenueList
+    - Import ProgressIndicator component
+    - Replace inline loading progress UI in header with ProgressIndicator component
+    - Pass loadedCount, totalCount, entityName="venues", onCancel, onResume, isCancelled props
+    - Remove duplicated Spinner, Box, and Button code from header
+    - Verify loading, cancellation, and resume functionality still works correctly
+    - _Requirements: 26C.11, 26C.12_
+
+  - [x] 18A.5 Integrate ProgressIndicator into GeographicAreaList
+    - Import ProgressIndicator component
+    - Adapt ProgressIndicator for tree node loading progress (may need per-node instances)
+    - Replace inline loading progress UI in tree nodes with ProgressIndicator component
+    - Pass appropriate props for each node's loading state
+    - Remove duplicated Spinner, Box, and Button code from tree node rendering
+    - Verify tree node loading, cancellation, and resume functionality still works correctly
+    - _Requirements: 26C.11, 26C.12_
+
+  - [x] 18A.6 Integrate ProgressIndicator into MapView
+    - Import ProgressIndicator component
+    - Replace MapLoadingOverlay component with ProgressIndicator component
+    - Adapt ProgressIndicator for map overlay positioning (may need wrapper or style props)
+    - Pass loadedCount, totalCount, entityName="markers", onCancel, onResume, isCancelled props
+    - Remove MapLoadingOverlay component code
+    - Verify map marker loading, cancellation, and resume functionality still works correctly
+    - _Requirements: 26C.10, 26C.11, 26C.12_
+
+  - [ ]* 18A.7 Write property tests for ProgressIndicator component
+    - **Property 191: ProgressIndicator Display During Loading**
+    - **Property 192: ProgressIndicator Cancel Button Functionality**
+    - **Property 193: ProgressIndicator Resume Button Display**
+    - **Property 194: ProgressIndicator Resume Button Functionality**
+    - **Property 195: ProgressIndicator Hiding When Complete**
+    - **Validates: Requirements 26C.1, 26C.2, 26C.3, 26C.4, 26C.5, 26C.6, 26C.7, 26C.8, 26C.9, 26C.14, 26C.15**
+
 - [ ] 19. Implement unified user management with embedded authorization (admin only)
   - [ ] 19.1 Create UserList component
     - Display table of all users (admin only)

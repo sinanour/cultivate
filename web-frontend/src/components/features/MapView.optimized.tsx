@@ -15,6 +15,7 @@ import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
 import { getActivityTypeColor, getActivityCategoryColor } from '../../utils/color.utils';
+import { ProgressIndicator } from '../common/ProgressIndicator';
 
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -140,11 +141,40 @@ function MapLoadingOverlay({
   onResume?: () => void;
   isCancelled?: boolean;
 }) {
-  // Show loading overlay if there's an error OR if we haven't loaded all markers yet AND not cancelled
+  // Show error state
+  if (error) {
+    return (
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 1000,
+        background: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        minWidth: '250px',
+      }}>
+        <SpaceBetween size="s" direction="vertical">
+          <Alert type="error" header="Failed to load markers">
+            {error}
+          </Alert>
+          {onRetry && (
+            <Button onClick={onRetry} iconName="refresh">
+              Retry
+            </Button>
+          )}
+        </SpaceBetween>
+      </div>
+    );
+  }
+
+  // Show loading or resume state
   const showLoading = !isCancelled && ((loadedCount < totalCount && totalCount > 0) || (isLoading && totalCount === 0));
   const showResume = isCancelled && loadedCount < totalCount && totalCount > 0;
   
-  if (!showLoading && !error && !showResume) return null;
+  if (!showLoading && !showResume) return null;
 
   return (
     <div style={{
@@ -159,18 +189,7 @@ function MapLoadingOverlay({
       boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
       minWidth: '250px',
     }}>
-      {error ? (
-        <SpaceBetween size="s" direction="vertical">
-          <Alert type="error" header="Failed to load markers">
-            {error}
-          </Alert>
-          {onRetry && (
-            <Button onClick={onRetry} iconName="refresh">
-              Retry
-            </Button>
-          )}
-        </SpaceBetween>
-      ) : showResume ? (
+      {showResume ? (
         <SpaceBetween size="s" direction="vertical">
           <Box textAlign="center">
             Loading paused: {loadedCount} / {totalCount} markers loaded

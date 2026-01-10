@@ -18,6 +18,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
+import { ProgressIndicator } from '../common/ProgressIndicator';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 import styles from './GeographicAreaList.module.scss';
@@ -600,33 +601,17 @@ export function GeographicAreaList() {
             {isAncestor && (
               <Badge color="grey">Read-Only</Badge>
             )}
-            {loadingState && !loadingState.isCancelled && loadingState.isLoading && node.loadingProgress && (
-              <SpaceBetween direction="horizontal" size="xs">
-                <Badge color="blue">
-                  Loading: {node.loadingProgress.loaded} / ~{node.loadingProgress.total}
-                </Badge>
-                <Button
-                  variant="inline-link"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCancelNodeLoading(area.id);
-                  }}
-                  ariaLabel="Cancel loading children"
-                >
-                  Cancel
-                </Button>
-              </SpaceBetween>
-            )}
-            {loadingState && loadingState.isCancelled && loadingState.currentPage < loadingState.totalPages && (
-              <Button
-                variant="icon"
-                iconName="refresh"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleResumeNodeLoading(area.id);
-                }}
-                ariaLabel="Resume loading children"
-              />
+            {loadingState && node.loadingProgress && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <ProgressIndicator
+                  loadedCount={node.loadingProgress.loaded}
+                  totalCount={node.loadingProgress.total}
+                  entityName="children"
+                  onCancel={() => handleCancelNodeLoading(area.id)}
+                  onResume={() => handleResumeNodeLoading(area.id)}
+                  isCancelled={loadingState.isCancelled}
+                />
+              </div>
             )}
             {loadingState && !loadingState.isCancelled && loadingState.isLoading && !node.loadingProgress && (
               <Badge color="blue">Loading...</Badge>

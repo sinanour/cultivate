@@ -1196,6 +1196,39 @@ The Web Frontend package provides a responsive React-based web application that 
 34. THE "Cancel" button SHALL use muted styling (e.g., variant="inline-link" or icon-only with subdued color) to avoid visual prominence
 
 
+### Requirement 26C: Reusable Batched Loading Progress Indicator
+
+**User Story:** As a developer, I want a reusable component for displaying batched loading progress with pause and resume functionality, so that I can maintain consistent loading UX across all list views and the map view without duplicating code.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide a reusable ProgressIndicator component that encapsulates batched loading UI logic
+2. THE ProgressIndicator component SHALL accept props for loadedCount, totalCount, entityName, onCancel, onResume, and isCancelled
+3. THE ProgressIndicator component SHALL consist of an icon button followed by a CloudScape ProgressBar component
+4. THE icon button SHALL display a "pause" icon (iconName="pause") when loading is actively in progress
+5. WHEN the pause icon button is clicked, THE ProgressIndicator SHALL invoke the onCancel callback to pause loading
+6. THE icon button SHALL display a "play" icon (iconName="play") when loading is paused (isCancelled is true) and more items remain to load
+7. WHEN the play icon button is clicked, THE ProgressIndicator SHALL invoke the onResume callback to resume loading
+8. THE ProgressBar component SHALL display a label showing the loading state with entity count
+9. WHEN actively loading, THE ProgressBar label SHALL be "Loading X / Y {entityName}..." where X is loadedCount and Y is totalCount (e.g., "Loading 300 / 4725 venues...")
+10. WHEN paused, THE ProgressBar label SHALL be "Loaded X / Y {entityName}." where X is loadedCount and Y is totalCount (e.g., "Loaded 300 / 4725 venues.")
+11. THE ProgressBar component SHALL calculate and display the percentage progress value based on loadedCount and totalCount
+12. THE ProgressBar component SHALL remain visible when loading is paused (not hidden)
+13. THE ProgressIndicator component SHALL unmount completely (return null) when loadedCount equals totalCount
+14. THE ProgressIndicator component SHALL use CloudScape SpaceBetween for horizontal layout with the icon button positioned to the left of the ProgressBar
+15. THE ProgressIndicator component SHALL be usable in table headers, container headers, and map overlays
+16. THE Web_App SHALL use the ProgressIndicator component in ParticipantList, ActivityList, VenueList, GeographicAreaList, and MapView components
+17. THE Web_App SHALL remove duplicated loading progress UI code from all list and map components after integrating ProgressIndicator
+18. THE ProgressIndicator component SHALL support customizable entity names (e.g., "participants", "activities", "venues", "markers")
+19. THE icon button SHALL use variant="icon" for consistent styling
+20. THE icon button SHALL include appropriate ARIA labels: "Pause loading" when showing pause icon, "Resume loading {entityName}" when showing play icon
+21. THE ProgressBar SHALL use status="in-progress" when actively loading
+22. THE ProgressIndicator component SHALL be positioned inline with entity counts in headers using SpaceBetween for horizontal layout
+23. WHEN loading is in progress or paused, THE Web_App SHALL hide the entity count display in list view headers
+24. WHEN loading is complete (loadedCount equals totalCount), THE Web_App SHALL display the final entity count in list view headers
+25. THE entity count SHALL remain hidden during active loading and paused states to prevent the pause/play button from shifting position when clicked
+26. THE entity count SHALL only appear after the ProgressIndicator component unmounts (when loading is complete)
+
 ### Requirement 27: Clear Optional Fields
 
 **User Story:** As a community organizer, I want to clear optional fields that have been previously populated in the web interface, so that I can remove information that is no longer relevant or was entered incorrectly.

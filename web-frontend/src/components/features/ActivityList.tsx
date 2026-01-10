@@ -12,7 +12,6 @@ import PropertyFilter from '@cloudscape-design/components/property-filter';
 import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
-import Spinner from '@cloudscape-design/components/spinner';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import type { Activity } from '../../types';
@@ -24,6 +23,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
+import { ProgressIndicator } from '../common/ProgressIndicator';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
@@ -894,35 +894,19 @@ export function ActivityList() {
             <Box display="inline" fontSize="heading-l" fontWeight="bold">
               <SpaceBetween direction="horizontal" size="xs">
                 <span>Activities</span>
-                <Box display="inline" color="text-status-inactive">
-                  {isCancelled && totalCount > loadedCount 
-                    ? `(${loadedCount} / ${totalCount})`
-                    : `(${loadedCount})`
-                  }
-                </Box>
-                {!isCancelled && loadedCount < totalCount && totalCount > 0 && (
-                  <SpaceBetween direction="horizontal" size="xs">
-                    <Spinner size="normal" />
-                    <Box display="inline" color="text-status-inactive">
-                      Loading: {loadedCount} / {totalCount}
-                    </Box>
-                    <Button
-                      variant="inline-link"
-                      onClick={handleCancelLoading}
-                      ariaLabel="Cancel loading"
-                    >
-                      Cancel
-                    </Button>
-                  </SpaceBetween>
+                {loadedCount >= totalCount && totalCount > 0 && (
+                  <Box display="inline" color="text-status-inactive">
+                    ({loadedCount})
+                  </Box>
                 )}
-                {isCancelled && loadedCount < totalCount && totalCount > 0 && (
-                  <Button
-                    variant="icon"
-                    iconName="refresh"
-                    onClick={handleResumeLoading}
-                    ariaLabel="Resume loading activities"
-                  />
-                )}
+                <ProgressIndicator
+                  loadedCount={loadedCount}
+                  totalCount={totalCount}
+                  entityName="activities"
+                  onCancel={handleCancelLoading}
+                  onResume={handleResumeLoading}
+                  isCancelled={isCancelled}
+                />
               </SpaceBetween>
             </Box>
           </Header>
