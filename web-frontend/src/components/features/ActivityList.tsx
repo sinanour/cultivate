@@ -493,13 +493,6 @@ export function ActivityList() {
     isFetchingRef.current = false; // Reset fetch tracking
   }, [selectedGeographicAreaId, propertyFilterQuery, dateRange]);
 
-  // Cancel loading handler
-  const handleCancelLoading = useCallback(() => {
-    setIsCancelled(true);
-    setHasMorePages(false); // Stop auto-fetching
-    isFetchingRef.current = false;
-  }, []);
-
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
     if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
@@ -527,6 +520,21 @@ export function ActivityList() {
       isFetchingRef.current = false;
     }
   }, [currentBatchPage, isLoadingBatch, hasMorePages, filterParams, isCancelled]);
+
+  // Cancel loading handler
+  const handleCancelLoading = useCallback(() => {
+    setIsCancelled(true);
+    setHasMorePages(false); // Stop auto-fetching
+    isFetchingRef.current = false;
+  }, []);
+
+  // Resume loading handler
+  const handleResumeLoading = useCallback(() => {
+    setIsCancelled(false);
+    setHasMorePages(true);
+    // Trigger next batch fetch
+    fetchNextBatch();
+  }, [fetchNextBatch]);
 
   // Fetch first batch on mount or when filters change (only when page is 1)
   useEffect(() => {
@@ -906,6 +914,14 @@ export function ActivityList() {
                       Cancel
                     </Button>
                   </SpaceBetween>
+                )}
+                {isCancelled && loadedCount < totalCount && totalCount > 0 && (
+                  <Button
+                    variant="icon"
+                    iconName="refresh"
+                    onClick={handleResumeLoading}
+                    ariaLabel="Resume loading activities"
+                  />
                 )}
               </SpaceBetween>
             </Box>

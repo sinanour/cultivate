@@ -128,6 +128,7 @@ function MapLoadingOverlay({
   error,
   onRetry,
   onCancel,
+  onResume,
   isCancelled
 }: { 
   isLoading: boolean;
@@ -136,12 +137,14 @@ function MapLoadingOverlay({
   error?: string;
   onRetry?: () => void;
   onCancel?: () => void;
+  onResume?: () => void;
   isCancelled?: boolean;
 }) {
   // Show loading overlay if there's an error OR if we haven't loaded all markers yet AND not cancelled
   const showLoading = !isCancelled && ((loadedCount < totalCount && totalCount > 0) || (isLoading && totalCount === 0));
+  const showResume = isCancelled && loadedCount < totalCount && totalCount > 0;
   
-  if (!showLoading && !error) return null;
+  if (!showLoading && !error && !showResume) return null;
 
   return (
     <div style={{
@@ -164,6 +167,17 @@ function MapLoadingOverlay({
           {onRetry && (
             <Button onClick={onRetry} iconName="refresh">
               Retry
+            </Button>
+          )}
+        </SpaceBetween>
+      ) : showResume ? (
+        <SpaceBetween size="s" direction="vertical">
+          <Box textAlign="center">
+            Loading paused: {loadedCount} / {totalCount} markers loaded
+          </Box>
+          {onResume && (
+            <Button onClick={onResume} iconName="refresh" fullWidth>
+              Resume Loading
             </Button>
           )}
         </SpaceBetween>
@@ -399,13 +413,6 @@ export function MapView({
   }, [mode, selectedGeographicAreaId, JSON.stringify(activityCategoryIds), JSON.stringify(activityTypeIds), 
       JSON.stringify(venueIds), JSON.stringify(populationIds), startDate, endDate, status]);
 
-  // Cancel loading handler
-  const handleCancelLoading = useCallback(() => {
-    setIsCancelled(true);
-    setHasMorePages(false);
-    isFetchingRef.current = false;
-  }, []);
-
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
     if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
@@ -446,7 +453,22 @@ export function MapView({
       setIsLoadingBatch(false);
       isFetchingRef.current = false;
     }
-  }, [mode, filters, currentPage, isLoadingBatch, hasMorePages, BATCH_SIZE]);
+  }, [mode, filters, currentPage, isLoadingBatch, hasMorePages, BATCH_SIZE, isCancelled]);
+
+  // Cancel loading handler
+  const handleCancelLoading = useCallback(() => {
+    setIsCancelled(true);
+    setHasMorePages(false);
+    isFetchingRef.current = false;
+  }, []);
+
+  // Resume loading handler
+  const handleResumeLoading = useCallback(() => {
+    setIsCancelled(false);
+    setHasMorePages(true);
+    // Trigger next batch fetch
+    fetchNextBatch();
+  }, [fetchNextBatch]);
 
   // Fetch first batch on mount or when dependencies change
   useEffect(() => {
@@ -590,6 +612,7 @@ export function MapView({
         error={loadingError}
         onRetry={handleRetry}
         onCancel={handleCancelLoading}
+        onResume={handleResumeLoading}
         isCancelled={isCancelled}
       />
       

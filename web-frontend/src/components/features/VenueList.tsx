@@ -74,13 +74,6 @@ export function VenueList() {
     isFetchingRef.current = false; // Reset fetch tracking
   }, [selectedGeographicAreaId, filteringText]);
 
-  // Cancel loading handler
-  const handleCancelLoading = useCallback(() => {
-    setIsCancelled(true);
-    setHasMorePages(false);
-    isFetchingRef.current = false;
-  }, []);
-
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
     if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
@@ -109,6 +102,21 @@ export function VenueList() {
       isFetchingRef.current = false;
     }
   }, [currentBatchPage, isLoadingBatch, hasMorePages, selectedGeographicAreaId, filteringText, isCancelled]);
+
+  // Cancel loading handler
+  const handleCancelLoading = useCallback(() => {
+    setIsCancelled(true);
+    setHasMorePages(false);
+    isFetchingRef.current = false;
+  }, []);
+
+  // Resume loading handler
+  const handleResumeLoading = useCallback(() => {
+    setIsCancelled(false);
+    setHasMorePages(true);
+    // Trigger next batch fetch
+    fetchNextBatch();
+  }, [fetchNextBatch]);
 
   // Fetch first batch on mount or when dependencies change
   useEffect(() => {
@@ -379,6 +387,14 @@ export function VenueList() {
                       Cancel
                     </Button>
                   </SpaceBetween>
+                )}
+                {isCancelled && loadedCount < totalCount && totalCount > 0 && (
+                  <Button
+                    variant="icon"
+                    iconName="refresh"
+                    onClick={handleResumeLoading}
+                    ariaLabel="Resume loading venues"
+                  />
                 )}
               </SpaceBetween>
             </Box>

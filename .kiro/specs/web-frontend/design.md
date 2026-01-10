@@ -213,6 +213,11 @@ src/
 - Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
 - Loading indicator positioned next to entity count in header
 - Cancel button allows user to interrupt batched loading at any point
+- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
+- Resume button positioned near entity count where loading indicator was displayed
+- When Resume button is clicked, continues fetching batches from where loading was interrupted
+- Resume button visible only when loading was cancelled and more items remain to load
+- Resume button hidden when all items loaded or when filters change
 - Does NOT use Alert components for loading progress
 - Allows interaction with already-loaded participants while additional batches load
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
@@ -314,6 +319,11 @@ src/
 - Loading indicator positioned next to entity count in header
 - Cancel button allows user to interrupt batched loading at any point
 - When cancelled, keeps already-loaded entities visible and stops fetching additional batches
+- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
+- Resume button positioned near entity count where loading indicator was displayed
+- When Resume button is clicked, continues fetching batches from where loading was interrupted
+- Resume button visible only when loading was cancelled and more items remain to load
+- Resume button hidden when all items loaded or when filters change
 - Does NOT use Alert components for loading progress
 - Allows interaction with already-loaded activities while additional batches load
 - Renders activity name as hyperlink in primary column (links to /activities/:id)
@@ -419,6 +429,11 @@ src/
 - Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
 - Loading indicator positioned next to entity count in header
 - Cancel button allows user to interrupt batched loading at any point
+- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
+- Resume button positioned near entity count where loading indicator was displayed
+- When Resume button is clicked, continues fetching batches from where loading was interrupted
+- Resume button visible only when loading was cancelled and more items remain to load
+- Resume button hidden when all items loaded or when filters change
 - Does NOT use Alert components for loading progress
 - Allows interaction with already-loaded venues while additional batches load
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
@@ -495,6 +510,11 @@ src/
 - Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
 - Loading indicator positioned next to entity count in header
 - Cancel button allows user to interrupt batched loading at any point
+- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
+- Resume button positioned near entity count where loading indicator was displayed
+- When Resume button is clicked, continues fetching batches from where loading was interrupted
+- Resume button visible only when loading was cancelled and more items remain to load
+- Resume button hidden when all items loaded or when filters change
 - Does NOT use Alert components for loading progress
 - Uses childCount field from API to determine if node has children
 - Shows expansion affordance (arrow) only when childCount > 0
@@ -559,6 +579,11 @@ src/
 - Displays subtle loading indicator showing loaded/total marker count (Spinner + "Loading: X / Y" text + Cancel button)
 - Loading indicator positioned near map controls, not as Alert component
 - Cancel button allows user to interrupt batched loading at any point
+- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
+- Resume button positioned near map controls where loading indicator was displayed
+- When Resume button is clicked, continues fetching marker batches from where loading was interrupted
+- Resume button visible only when loading was cancelled and more markers remain to load
+- Resume button hidden when all markers loaded or when filters/mode changes
 - Updates progress indicator after each batch is rendered
 - Allows users to interact with already-rendered markers while additional batches load
 - Automatically fetches next batch after previous batch is rendered

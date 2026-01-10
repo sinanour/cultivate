@@ -278,8 +278,15 @@ This implementation plan covers the React-based web application built with TypeS
     - Use pagination metadata (total count) from API to determine if more batches available
     - Remove loading indicator when all batches are fetched
     - Handle batch fetching errors with retry button
+    - Implement Cancel button to interrupt batched loading
+    - When loading is cancelled, keep already-loaded participants visible
+    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
+    - Position Resume button near entity count where loading indicator was displayed
+    - When Resume button is clicked, continue fetching batches from where loading was interrupted
+    - Show Resume button only when loading was cancelled and more items remain
+    - Hide Resume button when all items loaded or when filters change
     - Implement client-side search
-    - _Requirements: 4.1, 4.2, 4.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.17, 26A.18, 26A.19_
+    - _Requirements: 4.1, 4.2, 4.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.17, 26A.18, 26A.19, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
 
   - [ ]* 7.2 Write property test for participant list display
     - **Property 5: Participant List Display**
@@ -288,6 +295,13 @@ This implementation plan covers the React-based web application built with TypeS
   - [ ]* 7.3 Write property test for participant search
     - **Property 6: Participant Search Functionality**
     - **Validates: Requirements 4.2**
+
+  - [ ]* 7.3a Write property tests for batched loading with resume
+    - **Property 187: Batched Loading Cancellation**
+    - **Property 188: Resume Button Display After Cancellation**
+    - **Property 189: Resume Button Continues Loading**
+    - **Property 190: Resume Button Visibility Logic**
+    - **Validates: Requirements 26B.17, 26B.18, 26B.19, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.29, 26B.30, 26B.31**
 
   - [x] 7.2 Create ParticipantFormPage component
     - Dedicated full-page form for create/edit (not a modal)
@@ -429,11 +443,18 @@ This implementation plan covers the React-based web application built with TypeS
     - Use pagination metadata (total count) from API to determine if more batches available
     - Remove loading indicator when all batches are fetched
     - Handle batch fetching errors with retry button
+    - Implement Cancel button to interrupt batched loading
+    - When loading is cancelled, keep already-loaded venues visible
+    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
+    - Position Resume button near entity count where loading indicator was displayed
+    - When Resume button is clicked, continue fetching batches from where loading was interrupted
+    - Show Resume button only when loading was cancelled and more items remain
+    - Hide Resume button when all items loaded or when filters change
     - Render venue name as hyperlink to /venues/:id
     - Render geographic area name as hyperlink to /geographic-areas/:id
     - Implement search via /venues/search?q= endpoint, sort, and filter
     - Support optional pagination
-    - _Requirements: 6A.1, 6A.1a, 6A.2, 6A.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.20, 26A.21, 26A.22_
+    - _Requirements: 6A.1, 6A.1a, 6A.2, 6A.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.20, 26A.21, 26A.22, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
 
   - [ ]* 8.2 Write property tests for venue list and search
     - **Property 44: Venue List Display**
@@ -559,6 +580,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Display progress indicator during batch loading ("Loading areas: X / Y")
     - Update progress indicator after each batch is rendered
     - Allow users to expand/collapse already-loaded nodes while additional nodes load
+    - Implement Cancel button to interrupt batched loading
+    - When loading is cancelled, keep already-loaded areas visible
+    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
+    - Position Resume button near entity count where loading indicator was displayed
+    - When Resume button is clicked, continue fetching batches from where loading was interrupted
+    - Show Resume button only when loading was cancelled and more items remain
+    - Hide Resume button when all items loaded or when filters change
     - Use childCount field from API to determine if node has children
     - Show expansion affordance (arrow) only when childCount > 0
     - Hide expansion affordance when childCount = 0 (leaf node)
@@ -576,7 +604,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Visually indicate ancestor areas as read-only (e.g., with badge, icon, or muted styling)
     - Ensure ancestors are always rendered to provide hierarchy context
     - Support progressive disclosure through user-initiated node expansion
-    - _Requirements: 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.15, 6B.16, 6B.17, 6B.18, 6B.19, 6B.20, 6B.23, 6B.24, 6B.25, 6B.26, 6B.27, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.23, 26A.24, 26A.25, 26A.26, 26A.27_
+    - _Requirements: 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.15, 6B.16, 6B.17, 6B.18, 6B.19, 6B.20, 6B.23, 6B.24, 6B.25, 6B.26, 6B.27, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.23, 26A.24, 26A.25, 26A.26, 26A.27, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
 
   - [ ]* 9.2 Write property tests for hierarchical display and lazy loading
     - **Property 50: Geographic Area Hierarchical Display**
@@ -654,7 +682,14 @@ This implementation plan covers the React-based web application built with TypeS
     - Provide comprehensive i18nStrings for PropertyFilter accessibility
     - Maintain existing batched loading behavior (100 items per batch)
     - Keep progress indicator during batch loading ("Loading activities: X / Y")
-    - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11, 5.12, 5.13, 5.14, 5.15, 5.16, 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.7, 5A.8, 5A.9, 5A.10, 5A.11, 5A.12, 5A.13, 5A.14, 5A.15, 5A.16, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.26, 5A.27, 5A.28, 5A.29, 5A.30, 5A.31, 5A.32, 5A.33, 5A.34, 5A.35_
+    - Implement Cancel button to interrupt batched loading
+    - When loading is cancelled, keep already-loaded activities visible
+    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
+    - Position Resume button near entity count where loading indicator was displayed
+    - When Resume button is clicked, continue fetching batches from where loading was interrupted
+    - Show Resume button only when loading was cancelled and more items remain
+    - Hide Resume button when all items loaded or when filters change
+    - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11, 5.12, 5.13, 5.14, 5.15, 5.16, 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.7, 5A.8, 5A.9, 5A.10, 5A.11, 5A.12, 5A.13, 5A.14, 5A.15, 5A.16, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.26, 5A.27, 5A.28, 5A.29, 5A.30, 5A.31, 5A.32, 5A.33, 5A.34, 5A.35, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
 
   - [ ]* 11.1a Write property tests for ActivityList PropertyFilter
     - **Property 182: PropertyFilter Token Consolidation**
@@ -800,6 +835,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Use pagination metadata (total count) to determine if more batches available
     - Remove loading indicator when all batches are fetched
     - Handle batch fetching errors gracefully with retry button
+    - Implement Cancel button to interrupt batched loading
+    - When loading is cancelled, keep already-rendered markers visible on map
+    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
+    - Position Resume button near map controls where loading indicator was displayed
+    - When Resume button is clicked, continue fetching marker batches from where loading was interrupted
+    - Show Resume button only when loading was cancelled and more markers remain
+    - Hide Resume button when all markers loaded or when filters/mode changes
     - Update mode selector to support four modes: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
     - When mode changes, fetch appropriate marker data using MapDataService with batched loading
     - In "Activities by Type" mode: fetch activity markers in batches of 100, color-code by activityTypeId
@@ -813,7 +855,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Update legend to show activity types (in "Activities by Type" mode) or activity categories (in "Activities by Category" mode)
     - Filter legend items based on markers actually visible
     - Hide legend when no markers visible or in non-activity modes
-    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22, 6C.23, 6C.24, 6C.25, 6C.26, 6C.27, 6C.28, 6C.29, 6C.30, 6C.31, 6C.32, 6C.33, 6C.34, 6C.35, 6C.36_
+    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22, 6C.23, 6C.24, 6C.25, 6C.26, 6C.27, 6C.28, 6C.29, 6C.30, 6C.31, 6C.32, 6C.33, 6C.34, 6C.35, 6C.36, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
 
   - [x] 13.3 Implement lazy-loaded popup content
     - When marker is clicked, display loading indicator in popup

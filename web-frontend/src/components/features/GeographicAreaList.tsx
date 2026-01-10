@@ -39,6 +39,7 @@ interface BatchLoadingState {
     totalPages: number;
     loadedChildren: GeographicArea[];
     isLoading: boolean;
+    isCancelled: boolean;
   };
 }
 
@@ -59,6 +60,42 @@ export function GeographicAreaList() {
   // Cache for fetched children to avoid redundant API calls
   const [childrenCache, setChildrenCache] = useState<Map<string, GeographicArea[]>>(new Map());
   const [batchLoadingState, setBatchLoadingState] = useState<BatchLoadingState>({});
+
+  // Cancel loading handler for a specific node
+  const handleCancelNodeLoading = useCallback((parentId: string) => {
+    setBatchLoadingState(prev => {
+      const currentState = prev[parentId];
+      if (!currentState) return prev;
+      
+      return {
+        ...prev,
+        [parentId]: {
+          ...currentState,
+          isCancelled: true,
+          isLoading: false,
+        },
+      };
+    });
+  }, []);
+
+  // Resume loading handler for a specific node
+  const handleResumeNodeLoading = useCallback((parentId: string) => {
+    setBatchLoadingState(prev => {
+      const currentState = prev[parentId];
+      if (!currentState) return prev;
+      
+      return {
+        ...prev,
+        [parentId]: {
+          ...currentState,
+          isCancelled: false,
+        },
+      };
+    });
+    
+    // Trigger next batch fetch
+    setTimeout(() => loadNextBatch(parentId), 100);
+  }, []);
 
   // Fetch initial geographic areas with depth=1 (top-level + immediate children)
   const { data: geographicAreasResponse, isLoading } = useQuery({
@@ -123,6 +160,7 @@ export function GeographicAreaList() {
         totalPages: 1,
         loadedChildren: [],
         isLoading: true,
+        isCancelled: false,
       },
     }));
 
@@ -136,6 +174,7 @@ export function GeographicAreaList() {
           totalPages: response.pagination.totalPages,
           loadedChildren: response.data,
           isLoading: false,
+          isCancelled: false,
         },
       }));
 
@@ -164,7 +203,7 @@ export function GeographicAreaList() {
   // Continue loading next batch for a node
   const loadNextBatch = useCallback(async (parentId: string) => {
     const currentState = batchLoadingState[parentId];
-    if (!currentState || currentState.isLoading) {
+    if (!currentState || currentState.isLoading || currentState.isCancelled) {
       return;
     }
 
@@ -204,6 +243,7 @@ export function GeographicAreaList() {
           totalPages: response.pagination.totalPages,
           loadedChildren: allLoadedChildren,
           isLoading: false,
+          isCancelled: false,
         },
       }));
 
@@ -220,8 +260,10 @@ export function GeographicAreaList() {
           return newState;
         });
       } else {
-        // Auto-load next batch after a short delay
-        setTimeout(() => loadNextBatch(parentId), 100);
+        // Auto-load next batch after a short delay (only if not cancelled)
+        if (!currentState.isCancelled) {
+          setTimeout(() => loadNextBatch(parentId), 100);
+        }
       }
     } catch (error) {
       setBatchLoadingState(prev => ({
@@ -501,6 +543,7 @@ export function GeographicAreaList() {
     
     const area = node.data;
     const isAncestor = isReadOnlyAncestor(area.id);
+    const loadingState = batchLoadingState[area.id];
     
     // Build action buttons
     const actionButtons = [];
@@ -557,12 +600,35 @@ export function GeographicAreaList() {
             {isAncestor && (
               <Badge color="grey">Read-Only</Badge>
             )}
-            {node.isLoading && node.loadingProgress && (
-              <Badge color="blue">
-                Loading: {node.loadingProgress.loaded} / ~{node.loadingProgress.total}
-              </Badge>
+            {loadingState && !loadingState.isCancelled && loadingState.isLoading && node.loadingProgress && (
+              <SpaceBetween direction="horizontal" size="xs">
+                <Badge color="blue">
+                  Loading: {node.loadingProgress.loaded} / ~{node.loadingProgress.total}
+                </Badge>
+                <Button
+                  variant="inline-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelNodeLoading(area.id);
+                  }}
+                  ariaLabel="Cancel loading children"
+                >
+                  Cancel
+                </Button>
+              </SpaceBetween>
             )}
-            {node.isLoading && !node.loadingProgress && (
+            {loadingState && loadingState.isCancelled && loadingState.currentPage < loadingState.totalPages && (
+              <Button
+                variant="icon"
+                iconName="refresh"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleResumeNodeLoading(area.id);
+                }}
+                ariaLabel="Resume loading children"
+              />
+            )}
+            {loadingState && !loadingState.isCancelled && loadingState.isLoading && !node.loadingProgress && (
               <Badge color="blue">Loading...</Badge>
             )}
           </SpaceBetween>

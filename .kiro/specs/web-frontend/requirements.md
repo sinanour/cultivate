@@ -1181,10 +1181,18 @@ The Web Frontend package provides a responsive React-based web application that 
 20. WHEN a user clicks the "Cancel" button, THE Web_App SHALL update the entity count to reflect only the loaded entities
 21. THE "Cancel" button SHALL use a subtle, inline-link or icon-only style to match the loading indicator's non-intrusive appearance
 22. THE "Cancel" button SHALL be keyboard accessible and include appropriate ARIA labels for screen readers (e.g., "Cancel loading")
-23. WHEN batched loading is cancelled, THE Web_App SHALL allow the user to manually trigger a reload or apply new filters to restart loading
-24. THE Web_App SHALL NOT automatically resume batched loading after cancellation unless the user explicitly changes filters or refreshes the view
-25. THE "Cancel" button SHALL be positioned inline with the loading progress text to maintain horizontal layout
-26. THE "Cancel" button SHALL use muted styling (e.g., variant="inline-link" or icon-only with subdued color) to avoid visual prominence
+23. WHEN batched loading is cancelled and partial results are displayed, THE Web_App SHALL display a "Resume" icon button using the CloudScape refresh icon
+24. THE "Resume" button SHALL be positioned near the entity count in the header where the loading indicator was previously displayed
+25. THE "Resume" button SHALL use CloudScape Button component with iconName="refresh" and variant="icon"
+26. WHEN a user clicks the "Resume" button, THE Web_App SHALL continue fetching batches from where the loading was interrupted
+27. WHEN a user clicks the "Resume" button, THE Web_App SHALL display the loading indicator again with updated progress (e.g., "Loading: 250 / 1,500")
+28. THE "Resume" button SHALL be keyboard accessible and include appropriate ARIA labels for screen readers (e.g., "Resume loading")
+29. THE "Resume" button SHALL be visible only when batched loading has been cancelled and there are more items to load
+30. WHEN all items have been loaded (either through completion or after resuming), THE Web_App SHALL hide the "Resume" button
+31. WHEN a user applies new filters or refreshes the view, THE Web_App SHALL hide the "Resume" button and restart batched loading from the beginning
+32. THE Web_App SHALL NOT automatically resume batched loading after cancellation unless the user explicitly clicks the "Resume" button, changes filters, or refreshes the view
+33. THE "Cancel" button SHALL be positioned inline with the loading progress text to maintain horizontal layout
+34. THE "Cancel" button SHALL use muted styling (e.g., variant="inline-link" or icon-only with subdued color) to avoid visual prominence
 
 
 ### Requirement 27: Clear Optional Fields
