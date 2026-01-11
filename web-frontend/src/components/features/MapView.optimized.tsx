@@ -15,6 +15,7 @@ import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
 import { getActivityTypeColor, getActivityCategoryColor } from '../../utils/color.utils';
+import { MapLegend } from './MapLegend';
 
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -555,83 +556,25 @@ export function MapView({
       
       {/* Legend - positioned absolutely over the map */}
       {mode === 'activitiesByType' && visibleActivityTypes.length > 0 && (
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          background: 'white',
-          padding: '12px',
-          borderRadius: '4px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          zIndex: 1000,
-          maxWidth: '200px',
-          pointerEvents: 'auto',
-        }}>
-          <Box variant="strong" fontSize="body-s" padding={{ bottom: 'xs' }}>
-            Activity Types
-          </Box>
-          {visibleActivityTypes.map((type) => (
-            <div key={type.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: '6px',
-            }}>
-              <div style={{
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                marginRight: '8px',
-                border: '1px solid rgba(0, 0, 0, 0.2)',
-                backgroundColor: getActivityTypeColor(type.id),
-              }} />
-              <span style={{
-                fontSize: '13px',
-                color: '#333',
-                whiteSpace: 'nowrap',
-              }}>{type.name}</span>
-            </div>
-          ))}
-        </div>
+        <MapLegend
+          title="Activity Types"
+          items={visibleActivityTypes.map(type => ({
+            id: type.id,
+            name: type.name,
+            color: getActivityTypeColor(type.id),
+          }))}
+        />
       )}
 
       {mode === 'activitiesByCategory' && visibleCategories.length > 0 && (
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          background: 'white',
-          padding: '12px',
-          borderRadius: '4px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          zIndex: 1000,
-          maxWidth: '200px',
-          pointerEvents: 'auto',
-        }}>
-          <Box variant="strong" fontSize="body-s" padding={{ bottom: 'xs' }}>
-            Activity Categories
-          </Box>
-          {visibleCategories.map((category) => (
-            <div key={category.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: '6px',
-            }}>
-              <div style={{
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                marginRight: '8px',
-                border: '1px solid rgba(0, 0, 0, 0.2)',
-                backgroundColor: getActivityCategoryColor(category.id),
-              }} />
-              <span style={{
-                fontSize: '13px',
-                color: '#333',
-                whiteSpace: 'nowrap',
-              }}>{category.name}</span>
-            </div>
-          ))}
-        </div>
+        <MapLegend
+          title="Activity Categories"
+          items={visibleCategories.map(category => ({
+            id: category.id,
+            name: category.name,
+            color: getActivityCategoryColor(category.id),
+          }))}
+        />
       )}
       
       <MapContainer

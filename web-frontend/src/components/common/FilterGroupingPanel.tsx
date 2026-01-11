@@ -15,7 +15,13 @@ import type {
 } from '@cloudscape-design/components';
 
 export interface FilterGroupingState {
-  dateRange: { startDate?: string; endDate?: string } | null;
+  dateRange: { 
+    startDate?: string; 
+    endDate?: string;
+    type?: 'absolute' | 'relative';
+    amount?: number;
+    unit?: 'day' | 'week' | 'month' | 'year';
+  } | null;
   filterTokens: PropertyFilterProps.Query;
   grouping: string[] | string; // Array for additive, string for exclusive
 }
@@ -36,7 +42,13 @@ interface FilterGroupingPanelProps {
   filterProperties: FilterProperty[];
   groupingMode: 'additive' | 'exclusive';
   groupingDimensions: GroupingDimension[];
-  initialDateRange?: { startDate?: string; endDate?: string } | null;
+  initialDateRange?: { 
+    startDate?: string; 
+    endDate?: string;
+    type?: 'absolute' | 'relative';
+    amount?: number;
+    unit?: 'day' | 'week' | 'month' | 'year';
+  } | null;
   initialFilterTokens?: PropertyFilterProps.Query;
   initialGrouping?: string[] | string;
   onUpdate: (state: FilterGroupingState) => void;
@@ -62,15 +74,29 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
   disablePopulationFilter = false,
 }) => {
   // Internal state for pending changes
-  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(
-    initialDateRange
-      ? {
-          type: 'absolute',
-          startDate: initialDateRange.startDate || '',
-          endDate: initialDateRange.endDate || '',
-        }
-      : null
-  );
+  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(() => {
+    if (!initialDateRange) return null;
+    
+    // Handle relative date range from URL
+    if (initialDateRange.type === 'relative' && initialDateRange.amount && initialDateRange.unit) {
+      return {
+        type: 'relative',
+        amount: initialDateRange.amount,
+        unit: initialDateRange.unit,
+      };
+    }
+    
+    // Handle absolute date range
+    if (initialDateRange.startDate && initialDateRange.endDate) {
+      return {
+        type: 'absolute',
+        startDate: initialDateRange.startDate,
+        endDate: initialDateRange.endDate,
+      };
+    }
+    
+    return null;
+  });
   const [filterQuery, setFilterQuery] = useState<PropertyFilterProps.Query>(
     initialFilterTokens
   );
@@ -87,14 +113,35 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
 
   // Determine if there are pending changes
   const isDirty = useMemo(() => {
-    const currentDateRange =
-      dateRange?.type === 'absolute'
-        ? { startDate: dateRange.startDate, endDate: dateRange.endDate }
-        : null;
+    // Normalize current date range to FilterGroupingState format for comparison
+    let currentDateRange: FilterGroupingState['dateRange'] = null;
+    
+    if (dateRange?.type === 'absolute') {
+      currentDateRange = {
+        type: 'absolute',
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      };
+    } else if (dateRange?.type === 'relative' && dateRange.amount && dateRange.unit) {
+      currentDateRange = {
+        type: 'relative',
+        amount: dateRange.amount,
+        unit: dateRange.unit as 'day' | 'week' | 'month' | 'year',
+      };
+    }
+    
     const lastDateRange = lastAppliedState.dateRange;
 
-    const dateRangeChanged =
-      JSON.stringify(currentDateRange) !== JSON.stringify(lastDateRange);
+    // Compare date ranges - handle null cases explicitly
+    const dateRangeChanged = (() => {
+      // Both null - no change
+      if (!currentDateRange && !lastDateRange) return false;
+      // One is null, other isn't - changed
+      if (!currentDateRange || !lastDateRange) return true;
+      // Both have values - compare them
+      return JSON.stringify(currentDateRange) !== JSON.stringify(lastDateRange);
+    })();
+
     const filterTokensChanged =
       JSON.stringify(filterQuery) !== JSON.stringify(lastAppliedState.filterTokens);
     const groupingChanged = JSON.stringify(grouping) !== JSON.stringify(lastAppliedState.grouping);
@@ -111,10 +158,23 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
   }, [filterProperties, disablePopulationFilter]);
 
   const handleUpdate = () => {
-    const currentDateRange =
-      dateRange?.type === 'absolute'
-        ? { startDate: dateRange.startDate, endDate: dateRange.endDate }
-        : null;
+    // Extract date range - preserve type (absolute or relative)
+    let currentDateRange: FilterGroupingState['dateRange'] = null;
+    
+    if (dateRange?.type === 'absolute') {
+      currentDateRange = { 
+        type: 'absolute',
+        startDate: dateRange.startDate, 
+        endDate: dateRange.endDate 
+      };
+    } else if (dateRange?.type === 'relative' && dateRange.amount && dateRange.unit) {
+      // Preserve relative date range for URL persistence
+      currentDateRange = {
+        type: 'relative',
+        amount: dateRange.amount,
+        unit: dateRange.unit as 'day' | 'week' | 'month' | 'year',
+      };
+    }
 
     const newState: FilterGroupingState = {
       dateRange: currentDateRange,

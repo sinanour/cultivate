@@ -116,13 +116,51 @@ export function EngagementDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Initialize state from URL parameters
-  const initializeDateRange = (): { startDate?: string; endDate?: string } | null => {
+  const initializeDateRange = (): FilterGroupingState['dateRange'] => {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const relativePeriod = searchParams.get('relativePeriod');
+    
+    // Handle relative date range (e.g., "-90d", "-6m")
+    if (relativePeriod) {
+      const match = relativePeriod.match(/^-(\d+)([dwmy])$/);
+      if (match) {
+        const amount = parseInt(match[1], 10);
+        const unitChar = match[2];
+        
+        let unit: 'day' | 'week' | 'month' | 'year';
+        switch (unitChar) {
+          case 'd':
+            unit = 'day';
+            break;
+          case 'w':
+            unit = 'week';
+            break;
+          case 'm':
+            unit = 'month';
+            break;
+          case 'y':
+            unit = 'year';
+            break;
+          default:
+            return null;
+        }
+        
+        return {
+          type: 'relative',
+          amount,
+          unit,
+        };
+      }
+    }
     
     // Handle absolute date range
     if (startDate && endDate) {
-      return { startDate, endDate };
+      return {
+        type: 'absolute',
+        startDate,
+        endDate,
+      };
     }
     
     return null;
@@ -145,7 +183,7 @@ export function EngagementDashboard() {
     return dimensions.filter(dim => validDimensions.includes(dim));
   };
 
-  const [dateRange, setDateRange] = useState<{ startDate?: string; endDate?: string } | null>(initializeDateRange);
+  const [dateRange, setDateRange] = useState<FilterGroupingState['dateRange']>(initializeDateRange);
   const [groupByDimensions, setGroupByDimensions] = useState<string[]>(initializeGroupByDimensions);
   
   // Activities chart view mode state with localStorage persistence
@@ -482,12 +520,15 @@ export function EngagementDashboard() {
       params.set('geographicArea', selectedGeographicAreaId);
     }
     
-    // Shared date range
+    // Shared date range - preserve relative or absolute format
     if (dateRange) {
-      if (dateRange.startDate) {
+      if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+        // Store as relative (e.g., "-90d", "-6m")
+        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
+        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
+      } else if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
+        // Store as absolute dates
         params.set('startDate', dateRange.startDate);
-      }
-      if (dateRange.endDate) {
         params.set('endDate', dateRange.endDate);
       }
     }
@@ -542,11 +583,32 @@ export function EngagementDashboard() {
       let endDate: string | undefined;
       
       if (dateRange) {
-        if (dateRange.startDate) {
+        if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
           startDate = toISODateTime(dateRange.startDate, false);
-        }
-        if (dateRange.endDate) {
           endDate = toISODateTime(dateRange.endDate, true);
+        } else if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+          // Calculate absolute dates from relative range
+          const now = new Date();
+          const end = new Date(now);
+          const start = new Date(now);
+          
+          switch (dateRange.unit) {
+            case 'day':
+              start.setDate(start.getDate() - dateRange.amount);
+              break;
+            case 'week':
+              start.setDate(start.getDate() - (dateRange.amount * 7));
+              break;
+            case 'month':
+              start.setMonth(start.getMonth() - dateRange.amount);
+              break;
+            case 'year':
+              start.setFullYear(start.getFullYear() - dateRange.amount);
+              break;
+          }
+          
+          startDate = start.toISOString();
+          endDate = end.toISOString();
         }
       }
       
@@ -598,11 +660,32 @@ export function EngagementDashboard() {
       let endDate: string | undefined;
       
       if (dateRange) {
-        if (dateRange.startDate) {
+        if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
           startDate = toISODateTime(dateRange.startDate, false);
-        }
-        if (dateRange.endDate) {
           endDate = toISODateTime(dateRange.endDate, true);
+        } else if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+          // Calculate absolute dates from relative range
+          const now = new Date();
+          const end = new Date(now);
+          const start = new Date(now);
+          
+          switch (dateRange.unit) {
+            case 'day':
+              start.setDate(start.getDate() - dateRange.amount);
+              break;
+            case 'week':
+              start.setDate(start.getDate() - (dateRange.amount * 7));
+              break;
+            case 'month':
+              start.setMonth(start.getMonth() - dateRange.amount);
+              break;
+            case 'year':
+              start.setFullYear(start.getFullYear() - dateRange.amount);
+              break;
+          }
+          
+          startDate = start.toISOString();
+          endDate = end.toISOString();
         }
       }
       
@@ -737,8 +820,36 @@ export function EngagementDashboard() {
       );
       
       // Extract date range
-      const startDate = dateRange?.startDate;
-      const endDate = dateRange?.endDate;
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      
+      if (dateRange?.type === 'absolute') {
+        startDate = dateRange.startDate;
+        endDate = dateRange.endDate;
+      } else if (dateRange?.type === 'relative' && dateRange.amount && dateRange.unit) {
+        // Calculate absolute dates from relative range for filename
+        const now = new Date();
+        const end = new Date(now);
+        const start = new Date(now);
+        
+        switch (dateRange.unit) {
+          case 'day':
+            start.setDate(start.getDate() - dateRange.amount);
+            break;
+          case 'week':
+            start.setDate(start.getDate() - (dateRange.amount * 7));
+            break;
+          case 'month':
+            start.setMonth(start.getMonth() - dateRange.amount);
+            break;
+          case 'year':
+            start.setFullYear(start.getFullYear() - dateRange.amount);
+            break;
+        }
+        
+        startDate = start.toISOString().split('T')[0];
+        endDate = end.toISOString().split('T')[0];
+      }
       
       // Generate filename with active filters (use first value if multiple)
       const filename = generateEngagementSummaryFilename({
@@ -1231,8 +1342,41 @@ export function EngagementDashboard() {
 
       {/* Activity Lifecycle Events Chart */}
       <ActivityLifecycleChart
-        startDate={dateRange?.startDate ? new Date(dateRange.startDate) : undefined}
-        endDate={dateRange?.endDate ? new Date(dateRange.endDate) : undefined}
+        startDate={(() => {
+          if (!dateRange) return undefined;
+          if (dateRange.type === 'absolute' && dateRange.startDate) {
+            return new Date(dateRange.startDate);
+          }
+          if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+            const start = new Date();
+            switch (dateRange.unit) {
+              case 'day':
+                start.setDate(start.getDate() - dateRange.amount);
+                break;
+              case 'week':
+                start.setDate(start.getDate() - (dateRange.amount * 7));
+                break;
+              case 'month':
+                start.setMonth(start.getMonth() - dateRange.amount);
+                break;
+              case 'year':
+                start.setFullYear(start.getFullYear() - dateRange.amount);
+                break;
+            }
+            return start;
+          }
+          return undefined;
+        })()}
+        endDate={(() => {
+          if (!dateRange) return undefined;
+          if (dateRange.type === 'absolute' && dateRange.endDate) {
+            return new Date(dateRange.endDate);
+          }
+          if (dateRange.type === 'relative') {
+            return new Date();
+          }
+          return undefined;
+        })()}
         geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
         activityCategoryIds={(() => {
           const labels = propertyFilterQuery.tokens

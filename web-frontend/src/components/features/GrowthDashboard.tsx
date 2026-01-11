@@ -95,13 +95,51 @@ export function GrowthDashboard() {
     return 'all';
   });
 
-  const [dateRange, setDateRange] = useState<{ startDate?: string; endDate?: string } | null>(() => {
+  const [dateRange, setDateRange] = useState<FilterGroupingState['dateRange']>(() => {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const relativePeriod = searchParams.get('relativePeriod');
+
+    // Handle relative date range (e.g., "-90d", "-6m")
+    if (relativePeriod) {
+      const match = relativePeriod.match(/^-(\d+)([dwmy])$/);
+      if (match) {
+        const amount = parseInt(match[1], 10);
+        const unitChar = match[2];
+
+        let unit: 'day' | 'week' | 'month' | 'year';
+        switch (unitChar) {
+          case 'd':
+            unit = 'day';
+            break;
+          case 'w':
+            unit = 'week';
+            break;
+          case 'm':
+            unit = 'month';
+            break;
+          case 'y':
+            unit = 'year';
+            break;
+          default:
+            return null;
+        }
+
+        return {
+          type: 'relative',
+          amount,
+          unit,
+        };
+      }
+    }
 
     // Handle absolute date range
     if (startDate && endDate) {
-      return { startDate, endDate };
+      return {
+        type: 'absolute',
+        startDate,
+        endDate,
+      };
     }
 
     return null;
@@ -419,12 +457,15 @@ export function GrowthDashboard() {
     params.set('period', period);
     params.set('growthGroupBy', viewMode);
 
-    // Shared date range
+    // Shared date range - preserve relative or absolute format
     if (dateRange) {
-      if (dateRange.startDate) {
+      if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+        // Store as relative (e.g., "-90d", "-6m")
+        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
+        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
+      } else if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
+        // Store as absolute dates
         params.set('startDate', dateRange.startDate);
-      }
-      if (dateRange.endDate) {
         params.set('endDate', dateRange.endDate);
       }
     }
@@ -481,11 +522,32 @@ export function GrowthDashboard() {
       let endDate: string | undefined;
       
       if (dateRange) {
-        if (dateRange.startDate) {
+        if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
           startDate = toISODateTime(dateRange.startDate, false);
-        }
-        if (dateRange.endDate) {
           endDate = toISODateTime(dateRange.endDate, true);
+        } else if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+          // Calculate absolute dates from relative range
+          const now = new Date();
+          const end = new Date(now);
+          const start = new Date(now);
+          
+          switch (dateRange.unit) {
+            case 'day':
+              start.setDate(start.getDate() - dateRange.amount);
+              break;
+            case 'week':
+              start.setDate(start.getDate() - (dateRange.amount * 7));
+              break;
+            case 'month':
+              start.setMonth(start.getMonth() - dateRange.amount);
+              break;
+            case 'year':
+              start.setFullYear(start.getFullYear() - dateRange.amount);
+              break;
+          }
+          
+          startDate = start.toISOString();
+          endDate = end.toISOString();
         }
       }
       
