@@ -6,11 +6,8 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
-import PropertyFilter from '@cloudscape-design/components/property-filter';
-import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
-import DateRangePicker from '@cloudscape-design/components/date-range-picker';
-import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
+import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import Popover from '@cloudscape-design/components/popover';
 import Icon from '@cloudscape-design/components/icon';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -23,6 +20,12 @@ import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { useDebouncedLoading } from '../../hooks/useDebouncedLoading';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
+import { 
+  FilterGroupingPanel, 
+  type FilterGroupingState, 
+  type FilterProperty, 
+  type GroupingDimension as FilterGroupingDimension 
+} from '../common/FilterGroupingPanel';
 import type { TimePeriod } from '../../utils/constants';
 import { isValidUUID, setMultiValueParam, getValidatedUUIDs } from '../../utils/url-params.utils';
 
@@ -92,51 +95,13 @@ export function GrowthDashboard() {
     return 'all';
   });
 
-  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(() => {
+  const [dateRange, setDateRange] = useState<{ startDate?: string; endDate?: string } | null>(() => {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    const relativePeriod = searchParams.get('relativePeriod');
-
-    // Handle relative date range (e.g., "-90d", "-6m")
-    if (relativePeriod) {
-      const match = relativePeriod.match(/^-(\d+)([dwmy])$/);
-      if (match) {
-        const amount = parseInt(match[1], 10);
-        const unitChar = match[2];
-
-        let unit: 'day' | 'week' | 'month' | 'year';
-        switch (unitChar) {
-          case 'd':
-            unit = 'day';
-            break;
-          case 'w':
-            unit = 'week';
-            break;
-          case 'm':
-            unit = 'month';
-            break;
-          case 'y':
-            unit = 'year';
-            break;
-          default:
-            return null;
-        }
-
-        return {
-          type: 'relative',
-          amount,
-          unit,
-        };
-      }
-    }
 
     // Handle absolute date range
     if (startDate && endDate) {
-      return {
-        type: 'absolute',
-        startDate,
-        endDate,
-      };
+      return { startDate, endDate };
     }
 
     return null;
@@ -170,49 +135,6 @@ export function GrowthDashboard() {
     return uuidToLabelCache.get(uuid);
   };
 
-  // Consolidate tokens: merge multiple tokens for the same property into a single token with comma-separated values
-  // Also de-duplicates values to prevent the same value from appearing multiple times
-  const consolidateTokens = (query: PropertyFilterProps.Query): PropertyFilterProps.Query => {
-    const tokensByProperty = new Map<string, PropertyFilterProps.Token[]>();
-    
-    // Group tokens by property key
-    query.tokens.forEach(token => {
-      const key = token.propertyKey || '';
-      if (!tokensByProperty.has(key)) {
-        tokensByProperty.set(key, []);
-      }
-      tokensByProperty.get(key)!.push(token);
-    });
-    
-    // Consolidate tokens for each property
-    const consolidatedTokens: PropertyFilterProps.Token[] = [];
-    tokensByProperty.forEach((tokens, propertyKey) => {
-      if (tokens.length === 0) return;
-      
-      // Get all values for this property (only = operator)
-      const allValues = tokens
-        .filter(t => t.operator === '=')
-        .flatMap(t => extractValuesFromToken(t)); // Split comma-separated values
-      
-      // De-duplicate values (case-sensitive comparison)
-      const uniqueValues = Array.from(new Set(allValues));
-      
-      if (uniqueValues.length > 0) {
-        // Create a single token with comma-separated unique values
-        consolidatedTokens.push({
-          propertyKey,
-          operator: '=',
-          value: uniqueValues.join(', '),
-        });
-      }
-    });
-    
-    return {
-      ...query,
-      tokens: consolidatedTokens,
-    };
-  };
-
   // Extract individual values from consolidated tokens (split comma-separated values)
   const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
     if (!token.value) return [];
@@ -220,7 +142,8 @@ export function GrowthDashboard() {
     return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
   };
 
-  const filteringProperties: PropertyFilterProps.FilteringProperty[] = [
+  // FilterGroupingPanel configuration
+  const filteringProperties: FilterProperty[] = [
     {
       key: 'activityCategory',
       propertyLabel: 'Activity Category',
@@ -247,8 +170,23 @@ export function GrowthDashboard() {
     },
   ];
 
+  const groupingDimensionsConfig: FilterGroupingDimension[] = [
+    { value: 'all', label: 'All' },
+    { value: 'type', label: 'Activity Type' },
+    { value: 'category', label: 'Activity Category' },
+  ];
+
+  // Handler for FilterGroupingPanel updates
+  const handleFilterUpdate = (state: FilterGroupingState) => {
+    setDateRange(state.dateRange);
+    setPropertyFilterQuery(state.filterTokens);
+    if (typeof state.grouping === 'string') {
+      setViewMode(state.grouping as ViewMode);
+    }
+  };
+
   // Async loading of property values with cache population
-  const handleLoadItems = async ({ detail }: { detail: PropertyFilterProps.LoadItemsDetail }) => {
+  const handleLoadItems: PropertyFilterProps['onLoadItems'] = async ({ detail }) => {
     const { filteringProperty, filteringText } = detail;
     
     if (!filteringProperty) return;
@@ -483,13 +421,11 @@ export function GrowthDashboard() {
 
     // Shared date range
     if (dateRange) {
-      if (dateRange.type === 'absolute') {
+      if (dateRange.startDate) {
         params.set('startDate', dateRange.startDate);
+      }
+      if (dateRange.endDate) {
         params.set('endDate', dateRange.endDate);
-      } else if (dateRange.type === 'relative') {
-        // Convert relative date range to compact format (e.g., "-90d", "-6m")
-        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
-        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
       }
     }
 
@@ -545,32 +481,11 @@ export function GrowthDashboard() {
       let endDate: string | undefined;
       
       if (dateRange) {
-        if (dateRange.type === 'absolute') {
+        if (dateRange.startDate) {
           startDate = toISODateTime(dateRange.startDate, false);
+        }
+        if (dateRange.endDate) {
           endDate = toISODateTime(dateRange.endDate, true);
-        } else if (dateRange.type === 'relative') {
-          // Calculate relative date range
-          const now = new Date();
-          const start = new Date(now);
-          
-          // Calculate start date based on relative amount and unit
-          switch (dateRange.unit) {
-            case 'day':
-              start.setDate(start.getDate() - dateRange.amount);
-              break;
-            case 'week':
-              start.setDate(start.getDate() - (dateRange.amount * 7));
-              break;
-            case 'month':
-              start.setMonth(start.getMonth() - dateRange.amount);
-              break;
-            case 'year':
-              start.setFullYear(start.getFullYear() - dateRange.amount);
-              break;
-          }
-          
-          startDate = start.toISOString();
-          endDate = now.toISOString();
         }
       }
       
@@ -724,125 +639,36 @@ export function GrowthDashboard() {
         }
       >
         <SpaceBetween size="m">
-          <DateRangePicker
-            value={dateRange}
-            onChange={({ detail }) => {
-              setDateRange(detail.value || null);
-            }}
-            placeholder="All history"
-            dateOnly={true}
-            relativeOptions={[
-              { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
-                  { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
-                  { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
-                  { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
-                ]}
-                isValidRange={() => ({ valid: true })}
-                i18nStrings={{
-                  todayAriaLabel: 'Today',
-                  nextMonthAriaLabel: 'Next month',
-                  previousMonthAriaLabel: 'Previous month',
-                  customRelativeRangeDurationLabel: 'Duration',
-                  customRelativeRangeDurationPlaceholder: 'Enter duration',
-                  customRelativeRangeOptionLabel: 'Custom range',
-                  customRelativeRangeOptionDescription: 'Set a custom range in the past',
-                  customRelativeRangeUnitLabel: 'Unit of time',
-                  formatRelativeRange: (value) => {
-                    const unit = value.amount === 1 
-                      ? value.unit 
-                      : value.unit === 'day' ? 'days' 
-                      : value.unit === 'week' ? 'weeks' 
-                      : value.unit === 'month' ? 'months' 
-                      : 'years';
-                    return `Last ${value.amount} ${unit}`;
-                  },
-                  formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
-                  dateTimeConstraintText: 'Select a date range for growth analysis.',
-                  relativeModeTitle: 'Relative range',
-                  absoluteModeTitle: 'Absolute range',
-                  relativeRangeSelectionHeading: 'Choose a range',
-                  startDateLabel: 'Start date',
-                  endDateLabel: 'End date',
-                  clearButtonLabel: 'Clear and dismiss',
-                  cancelButtonLabel: 'Cancel',
-                  applyButtonLabel: 'Apply',
-                }}
-              />
-
-          {/* PropertyFilter for Activity Category, Activity Type, Venue, and Population */}
-          <PropertyFilter
-            query={propertyFilterQuery}
-            onChange={({ detail }) => {
-              // Consolidate tokens to ensure one token per property with comma-separated values
-              const consolidated = consolidateTokens(detail);
-              setPropertyFilterQuery(consolidated);
-            }}
-            filteringProperties={filteringProperties}
-            filteringOptions={propertyFilterOptions}
-            filteringLoadingText="Loading options..."
-            filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
-            onLoadItems={handleLoadItems}
-            hideOperations={true}
-            i18nStrings={{
-              filteringAriaLabel: 'Filter growth data',
-              dismissAriaLabel: 'Dismiss',
-              filteringPlaceholder: 'Filter by activity category, type, venue, or population',
-              groupValuesText: 'Values',
-              groupPropertiesText: 'Properties',
-              operatorsText: 'Operators',
-              operationAndText: 'and',
-              operationOrText: 'or',
-              operatorLessText: 'Less than',
-              operatorLessOrEqualText: 'Less than or equal',
-              operatorGreaterText: 'Greater than',
-              operatorGreaterOrEqualText: 'Greater than or equal',
-              operatorContainsText: 'Contains',
-              operatorDoesNotContainText: 'Does not contain',
-              operatorEqualsText: 'Equals',
-              operatorDoesNotEqualText: 'Does not equal',
-              editTokenHeader: 'Edit filter',
-              propertyText: 'Property',
-              operatorText: 'Operator',
-              valueText: 'Value',
-              cancelActionText: 'Cancel',
-              applyActionText: 'Apply',
-              allPropertiesLabel: 'All properties',
-              tokenLimitShowMore: 'Show more',
-              tokenLimitShowFewer: 'Show fewer',
-              clearFiltersText: 'Clear filters',
-              removeTokenButtonAriaLabel: (token) => `Remove token ${token.propertyKey} ${token.operator} ${token.value}`,
-              enteredTextLabel: (text) => `Use: "${text}"`,
-            }}
-            filteringEmpty="No matching options"
-            filteringFinishedText="End of results"
-          />
-
+          {/* Time Period Selector */}
           <div>
-            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Group By</Box>
-            <SpaceBetween size="s" direction="horizontal">
-              <SegmentedControl
-                selectedId={viewMode}
-                onChange={({ detail }) => setViewMode(detail.selectedId as ViewMode)}
-                label="Activity grouping mode"
-                options={[
-                  { id: 'all', text: 'All' },
-                  { id: 'category', text: 'Activity Category' },
-                  { id: 'type', text: 'Activity Type' },
-                ]}
-              />
-              <SegmentedControl
-                selectedId={period}
-                onChange={({ detail }) => setPeriod(detail.selectedId as TimePeriod)}
-                label="Time period aggregation"
-                options={[
-                  { id: 'DAY', text: 'Daily' },
-                  { id: 'WEEK', text: 'Weekly' },
-                  { id: 'MONTH', text: 'Monthly' },
-                  { id: 'YEAR', text: 'Yearly' },
-                ]}
-              />
-            </SpaceBetween>
+            <Box variant="awsui-key-label" margin={{ bottom: 'xs' }}>Time Period</Box>
+            <SegmentedControl
+              selectedId={period}
+              onChange={({ detail }) => setPeriod(detail.selectedId as TimePeriod)}
+              label="Time period aggregation"
+              options={[
+                { id: 'DAY', text: 'Daily' },
+                { id: 'WEEK', text: 'Weekly' },
+                { id: 'MONTH', text: 'Monthly' },
+                { id: 'YEAR', text: 'Yearly' },
+              ]}
+            />
           </div>
+
+          {/* FilterGroupingPanel */}
+          <FilterGroupingPanel
+            filterProperties={filteringProperties}
+            groupingMode="exclusive"
+            groupingDimensions={groupingDimensionsConfig}
+            initialDateRange={dateRange}
+            initialFilterTokens={propertyFilterQuery}
+            initialGrouping={viewMode}
+            onUpdate={handleFilterUpdate}
+            onLoadItems={handleLoadItems}
+            filteringOptions={propertyFilterOptions}
+            filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
+            isLoading={isLoading}
+          />
         </SpaceBetween>
       </Container>
 

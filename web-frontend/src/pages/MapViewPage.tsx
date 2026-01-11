@@ -6,12 +6,16 @@ import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import Box from '@cloudscape-design/components/box';
 import SpaceBetween from '@cloudscape-design/components/space-between';
-import SegmentedControl from '@cloudscape-design/components/segmented-control';
-import Multiselect from '@cloudscape-design/components/multiselect';
-import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
+import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import { MapView } from '../components/features/MapView.optimized';
 import { ProgressIndicator } from '../components/common/ProgressIndicator';
 import { PopulationService } from '../services/api/population.service';
+import { 
+  FilterGroupingPanel, 
+  type FilterGroupingState, 
+  type FilterProperty, 
+  type GroupingDimension as FilterGroupingDimension 
+} from '../components/common/FilterGroupingPanel';
 
 type MapMode = 'activitiesByType' | 'activitiesByCategory' | 'participantHomes' | 'venues';
 
@@ -31,35 +35,151 @@ export default function MapViewPage() {
     return (urlMode as MapMode) || 'activitiesByType';
   });
   
-  const [selectedPopulations, setSelectedPopulations] = useState<MultiselectProps.Options>(() => {
-    const urlPopIds = searchParams.getAll('populationIds');
-    return urlPopIds.map(id => ({ label: '', value: id }));
+  // PropertyFilter state for populations
+  const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
+    tokens: [],
+    operation: 'and',
   });
+  const [propertyFilterOptions, setPropertyFilterOptions] = useState<PropertyFilterProps.FilteringOption[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
-  // Fetch populations for filter
+  // Bidirectional cache: label ↔ UUID for populations
+  const [labelToUuidCache, setLabelToUuidCache] = useState<Map<string, string>>(new Map());
+  const [uuidToLabelCache, setUuidToLabelCache] = useState<Map<string, string>>(new Map());
+
+  // Helper to add to cache
+  const addToCache = (uuid: string, label: string) => {
+    setLabelToUuidCache(prev => new Map(prev).set(label, uuid));
+    setUuidToLabelCache(prev => new Map(prev).set(uuid, label));
+  };
+
+  // Helper to get UUID from label
+  const getUuidFromLabel = (label: string): string | undefined => {
+    return labelToUuidCache.get(label);
+  };
+
+  // Helper to get label from UUID
+  const getLabelFromUuid = (uuid: string): string | undefined => {
+    return uuidToLabelCache.get(uuid);
+  };
+
+  // Extract individual values from consolidated tokens
+  const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
+    if (!token.value) return [];
+    return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
+  };
+
+  // FilterGroupingPanel configuration
+  const filteringProperties: FilterProperty[] = [
+    {
+      key: 'population',
+      propertyLabel: 'Population',
+      groupValuesLabel: 'Population values',
+      operators: ['='],
+    },
+  ];
+
+  const groupingDimensionsConfig: FilterGroupingDimension[] = [
+    { value: 'activitiesByType', label: 'Activities by Type' },
+    { value: 'activitiesByCategory', label: 'Activities by Category' },
+    { value: 'participantHomes', label: 'Participant Homes' },
+    { value: 'venues', label: 'Venues' },
+  ];
+
+  // Handler for FilterGroupingPanel updates
+  const handleFilterUpdate = (state: FilterGroupingState) => {
+    setPropertyFilterQuery(state.filterTokens);
+    if (typeof state.grouping === 'string') {
+      handleModeChange(state.grouping as MapMode);
+    }
+  };
+
+  // Async loading of population values
+  const handleLoadItems: PropertyFilterProps['onLoadItems'] = async ({ detail }) => {
+    const { filteringProperty, filteringText } = detail;
+    
+    if (!filteringProperty || filteringProperty.key !== 'population') return;
+
+    setIsLoadingOptions(true);
+
+    try {
+      const populations = await PopulationService.getPopulations();
+      const filtered = populations.filter(pop => 
+        !filteringText || pop.name.toLowerCase().includes(filteringText.toLowerCase())
+      );
+      
+      // Add to cache and create options with labels as values
+      filtered.forEach(pop => addToCache(pop.id, pop.name));
+      const options = filtered.map(pop => ({
+        propertyKey: 'population',
+        value: pop.name,
+        label: pop.name,
+      }));
+
+      setPropertyFilterOptions(options);
+    } catch (error) {
+      console.error('Error loading population options:', error);
+      setPropertyFilterOptions([]);
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  };
+
+  // Initialize PropertyFilter from URL parameters
+  useEffect(() => {
+    const initializeFiltersFromUrl = async () => {
+      const popIds = searchParams.getAll('populationIds');
+      if (popIds.length === 0) return;
+
+      const popLabels: string[] = [];
+      for (const id of popIds) {
+        let label = getLabelFromUuid(id);
+        if (!label) {
+          try {
+            const populations = await PopulationService.getPopulations();
+            const population = populations.find(p => p.id === id);
+            if (population) {
+              label = population.name;
+              addToCache(population.id, population.name);
+            }
+          } catch (error) {
+            console.error('Error fetching population:', error);
+          }
+        }
+        if (label) {
+          popLabels.push(label);
+        }
+      }
+
+      if (popLabels.length > 0) {
+        setPropertyFilterQuery({
+          tokens: [{
+            propertyKey: 'population',
+            operator: '=',
+            value: popLabels.join(', '),
+          }],
+          operation: 'and',
+        });
+      }
+    };
+
+    if (propertyFilterQuery.tokens.length === 0) {
+      initializeFiltersFromUrl();
+    }
+  }, []);
+
+  // Fetch populations for cache warming
   const { data: allPopulations = [] } = useQuery({
     queryKey: ['populations'],
     queryFn: PopulationService.getPopulations,
   });
 
-  const populationOptions: MultiselectProps.Options = allPopulations.map(pop => ({
-    label: pop.name,
-    value: pop.id,
-  }));
-
-  // Update population labels when populations load
+  // Warm cache when populations load
   useEffect(() => {
-    if (allPopulations.length > 0 && selectedPopulations.some(opt => !opt.label)) {
-      const updated = selectedPopulations.map(opt => {
-        const pop = allPopulations.find(p => p.id === opt.value);
-        return pop ? { label: pop.name, value: pop.id } : opt;
-      }).filter(opt => opt.label);
-      
-      if (JSON.stringify(updated) !== JSON.stringify(selectedPopulations)) {
-        setSelectedPopulations(updated);
-      }
+    if (allPopulations.length > 0) {
+      allPopulations.forEach(pop => addToCache(pop.id, pop.name));
     }
-  }, [allPopulations, selectedPopulations]);
+  }, [allPopulations]);
 
   // Sync filters to URL
   useEffect(() => {
@@ -68,18 +188,21 @@ export default function MapViewPage() {
     // Update mode
     params.set('mode', mapMode);
     
-    // Update population filters
+    // Update population filters (extract UUIDs from labels)
     params.delete('populationIds');
-    if (selectedPopulations.length > 0) {
-      selectedPopulations.forEach(pop => {
-        if (pop.value) {
-          params.append('populationIds', pop.value);
-        }
-      });
+    const populationLabels = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'population' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    const populationIds = populationLabels
+      .map(label => getUuidFromLabel(label))
+      .filter(Boolean) as string[];
+    
+    if (populationIds.length > 0) {
+      populationIds.forEach(id => params.append('populationIds', id));
     }
     
     setSearchParams(params, { replace: true });
-  }, [mapMode, selectedPopulations, searchParams, setSearchParams]);
+  }, [mapMode, propertyFilterQuery, searchParams, setSearchParams]);
 
   // Handle mode change
   const handleModeChange = useCallback((newMode: MapMode) => {
@@ -88,7 +211,12 @@ export default function MapViewPage() {
     setMapLoadingState(prev => ({ ...prev, isCancelled: false }));
   }, []);
 
-  const selectedPopulationIds = selectedPopulations.map(opt => opt.value!).filter(Boolean);
+  // Extract population IDs from filter tokens
+  const selectedPopulationIds = propertyFilterQuery.tokens
+    .filter(t => t.propertyKey === 'population' && t.operator === '=')
+    .flatMap(t => extractValuesFromToken(t))
+    .map(label => getUuidFromLabel(label))
+    .filter(Boolean) as string[];
 
   // Handlers for pause/resume
   const handlePauseLoading = useCallback(() => {
@@ -116,71 +244,64 @@ export default function MapViewPage() {
 
   return (
     <ContentLayout>
-      <Container 
-        header={
-          <Header 
-            variant="h2"
-            actions={
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                <SegmentedControl
-                  selectedId={mapMode}
-                  onChange={({ detail }) => handleModeChange(detail.selectedId as MapMode)}
-                  options={[
-                    { id: 'activitiesByType', text: 'Activities by Type' },
-                    { id: 'activitiesByCategory', text: 'Activities by Category' },
-                    { id: 'participantHomes', text: 'Participant Homes' },
-                    { id: 'venues', text: 'Venues' }
-                  ]}
-                />
-                <div style={{ minWidth: '300px', minHeight: '64px' }}>
-                  <Multiselect
-                    selectedOptions={selectedPopulations}
-                    onChange={({ detail }) => setSelectedPopulations(detail.selectedOptions)}
-                    options={populationOptions}
-                    placeholder="Filter by populations"
-                    filteringType="auto"
-                    tokenLimit={2}
-                    disabled={mapMode === 'venues'}
+      <SpaceBetween size="l">
+        <Container 
+          header={
+            <Header variant="h2">
+              <Box display="inline" fontSize="heading-l" fontWeight="bold">
+                <SpaceBetween direction="horizontal" size="xs">
+                  <Box display="inline-block" variant="h1">
+                    <SpaceBetween direction="horizontal" size="xs">
+                      <span>Map View</span>
+                      {mapLoadingState.loadedCount >= mapLoadingState.totalCount && mapLoadingState.totalCount > 0 && (
+                        <Box display="inline" color="text-status-inactive" variant="h1" fontWeight="normal">
+                          ({mapLoadingState.loadedCount})
+                        </Box>
+                      )}
+                    </SpaceBetween>
+                  </Box>
+                  <ProgressIndicator
+                    loadedCount={mapLoadingState.loadedCount}
+                    totalCount={mapLoadingState.totalCount}
+                    entityName={getEntityName()}
+                    onCancel={handlePauseLoading}
+                    onResume={handleResumeLoading}
+                    isCancelled={mapLoadingState.isCancelled}
                   />
-                </div>
-              </div>
-            }
-          >
-            <Box display="inline" fontSize="heading-l" fontWeight="bold">
-              <SpaceBetween direction="horizontal" size="xs">
-                <Box display="inline-block" variant="h1">
-                  <SpaceBetween direction="horizontal" size="xs">
-                    <span>Map View</span>
-                    {mapLoadingState.loadedCount >= mapLoadingState.totalCount && mapLoadingState.totalCount > 0 && (
-                      <Box display="inline" color="text-status-inactive" variant="h1" fontWeight="normal">
-                        ({mapLoadingState.loadedCount})
-                      </Box>
-                    )}
-                  </SpaceBetween>
-                </Box>
-                <ProgressIndicator
-                  loadedCount={mapLoadingState.loadedCount}
-                  totalCount={mapLoadingState.totalCount}
-                  entityName={getEntityName()}
-                  onCancel={handlePauseLoading}
-                  onResume={handleResumeLoading}
-                  isCancelled={mapLoadingState.isCancelled}
-                />
-              </SpaceBetween>
-            </Box>
-          </Header>
-        }
-        disableContentPaddings
-      >
-        <div style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
-          <MapView 
-            mode={mapMode}
-            populationIds={selectedPopulationIds}
-            onLoadingStateChange={setMapLoadingState}
-            externalIsCancelled={mapLoadingState.isCancelled}
-          />
-        </div>
-      </Container>
+                </SpaceBetween>
+              </Box>
+            </Header>
+          }
+        >
+          <SpaceBetween size="m">
+            {/* FilterGroupingPanel */}
+            <FilterGroupingPanel
+              filterProperties={filteringProperties}
+              groupingMode="exclusive"
+              groupingDimensions={groupingDimensionsConfig}
+              initialDateRange={null}
+              initialFilterTokens={propertyFilterQuery}
+              initialGrouping={mapMode}
+              onUpdate={handleFilterUpdate}
+              onLoadItems={handleLoadItems}
+              filteringOptions={propertyFilterOptions}
+              filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
+              isLoading={false}
+              disablePopulationFilter={mapMode === 'venues'}
+            />
+
+            {/* Map */}
+            <div style={{ height: 'calc(100vh - 400px)', minHeight: '500px' }}>
+              <MapView 
+                mode={mapMode}
+                populationIds={selectedPopulationIds}
+                onLoadingStateChange={setMapLoadingState}
+                externalIsCancelled={mapLoadingState.isCancelled}
+              />
+            </div>
+          </SpaceBetween>
+        </Container>
+      </SpaceBetween>
     </ContentLayout>
   );
 }

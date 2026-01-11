@@ -41,6 +41,9 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Auto_Zoom**: Automatic adjustment of map zoom level to fit all visible markers within the viewport
 - **Server_Side_Filtering**: A filtering approach where filter criteria are sent to the backend API as query parameters, and the backend returns only matching records, reducing data transfer and improving performance
 - **PropertyFilter**: A CloudScape Design System component that provides a unified interface for filtering data by multiple properties with support for lazy-loading values, token-based filter display, and URL synchronization
+- **FilterGroupingPanel**: A reusable component that combines date range selection, property-based filtering, and grouping controls with an explicit "Update" button for applying changes to data visualization pages
+- **Additive_Grouping**: A grouping mode where multiple dimensions can be selected simultaneously (e.g., group by activity type AND venue AND geographic area)
+- **Exclusive_Grouping**: A grouping mode where only one dimension can be selected at a time (e.g., group by activity type OR activity category OR no grouping)
 
 ## Requirements
 
@@ -466,21 +469,25 @@ The Web Frontend package provides a responsive React-based web application that 
 
 **Filtering and Geographic Context:**
 
-51. THE Web_App SHALL provide filtering controls to show/hide activities by category, type, status, date range, or population
-52. THE Web_App SHALL provide a population filter control on the map view
-53. WHEN a population filter is applied on the map, THE Web_App SHALL display only activities that have at least one participant belonging to at least one of the specified populations
-54. WHEN a population filter is applied in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses for participants who belong to at least one of the specified populations
-55. WHEN the map mode is "Venues", THE Web_App SHALL disable the population filter control
-56. WHEN the map mode is "Activities by Type" or "Activities by Category", THE Web_App SHALL enable the population filter control
-57. THE Web_App SHALL provide geographic area boundary overlays when available
-58. THE Web_App SHALL allow zooming and panning of the map
-59. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
-60. WHEN the global geographic area filter is active, THE Web_App SHALL apply the filter to all map modes to show only markers for entities associated with venues in the filtered geographic area or its descendants
-61. WHEN the global geographic area filter is active in "Activities by Type" or "Activities by Category" modes, THE Web_App SHALL display only activities whose current venue is in the filtered geographic area or its descendants
-62. WHEN the global geographic area filter is active in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses where the venue is in the filtered geographic area or its descendants
-63. WHEN the global geographic area filter is active in "Venues" mode, THE Web_App SHALL display only venues that are in the filtered geographic area or its descendants
-64. WHEN determining current venue for activity markers, THE Web_App SHALL treat null effectiveFrom dates as equivalent to the activity start date
-65. WHEN determining current home address for participant markers, THE Web_App SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
+51. THE Web_App SHALL use the FilterGroupingPanel component to provide date range selection, property-based filtering, and exclusive grouping controls for map mode selection
+52. WHEN using the FilterGroupingPanel on the Map View, THE Web_App SHALL configure it with exclusive grouping mode supporting options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
+53. WHEN using the FilterGroupingPanel on the Map View, THE Web_App SHALL configure it with filter properties: activity category, activity type, status, date range, population
+54. WHEN the user clicks the "Update" button on the FilterGroupingPanel, THE Web_App SHALL apply the selected filters and map mode to fetch new marker data
+55. WHEN a population filter is applied on the map, THE Web_App SHALL display only activities that have at least one participant belonging to at least one of the specified populations
+56. WHEN a population filter is applied in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses for participants who belong to at least one of the specified populations
+57. WHEN the map mode is "Venues", THE Web_App SHALL disable the population filter control in the FilterGroupingPanel
+58. WHEN the map mode is "Activities by Type" or "Activities by Category", THE Web_App SHALL enable the population filter control in the FilterGroupingPanel
+59. THE Web_App SHALL provide geographic area boundary overlays when available
+60. THE Web_App SHALL allow zooming and panning of the map
+61. THE Web_App SHALL provide a button to center the map on a specific venue or geographic area
+62. WHEN the global geographic area filter is active, THE Web_App SHALL apply the filter to all map modes to show only markers for entities associated with venues in the filtered geographic area or its descendants
+63. WHEN the global geographic area filter is active in "Activities by Type" or "Activities by Category" modes, THE Web_App SHALL display only activities whose current venue is in the filtered geographic area or its descendants
+64. WHEN the global geographic area filter is active in "Participant Homes" mode, THE Web_App SHALL display only participant home addresses where the venue is in the filtered geographic area or its descendants
+65. WHEN the global geographic area filter is active in "Venues" mode, THE Web_App SHALL display only venues that are in the filtered geographic area or its descendants
+66. WHEN determining current venue for activity markers, THE Web_App SHALL treat null effectiveFrom dates as equivalent to the activity start date
+67. WHEN determining current home address for participant markers, THE Web_App SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
+68. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
+69. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
 66. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
 67. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
 
@@ -514,8 +521,11 @@ The Web Frontend package provides a responsive React-based web application that 
 14a. THE Web_App SHALL display all participation counts (non-unique) in aggregate across all activity categories and types
 14b. THE Web_App SHALL display all participation counts (non-unique) broken down by activity category
 14c. THE Web_App SHALL display all participation counts (non-unique) broken down by activity type
-15. THE Web_App SHALL provide controls to group metrics by one or more dimensions: activity category, activity type, venue, geographic area, and population
-16. THE Web_App SHALL provide filter controls to filter by one or more activity categories
+15. THE Web_App SHALL use the FilterGroupingPanel component to provide date range selection, property-based filtering, and additive grouping controls
+16. WHEN using the FilterGroupingPanel on the Engagement Dashboard, THE Web_App SHALL configure it with additive grouping mode supporting dimensions: activity category, activity type, venue, geographic area
+17. WHEN using the FilterGroupingPanel on the Engagement Dashboard, THE Web_App SHALL configure it with filter properties: activity category, activity type, venue, population
+18. WHEN the user clicks the "Update" button on the FilterGroupingPanel, THE Web_App SHALL apply the selected filters and grouping dimensions to fetch new engagement metrics
+19. THE Web_App SHALL provide filter controls to filter by one or more activity categories
 17. WHEN an activity category filter is applied with multiple values, THE Web_App SHALL include only activities belonging to at least one of the specified activity categories (OR logic within dimension)
 18. THE Web_App SHALL provide filter controls to filter by one or more activity types
 19. WHEN an activity type filter is applied with multiple values, THE Web_App SHALL include only activities of at least one of the specified activity types (OR logic within dimension)
@@ -589,7 +599,11 @@ The Web Frontend package provides a responsive React-based web application that 
 82. WHEN a user returns to the Growth Dashboard, THE Growth_Dashboard SHALL restore the previously selected view mode from local storage
 83. IF no previous selection exists in local storage, THE Growth_Dashboard SHALL default to "All" view
 84. WHEN local storage is unavailable, THE Growth_Dashboard SHALL function normally with "All" as the default
-85. THE Web_App SHALL provide filter controls to filter growth metrics by one or more activity categories
+85. THE Web_App SHALL use the FilterGroupingPanel component to provide date range selection, property-based filtering, and exclusive grouping controls
+86. WHEN using the FilterGroupingPanel on the Growth Dashboard, THE Web_App SHALL configure it with exclusive grouping mode supporting options: "All", "Activity Type", "Activity Category"
+87. WHEN using the FilterGroupingPanel on the Growth Dashboard, THE Web_App SHALL configure it with filter properties: activity category, activity type, geographic area, venue, population
+88. WHEN the user clicks the "Update" button on the FilterGroupingPanel, THE Web_App SHALL apply the selected filters and grouping mode to fetch new growth metrics
+89. THE Web_App SHALL provide filter controls to filter growth metrics by one or more activity categories
 86. WHEN an activity category filter is applied to growth metrics with multiple values, THE Web_App SHALL include only activities belonging to at least one of the specified activity categories (OR logic within dimension)
 87. THE Web_App SHALL provide filter controls to filter growth metrics by one or more activity types
 88. WHEN an activity type filter is applied to growth metrics with multiple values, THE Web_App SHALL include only activities of at least one of the specified activity types (OR logic within dimension)
@@ -703,6 +717,49 @@ The Web Frontend package provides a responsive React-based web application that 
 23. THE PropertyFilter SHALL NOT create separate tokens for each value within the same property dimension
 24. THE PropertyFilter SHALL prevent duplicate values within a single property dimension
 25. WHEN a user attempts to add a value that already exists in a property dimension's token, THE PropertyFilter SHALL ignore the duplicate and maintain only unique values
+
+### Requirement 7C: Common Filtering and Grouping Component
+
+**User Story:** As a community organizer, I want a consistent filtering and grouping interface across all data visualization pages (Engagement Dashboard, Growth Dashboard, and Map View), so that I can efficiently analyze data with a familiar interface and explicit control over when filters are applied.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide a reusable FilterGroupingPanel component for use on all data visualization pages
+2. THE FilterGroupingPanel SHALL consist of three sections arranged horizontally or vertically: date range selection, property-based filtering, and grouping controls
+3. THE FilterGroupingPanel SHALL include a CloudScape DateRangePicker component for date range selection
+4. THE FilterGroupingPanel SHALL include a CloudScape PropertyFilter component for multi-dimensional filtering
+5. THE FilterGroupingPanel SHALL include grouping controls that adapt based on the grouping mode (additive or exclusive)
+6. THE FilterGroupingPanel SHALL provide an explicit "Update" button to apply the selected filters and grouping options
+7. WHEN the "Update" button is clicked, THE FilterGroupingPanel SHALL invoke a callback with the current filter and grouping state
+8. THE FilterGroupingPanel SHALL NOT automatically apply filters as the user makes selections
+9. THE FilterGroupingPanel SHALL allow users to adjust multiple filters and grouping options before applying them all at once
+10. WHEN the grouping mode is additive, THE FilterGroupingPanel SHALL display a multi-select dropdown component for grouping dimension selection
+11. WHEN the grouping mode is exclusive, THE FilterGroupingPanel SHALL display a CloudScape SegmentedControl component for grouping dimension selection
+12. THE FilterGroupingPanel SHALL accept configuration props specifying available filter properties, available grouping dimensions, and grouping mode (additive or exclusive)
+13. THE FilterGroupingPanel SHALL accept initial values for date range, filter tokens, and selected grouping dimensions
+14. THE FilterGroupingPanel SHALL maintain internal state for user selections until the "Update" button is clicked
+15. THE FilterGroupingPanel SHALL provide visual feedback when filters or grouping options have been changed but not yet applied (e.g., highlight the "Update" button)
+16. THE FilterGroupingPanel SHALL integrate with URL query parameter synchronization (parent component responsibility)
+17. THE FilterGroupingPanel SHALL support all PropertyFilter features: lazy loading, debouncing, token consolidation, and de-duplication
+18. THE FilterGroupingPanel SHALL use consistent styling and layout across all pages where it is used
+19. THE FilterGroupingPanel SHALL be responsive and adapt to different screen sizes
+20. THE FilterGroupingPanel SHALL provide clear labels for all controls (date range, filters, grouping)
+21. THE Web_App SHALL use the FilterGroupingPanel component on the Engagement Dashboard page
+22. THE Web_App SHALL use the FilterGroupingPanel component on the Growth Dashboard page
+23. THE Web_App SHALL use the FilterGroupingPanel component on the Map View page
+24. WHEN used on the Engagement Dashboard, THE FilterGroupingPanel SHALL support additive grouping with dimensions: activity category, activity type, venue, geographic area
+25. WHEN used on the Growth Dashboard, THE FilterGroupingPanel SHALL support exclusive grouping with options: "All", "Activity Type", "Activity Category"
+26. WHEN used on the Map View, THE FilterGroupingPanel SHALL support exclusive grouping with options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
+27. THE FilterGroupingPanel SHALL accept a prop specifying which filter properties are available (e.g., activity category, activity type, venue, population)
+28. THE FilterGroupingPanel SHALL accept a prop specifying which grouping dimensions are available
+29. THE FilterGroupingPanel SHALL accept a prop specifying the grouping mode (additive or exclusive)
+30. THE FilterGroupingPanel SHALL provide a callback prop that is invoked when the "Update" button is clicked, passing the complete filter and grouping state
+31. THE FilterGroupingPanel SHALL disable the "Update" button when no changes have been made to filters or grouping
+32. THE FilterGroupingPanel SHALL enable the "Update" button when any filter or grouping selection has changed
+33. THE FilterGroupingPanel SHALL provide a "Clear All" button to reset all filters and grouping to their default states
+34. WHEN the "Clear All" button is clicked, THE FilterGroupingPanel SHALL reset date range, clear all filter tokens, and reset grouping to default
+35. THE FilterGroupingPanel SHALL display a loading indicator on the "Update" button while the parent component is fetching new data
+36. THE FilterGroupingPanel SHALL disable all controls while the parent component is fetching new data to prevent conflicting updates
 
 ### Requirement 8: Authentication UI
 

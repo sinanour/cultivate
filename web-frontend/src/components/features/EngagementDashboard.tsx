@@ -7,16 +7,11 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
-import DateRangePicker from '@cloudscape-design/components/date-range-picker';
-import Multiselect from '@cloudscape-design/components/multiselect';
-import PropertyFilter from '@cloudscape-design/components/property-filter';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import Popover from '@cloudscape-design/components/popover';
 import Icon from '@cloudscape-design/components/icon';
-import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
-import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Badge from '@cloudscape-design/components/badge';
@@ -28,6 +23,12 @@ import { PopulationService } from '../../services/api/population.service';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import { ActivityLifecycleChart } from './ActivityLifecycleChart';
+import { 
+  FilterGroupingPanel, 
+  type FilterGroupingState, 
+  type FilterProperty, 
+  type GroupingDimension as FilterGroupingDimension 
+} from '../common/FilterGroupingPanel';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotification } from '../../hooks/useNotification';
@@ -115,57 +116,19 @@ export function EngagementDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Initialize state from URL parameters
-  const initializeDateRange = (): DateRangePickerProps.Value | null => {
+  const initializeDateRange = (): { startDate?: string; endDate?: string } | null => {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    const relativePeriod = searchParams.get('relativePeriod');
-    
-    // Handle relative date range (e.g., "-90d", "-6m")
-    if (relativePeriod) {
-      const match = relativePeriod.match(/^-(\d+)([dwmy])$/);
-      if (match) {
-        const amount = parseInt(match[1], 10);
-        const unitChar = match[2];
-        
-        let unit: 'day' | 'week' | 'month' | 'year';
-        switch (unitChar) {
-          case 'd':
-            unit = 'day';
-            break;
-          case 'w':
-            unit = 'week';
-            break;
-          case 'm':
-            unit = 'month';
-            break;
-          case 'y':
-            unit = 'year';
-            break;
-          default:
-            return null;
-        }
-        
-        return {
-          type: 'relative',
-          amount,
-          unit,
-        };
-      }
-    }
     
     // Handle absolute date range
     if (startDate && endDate) {
-      return {
-        type: 'absolute',
-        startDate,
-        endDate,
-      };
+      return { startDate, endDate };
     }
     
     return null;
   };
 
-  const initializeGroupByDimensions = (): MultiselectProps.Options => {
+  const initializeGroupByDimensions = (): string[] => {
     // Check new param name first
     const groupByParam = searchParams.get('engagementGroupBy');
     
@@ -179,16 +142,11 @@ export function EngagementDashboard() {
     const dimensions = paramToUse.split(',');
     const validDimensions = ['activityCategory', 'activityType', 'venue', 'geographicArea', 'population'];
     
-    return dimensions
-      .filter(dim => validDimensions.includes(dim))
-      .map(dim => {
-        const label = dim.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        return { label, value: dim };
-      });
+    return dimensions.filter(dim => validDimensions.includes(dim));
   };
 
-  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(initializeDateRange);
-  const [groupByDimensions, setGroupByDimensions] = useState<MultiselectProps.Options>(initializeGroupByDimensions);
+  const [dateRange, setDateRange] = useState<{ startDate?: string; endDate?: string } | null>(initializeDateRange);
+  const [groupByDimensions, setGroupByDimensions] = useState<string[]>(initializeGroupByDimensions);
   
   // Activities chart view mode state with localStorage persistence
   const [activitiesViewMode, setActivitiesViewMode] = useState<ActivitiesViewMode>(() => {
@@ -234,49 +192,6 @@ export function EngagementDashboard() {
     return uuidToLabel.get(uuid);
   };
 
-  // Consolidate tokens: merge multiple tokens for the same property into a single token with comma-separated values
-  // Also de-duplicates values to prevent the same value from appearing multiple times
-  const consolidateTokens = (query: PropertyFilterProps.Query): PropertyFilterProps.Query => {
-    const tokensByProperty = new Map<string, PropertyFilterProps.Token[]>();
-    
-    // Group tokens by property key
-    query.tokens.forEach(token => {
-      const key = token.propertyKey || '';
-      if (!tokensByProperty.has(key)) {
-        tokensByProperty.set(key, []);
-      }
-      tokensByProperty.get(key)!.push(token);
-    });
-    
-    // Consolidate tokens for each property
-    const consolidatedTokens: PropertyFilterProps.Token[] = [];
-    tokensByProperty.forEach((tokens, propertyKey) => {
-      if (tokens.length === 0) return;
-      
-      // Get all values for this property (only = operator)
-      const allValues = tokens
-        .filter(t => t.operator === '=')
-        .flatMap(t => extractValuesFromToken(t)); // Split comma-separated values
-      
-      // De-duplicate values (case-sensitive comparison)
-      const uniqueValues = Array.from(new Set(allValues));
-      
-      if (uniqueValues.length > 0) {
-        // Create a single token with comma-separated unique values
-        consolidatedTokens.push({
-          propertyKey,
-          operator: '=',
-          value: uniqueValues.join(', '),
-        });
-      }
-    });
-    
-    return {
-      ...query,
-      tokens: consolidatedTokens,
-    };
-  };
-
   // Extract individual values from consolidated tokens (split comma-separated values)
   const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
     if (!token.value) return [];
@@ -284,7 +199,8 @@ export function EngagementDashboard() {
     return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
   };
 
-  const filteringProperties: PropertyFilterProps.FilteringProperty[] = [
+  // FilterGroupingPanel configuration
+  const filteringProperties: FilterProperty[] = [
     {
       key: 'activityCategory',
       propertyLabel: 'Activity Category',
@@ -311,8 +227,24 @@ export function EngagementDashboard() {
     },
   ];
 
+  const groupingDimensionsConfig: FilterGroupingDimension[] = [
+    { value: 'activityCategory', label: 'Activity Category' },
+    { value: 'activityType', label: 'Activity Type' },
+    { value: 'venue', label: 'Venue' },
+    { value: 'geographicArea', label: 'Geographic Area' },
+  ];
+
+  // Handler for FilterGroupingPanel updates
+  const handleFilterUpdate = (state: FilterGroupingState) => {
+    setDateRange(state.dateRange);
+    setPropertyFilterQuery(state.filterTokens);
+    if (Array.isArray(state.grouping)) {
+      setGroupByDimensions(state.grouping);
+    }
+  };
+
   // Async loading of property values with cache population
-  const handleLoadItems = async ({ detail }: { detail: PropertyFilterProps.LoadItemsDetail }) => {
+  const handleLoadItems: PropertyFilterProps['onLoadItems'] = async ({ detail }) => {
     const { filteringProperty, filteringText } = detail;
     
     if (!filteringProperty) return;
@@ -552,13 +484,11 @@ export function EngagementDashboard() {
     
     // Shared date range
     if (dateRange) {
-      if (dateRange.type === 'absolute') {
+      if (dateRange.startDate) {
         params.set('startDate', dateRange.startDate);
+      }
+      if (dateRange.endDate) {
         params.set('endDate', dateRange.endDate);
-      } else if (dateRange.type === 'relative') {
-        // Convert relative date range to compact format (e.g., "-90d", "-6m")
-        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
-        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
       }
     }
     
@@ -594,7 +524,7 @@ export function EngagementDashboard() {
     
     // Dashboard-specific grouping (renamed)
     if (groupByDimensions.length > 0) {
-      const groupByValues = groupByDimensions.map(d => d.value).join(',');
+      const groupByValues = groupByDimensions.join(',');
       params.set('engagementGroupBy', groupByValues);
     }
     
@@ -612,32 +542,11 @@ export function EngagementDashboard() {
       let endDate: string | undefined;
       
       if (dateRange) {
-        if (dateRange.type === 'absolute') {
+        if (dateRange.startDate) {
           startDate = toISODateTime(dateRange.startDate, false);
+        }
+        if (dateRange.endDate) {
           endDate = toISODateTime(dateRange.endDate, true);
-        } else if (dateRange.type === 'relative') {
-          // Calculate relative date range
-          const now = new Date();
-          const start = new Date(now);
-          
-          // Calculate start date based on relative amount and unit
-          switch (dateRange.unit) {
-            case 'day':
-              start.setDate(start.getDate() - dateRange.amount);
-              break;
-            case 'week':
-              start.setDate(start.getDate() - (dateRange.amount * 7));
-              break;
-            case 'month':
-              start.setMonth(start.getMonth() - dateRange.amount);
-              break;
-            case 'year':
-              start.setFullYear(start.getFullYear() - dateRange.amount);
-              break;
-          }
-          
-          startDate = start.toISOString();
-          endDate = now.toISOString();
         }
       }
       
@@ -672,7 +581,7 @@ export function EngagementDashboard() {
         activityTypeIds: activityTypeIds.length > 0 ? activityTypeIds : undefined,
         venueIds: venueIds.length > 0 ? venueIds : undefined,
         populationIds: populationIds.length > 0 ? populationIds : undefined,
-        groupBy: groupByDimensions.map(d => d.value as GroupingDimension),
+        groupBy: groupByDimensions.map(d => d as GroupingDimension),
       };
       
       return AnalyticsService.getEngagementMetrics(params);
@@ -689,30 +598,11 @@ export function EngagementDashboard() {
       let endDate: string | undefined;
       
       if (dateRange) {
-        if (dateRange.type === 'absolute') {
+        if (dateRange.startDate) {
           startDate = toISODateTime(dateRange.startDate, false);
+        }
+        if (dateRange.endDate) {
           endDate = toISODateTime(dateRange.endDate, true);
-        } else if (dateRange.type === 'relative') {
-          const now = new Date();
-          const start = new Date(now);
-          
-          switch (dateRange.unit) {
-            case 'day':
-              start.setDate(start.getDate() - dateRange.amount);
-              break;
-            case 'week':
-              start.setDate(start.getDate() - (dateRange.amount * 7));
-              break;
-            case 'month':
-              start.setMonth(start.getMonth() - dateRange.amount);
-              break;
-            case 'year':
-              start.setFullYear(start.getFullYear() - dateRange.amount);
-              break;
-          }
-          
-          startDate = start.toISOString();
-          endDate = now.toISOString();
         }
       }
       
@@ -846,36 +736,9 @@ export function EngagementDashboard() {
         t => t.propertyKey === 'population' && t.operator === '='
       );
       
-      // Extract date range (convert relative to absolute if needed)
-      let startDate: string | undefined;
-      let endDate: string | undefined;
-      if (dateRange?.type === 'absolute') {
-        startDate = dateRange.startDate;
-        endDate = dateRange.endDate;
-      } else if (dateRange?.type === 'relative') {
-        // Calculate absolute dates from relative range for filename
-        const now = new Date();
-        const end = new Date(now);
-        const start = new Date(now);
-        
-        switch (dateRange.unit) {
-          case 'day':
-            start.setDate(start.getDate() - dateRange.amount);
-            break;
-          case 'week':
-            start.setDate(start.getDate() - (dateRange.amount * 7));
-            break;
-          case 'month':
-            start.setMonth(start.getMonth() - dateRange.amount);
-            break;
-          case 'year':
-            start.setFullYear(start.getFullYear() - dateRange.amount);
-            break;
-        }
-        
-        startDate = start.toISOString().split('T')[0];
-        endDate = end.toISOString().split('T')[0];
-      }
+      // Extract date range
+      const startDate = dateRange?.startDate;
+      const endDate = dateRange?.endDate;
       
       // Generate filename with active filters (use first value if multiple)
       const filename = generateEngagementSummaryFilename({
@@ -971,114 +834,19 @@ export function EngagementDashboard() {
       <Container
         header={<Header variant="h3">Filters and Grouping</Header>}
       >
-        <SpaceBetween size="m">
-          {/* Date Range and Date Granularity */}
-          <ColumnLayout columns={2}>
-            <DateRangePicker
-              value={dateRange}
-              onChange={({ detail }) => setDateRange(detail.value || null)}
-              placeholder="All history"
-              dateOnly={true}
-              relativeOptions={[
-                { key: 'previous-7-days', amount: 7, unit: 'day', type: 'relative' },
-                { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
-                { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
-              ]}
-              isValidRange={() => ({ valid: true })}
-              i18nStrings={{
-                todayAriaLabel: 'Today',
-                nextMonthAriaLabel: 'Next month',
-                previousMonthAriaLabel: 'Previous month',
-                customRelativeRangeDurationLabel: 'Duration',
-                customRelativeRangeDurationPlaceholder: 'Enter duration',
-                customRelativeRangeOptionLabel: 'Custom range',
-                customRelativeRangeOptionDescription: 'Set a custom range in the past',
-                customRelativeRangeUnitLabel: 'Unit of time',
-                formatRelativeRange: (value) => {
-                  const unit = value.amount === 1 
-                    ? value.unit 
-                    : value.unit === 'day' ? 'days' 
-                    : value.unit === 'week' ? 'weeks' 
-                    : value.unit === 'month' ? 'months' 
-                    : 'years';
-                  return `Last ${value.amount} ${unit}`;
-                },
-                formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
-                dateTimeConstraintText: 'Range must be between 6 and 30 days.',
-                relativeModeTitle: 'Relative range',
-                absoluteModeTitle: 'Absolute range',
-                relativeRangeSelectionHeading: 'Choose a range',
-                startDateLabel: 'Start date',
-                endDateLabel: 'End date',
-                clearButtonLabel: 'Clear and dismiss',
-                cancelButtonLabel: 'Cancel',
-                applyButtonLabel: 'Apply',
-              }}
-            />
-          </ColumnLayout>
-
-          {/* PropertyFilter for Activity Category, Activity Type, and Venue */}
-          <PropertyFilter
-            query={propertyFilterQuery}
-            onChange={({ detail }) => {
-              // Consolidate tokens to ensure one token per property with comma-separated values
-              const consolidated = consolidateTokens(detail);
-              setPropertyFilterQuery(consolidated);
-            }}
-            filteringProperties={filteringProperties}
-            filteringOptions={propertyFilterOptions}
-            filteringLoadingText="Loading options..."
-            filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
-            onLoadItems={handleLoadItems}
-            hideOperations={true}
-            i18nStrings={{
-              filteringAriaLabel: 'Filter engagement data',
-              dismissAriaLabel: 'Dismiss',
-              filteringPlaceholder: 'Filter by activity category, type, venue, or population',
-              groupValuesText: 'Values',
-              groupPropertiesText: 'Properties',
-              operatorsText: 'Operators',
-              operationAndText: 'and',
-              operationOrText: 'or',
-              operatorLessText: 'Less than',
-              operatorLessOrEqualText: 'Less than or equal',
-              operatorGreaterText: 'Greater than',
-              operatorGreaterOrEqualText: 'Greater than or equal',
-              operatorContainsText: 'Contains',
-              operatorDoesNotContainText: 'Does not contain',
-              operatorEqualsText: 'Equals',
-              operatorDoesNotEqualText: 'Does not equal',
-              editTokenHeader: 'Edit filter',
-              propertyText: 'Property',
-              operatorText: 'Operator',
-              valueText: 'Value',
-              cancelActionText: 'Cancel',
-              applyActionText: 'Apply',
-              allPropertiesLabel: 'All properties',
-              tokenLimitShowMore: 'Show more',
-              tokenLimitShowFewer: 'Show fewer',
-              clearFiltersText: 'Clear filters',
-              removeTokenButtonAriaLabel: (token) => `Remove token ${token.propertyKey} ${token.operator} ${token.value}`,
-              enteredTextLabel: (text) => `Use: "${text}"`,
-            }}
-            filteringEmpty="No matching options"
-            filteringFinishedText="End of results"
-          />
-
-          {/* Grouping Dimensions */}
-          <Multiselect
-            selectedOptions={groupByDimensions}
-            onChange={({ detail }) => setGroupByDimensions(detail.selectedOptions)}
-            options={[
-              { label: 'Activity Category', value: GroupingDimension.ACTIVITY_CATEGORY },
-              { label: 'Activity Type', value: GroupingDimension.ACTIVITY_TYPE },
-              { label: 'Venue', value: GroupingDimension.VENUE },
-              { label: 'Geographic Area', value: GroupingDimension.GEOGRAPHIC_AREA },
-            ]}
-            placeholder="Group by dimensions"
-            selectedAriaLabel="Selected"
-          />
-        </SpaceBetween>
+        <FilterGroupingPanel
+          filterProperties={filteringProperties}
+          groupingMode="additive"
+          groupingDimensions={groupingDimensionsConfig}
+          initialDateRange={dateRange}
+          initialFilterTokens={propertyFilterQuery}
+          initialGrouping={groupByDimensions}
+          onUpdate={handleFilterUpdate}
+          onLoadItems={handleLoadItems}
+          filteringOptions={propertyFilterOptions}
+          filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
+          isLoading={isLoading}
+        />
       </Container>
 
       {/* Engagement Summary Table - Always visible */}
@@ -1463,38 +1231,8 @@ export function EngagementDashboard() {
 
       {/* Activity Lifecycle Events Chart */}
       <ActivityLifecycleChart
-        startDate={
-          dateRange?.type === 'absolute' 
-            ? new Date(dateRange.startDate)
-            : dateRange?.type === 'relative'
-            ? (() => {
-                const now = new Date();
-                const start = new Date(now);
-                switch (dateRange.unit) {
-                  case 'day':
-                    start.setDate(start.getDate() - dateRange.amount);
-                    break;
-                  case 'week':
-                    start.setDate(start.getDate() - (dateRange.amount * 7));
-                    break;
-                  case 'month':
-                    start.setMonth(start.getMonth() - dateRange.amount);
-                    break;
-                  case 'year':
-                    start.setFullYear(start.getFullYear() - dateRange.amount);
-                    break;
-                }
-                return start;
-              })()
-            : undefined
-        }
-        endDate={
-          dateRange?.type === 'absolute'
-            ? new Date(dateRange.endDate)
-            : dateRange?.type === 'relative'
-            ? new Date()
-            : undefined
-        }
+        startDate={dateRange?.startDate ? new Date(dateRange.startDate) : undefined}
+        endDate={dateRange?.endDate ? new Date(dateRange.endDate) : undefined}
         geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
         activityCategoryIds={(() => {
           const labels = propertyFilterQuery.tokens

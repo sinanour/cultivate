@@ -615,19 +615,25 @@ src/
 - Caches popup content locally to avoid refetching when same marker is clicked multiple times
 - Displays error message with retry button when popup content fails to load
 
-**MapFilters**
-- Provides filter controls for activity category, activity type, status, date range, and population
-- Updates map markers based on selected filters (refetches marker data with new filter parameters)
-- When population filter is applied: shows only activities with participants in specified populations
-- When population filter is applied in "Participant Homes" mode: shows only participants in specified populations
-- Disables population filter control when map mode is "Venues"
-- Enables population filter control when map mode is "Activities by Type", "Activities by Category", or "Participant Homes"
-- Provides geographic area boundary toggle
-- Includes button to center map on specific venue or geographic area
+**MapView with FilterGroupingPanel**
+- Uses FilterGroupingPanel component for unified filtering and map mode selection
+- Configures FilterGroupingPanel with:
+  - Exclusive grouping mode supporting map modes: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
+  - Filter properties: activity category, activity type, status, date range, population
+  - Disables population filter when map mode is "Venues"
+  - Enables population filter when map mode is "Activities by Type", "Activities by Category", or "Participant Homes"
+- When "Update" button clicked on FilterGroupingPanel: fetches new marker data with selected filters and map mode
+- Renders interactive map using Leaflet or Mapbox GL JS
 
 #### 13. Analytics Dashboards
 
 **EngagementDashboard**
+- Uses FilterGroupingPanel component for unified filtering and grouping interface
+- Configures FilterGroupingPanel with:
+  - Additive grouping mode supporting dimensions: activity category, activity type, venue, geographic area
+  - Filter properties: activity category, activity type, venue, population
+  - Date range selection via DateRangePicker
+- When "Update" button clicked on FilterGroupingPanel: fetches new engagement metrics with selected filters and grouping
 - Displays comprehensive temporal metrics using CloudScape Cards:
   - Activities at start/end of date range
   - Activities started, completed, cancelled within range
@@ -662,42 +668,6 @@ src/
   - Adjusts chart axis scales dynamically when series are toggled
   - Provides hover states on legend items to indicate clickability
   - Ensures legend items are keyboard navigable (Tab key) and screen reader accessible
-- Provides multi-dimensional grouping controls:
-  - Activity category grouping
-  - Activity type grouping
-  - Venue grouping
-  - Geographic area grouping
-- **PropertyFilter Component** for unified filtering:
-  - Replaces separate activity type and venue filter dropdowns
-  - Uses CloudScape PropertyFilter component
-  - Supports filtering by Activity Category, Activity Type, Venue, and Population properties
-  - Supports multi-select for each property (OR logic within dimension)
-  - Applies AND logic across different properties (e.g., categories AND venues AND populations)
-  - Implements lazy loading of property values when user types in filter input
-  - Asynchronously fetches matching values from backend APIs:
-    - Activity Categories: from ActivityCategoryService.getActivityCategories()
-    - Activity Types: from ActivityTypeService.getActivityTypes()
-    - Venues: from VenueService.getVenues() with geographic area filtering
-    - Populations: from PopulationService.getPopulations()
-  - Debounces user input internally (CloudScape handles debouncing)
-  - Displays loading indicator while fetching property values
-  - Supports multiple filter tokens with AND logic across dimensions
-  - Provides clear labels for each property (Activity Category, Activity Type, Venue, Population)
-  - Displays selected property values in filter tokens
-  - Allows clearing all filters at once
-  - Integrates with existing date range and geographic area filters
-  - Persists filter tokens to URL query parameters
-  - Restores filter tokens from URL on page load
-  - Extracts filter values from tokens (propertyKey and value) and applies to analytics queries
-  - Supports only the equals (=) operator for all properties
-  - Does NOT support the not equals (!=) operator
-  - Displays multiple values for a single property dimension as a single token with comma-separated values
-  - Maintains one-to-one mapping between property name and filter token
-  - Example: "Activity Category = Study Circles, Devotional Gatherings" (single token for multiple values)
-  - Does NOT create separate tokens for each value within the same property dimension
-  - Automatically de-duplicates values within each property dimension to prevent duplicate entries
-  - Uses Set-based de-duplication to ensure each value appears only once per property
-- Provides date range filter using CloudScape DateRangePicker
 - Renders "Engagement Summary" table using CloudScape Table:
   - Always visible regardless of whether grouping dimensions are selected
   - Provides info icon next to "Engagement Summary" table header
@@ -834,8 +804,14 @@ src/
 - Uses same color scheme as other dashboard charts for consistency
 
 **GrowthDashboard**
+- Uses FilterGroupingPanel component for unified filtering and grouping interface
+- Configures FilterGroupingPanel with:
+  - Exclusive grouping mode supporting options: "All", "Activity Type", "Activity Category"
+  - Filter properties: activity category, activity type, geographic area, venue, population
+  - Date range selection via DateRangePicker
+  - Time period selector (day, week, month, year)
+- When "Update" button clicked on FilterGroupingPanel: fetches new growth metrics with selected filters, time period, and grouping mode
 - Displays three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
-- Provides time period selector (day, week, month, year)
 - Each time period represents a snapshot of unique participants, unique activities, and total participation engaged at that point in time (not cumulative counts)
 - Provides CloudScape SegmentedControl to view growth metrics with three options:
   - "All" (default selection)
@@ -872,14 +848,6 @@ src/
 - Provides info icons next to "Participant Growth" and "Participation Growth" boxes (displayed in "All" view mode)
 - When info icon next to Participant Growth is clicked, displays popover explaining "Unique Participants: The count of distinct individuals involved in activities. The same person involved in multiple activities is counted only once."
 - When info icon next to Participation Growth is clicked, displays popover explaining "Total Participation: The sum of all participant-activity associations. The same person involved in 3 activities contributes 3 to this count."
-- Provides geographic area filter dropdown
-- Provides multi-dimensional filter controls:
-  - Activity category filter (multi-select, OR logic within dimension)
-  - Activity type filter (multi-select, OR logic within dimension)
-  - Geographic area filter (multi-select, OR logic within dimension, includes descendants)
-  - Venue filter (multi-select, OR logic within dimension)
-  - Population filter (multi-select, OR logic within dimension)
-  - Applies AND logic across filter dimensions
 - Uses recharts for line charts
 - Synchronizes filter parameters with URL query parameters:
   - Period parameter: `?period=MONTH`
@@ -1100,6 +1068,74 @@ src/
 - VenueList header: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="venues" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
 - GeographicAreaList: Similar pattern for tree node loading progress
 - MapView overlay: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="markers" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
+
+**FilterGroupingPanel**
+- Reusable component for consistent filtering and grouping interface across all data visualization pages
+- Combines date range selection, property-based filtering, and grouping controls in a unified panel
+- Provides explicit "Update" button to apply selected filters and grouping options
+- Supports both additive grouping (multi-select) and exclusive grouping (SegmentedControl) modes
+- Consists of three main sections arranged horizontally or vertically:
+  1. CloudScape DateRangePicker for date range selection
+  2. CloudScape PropertyFilter for multi-dimensional filtering
+  3. Grouping controls (multi-select dropdown or SegmentedControl based on mode)
+- Does NOT automatically apply filters as user makes selections
+- Allows users to adjust multiple filters and grouping options before applying
+- Invokes callback with complete filter and grouping state when "Update" button is clicked
+- Maintains internal state for user selections until "Update" is clicked
+- Provides visual feedback when filters/grouping have changed but not yet applied (highlights "Update" button)
+- Disables "Update" button when no changes have been made
+- Enables "Update" button when any filter or grouping selection has changed
+- Provides "Clear All" button to reset all filters and grouping to defaults
+- When "Clear All" clicked: resets date range, clears all filter tokens, resets grouping to default
+- Displays loading indicator on "Update" button while parent component fetches new data
+- Disables all controls while parent component is fetching data to prevent conflicting updates
+- Integrates with URL query parameter synchronization (parent component responsibility)
+- Supports all PropertyFilter features: lazy loading, debouncing, token consolidation, de-duplication
+- Uses consistent styling and layout across all pages
+- Responsive design adapts to different screen sizes
+- Provides clear labels for all controls
+
+**Grouping Mode Behavior:**
+- **Additive Mode**: Uses multi-select dropdown (CloudScape Multiselect component)
+  - Allows selecting multiple grouping dimensions simultaneously
+  - Example: Group by activity type AND venue AND geographic area
+  - Used on Engagement Dashboard with dimensions: activity category, activity type, venue, geographic area
+- **Exclusive Mode**: Uses CloudScape SegmentedControl component
+  - Allows selecting only one grouping option at a time
+  - Example: Group by "All" OR "Activity Type" OR "Activity Category"
+  - Used on Growth Dashboard with options: "All", "Activity Type", "Activity Category"
+  - Used on Map View with options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
+
+**Implementation Details:**
+- Accepts props:
+  - filterProperties: Array of property definitions for PropertyFilter (name, label, operators, loadItems function)
+  - groupingMode: 'additive' | 'exclusive'
+  - groupingDimensions: Array of available grouping dimensions (for additive mode) or options (for exclusive mode)
+  - initialDateRange?: { startDate, endDate } - Initial date range selection
+  - initialFilterTokens?: PropertyFilterToken[] - Initial filter tokens
+  - initialGrouping?: string[] (additive) | string (exclusive) - Initial grouping selection
+  - onUpdate: (state: FilterGroupingState) => void - Callback invoked when "Update" clicked
+  - isLoading?: boolean - Whether parent is fetching data
+  - disablePopulationFilter?: boolean - Whether to disable population filter (e.g., in Venues map mode)
+- Returns JSX element containing the complete filtering/grouping panel
+- Uses CloudScape SpaceBetween or Grid for layout
+- Implements internal state management for pending changes
+- Tracks whether current state differs from last applied state
+- Provides accessible keyboard navigation and ARIA labels
+
+**FilterGroupingState Interface:**
+```typescript
+interface FilterGroupingState {
+  dateRange: { startDate?: Date; endDate?: Date } | null;
+  filterTokens: PropertyFilterToken[];
+  grouping: string[] | string; // Array for additive, string for exclusive
+}
+```
+
+**Usage Examples:**
+- Engagement Dashboard: `<FilterGroupingPanel filterProperties={engagementFilterProps} groupingMode="additive" groupingDimensions={['activityCategory', 'activityType', 'venue', 'geographicArea']} onUpdate={handleFilterUpdate} />`
+- Growth Dashboard: `<FilterGroupingPanel filterProperties={growthFilterProps} groupingMode="exclusive" groupingDimensions={['All', 'Activity Type', 'Activity Category']} onUpdate={handleFilterUpdate} />`
+- Map View: `<FilterGroupingPanel filterProperties={mapFilterProps} groupingMode="exclusive" groupingDimensions={['Activities by Type', 'Activities by Category', 'Participant Homes', 'Venues']} onUpdate={handleFilterUpdate} disablePopulationFilter={mapMode === 'Venues'} />`
 
 **NavigationGuard (useFormNavigationGuard hook)**
 - Custom React hook for implementing navigation guards on form pages

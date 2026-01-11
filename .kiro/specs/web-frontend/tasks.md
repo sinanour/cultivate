@@ -877,6 +877,22 @@ This implementation plan covers the React-based web application built with TypeS
     - Enable population filter when mode is "Activities by Type", "Activities by Category", or "Participant Homes"
     - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56_
 
+  - [ ] 13.4a Integrate FilterGroupingPanel into MapView
+    - Import FilterGroupingPanel component
+    - Remove existing MapFilters component or refactor it to use FilterGroupingPanel
+    - Configure FilterGroupingPanel with exclusive grouping mode
+    - Set groupingDimensions to: ['Activities by Type', 'Activities by Category', 'Participant Homes', 'Venues']
+    - Set filterProperties to support: Activity Category, Activity Type, Status, Date Range, Population
+    - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
+    - Extract dateRange, filterTokens, and map mode (grouping string) from FilterGroupingState
+    - Convert filter tokens to API query parameters for marker endpoints
+    - Pass filters and map mode to MapDataService marker fetch methods
+    - Update URL query parameters when filters/map mode applied
+    - Restore filters/map mode from URL on component mount
+    - Pass isLoading prop to FilterGroupingPanel during marker fetching
+    - Pass disablePopulationFilter prop based on selected map mode (true when mode is "Venues")
+    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56, 6C.57, 6C.58, 6C.59, 6C.60, 7C.23, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
+
   - [x] 13.5 Update global geographic filter integration
     - Apply global filter to all map modes
     - Pass selectedGeographicAreaId to marker fetch calls
@@ -901,7 +917,57 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 68e: Batch Error Handling with Retry**
     - **Validates: Requirements 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22, 6C.23, 6C.37, 6C.51**
 
+- [ ] 13A. Implement FilterGroupingPanel component
+  - [ ] 13A.1 Create FilterGroupingPanel component
+    - Create new component file at web-frontend/src/components/common/FilterGroupingPanel.tsx
+    - Accept props: filterProperties, groupingMode ('additive' | 'exclusive'), groupingDimensions, initialDateRange, initialFilterTokens, initialGrouping, onUpdate, isLoading, disablePopulationFilter
+    - Implement three-section layout: DateRangePicker, PropertyFilter, Grouping Controls
+    - Use CloudScape SpaceBetween or Grid for responsive layout
+    - Implement internal state management for pending changes (dateRange, filterTokens, grouping)
+    - Track whether current state differs from last applied state (isDirty flag)
+    - Render CloudScape DateRangePicker component for date range selection
+    - Render CloudScape PropertyFilter component with provided filterProperties
+    - When groupingMode is 'additive': render CloudScape Multiselect for grouping dimensions
+    - When groupingMode is 'exclusive': render CloudScape SegmentedControl for grouping options
+    - Render "Update" button using CloudScape Button with variant="primary"
+    - Disable "Update" button when isDirty is false (no changes made)
+    - Enable "Update" button when isDirty is true (changes pending)
+    - When "Update" button clicked: invoke onUpdate callback with current FilterGroupingState
+    - When "Update" button clicked: mark current state as applied (set isDirty to false)
+    - Render "Clear All" button using CloudScape Button
+    - When "Clear All" clicked: reset dateRange to null, clear filterTokens array, reset grouping to default
+    - When isLoading prop is true: display loading indicator on "Update" button
+    - When isLoading prop is true: disable all controls (DateRangePicker, PropertyFilter, grouping controls)
+    - When disablePopulationFilter prop is true: disable or hide population property in PropertyFilter
+    - Provide accessible keyboard navigation for all controls
+    - Include appropriate ARIA labels for screen readers
+    - _Requirements: 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36_
+
+  - [ ]* 13A.2 Write property tests for FilterGroupingPanel
+    - **Property 196: FilterGroupingPanel Three-Section Layout**
+    - **Property 197: FilterGroupingPanel Update Button Behavior**
+    - **Property 198: FilterGroupingPanel Additive Grouping Mode**
+    - **Property 199: FilterGroupingPanel Exclusive Grouping Mode**
+    - **Property 200: FilterGroupingPanel Clear All Functionality**
+    - **Property 201: FilterGroupingPanel Loading State Handling**
+    - **Validates: Requirements 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.14, 7C.15, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36**
+
 - [x] 14. Implement analytics dashboards
+  - [ ] 14.0 Integrate FilterGroupingPanel into EngagementDashboard
+    - Import FilterGroupingPanel component
+    - Remove existing separate filter controls (PropertyFilter, DateRangePicker, grouping dropdowns)
+    - Configure FilterGroupingPanel with additive grouping mode
+    - Set groupingDimensions to: ['activityCategory', 'activityType', 'venue', 'geographicArea']
+    - Set filterProperties to support: Activity Category, Activity Type, Venue, Population
+    - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
+    - Extract dateRange, filterTokens, and grouping array from FilterGroupingState
+    - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, venueIds, populationIds)
+    - Pass filters and grouping to analytics API queries
+    - Update URL query parameters when filters/grouping applied
+    - Restore filters/grouping from URL on component mount
+    - Pass isLoading prop to FilterGroupingPanel during data fetching
+    - _Requirements: 7.15, 7.16, 7.17, 7.18, 7C.21, 7C.24, 7C.27, 7C.28, 7C.29, 7C.30_
+
   - [x] 14.1 Create EngagementDashboard component
     - Display comprehensive temporal metrics using CloudScape Cards:
       - Activities at start/end of date range
@@ -1092,6 +1158,22 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 31e: Analytics URL Shareability**
     - **Property 33n: Engagement Dashboard Flicker-Free Filter Updates**
     - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.30a, 7.30b, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121, 7.122, 7.123, 7.124**
+
+  - [ ] 14.1a Integrate FilterGroupingPanel into GrowthDashboard
+    - Import FilterGroupingPanel component
+    - Remove existing separate filter controls (dropdowns, SegmentedControl for grouping)
+    - Configure FilterGroupingPanel with exclusive grouping mode
+    - Set groupingDimensions to: ['All', 'Activity Type', 'Activity Category']
+    - Set filterProperties to support: Activity Category, Activity Type, Geographic Area, Venue, Population
+    - Include time period selector within FilterGroupingPanel or adjacent to it
+    - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
+    - Extract dateRange, filterTokens, and grouping string from FilterGroupingState
+    - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds)
+    - Pass filters, time period, and grouping mode to growth analytics API queries
+    - Update URL query parameters when filters/grouping applied
+    - Restore filters/grouping from URL on component mount
+    - Pass isLoading prop to FilterGroupingPanel during data fetching
+    - _Requirements: 7.85, 7.86, 7.87, 7.88, 7C.22, 7C.25, 7C.27, 7C.28, 7C.29, 7C.30_
 
   - [x] 14.2 Create GrowthDashboard component
     - Display three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
