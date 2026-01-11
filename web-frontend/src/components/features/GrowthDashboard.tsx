@@ -285,11 +285,11 @@ export function GrowthDashboard() {
           label: type.name,
         }));
       } else if (filteringProperty.key === 'venue') {
-        const venues = await VenueService.getVenues(undefined, undefined, selectedGeographicAreaId, filteringText || undefined);
+        const venuesResponse = await VenueService.getVenues(undefined, undefined, selectedGeographicAreaId, filteringText || undefined);
         
         // Add to cache and create options with labels as values
-        venues.forEach(venue => addToCache(venue.id, venue.name));
-        options = venues.map(venue => ({
+        venuesResponse.data.forEach(venue => addToCache(venue.id, venue.name));
+        options = venuesResponse.data.map(venue => ({
           propertyKey: 'venue',
           value: venue.name, // Use label as value for display
           label: venue.name,
@@ -391,8 +391,8 @@ export function GrowthDashboard() {
         if (!label) {
           // Cache miss - fetch the venue to get its label
           try {
-            const venues = await VenueService.getVenues();
-            const venue = venues.find(v => v.id === id);
+            const venuesResponse = await VenueService.getVenues();
+            const venue = venuesResponse.data.find(v => v.id === id);
             if (venue) {
               label = venue.name;
               addToCache(venue.id, venue.name);

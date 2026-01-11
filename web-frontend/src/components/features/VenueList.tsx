@@ -366,12 +366,16 @@ export function VenueList() {
           >
             <Box display="inline" fontSize="heading-l" fontWeight="bold">
               <SpaceBetween direction="horizontal" size="xs">
-                <span>Venues</span>
-                {loadedCount >= totalCount && totalCount > 0 && (
-                  <Box display="inline" color="text-status-inactive">
-                    ({loadedCount})
-                  </Box>
-                )}
+                <Box display="inline-block" variant="h1">
+                  <SpaceBetween direction="horizontal" size="xs">
+                      <span>Venues</span>
+                      {loadedCount >= totalCount && totalCount > 0 && (
+                        <Box display="inline" color="text-status-inactive" variant="h1" fontWeight="normal">
+                          ({loadedCount})
+                        </Box>
+                      )}
+                  </SpaceBetween>
+                </Box>
                 <ProgressIndicator
                   loadedCount={loadedCount}
                   totalCount={totalCount}

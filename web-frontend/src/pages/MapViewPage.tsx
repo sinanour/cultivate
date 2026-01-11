@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import ContentLayout from '@cloudscape-design/components/content-layout';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import Box from '@cloudscape-design/components/box';
+import SpaceBetween from '@cloudscape-design/components/space-between';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import Multiselect from '@cloudscape-design/components/multiselect';
 import type { MultiselectProps } from '@cloudscape-design/components/multiselect';
 import { MapView } from '../components/features/MapView.optimized';
+import { ProgressIndicator } from '../components/common/ProgressIndicator';
 import { PopulationService } from '../services/api/population.service';
 
 type MapMode = 'activitiesByType' | 'activitiesByCategory' | 'participantHomes' | 'venues';
@@ -79,7 +81,38 @@ export default function MapViewPage() {
     setSearchParams(params, { replace: true });
   }, [mapMode, selectedPopulations, searchParams, setSearchParams]);
 
+  // Handle mode change
+  const handleModeChange = useCallback((newMode: MapMode) => {
+    setMapMode(newMode);
+    // Reset cancelled state when mode changes to allow new mode to fetch data
+    setMapLoadingState(prev => ({ ...prev, isCancelled: false }));
+  }, []);
+
   const selectedPopulationIds = selectedPopulations.map(opt => opt.value!).filter(Boolean);
+
+  // Handlers for pause/resume
+  const handlePauseLoading = useCallback(() => {
+    setMapLoadingState(prev => ({ ...prev, isCancelled: true }));
+  }, []);
+
+  const handleResumeLoading = useCallback(() => {
+    setMapLoadingState(prev => ({ ...prev, isCancelled: false }));
+  }, []);
+
+  // Get entity name based on map mode
+  const getEntityName = () => {
+    switch (mapMode) {
+      case 'activitiesByType':
+      case 'activitiesByCategory':
+        return 'activities';
+      case 'participantHomes':
+        return 'participant homes';
+      case 'venues':
+        return 'venues';
+      default:
+        return 'markers';
+    }
+  };
 
   return (
     <ContentLayout>
@@ -91,7 +124,7 @@ export default function MapViewPage() {
               <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                 <SegmentedControl
                   selectedId={mapMode}
-                  onChange={({ detail }) => setMapMode(detail.selectedId as MapMode)}
+                  onChange={({ detail }) => handleModeChange(detail.selectedId as MapMode)}
                   options={[
                     { id: 'activitiesByType', text: 'Activities by Type' },
                     { id: 'activitiesByCategory', text: 'Activities by Category' },
@@ -114,18 +147,26 @@ export default function MapViewPage() {
             }
           >
             <Box display="inline" fontSize="heading-l" fontWeight="bold">
-              <span>Map View</span>
-              {mapLoadingState.totalCount > 0 && (
-                <Box display="inline" color="text-status-inactive">
-                  {' '}
-                  {mapLoadingState.isCancelled && mapLoadingState.totalCount > mapLoadingState.loadedCount
-                    ? `(${mapLoadingState.loadedCount} / ${mapLoadingState.totalCount})`
-                    : mapLoadingState.loadedCount === mapLoadingState.totalCount
-                    ? `(${mapLoadingState.loadedCount})`
-                    : ''
-                  }
+              <SpaceBetween direction="horizontal" size="xs">
+                <Box display="inline-block" variant="h1">
+                  <SpaceBetween direction="horizontal" size="xs">
+                    <span>Map View</span>
+                    {mapLoadingState.loadedCount >= mapLoadingState.totalCount && mapLoadingState.totalCount > 0 && (
+                      <Box display="inline" color="text-status-inactive" variant="h1" fontWeight="normal">
+                        ({mapLoadingState.loadedCount})
+                      </Box>
+                    )}
+                  </SpaceBetween>
                 </Box>
-              )}
+                <ProgressIndicator
+                  loadedCount={mapLoadingState.loadedCount}
+                  totalCount={mapLoadingState.totalCount}
+                  entityName={getEntityName()}
+                  onCancel={handlePauseLoading}
+                  onResume={handleResumeLoading}
+                  isCancelled={mapLoadingState.isCancelled}
+                />
+              </SpaceBetween>
             </Box>
           </Header>
         }
@@ -136,6 +177,7 @@ export default function MapViewPage() {
             mode={mapMode}
             populationIds={selectedPopulationIds}
             onLoadingStateChange={setMapLoadingState}
+            externalIsCancelled={mapLoadingState.isCancelled}
           />
         </div>
       </Container>

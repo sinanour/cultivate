@@ -1069,7 +1069,7 @@ src/
 - ProgressBar displays label with entity count: "Loading X / Y {entityName}..." when active
 - ProgressBar displays label with entity count: "Loaded X / Y {entityName}." when paused
 - ProgressBar calculates and displays percentage progress value
-- ProgressBar remains visible when paused (not hidden)
+- ProgressBar remains visible in both active and paused states
 - Unmounts completely (returns null) when loading is complete
 - Uses CloudScape SpaceBetween for horizontal layout with icon button on left
 - Supports customizable entity names (e.g., "participants", "activities", "venues", "markers")

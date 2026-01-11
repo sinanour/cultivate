@@ -15,7 +15,6 @@ import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
 import { getActivityTypeColor, getActivityCategoryColor } from '../../utils/color.utils';
-import { ProgressIndicator } from '../common/ProgressIndicator';
 
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -102,6 +101,9 @@ interface MapViewProps {
   endDate?: string;
   status?: string;
   onLoadingStateChange?: (state: { loadedCount: number; totalCount: number; isCancelled: boolean }) => void;
+  externalIsCancelled?: boolean;
+  onCancelRequest?: () => void;
+  onResumeRequest?: () => void;
 }
 
 // Component to handle map bounds adjustment and auto-zoom
@@ -119,107 +121,6 @@ function MapBoundsAdjuster({ markers, isLoading }: { markers: Array<{ position: 
   }, [markers, isLoading, map]);
 
   return null;
-}
-
-// Loading overlay component with progress indicator
-function MapLoadingOverlay({ 
-  isLoading, 
-  loadedCount, 
-  totalCount,
-  error,
-  onRetry,
-  onCancel,
-  onResume,
-  isCancelled
-}: { 
-  isLoading: boolean;
-  loadedCount: number;
-  totalCount: number;
-  error?: string;
-  onRetry?: () => void;
-  onCancel?: () => void;
-  onResume?: () => void;
-  isCancelled?: boolean;
-}) {
-  // Show error state
-  if (error) {
-    return (
-      <div style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 1000,
-        background: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        minWidth: '250px',
-      }}>
-        <SpaceBetween size="s" direction="vertical">
-          <Alert type="error" header="Failed to load markers">
-            {error}
-          </Alert>
-          {onRetry && (
-            <Button onClick={onRetry} iconName="refresh">
-              Retry
-            </Button>
-          )}
-        </SpaceBetween>
-      </div>
-    );
-  }
-
-  // Show loading or resume state
-  const showLoading = !isCancelled && ((loadedCount < totalCount && totalCount > 0) || (isLoading && totalCount === 0));
-  const showResume = isCancelled && loadedCount < totalCount && totalCount > 0;
-  
-  if (!showLoading && !showResume) return null;
-
-  return (
-    <div style={{
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      zIndex: 1000,
-      background: 'white',
-      padding: '20px',
-      borderRadius: '8px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-      minWidth: '250px',
-    }}>
-      {showResume ? (
-        <SpaceBetween size="s" direction="vertical">
-          <Box textAlign="center">
-            Loading paused: {loadedCount} / {totalCount} markers loaded
-          </Box>
-          {onResume && (
-            <Button onClick={onResume} iconName="refresh" fullWidth>
-              Resume Loading
-            </Button>
-          )}
-        </SpaceBetween>
-      ) : (
-        <SpaceBetween size="s" direction="vertical">
-          <SpaceBetween size="s" direction="horizontal">
-            <Spinner />
-            <Box>Loading markers...</Box>
-          </SpaceBetween>
-          {totalCount > 0 && (
-            <Box textAlign="center" variant="small">
-              {loadedCount} / {totalCount}
-            </Box>
-          )}
-          {onCancel && (
-            <Button onClick={onCancel} variant="link">
-              Cancel
-            </Button>
-          )}
-        </SpaceBetween>
-      )}
-    </div>
-  );
 }
 
 // Lazy-loaded popup content component
@@ -387,7 +288,8 @@ export function MapView({
   startDate,
   endDate,
   status,
-  onLoadingStateChange
+  onLoadingStateChange,
+  externalIsCancelled = false,
 }: MapViewProps) {
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
@@ -400,10 +302,12 @@ export function MapView({
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [loadingError, setLoadingError] = useState<string | undefined>();
   const [hasMorePages, setHasMorePages] = useState(true);
-  const [isCancelled, setIsCancelled] = useState(false);
   const isFetchingRef = useRef(false); // Track if we're currently in a fetch cycle
 
   const BATCH_SIZE = 100;
+
+  // Use external cancelled state
+  const isCancelled = externalIsCancelled;
 
   // Build filters
   const filters: MapFilters = {
@@ -427,7 +331,6 @@ export function MapView({
     setIsLoadingBatch(false);
     setLoadingError(undefined);
     setHasMorePages(true);
-    setIsCancelled(false);
     isFetchingRef.current = false; // Reset fetch tracking
   }, [mode, selectedGeographicAreaId, JSON.stringify(activityCategoryIds), JSON.stringify(activityTypeIds), 
       JSON.stringify(venueIds), JSON.stringify(populationIds), startDate, endDate, status]);
@@ -474,20 +377,28 @@ export function MapView({
     }
   }, [mode, filters, currentPage, isLoadingBatch, hasMorePages, BATCH_SIZE, isCancelled]);
 
-  // Cancel loading handler
-  const handleCancelLoading = useCallback(() => {
-    setIsCancelled(true);
-    setHasMorePages(false);
-    isFetchingRef.current = false;
-  }, []);
+  // Calculate loaded count
+  const loadedCount = mode === 'activitiesByType' || mode === 'activitiesByCategory' 
+    ? allActivityMarkers.length 
+    : mode === 'participantHomes' 
+    ? allParticipantHomeMarkers.length 
+    : allVenueMarkers.length;
 
-  // Resume loading handler
-  const handleResumeLoading = useCallback(() => {
-    setIsCancelled(false);
-    setHasMorePages(true);
-    // Trigger next batch fetch
-    fetchNextBatch();
-  }, [fetchNextBatch]);
+  // Handle external pause/resume control
+  useEffect(() => {
+    if (externalIsCancelled) {
+      // Pause loading
+      setHasMorePages(false);
+      isFetchingRef.current = false;
+    } else if (!externalIsCancelled && loadedCount < totalCount && totalCount > 0) {
+      // Resume loading
+      setHasMorePages(true);
+      // Trigger next batch fetch if not already loading
+      if (!isLoadingBatch && !isFetchingRef.current) {
+        fetchNextBatch();
+      }
+    }
+  }, [externalIsCancelled, loadedCount, totalCount, isLoadingBatch, fetchNextBatch]);
 
   // Fetch first batch on mount or when dependencies change
   useEffect(() => {
@@ -530,13 +441,6 @@ export function MapView({
       });
     }
   });
-
-  // Calculate loaded count
-  const loadedCount = mode === 'activitiesByType' || mode === 'activitiesByCategory' 
-    ? allActivityMarkers.length 
-    : mode === 'participantHomes' 
-    ? allParticipantHomeMarkers.length 
-    : allVenueMarkers.length;
 
   // Notify parent of loading state changes
   useEffect(() => {
@@ -624,16 +528,30 @@ export function MapView({
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-      <MapLoadingOverlay 
-        isLoading={isLoadingBatch} 
-        loadedCount={loadedCount}
-        totalCount={totalCount}
-        error={loadingError}
-        onRetry={handleRetry}
-        onCancel={handleCancelLoading}
-        onResume={handleResumeLoading}
-        isCancelled={isCancelled}
-      />
+      {/* Show error overlay if there's an error */}
+      {loadingError && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 1000,
+          background: 'white',
+          padding: '20px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          minWidth: '250px',
+        }}>
+          <SpaceBetween size="s" direction="vertical">
+            <Alert type="error" header="Failed to load markers">
+              {loadingError}
+            </Alert>
+            <Button onClick={handleRetry} iconName="refresh">
+              Retry
+            </Button>
+          </SpaceBetween>
+        </div>
+      )}
       
       {/* Legend - positioned absolutely over the map */}
       {mode === 'activitiesByType' && visibleActivityTypes.length > 0 && (

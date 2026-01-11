@@ -32,7 +32,6 @@ export function ProgressIndicator({
     return (
       <SpaceBetween direction="horizontal" size="xs">
         <Button
-          variant="icon"
           iconName="play"
           onClick={onResume}
           ariaLabel={`Resume loading ${entityName}`}
@@ -51,7 +50,6 @@ export function ProgressIndicator({
     return (
       <SpaceBetween direction="horizontal" size="xs">
         <Button
-          variant="icon"
           iconName="pause"
           onClick={onCancel}
           ariaLabel="Pause loading"
