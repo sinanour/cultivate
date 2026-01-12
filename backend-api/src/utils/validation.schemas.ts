@@ -480,8 +480,14 @@ export const MapActivityMarkersQuerySchema = z.object({
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid population ID format')).optional()
   ),
-  startDate: z.string().datetime('Invalid start date format').optional(),
-  endDate: z.string().datetime('Invalid end date format').optional(),
+  startDate: z.string().refine(
+    (val) => !val || /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(val),
+    { message: 'Invalid start date format. Use YYYY-MM-DD or ISO-8601 datetime' }
+  ).optional(),
+  endDate: z.string().refine(
+    (val) => !val || /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(val),
+    { message: 'Invalid end date format. Use YYYY-MM-DD or ISO-8601 datetime' }
+  ).optional(),
   status: z.nativeEnum(ActivityStatus).optional(),
 });
 
@@ -496,6 +502,14 @@ export const MapParticipantHomeMarkersQuerySchema = z.object({
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid population ID format')).optional()
   ),
+  startDate: z.string().refine(
+    (val) => !val || /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(val),
+    { message: 'Invalid start date format. Use YYYY-MM-DD or ISO-8601 datetime' }
+  ).optional(),
+  endDate: z.string().refine(
+    (val) => !val || /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(val),
+    { message: 'Invalid end date format. Use YYYY-MM-DD or ISO-8601 datetime' }
+  ).optional(),
 });
 
 export const MapVenueMarkersQuerySchema = z.object({

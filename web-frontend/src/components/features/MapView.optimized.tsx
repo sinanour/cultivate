@@ -355,6 +355,8 @@ export function MapView({
         const response = await MapDataService.getParticipantHomeMarkers({
           geographicAreaIds: filters.geographicAreaIds,
           populationIds: filters.populationIds,
+          startDate: filters.startDate,
+          endDate: filters.endDate,
         }, currentPage, BATCH_SIZE);
         setAllParticipantHomeMarkers(prev => [...prev, ...response.data]);
         setTotalCount(response.pagination.total);

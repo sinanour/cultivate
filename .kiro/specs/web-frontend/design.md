@@ -623,6 +623,16 @@ src/
   - Disables population filter when map mode is "Venues"
   - Enables population filter when map mode is "Activities by Type", "Activities by Category", or "Participant Homes"
 - When "Update" button clicked on FilterGroupingPanel: fetches new marker data with selected filters and map mode
+- **Date Range Handling:**
+  - Accepts both absolute and relative date ranges from FilterGroupingPanel
+  - When absolute date range selected: persists startDate and endDate as ISO-8601 strings (YYYY-MM-DD) to URL query parameters
+  - When relative date range selected: persists in compact format (e.g., "-90d", "-6m", "-1y") to relativePeriod URL query parameter
+  - Restores date range from URL on page load (supports both absolute and relative formats)
+  - Converts relative date ranges to absolute dates before passing to MapDataService
+  - Calculation: endDate = today, startDate = today minus specified amount
+  - Passes absolute startDate and endDate strings to MapView component
+  - MapView passes dates to MapDataService for API requests
+  - Triggers marker refetch when date range changes
 - Renders interactive map using Leaflet or Mapbox GL JS
 
 #### 13. Analytics Dashboards

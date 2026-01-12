@@ -161,11 +161,27 @@ export class MapDataService {
             activityWhere.activityTypeId = { in: filters.activityTypeIds };
         }
 
-        // Apply date filters
-        if (filters.startDate) {
-            activityWhere.startDate = { gte: filters.startDate };
-        }
-        if (filters.endDate) {
+        // Apply date filters - temporal overlap logic
+        // Activity is included if it was active at any point during the query period
+        if (filters.startDate && filters.endDate) {
+            // Both dates provided: activity overlaps if it started before/during period AND ended after/during period (or ongoing)
+            activityWhere.AND = [
+                { startDate: { lte: filters.endDate } },
+                {
+                    OR: [
+                        { endDate: { gte: filters.startDate } },
+                        { endDate: null }, // Ongoing activities
+                    ],
+                },
+            ];
+        } else if (filters.startDate) {
+            // Only startDate: activity must end after/during start (or be ongoing)
+            activityWhere.OR = [
+                { endDate: { gte: filters.startDate } },
+                { endDate: null }, // Ongoing activities
+            ];
+        } else if (filters.endDate) {
+        // Only endDate: activity must start before/during end
             activityWhere.startDate = { lte: filters.endDate };
         }
 
@@ -322,7 +338,7 @@ export class MapDataService {
      * Get lightweight participant home marker data grouped by venue with pagination
      */
     async getParticipantHomeMarkers(
-        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds'>,
+        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds' | 'startDate' | 'endDate'>,
         userId: string,
         page: number = 1,
         limit: number = 100
@@ -406,30 +422,75 @@ export class MapDataService {
             },
         });
 
-        // Group by current home venue
+        // Group by home venue(s) - temporal filtering if dates provided
         const venueParticipantMap = new Map<string, number>();
 
         for (const participant of participants) {
-            // Get current home venue (most recent in history)
-            const currentHome = participant.addressHistory[0];
-            if (!currentHome) continue;
+            if (participant.addressHistory.length === 0) continue;
 
-            // Skip if venue has no coordinates
-            if (
-                currentHome.venue.latitude === null ||
-                currentHome.venue.longitude === null
-            ) {
-                continue;
+            // Determine which addresses were active during query period
+            let activeAddresses: typeof participant.addressHistory;
+
+            if (filters.startDate || filters.endDate) {
+                // Temporal filtering: find all addresses active during query period
+                // Address history is ordered DESC (most recent first)
+                activeAddresses = [];
+
+                for (let i = 0; i < participant.addressHistory.length; i++) {
+                    const currentAddress = participant.addressHistory[i];
+                    const previousAddress = i > 0 ? participant.addressHistory[i - 1] : null; // Previous is newer
+
+                    // Determine the effective date range for this address
+                    // addressStart: when this address became effective (null = earliest possible)
+                    // addressEnd: when the next (newer) address became effective (null = still current)
+
+                    const addressStart = currentAddress.effectiveFrom;
+                    const addressEnd = previousAddress?.effectiveFrom; // When next address started (or null if still current)
+
+                    // Check if this address overlaps with query period
+                    let isActive = false;
+
+                    if (filters.startDate && filters.endDate) {
+                        // Both dates: address overlaps if it started before/during period AND ended after period start (or still active)
+                        const startedBeforePeriodEnd = addressStart === null || addressStart <= filters.endDate;
+                        const endedAfterPeriodStart = addressEnd === null || addressEnd === undefined || addressEnd > filters.startDate;
+                        isActive = startedBeforePeriodEnd && endedAfterPeriodStart;
+                    } else if (filters.startDate) {
+                        // Only startDate: address must end after start (or still active)
+                        isActive = addressEnd === null || addressEnd === undefined || addressEnd > filters.startDate;
+                    } else if (filters.endDate) {
+                        // Only endDate: address must start before/during end
+                        isActive = addressStart === null || addressStart <= filters.endDate;
+                    }
+
+                    if (isActive) {
+                        activeAddresses.push(currentAddress);
+                    }
+                }
+            } else {
+                // No date filters: use current home only (most recent)
+                activeAddresses = [participant.addressHistory[0]];
             }
 
-            // Apply geographic filter
-            if (effectiveVenueIds && !effectiveVenueIds.includes(currentHome.venue.id)) {
-                continue;
-            }
+            // Add all active addresses to the map
+            for (const address of activeAddresses) {
+                // Skip if venue has no coordinates
+                if (
+                    address.venue.latitude === null ||
+                    address.venue.longitude === null
+                ) {
+                    continue;
+                }
 
-            // Increment count for this venue
-            const count = venueParticipantMap.get(currentHome.venue.id) || 0;
-            venueParticipantMap.set(currentHome.venue.id, count + 1);
+                // Apply geographic filter
+                if (effectiveVenueIds && !effectiveVenueIds.includes(address.venue.id)) {
+                    continue;
+                }
+
+                // Increment count for this venue
+                const count = venueParticipantMap.get(address.venue.id) || 0;
+                venueParticipantMap.set(address.venue.id, count + 1);
+            }
         }
 
         // Get total count of unique venues

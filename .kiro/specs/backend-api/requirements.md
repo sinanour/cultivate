@@ -921,3 +921,15 @@ The Backend API package provides the RESTful API service that implements all bus
 30. WHEN determining current home venue for participant home markers, THE API SHALL correctly handle null effectiveFrom dates (treat as oldest address)
 31. THE API SHALL exclude activities and participants without venue coordinates from map marker responses
 32. THE API SHALL exclude venues without latitude or longitude coordinates from venue marker responses
+33. WHEN startDate and endDate filters are provided for activity markers, THE API SHALL return only activities that were active at any point during the query period (activity overlaps with query period)
+34. WHEN an activity started after the endDate filter, THE API SHALL exclude it from activity marker results
+35. WHEN an activity ended before the startDate filter, THE API SHALL exclude it from activity marker results
+36. WHEN an activity is ongoing (null endDate) and started before or during the query period, THE API SHALL include it in activity marker results
+37. WHEN calculating activity temporal overlap, THE API SHALL use the logic: (activity.startDate <= queryEndDate) AND (activity.endDate >= queryStartDate OR activity.endDate IS NULL)
+38. THE API SHALL accept optional startDate and endDate query parameters on GET /api/v1/map/participant-homes endpoint
+39. WHEN startDate and endDate filters are provided for participant home markers, THE API SHALL return all participant addresses that were active at any point during the query period
+40. WHEN determining which addresses were active during a query period, THE API SHALL check if the address effectiveFrom date falls within or before the query period and the next address (if any) started after or during the query period
+41. WHEN a participant had multiple addresses during the query period, THE API SHALL include all venues where the participant lived during that period in the marker results
+42. WHEN calculating participant address temporal overlap with null effectiveFrom, THE API SHALL treat null as the earliest possible date (older than any non-null date)
+43. WHEN a participant's address history spans the entire query period with a single address, THE API SHALL include that venue in the marker results
+44. WHEN a participant moved during the query period, THE API SHALL include both the old and new venue addresses in the marker results

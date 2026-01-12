@@ -153,7 +153,7 @@ export class MapDataService {
      * Get lightweight participant home marker data grouped by venue with pagination
      */
     static async getParticipantHomeMarkers(
-        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds'> = {},
+        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds' | 'startDate' | 'endDate'> = {},
         page: number = 1,
         limit: number = 100
     ): Promise<PaginatedResponse<ParticipantHomeMarker>> {
@@ -168,6 +168,14 @@ export class MapDataService {
         }
         if (filters.populationIds) {
             filters.populationIds.forEach(id => params.append('populationIds', id));
+        }
+
+        // Add date filters
+        if (filters.startDate) {
+            params.append('startDate', filters.startDate);
+        }
+        if (filters.endDate) {
+            params.append('endDate', filters.endDate);
         }
 
         const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/participant-homes?${params.toString()}`;

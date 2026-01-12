@@ -2144,3 +2144,81 @@ if (geographicAreaId) {
   - Verify geographic authorization is applied
   - Verify coordinates are excluded when null
   - Test performance with large datasets
+
+
+- [x] 47. Implement temporal filtering for map data endpoints
+  - [x] 47.1 Update MapActivityMarkersQuerySchema to accept startDate and endDate
+    - Add startDate and endDate as optional datetime string parameters
+    - Use same validation as other analytics endpoints
+    - _Requirements: 27.24, 27.33_
+
+  - [x] 47.2 Update MapParticipantHomeMarkersQuerySchema to accept startDate and endDate
+    - Add startDate and endDate as optional datetime string parameters
+    - Use same validation as other analytics endpoints
+    - _Requirements: 27.38_
+
+  - [x] 47.3 Implement activity temporal overlap filtering in MapDataService
+    - Update getActivityMarkers() to accept startDate and endDate from filters
+    - Replace simple startDate filtering with temporal overlap logic
+    - When both dates provided: `(activity.startDate <= endDate) AND (activity.endDate >= startDate OR activity.endDate IS NULL)`
+    - When only startDate provided: `(activity.endDate >= startDate OR activity.endDate IS NULL)`
+    - When only endDate provided: `(activity.startDate <= endDate)`
+    - Exclude activities that started after query period ended
+    - Exclude activities that ended before query period started
+    - Include ongoing activities (null endDate) that started before or during query period
+    - _Requirements: 27.33, 27.34, 27.35, 27.36, 27.37_
+
+  - [x] 47.4 Implement participant address temporal filtering in MapDataService
+    - Update getParticipantHomeMarkers() to accept startDate and endDate from filters
+    - When date filters provided, fetch ALL address history records (not just current)
+    - For each participant, determine which addresses were active during query period
+    - An address is active if: effectiveFrom <= queryEndDate AND (nextEffectiveFrom > queryStartDate OR no next address)
+    - Handle null effectiveFrom as earliest possible date
+    - Include all venues where participant lived during query period
+    - Group by venue and count participants per venue
+    - When no date filters provided, use existing logic (current home only)
+    - _Requirements: 27.38, 27.39, 27.40, 27.41, 27.42, 27.43, 27.44_
+
+  - [x] 47.5 Update route handlers to pass date filters to service
+    - Update getActivityMarkers route handler to extract and pass startDate/endDate
+    - Update getParticipantHomeMarkers route handler to extract and pass startDate/endDate
+    - Ensure date strings are converted to Date objects
+    - _Requirements: 27.24, 27.38_
+
+  - [x] 47.6 Update OpenAPI documentation
+    - Document startDate and endDate parameters for GET /api/v1/map/activities
+    - Document startDate and endDate parameters for GET /api/v1/map/participant-homes
+    - Explain temporal overlap logic for activities
+    - Explain temporal address history logic for participant homes
+    - Provide examples showing temporal filtering
+    - _Requirements: 27.24, 27.33, 27.38, 27.39_
+
+  - [ ]* 47.7 Write property tests for temporal filtering
+    - **Property 212: Activity Temporal Overlap Filtering**
+    - **Property 213: Activity Started After Period Exclusion**
+    - **Property 214: Activity Ended Before Period Exclusion**
+    - **Property 215: Ongoing Activity Inclusion**
+    - **Property 216: Participant Address Temporal Overlap Filtering**
+    - **Property 217: Multiple Addresses During Period Inclusion**
+    - **Property 218: Single Address Spanning Period Inclusion**
+    - **Property 219: Participant Address Null EffectiveFrom Temporal Handling**
+    - **Validates: Requirements 27.33, 27.34, 27.35, 27.36, 27.37, 27.39, 27.40, 27.41, 27.42, 27.43, 27.44**
+
+  - [x] 47.8 Create integration tests for map data temporal filtering
+    - Test activity markers with date range that excludes some activities
+    - Test activity markers with ongoing activities
+    - Test activity markers with activities that started after period
+    - Test activity markers with activities that ended before period
+    - Test participant home markers with date range
+    - Test participant who moved during query period (should show both venues)
+    - Test participant with single address spanning entire period
+    - Test participant with null effectiveFrom address
+    - _Requirements: 27.33, 27.34, 27.35, 27.36, 27.37, 27.38, 27.39, 27.40, 27.41, 27.42, 27.43, 27.44_
+
+- [ ] 48. Checkpoint - Verify map data temporal filtering
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test activity temporal overlap with various date ranges
+  - Test participant address history temporal filtering
+  - Verify ongoing activities are handled correctly
+  - Verify participants who moved are shown at all relevant venues
+  - Verify null effectiveFrom dates are handled correctly

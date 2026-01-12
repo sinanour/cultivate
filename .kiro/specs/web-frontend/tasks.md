@@ -2849,3 +2849,54 @@ See `API_ALIGNMENT_SUMMARY.md` for detailed alignment documentation.
   - Test effective access summary calculation
   - Verify admin-only access restrictions
   - Test visual distinction between ALLOW and DENY rules
+
+
+- [x] 41. Implement map view temporal filtering
+  - [x] 41.1 Update MapViewPage to handle date range from FilterGroupingPanel
+    - Add dateRange state to store date range from FilterGroupingPanel
+    - Initialize dateRange from URL query parameters (startDate, endDate, relativePeriod)
+    - Parse relativePeriod parameter in compact format (e.g., "-90d", "-6m", "-1y")
+    - Update handleFilterUpdate to capture dateRange from FilterGroupingState
+    - Pass dateRange to FilterGroupingPanel as initialDateRange prop
+    - Convert relative date ranges to absolute dates before passing to MapView
+    - Calculate absolute dates: endDate = today, startDate = today minus amount
+    - Pass absolute startDate and endDate strings to MapView component as props
+    - Sync dateRange to URL query parameters when it changes
+    - When absolute: persist startDate and endDate as ISO-8601 strings
+    - When relative: persist as relativePeriod in compact format (e.g., "-90d")
+    - _Requirements: 6C.70, 6C.71, 6C.72, 6C.73, 6C.74, 6C.75, 6C.76, 6C.77, 6C.78, 6C.79, 6C.85_
+
+  - [x] 41.2 Update MapDataService to send date parameters
+    - Update getParticipantHomeMarkers method signature to accept startDate and endDate in filters parameter
+    - Add startDate and endDate to URLSearchParams when calling /api/v1/map/participant-homes
+    - Ensure getActivityMarkers already sends startDate and endDate (verify existing implementation)
+    - _Requirements: 6C.79, 6C.80, 6C.81_
+
+  - [x] 41.3 Update MapView component to pass date filters to service
+    - Verify MapView already accepts startDate and endDate props
+    - Ensure MapView passes startDate and endDate to MapDataService.getActivityMarkers
+    - Update MapView to pass startDate and endDate to MapDataService.getParticipantHomeMarkers
+    - Include date parameters in filters object passed to service methods
+    - _Requirements: 6C.70, 6C.71, 6C.82, 6C.83, 6C.84, 6C.85_
+
+  - [ ]* 41.4 Write property tests for map temporal filtering
+    - **Property 220: Map Date Range URL Persistence**
+    - **Property 221: Map Date Range Restoration from URL**
+    - **Property 222: Map Activity Temporal Filtering**
+    - **Property 223: Map Participant Home Temporal Filtering**
+    - **Property 224: Map Date Parameter Passing to Service**
+    - **Property 225: Map No Date Range Behavior**
+    - **Validates: Requirements 6C.70, 6C.71, 6C.72, 6C.73, 6C.74, 6C.75, 6C.76, 6C.77, 6C.78, 6C.79**
+
+- [x] 42. Checkpoint - Verify map temporal filtering
+  - ✅ Frontend builds successfully with no errors
+  - ✅ Backend tests passing (14 temporal filtering tests)
+  - ✅ MapViewPage handles both absolute and relative date ranges
+  - ✅ Relative dates persist to URL as compact format (e.g., "-90d")
+  - ✅ Absolute dates persist to URL as ISO-8601 strings
+  - ✅ Date range restoration from URL works for both formats
+  - ✅ Relative dates converted to absolute before API calls
+  - ✅ MapView passes date parameters to MapDataService
+  - ✅ MapDataService sends date parameters to backend API
+  - ✅ Date range changes trigger marker refetch
+  - ✅ Temporal filtering working correctly for activities and participant homes

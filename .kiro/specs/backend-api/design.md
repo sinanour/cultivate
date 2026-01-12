@@ -767,6 +767,13 @@ Returns lightweight activity marker data for map rendering with pagination suppo
 - Returns only activities with current venue that has non-null coordinates
 - Determines current venue from most recent venue history (handles null effectiveFrom as activity startDate)
 - Applies all filters using same logic as analytics endpoints
+- **Temporal Filtering:** When startDate and/or endDate filters are provided, returns only activities that were active at any point during the query period using overlap logic:
+  - Activity overlaps with query period if: `(activity.startDate <= queryEndDate) AND (activity.endDate >= queryStartDate OR activity.endDate IS NULL)`
+  - If only startDate provided: `(activity.endDate >= queryStartDate OR activity.endDate IS NULL)`
+  - If only endDate provided: `(activity.startDate <= queryEndDate)`
+  - Excludes activities that started after the query period ended
+  - Excludes activities that ended before the query period started
+  - Includes ongoing activities (null endDate) that started before or during the query period
 - Applies geographic authorization filtering
 - Excludes activities without venue or without coordinates
 - Returns pagination metadata including total count on every request
@@ -800,6 +807,8 @@ Returns lightweight participant home marker data grouped by venue with paginatio
 - `limit` (optional): Items per page (default: 100, max: 100)
 - `geographicAreaIds` (optional): Array of geographic area UUIDs
 - `populationIds` (optional): Array of population UUIDs
+- `startDate` (optional): ISO 8601 datetime string - start of query period
+- `endDate` (optional): ISO 8601 datetime string - end of query period
 
 **Response:**
 ```typescript
@@ -821,9 +830,16 @@ Returns lightweight participant home marker data grouped by venue with paginatio
 ```
 
 **Business Logic:**
-- Groups participants by their current home venue (most recent address history)
-- Returns one marker per venue with participant count
-- Handles null effectiveFrom as oldest address
+- Groups participants by their home venues that were active during the query period
+- **Temporal Filtering:** When startDate and/or endDate filters are provided, returns all addresses that were active at any point during the query period:
+  - For each participant, examines all address history records
+  - An address is active during the query period if:
+    - The address effectiveFrom date is before or during the query period AND
+    - The next address (if any) started after or during the query period (or no next address exists)
+  - Handles null effectiveFrom as the earliest possible date (oldest address)
+  - When a participant had multiple addresses during the query period, includes all applicable venues
+  - When no date filters provided, returns only current home venue (most recent address history)
+- Returns one marker per venue with participant count (may include same venue multiple times if multiple participants lived there during query period)
 - Applies geographic authorization filtering
 - Excludes participants without home venue or without coordinates
 - Returns pagination metadata including total count on every request
@@ -3067,6 +3083,40 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Property 211: Foreign key constraint order**
 *For any* fake data removal operation, records should be deleted in the order: assignments, activity venue history, activities, participant address history, participants, venues, geographic areas (respecting foreign key dependencies).
 **Validates: Requirements 26.35**
+
+### Map Data Temporal Filtering Properties
+
+**Property 212: Activity temporal overlap filtering**
+*For any* activity and query period (startDate, endDate), the activity should be included in map markers if and only if the activity was active at any point during the query period: `(activity.startDate <= queryEndDate) AND (activity.endDate >= queryStartDate OR activity.endDate IS NULL)`.
+**Validates: Requirements 27.33, 27.37**
+
+**Property 213: Activity started after period exclusion**
+*For any* activity that started after the query period endDate, it should be excluded from activity marker results.
+**Validates: Requirements 27.34**
+
+**Property 214: Activity ended before period exclusion**
+*For any* activity that ended before the query period startDate, it should be excluded from activity marker results.
+**Validates: Requirements 27.35**
+
+**Property 215: Ongoing activity inclusion**
+*For any* ongoing activity (null endDate) that started before or during the query period, it should be included in activity marker results.
+**Validates: Requirements 27.36**
+
+**Property 216: Participant address temporal overlap filtering**
+*For any* participant address history record and query period (startDate, endDate), the address should be included in participant home markers if the address was active at any point during the query period.
+**Validates: Requirements 27.39, 27.40**
+
+**Property 217: Multiple addresses during period inclusion**
+*For any* participant who had multiple addresses during the query period, all venues where the participant lived during that period should be included in the marker results.
+**Validates: Requirements 27.41, 27.44**
+
+**Property 218: Single address spanning period inclusion**
+*For any* participant whose address history spans the entire query period with a single address, that venue should be included in the marker results.
+**Validates: Requirements 27.43**
+
+**Property 219: Participant address null effectiveFrom temporal handling**
+*For any* participant address with null effectiveFrom, when calculating temporal overlap, it should be treated as the earliest possible date (older than any non-null date).
+**Validates: Requirements 27.42**
 
 ## Error Handling
 

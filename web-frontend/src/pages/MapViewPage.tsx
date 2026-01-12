@@ -35,6 +35,62 @@ export default function MapViewPage() {
     return (urlMode as MapMode) || 'activitiesByType';
   });
   
+  // Date range state
+  const [dateRange, setDateRange] = useState<{ 
+    startDate?: string; 
+    endDate?: string;
+    type?: 'absolute' | 'relative';
+    amount?: number;
+    unit?: 'day' | 'week' | 'month' | 'year';
+  } | null>(() => {
+    const startDateStr = searchParams.get('startDate');
+    const endDateStr = searchParams.get('endDate');
+    const relativePeriod = searchParams.get('relativePeriod');
+    
+    // Handle relative date range (e.g., "-90d", "-6m")
+    if (relativePeriod) {
+      const match = relativePeriod.match(/^-(\d+)([dwmy])$/);
+      if (match) {
+        const amount = parseInt(match[1], 10);
+        const unitChar = match[2];
+        
+        let unit: 'day' | 'week' | 'month' | 'year';
+        switch (unitChar) {
+          case 'd':
+            unit = 'day';
+            break;
+          case 'w':
+            unit = 'week';
+            break;
+          case 'm':
+            unit = 'month';
+            break;
+          case 'y':
+            unit = 'year';
+            break;
+          default:
+            return null;
+        }
+        
+        return {
+          type: 'relative',
+          amount,
+          unit,
+        };
+      }
+    }
+    
+    // Handle absolute date range
+    if (startDateStr || endDateStr) {
+      return {
+        startDate: startDateStr || undefined,
+        endDate: endDateStr || undefined,
+        type: 'absolute',
+      };
+    }
+    return null;
+  });
+  
   // PropertyFilter state for populations
   const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
     tokens: [],
@@ -89,6 +145,7 @@ export default function MapViewPage() {
   // Handler for FilterGroupingPanel updates
   const handleFilterUpdate = (state: FilterGroupingState) => {
     setPropertyFilterQuery(state.filterTokens);
+    setDateRange(state.dateRange);
     if (typeof state.grouping === 'string') {
       handleModeChange(state.grouping as MapMode);
     }
@@ -188,6 +245,23 @@ export default function MapViewPage() {
     // Update mode
     params.set('mode', mapMode);
     
+    // Update date range
+    params.delete('startDate');
+    params.delete('endDate');
+    params.delete('relativePeriod');
+    
+    if (dateRange) {
+      if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+        // Store as relative (e.g., "-90d", "-6m")
+        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
+        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
+      } else if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
+        // Store as absolute dates
+        params.set('startDate', dateRange.startDate);
+        params.set('endDate', dateRange.endDate);
+      }
+    }
+    
     // Update population filters (extract UUIDs from labels)
     params.delete('populationIds');
     const populationLabels = propertyFilterQuery.tokens
@@ -202,7 +276,7 @@ export default function MapViewPage() {
     }
     
     setSearchParams(params, { replace: true });
-  }, [mapMode, propertyFilterQuery, searchParams, setSearchParams]);
+  }, [mapMode, dateRange, propertyFilterQuery, searchParams, setSearchParams]);
 
   // Handle mode change
   const handleModeChange = useCallback((newMode: MapMode) => {
@@ -217,6 +291,47 @@ export default function MapViewPage() {
     .flatMap(t => extractValuesFromToken(t))
     .map(label => getUuidFromLabel(label))
     .filter(Boolean) as string[];
+
+  // Convert date range to absolute dates for API
+  const getAbsoluteDates = (): { startDate?: string; endDate?: string } => {
+    if (!dateRange) return {};
+    
+    if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
+      return {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      };
+    } else if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+      // Calculate absolute dates from relative range
+      const now = new Date();
+      const end = new Date(now);
+      const start = new Date(now);
+      
+      switch (dateRange.unit) {
+        case 'day':
+          start.setDate(start.getDate() - dateRange.amount);
+          break;
+        case 'week':
+          start.setDate(start.getDate() - (dateRange.amount * 7));
+          break;
+        case 'month':
+          start.setMonth(start.getMonth() - dateRange.amount);
+          break;
+        case 'year':
+          start.setFullYear(start.getFullYear() - dateRange.amount);
+          break;
+      }
+      
+      return {
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0],
+      };
+    }
+    
+    return {};
+  };
+
+  const absoluteDates = getAbsoluteDates();
 
   // Handlers for pause/resume
   const handlePauseLoading = useCallback(() => {
@@ -279,7 +394,7 @@ export default function MapViewPage() {
               filterProperties={filteringProperties}
               groupingMode="exclusive"
               groupingDimensions={groupingDimensionsConfig}
-              initialDateRange={null}
+              initialDateRange={dateRange}
               initialFilterTokens={propertyFilterQuery}
               initialGrouping={mapMode}
               onUpdate={handleFilterUpdate}
@@ -295,6 +410,8 @@ export default function MapViewPage() {
               <MapView 
                 mode={mapMode}
                 populationIds={selectedPopulationIds}
+                startDate={absoluteDates.startDate}
+                endDate={absoluteDates.endDate}
                 onLoadingStateChange={setMapLoadingState}
                 externalIsCancelled={mapLoadingState.isCancelled}
               />

@@ -146,6 +146,8 @@ export class MapDataRoutes {
             const filters = {
                 geographicAreaIds: query.geographicAreaIds,
                 populationIds: query.populationIds,
+                startDate: query.startDate ? new Date(query.startDate) : undefined,
+                endDate: query.endDate ? new Date(query.endDate) : undefined,
             };
 
             const result = await this.mapDataService.getParticipantHomeMarkers(

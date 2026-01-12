@@ -488,8 +488,22 @@ The Web Frontend package provides a responsive React-based web application that 
 67. WHEN determining current home address for participant markers, THE Web_App SHALL treat null effectiveFrom dates as the oldest address (earlier than any non-null date)
 68. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
 69. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
-66. WHEN displaying activities on the map, THE Web_App SHALL correctly identify the current venue considering null effectiveFrom dates in venue history
-67. WHEN displaying participant homes on the map, THE Web_App SHALL correctly identify the current home venue considering null effectiveFrom dates in address history
+70. THE Web_App SHALL pass startDate and endDate parameters from the FilterGroupingPanel date range to the MapDataService when fetching activity markers
+71. THE Web_App SHALL pass startDate and endDate parameters from the FilterGroupingPanel date range to the MapDataService when fetching participant home markers
+72. WHEN a date range is selected on the map view, THE Web_App SHALL persist the date range to URL query parameters
+73. WHEN an absolute date range is selected, THE Web_App SHALL persist startDate and endDate as ISO-8601 date strings (YYYY-MM-DD) to URL query parameters
+74. WHEN a relative date range is selected, THE Web_App SHALL persist the relative period in compact format (e.g., "-90d", "-6m", "-1y") to the relativePeriod URL query parameter
+75. WHEN a user navigates to a map view URL with startDate and endDate query parameters, THE Web_App SHALL restore the absolute date range and apply it to marker fetching
+76. WHEN a user navigates to a map view URL with a relativePeriod query parameter, THE Web_App SHALL restore the relative date range and calculate absolute dates for marker fetching
+77. THE Web_App SHALL convert relative date ranges to absolute dates before passing to the MapDataService
+78. WHEN calculating absolute dates from a relative range, THE Web_App SHALL use the current date as the end date and subtract the specified amount from the start date
+79. THE MapDataService SHALL send startDate and endDate as ISO-8601 date strings in query parameters to the backend map marker endpoints
+80. WHEN fetching activity markers with a date range, THE MapDataService SHALL include startDate and endDate in the API request to /api/v1/map/activities
+81. WHEN fetching participant home markers with a date range, THE MapDataService SHALL include startDate and endDate in the API request to /api/v1/map/participant-homes
+82. THE Web_App SHALL display only activities that were active during the selected date range on the map
+83. THE Web_App SHALL display only participant home addresses that were active during the selected date range on the map
+84. WHEN no date range is selected, THE Web_App SHALL display all activities and participant homes regardless of temporal status
+85. WHEN the date range changes (either absolute or relative), THE Web_App SHALL trigger a refetch of marker data from the backend
 
 
 ### Requirement 7: Analytics Dashboard
