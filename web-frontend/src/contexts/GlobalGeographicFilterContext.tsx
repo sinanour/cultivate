@@ -81,16 +81,13 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     // If we have missing parents, fetch their complete ancestor chains in batches
     if (missingParentIds.length > 0) {
       try {
-        console.log(`Fetching ancestors for ${missingParentIds.length} missing parents`);
         
         // Step 1: Fetch ancestor IDs using batch-ancestors endpoint (chunked if > 100)
         const parentIdChunks = chunkArray(missingParentIds, 100);
-        console.log(`Split ${missingParentIds.length} parent IDs into ${parentIdChunks.length} chunks`);
         
         const allParentMaps: Record<string, string | null>[] = [];
         for (let i = 0; i < parentIdChunks.length; i++) {
           const chunk = parentIdChunks[i];
-          console.log(`Fetching batch-ancestors chunk ${i + 1}/${parentIdChunks.length} (${chunk.length} IDs)`);
           const parentMap = await GeographicAreaService.getBatchAncestors(chunk);
           allParentMaps.push(parentMap);
         }
@@ -111,35 +108,25 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
         
         // Step 3: Fetch full geographic area objects for all ancestors using batch-details endpoint (chunked if > 100)
         if (ancestorIdsToFetch.length > 0) {
-          console.log(`Fetching ${ancestorIdsToFetch.length} ancestor area objects using batch-details`);
           
           const ancestorIdChunks = chunkArray(ancestorIdsToFetch, 100);
-          console.log(`Split ${ancestorIdsToFetch.length} ancestor IDs into ${ancestorIdChunks.length} chunks`);
           
           for (let i = 0; i < ancestorIdChunks.length; i++) {
             const chunk = ancestorIdChunks[i];
-            console.log(`Fetching batch-details chunk ${i + 1}/${ancestorIdChunks.length} (${chunk.length} IDs)`);
             const ancestorDetailsMap = await GeographicAreaService.getBatchDetails(chunk);
             
             // Add fetched ancestors to our area map
-            let chunkAncestorCount = 0;
             for (const [ancestorId, ancestorData] of Object.entries(ancestorDetailsMap)) {
               if (ancestorData && !areaMap.has(ancestorId)) {
                 areaMap.set(ancestorId, ancestorData);
-                chunkAncestorCount++;
               }
             }
-            console.log(`Chunk ${i + 1}: Added ${chunkAncestorCount} ancestors (total map size: ${areaMap.size})`);
           }
-          
-          console.log(`Completed ancestor fetching: ${areaMap.size} total areas in map`);
         }
       } catch (error) {
         console.error('Failed to fetch batch ancestors:', error);
         // Continue without ancestor data - paths will be incomplete but functional
       }
-    } else {
-      console.log('No missing parents - all parent data already available');
     }
 
     // Build hierarchy paths and ancestor arrays for all areas using the complete area map
@@ -167,7 +154,6 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
 
     const result = newAreas.map(area => {
       const { hierarchyPath, ancestors } = buildHierarchyData(area);
-      console.log(`Area ${area.name}: hierarchy path = "${hierarchyPath}", ancestors count = ${ancestors.length}`);
       return {
         ...area,
         ancestors,
@@ -197,7 +183,6 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
         
         if (!hasRules) {
           // No authorization rules = unrestricted access
-          console.log('User has unrestricted access (no authorization rules)');
           setAuthorizedAreaIds(new Set());
           return;
         }
@@ -215,7 +200,6 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
           )
           .map(area => area.geographicAreaId);
         
-        console.log(`User has authorization rules. Direct authorization for ${directlyAuthorizedIds.length} areas:`, directlyAuthorizedIds);
         setAuthorizedAreaIds(new Set(directlyAuthorizedIds));
       } catch (error) {
         console.error('Failed to fetch authorized areas:', error);
@@ -264,7 +248,6 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     
     // Skip if we haven't loaded authorization rules yet
     if (hasAuthorizationRules === null) {
-      console.log('Waiting for authorization rules to load before validating filter...');
       return;
     }
 
@@ -275,7 +258,6 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
       // URL has a geographic area parameter
       // Validate authorization before applying
       const isAuthorized = isAuthorizedArea(urlGeographicAreaId);
-      console.log(`Validating URL parameter ${urlGeographicAreaId}: ${isAuthorized ? 'AUTHORIZED' : 'UNAUTHORIZED'}`);
       
       if (isAuthorized) {
         // Authorized - apply the filter

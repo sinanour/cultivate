@@ -36,7 +36,6 @@ export class ConnectionMonitor {
     }
 
     private static handleOnline = async () => {
-        console.log('Connection restored, processing sync queue...');
 
         // Notify all listeners
         this.listeners.forEach((listener) => listener(true));
@@ -44,14 +43,12 @@ export class ConnectionMonitor {
         // Process sync queue
         try {
             const result = await SyncQueue.processQueue();
-            console.log(`Sync complete: ${result.success} succeeded, ${result.failed} failed`);
         } catch (error) {
             console.error('Failed to process sync queue:', error);
         }
     };
 
     private static handleOffline = () => {
-        console.log('Connection lost');
 
         // Notify all listeners
         this.listeners.forEach((listener) => listener(false));

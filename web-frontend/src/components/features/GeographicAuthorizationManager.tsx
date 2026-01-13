@@ -38,7 +38,6 @@ export function GeographicAuthorizationManager({
     queryFn: async () => {
       try {
         const result = await geographicAuthorizationService.getAuthorizationRules(userId);
-        console.log('Authorization rules loaded:', result);
         return result;
       } catch (error) {
         console.error('Error loading authorization rules:', error);
@@ -55,7 +54,6 @@ export function GeographicAuthorizationManager({
     queryFn: async () => {
       try {
         const result = await geographicAuthorizationService.getAuthorizedAreas(userId);
-        console.log('Authorized areas loaded:', result);
         return result;
       } catch (error) {
         console.error('Error loading authorized areas:', error);

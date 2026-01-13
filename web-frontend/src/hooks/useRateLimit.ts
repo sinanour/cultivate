@@ -26,7 +26,6 @@ export function useRateLimit({ onRetry }: UseRateLimitOptions = {}) {
                     // Set up automatic retry
                     if (info.retryAfterSeconds && onRetry) {
                         const timeoutId = setTimeout(() => {
-                            console.log('Retrying after rate limit cooldown...');
                             setShowNotification(false);
                             setRateLimitInfo(null);
                             onRetry();
