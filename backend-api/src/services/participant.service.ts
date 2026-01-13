@@ -128,21 +128,31 @@ export class ParticipantService {
         const areaIds = effectiveAreaIds;
 
         // Get all participants with their most recent address
+        type ParticipantWithAddress = Participant & {
+            addressHistory: Array<{
+                venue: { id: string; geographicAreaId: string };
+            }>;
+        };
+
         const allParticipants = await this.prisma.participant.findMany({
             where: searchWhere,
             include: {
                 addressHistory: {
+                    where: {
+                        venue: {}, // Only include address history with valid venues (venue exists)
+                    },
                     orderBy: { effectiveFrom: 'desc' },
                     take: 1,
                     include: { venue: true }
                 }
             },
             orderBy: { name: 'asc' }
-        });
+        }) as ParticipantWithAddress[];
 
         // Filter to only those whose current address is in the geographic area
         const filteredParticipants = allParticipants.filter(p =>
             p.addressHistory.length > 0 &&
+            p.addressHistory[0].venue && // Ensure venue exists
             areaIds.includes(p.addressHistory[0].venue.geographicAreaId)
         );
 
@@ -178,21 +188,31 @@ export class ParticipantService {
         const areaIds = effectiveAreaIds;
 
         // Get all participants with their most recent address
+        type ParticipantWithAddress = Participant & {
+            addressHistory: Array<{
+                venue: { id: string; geographicAreaId: string };
+            }>;
+        };
+
         const allParticipants = await this.prisma.participant.findMany({
             where: searchWhere,
             include: {
                 addressHistory: {
+                    where: {
+                        venue: {}, // Only include address history with valid venues (venue exists)
+                    },
                     orderBy: { effectiveFrom: 'desc' },
                     take: 1,
                     include: { venue: true }
                 }
             },
             orderBy: { name: 'asc' }
-        });
+        }) as ParticipantWithAddress[];
 
         // Filter to only those whose current address is in the geographic area
         const filteredParticipants = allParticipants.filter(p =>
             p.addressHistory.length > 0 &&
+            p.addressHistory[0].venue && // Ensure venue exists
             areaIds.includes(p.addressHistory[0].venue.geographicAreaId)
         );
 

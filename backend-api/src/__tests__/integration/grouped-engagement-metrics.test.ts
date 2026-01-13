@@ -25,10 +25,52 @@ describe('Grouped Engagement Metrics', () => {
         geographicAreaRepository = new GeographicAreaRepository(prisma);
         analyticsService = new AnalyticsService(prisma, geographicAreaRepository);
 
+        // Clean up any existing test data first (in correct order)
+        // First delete participants (which will cascade to address history and assignments)
+        await prisma.participant.deleteMany({
+            where: {
+                email: { in: ['p1-grouped@test.com', 'p2-grouped@test.com'] },
+            },
+        });
+
+        // Delete activities (which will cascade to activity venue history and assignments)
+        await prisma.activity.deleteMany({
+            where: {
+                name: { in: ['Study Circle 1 Grouped', "Children's Class 1 Grouped"] },
+            },
+        });
+
+        // Delete any orphaned address history or activity venue history
+        const testVenue = await prisma.venue.findFirst({
+            where: { name: 'Test Venue Grouped' },
+        });
+        if (testVenue) {
+            await prisma.participantAddressHistory.deleteMany({
+                where: { venueId: testVenue.id },
+            });
+            await prisma.activityVenueHistory.deleteMany({
+                where: { venueId: testVenue.id },
+            });
+        }
+
+        // Then delete venues
+        await prisma.venue.deleteMany({
+            where: {
+                name: 'Test Venue Grouped',
+            },
+        });
+
+        // Finally delete geographic areas
+        await prisma.geographicArea.deleteMany({
+            where: {
+                name: { in: ['Test Country Grouped', 'Test City Grouped'] },
+            },
+        });
+
         // Create test data
         const country = await prisma.geographicArea.create({
             data: {
-                name: 'Test Country',
+                name: 'Test Country Grouped',
                 areaType: 'COUNTRY',
             },
         });
@@ -36,7 +78,7 @@ describe('Grouped Engagement Metrics', () => {
 
         const city = await prisma.geographicArea.create({
             data: {
-                name: 'Test City',
+                name: 'Test City Grouped',
                 areaType: 'CITY',
                 parentGeographicAreaId: countryId,
             },
@@ -45,8 +87,8 @@ describe('Grouped Engagement Metrics', () => {
 
         const venue = await prisma.venue.create({
             data: {
-                name: 'Test Venue',
-                address: '123 Test St',
+                name: 'Test Venue Grouped',
+                address: '123 Test St Grouped',
                 geographicAreaId: cityId,
             },
         });
@@ -83,16 +125,16 @@ describe('Grouped Engagement Metrics', () => {
         // Create participants
         const participant1 = await prisma.participant.create({
             data: {
-                name: 'Participant 1',
-                email: 'p1@test.com',
+                name: 'Participant 1 Grouped',
+                email: 'p1-grouped@test.com',
             },
         });
         participant1Id = participant1.id;
 
         const participant2 = await prisma.participant.create({
             data: {
-                name: 'Participant 2',
-                email: 'p2@test.com',
+                name: 'Participant 2 Grouped',
+                email: 'p2-grouped@test.com',
             },
         });
         participant2Id = participant2.id;
@@ -100,7 +142,7 @@ describe('Grouped Engagement Metrics', () => {
         // Create Study Circle activity
         const activity1 = await prisma.activity.create({
             data: {
-                name: 'Study Circle 1',
+                name: 'Study Circle 1 Grouped',
                 activityTypeId: ruhiBook01TypeId,
                 startDate: new Date('2025-01-01'),
                 status: 'ACTIVE',
@@ -125,7 +167,7 @@ describe('Grouped Engagement Metrics', () => {
         // Create Children's Class activity
         const activity2 = await prisma.activity.create({
             data: {
-                name: "Children's Class 1",
+                name: "Children's Class 1 Grouped",
                 activityTypeId: childrensClassTypeId,
                 startDate: new Date('2025-01-01'),
                 status: 'ACTIVE',
@@ -150,37 +192,46 @@ describe('Grouped Engagement Metrics', () => {
 
     afterAll(async () => {
         // Clean up test data in correct order
-        await prisma.assignment.deleteMany({
-            where: {
-                OR: [{ activityId: activity1Id }, { activityId: activity2Id }],
-            },
-        });
+        // Only delete if IDs are defined
+        if (activity1Id && activity2Id) {
+            await prisma.assignment.deleteMany({
+                where: {
+                    OR: [{ activityId: activity1Id }, { activityId: activity2Id }],
+                },
+            });
 
-        await prisma.activityVenueHistory.deleteMany({
-            where: {
-                OR: [{ activityId: activity1Id }, { activityId: activity2Id }],
-            },
-        });
+            await prisma.activityVenueHistory.deleteMany({
+                where: {
+                    OR: [{ activityId: activity1Id }, { activityId: activity2Id }],
+                },
+            });
 
-        await prisma.activity.deleteMany({
-            where: {
-                id: { in: [activity1Id, activity2Id] },
-            },
-        });
+            await prisma.activity.deleteMany({
+                where: {
+                    id: { in: [activity1Id, activity2Id] },
+                },
+            });
+        }
 
-        await prisma.participant.deleteMany({
-            where: {
-                id: { in: [participant1Id, participant2Id] },
-            },
-        });
+        if (participant1Id && participant2Id) {
+            await prisma.participant.deleteMany({
+                where: {
+                    id: { in: [participant1Id, participant2Id] },
+                },
+            });
+        }
 
-        await prisma.venue.deleteMany({
-            where: { id: venueId },
-        });
+        if (venueId) {
+            await prisma.venue.deleteMany({
+                where: { id: venueId },
+            });
+        }
 
-        await prisma.geographicArea.deleteMany({
-            where: { id: { in: [cityId, countryId] } },
-        });
+        if (cityId && countryId) {
+            await prisma.geographicArea.deleteMany({
+                where: { id: { in: [cityId, countryId] } },
+            });
+        }
 
         await prisma.$disconnect();
     });

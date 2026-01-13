@@ -385,9 +385,11 @@ export class MapDataService {
 
         // Build participant where clause
         const participantWhere: any = {
-            // Must have address history
+            // Must have address history with valid venue
             addressHistory: {
-                some: {},
+                some: {
+                    venue: {}, // Venue exists (not null)
+                },
             },
         };
 
@@ -405,6 +407,9 @@ export class MapDataService {
             where: participantWhere,
             include: {
                 addressHistory: {
+                    where: {
+                        venue: {}, // Only include address history with valid venues (venue exists)
+                    },
                     include: {
                         venue: {
                             select: {
