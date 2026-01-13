@@ -382,7 +382,24 @@ export function ActivityList() {
 
   // Synchronize filters to URL
   useEffect(() => {
-    const params = new URLSearchParams();
+    // Start with existing URL parameters to preserve non-filter params
+    const params = new URLSearchParams(window.location.search);
+    
+    // Remove all filter-related parameters that we manage
+    params.delete('geographicArea');
+    params.delete('startDate');
+    params.delete('endDate');
+    params.delete('activityCategoryIds');
+    params.delete('activityTypeIds');
+    params.delete('status');
+    params.delete('populationIds');
+    
+    // Add current filter values
+    
+    // Global geographic area filter
+    if (selectedGeographicAreaId) {
+      params.append('geographicArea', selectedGeographicAreaId);
+    }
     
     // Date range
     if (dateRange?.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
@@ -415,8 +432,14 @@ export function ActivityList() {
     const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
     populationIds.forEach(id => params.append('populationIds', id));
     
-    setSearchParams(params, { replace: true });
-  }, [dateRange, propertyFilterQuery, setSearchParams]);
+    // Only update URL if parameters actually changed
+    const currentSearch = window.location.search.slice(1); // Remove leading '?'
+    const newSearch = params.toString();
+    
+    if (currentSearch !== newSearch) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, setSearchParams, getUuidFromLabel]);
 
   // Build filter params from PropertyFilter tokens and date range
   const filterParams = useMemo((): ActivityFilterParams => {
