@@ -34,41 +34,53 @@ export interface PaginatedResponse<T> {
     };
 }
 
-export class ParticipantService {
-    static async getParticipants(page?: number, limit?: number, geographicAreaId?: string | null, search?: string): Promise<PaginatedResponse<Participant>> {
-        const params = new URLSearchParams();
-        if (page) params.append('page', page.toString());
-        if (limit) params.append('limit', limit.toString());
-        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
-        if (search) params.append('search', search);
-        const query = params.toString();
+export interface FlexibleQueryOptions {
+    page?: number;
+    limit?: number;
+    geographicAreaId?: string | null;
+    filter?: Record<string, any>;
+    fields?: string[];
+}
 
-        // If pagination params provided, return paginated response
-        if (page !== undefined || limit !== undefined) {
-            return ApiClient.get<PaginatedResponse<Participant>>(`/participants${query ? `?${query}` : ''}`);
+export class ParticipantService {
+    /**
+     * Get participants with flexible filtering and customizable attribute selection
+     */
+    static async getParticipantsFlexible(options: FlexibleQueryOptions): Promise<PaginatedResponse<Participant>> {
+        const params = new URLSearchParams();
+
+        // Add pagination params
+        if (options.page) params.append('page', options.page.toString());
+        if (options.limit) params.append('limit', options.limit.toString());
+
+        // Add geographicAreaId as first-class parameter (not in filter[])
+        if (options.geographicAreaId) params.append('geographicAreaId', options.geographicAreaId);
+
+        // Add flexible filter params using filter[fieldName]=value syntax
+        if (options.filter) {
+            for (const [key, value] of Object.entries(options.filter)) {
+                if (value !== undefined && value !== null) {
+                    if (Array.isArray(value)) {
+                        params.append(`filter[${key}]`, value.join(','));
+                    } else {
+                        params.append(`filter[${key}]`, value.toString());
+                    }
+                }
+            }
         }
 
-        // Otherwise, ApiClient returns the array directly (unwrapped), so wrap it
-        const participants = await ApiClient.get<Participant[]>(`/participants${query ? `?${query}` : ''}`);
-        return {
-            data: participants,
-            pagination: {
-                page: 1,
-                limit: participants.length,
-                total: participants.length,
-                totalPages: 1
-            }
-        };
-    }
+        // Add fields param
+        if (options.fields && options.fields.length > 0) {
+            params.append('fields', options.fields.join(','));
+        }
 
-    static async getParticipantsPaginated(page: number = 1, limit: number = 100, geographicAreaId?: string | null, search?: string): Promise<PaginatedResponse<Participant>> {
-        const params = new URLSearchParams();
-        params.append('page', page.toString());
-        params.append('limit', limit.toString());
-        if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
-        if (search) params.append('search', search);
         const query = params.toString();
         return ApiClient.get<PaginatedResponse<Participant>>(`/participants${query ? `?${query}` : ''}`);
+    }
+
+    static async getParticipants(page?: number, limit?: number, geographicAreaId?: string | null): Promise<PaginatedResponse<Participant>> {
+        // Delegate to flexible method for backward compatibility
+        return this.getParticipantsFlexible({ page, limit, geographicAreaId });
     }
 
     static async getParticipant(id: string): Promise<Participant> {

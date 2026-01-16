@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import ContentLayout from '@cloudscape-design/components/content-layout';
@@ -20,7 +20,7 @@ import {
 type MapMode = 'activitiesByType' | 'activitiesByCategory' | 'participantHomes' | 'venues';
 
 export default function MapViewPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   
   // Map loading state
   const [mapLoadingState, setMapLoadingState] = useState<{ 
@@ -96,27 +96,18 @@ export default function MapViewPage() {
     tokens: [],
     operation: 'and',
   });
-  const [propertyFilterOptions, setPropertyFilterOptions] = useState<PropertyFilterProps.FilteringOption[]>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
   // Bidirectional cache: label ↔ UUID for populations
   const [labelToUuidCache, setLabelToUuidCache] = useState<Map<string, string>>(new Map());
-  const [uuidToLabelCache, setUuidToLabelCache] = useState<Map<string, string>>(new Map());
 
   // Helper to add to cache
-  const addToCache = (uuid: string, label: string) => {
+  const addToCache = useCallback((uuid: string, label: string) => {
     setLabelToUuidCache(prev => new Map(prev).set(label, uuid));
-    setUuidToLabelCache(prev => new Map(prev).set(uuid, label));
-  };
+  }, []);
 
   // Helper to get UUID from label
   const getUuidFromLabel = (label: string): string | undefined => {
     return labelToUuidCache.get(label);
-  };
-
-  // Helper to get label from UUID
-  const getLabelFromUuid = (uuid: string): string | undefined => {
-    return uuidToLabelCache.get(uuid);
   };
 
   // Extract individual values from consolidated tokens
@@ -125,15 +116,41 @@ export default function MapViewPage() {
     return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
   };
 
-  // FilterGroupingPanel configuration
-  const filteringProperties: FilterProperty[] = [
+  // Fetch populations for cache warming
+  const { data: allPopulations = [] } = useQuery({
+    queryKey: ['populations'],
+    queryFn: PopulationService.getPopulations,
+  });
+
+  // Warm cache when populations load
+  useEffect(() => {
+    if (allPopulations && allPopulations.length > 0) {
+      allPopulations.forEach(pop => addToCache(pop.id, pop.name));
+    }
+  }, [allPopulations, addToCache]);
+
+  // FilterGroupingPanel configuration with loadItems callbacks
+  const filteringProperties: FilterProperty[] = useMemo(() => [
     {
       key: 'population',
       propertyLabel: 'Population',
       groupValuesLabel: 'Population values',
       operators: ['='],
+      loadItems: async (filterText: string) => {
+        const populations = await PopulationService.getPopulations();
+        const filtered = populations.filter(pop => 
+          !filterText || pop.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        filtered.forEach(pop => addToCache(pop.id, pop.name));
+        return filtered.map(pop => ({
+          propertyKey: 'population',
+          value: pop.name,
+          label: pop.name,
+        }));
+      },
     },
-  ];
+  ], [addToCache]); // Depend on addToCache which is stable
 
   const groupingDimensionsConfig: FilterGroupingDimension[] = [
     { value: 'activitiesByType', label: 'Activities by Type' },
@@ -150,133 +167,6 @@ export default function MapViewPage() {
       handleModeChange(state.grouping as MapMode);
     }
   };
-
-  // Async loading of population values
-  const handleLoadItems: PropertyFilterProps['onLoadItems'] = async ({ detail }) => {
-    const { filteringProperty, filteringText } = detail;
-    
-    if (!filteringProperty || filteringProperty.key !== 'population') return;
-
-    setIsLoadingOptions(true);
-
-    try {
-      const populations = await PopulationService.getPopulations();
-      const filtered = populations.filter(pop => 
-        !filteringText || pop.name.toLowerCase().includes(filteringText.toLowerCase())
-      );
-      
-      // Add to cache and create options with labels as values
-      filtered.forEach(pop => addToCache(pop.id, pop.name));
-      const options = filtered.map(pop => ({
-        propertyKey: 'population',
-        value: pop.name,
-        label: pop.name,
-      }));
-
-      setPropertyFilterOptions(options);
-    } catch (error) {
-      console.error('Error loading population options:', error);
-      setPropertyFilterOptions([]);
-    } finally {
-      setIsLoadingOptions(false);
-    }
-  };
-
-  // Initialize PropertyFilter from URL parameters
-  useEffect(() => {
-    const initializeFiltersFromUrl = async () => {
-      const popIds = searchParams.getAll('populationIds');
-      if (popIds.length === 0) return;
-
-      const popLabels: string[] = [];
-      for (const id of popIds) {
-        let label = getLabelFromUuid(id);
-        if (!label) {
-          try {
-            const populations = await PopulationService.getPopulations();
-            const population = populations.find(p => p.id === id);
-            if (population) {
-              label = population.name;
-              addToCache(population.id, population.name);
-            }
-          } catch (error) {
-            console.error('Error fetching population:', error);
-          }
-        }
-        if (label) {
-          popLabels.push(label);
-        }
-      }
-
-      if (popLabels.length > 0) {
-        setPropertyFilterQuery({
-          tokens: [{
-            propertyKey: 'population',
-            operator: '=',
-            value: popLabels.join(', '),
-          }],
-          operation: 'and',
-        });
-      }
-    };
-
-    if (propertyFilterQuery.tokens.length === 0) {
-      initializeFiltersFromUrl();
-    }
-  }, []);
-
-  // Fetch populations for cache warming
-  const { data: allPopulations = [] } = useQuery({
-    queryKey: ['populations'],
-    queryFn: PopulationService.getPopulations,
-  });
-
-  // Warm cache when populations load
-  useEffect(() => {
-    if (allPopulations.length > 0) {
-      allPopulations.forEach(pop => addToCache(pop.id, pop.name));
-    }
-  }, [allPopulations]);
-
-  // Sync filters to URL
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    
-    // Update mode
-    params.set('mode', mapMode);
-    
-    // Update date range
-    params.delete('startDate');
-    params.delete('endDate');
-    params.delete('relativePeriod');
-    
-    if (dateRange) {
-      if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
-        // Store as relative (e.g., "-90d", "-6m")
-        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
-        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
-      } else if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
-        // Store as absolute dates
-        params.set('startDate', dateRange.startDate);
-        params.set('endDate', dateRange.endDate);
-      }
-    }
-    
-    // Update population filters (extract UUIDs from labels)
-    params.delete('populationIds');
-    const populationLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'population' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const populationIds = populationLabels
-      .map(label => getUuidFromLabel(label))
-      .filter(Boolean) as string[];
-    
-    if (populationIds.length > 0) {
-      populationIds.forEach(id => params.append('populationIds', id));
-    }
-    
-    setSearchParams(params, { replace: true });
-  }, [mapMode, dateRange, propertyFilterQuery, searchParams, setSearchParams]);
 
   // Handle mode change
   const handleModeChange = useCallback((newMode: MapMode) => {
@@ -398,9 +288,6 @@ export default function MapViewPage() {
               initialFilterTokens={propertyFilterQuery}
               initialGrouping={mapMode}
               onUpdate={handleFilterUpdate}
-              onLoadItems={handleLoadItems}
-              filteringOptions={propertyFilterOptions}
-              filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
               isLoading={false}
               disablePopulationFilter={mapMode === 'venues'}
             />

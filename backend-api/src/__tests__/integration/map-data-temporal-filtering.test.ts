@@ -27,6 +27,9 @@ describe('Map Data Temporal Filtering', () => {
     let futureActivityId: string; // Starts after query period
     let ongoingActivityId: string; // Ongoing (null endDate)
 
+    // Increase timeout for slow integration tests
+    jest.setTimeout(15000);
+
     beforeAll(async () => {
         // Initialize services
         geographicAreaRepository = new GeographicAreaRepository(prisma);

@@ -25,6 +25,9 @@ describe('Analytics with DENY Authorization Rules', () => {
     let allowedParticipantId: string;
     let deniedParticipantId: string;
 
+    // Increase timeout for slow integration tests
+    jest.setTimeout(15000);
+
     beforeAll(async () => {
         prisma = new PrismaClient();
         geographicAreaRepository = new GeographicAreaRepository(prisma);

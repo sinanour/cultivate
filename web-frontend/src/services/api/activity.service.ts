@@ -33,9 +33,79 @@ export interface ActivityFilterParams {
     populationIds?: string[];
     startDate?: string;
     endDate?: string;
+    filter?: Record<string, any>;
+    fields?: string[];
 }
 
 export class ActivityService {
+    /**
+     * Get activities with flexible filtering and customizable attribute selection
+     */
+    static async getActivitiesFlexible(options: ActivityFilterParams): Promise<PaginatedResponse<Activity>> {
+        const params = new URLSearchParams();
+
+        // Add pagination params
+        if (options.page) params.append('page', options.page.toString());
+        if (options.limit) params.append('limit', options.limit.toString());
+
+        // Add geographicAreaId as first-class parameter (not in filter[])
+        if (options.geographicAreaId) params.append('geographicAreaId', options.geographicAreaId);
+
+        // Convert legacy parameters to filter[] syntax
+        if (!options.filter) options.filter = {};
+
+        // Convert activityCategoryIds to filter[activityCategoryIds]
+        if (options.activityCategoryIds && options.activityCategoryIds.length > 0) {
+            options.filter.activityCategoryIds = options.activityCategoryIds.join(',');
+        }
+
+        // Convert activityTypeIds to filter[activityTypeIds]
+        if (options.activityTypeIds && options.activityTypeIds.length > 0) {
+            options.filter.activityTypeIds = options.activityTypeIds.join(',');
+        }
+
+        // Convert status to filter[status]
+        if (options.status && options.status.length > 0) {
+            options.filter.status = options.status.join(',');
+        }
+
+        // Convert populationIds to filter[populationIds]
+        if (options.populationIds && options.populationIds.length > 0) {
+            options.filter.populationIds = options.populationIds.join(',');
+        }
+
+        // Convert startDate to filter[startDate]
+        if (options.startDate) {
+            options.filter.startDate = options.startDate;
+        }
+
+        // Convert endDate to filter[endDate]
+        if (options.endDate) {
+            options.filter.endDate = options.endDate;
+        }
+
+        // Add flexible filter params using filter[fieldName]=value syntax
+        if (options.filter) {
+            for (const [key, value] of Object.entries(options.filter)) {
+                if (value !== undefined && value !== null) {
+                    if (Array.isArray(value)) {
+                        params.append(`filter[${key}]`, value.join(','));
+                    } else {
+                        params.append(`filter[${key}]`, value.toString());
+                    }
+                }
+            }
+        }
+
+        // Add fields param
+        if (options.fields && options.fields.length > 0) {
+            params.append('fields', options.fields.join(','));
+        }
+
+        const query = params.toString();
+        return ApiClient.get<PaginatedResponse<Activity>>(`/activities${query ? `?${query}` : ''}`);
+    }
+
     static async getActivities(page?: number, limit?: number, geographicAreaId?: string | null): Promise<Activity[]> {
         const params = new URLSearchParams();
         if (page) params.append('page', page.toString());
@@ -43,59 +113,6 @@ export class ActivityService {
         if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
         const query = params.toString();
         return ApiClient.get<Activity[]>(`/activities${query ? `?${query}` : ''}`);
-    }
-
-    static async getActivitiesPaginated(
-        page: number = 1,
-        limit: number = 100,
-        filters?: ActivityFilterParams
-    ): Promise<PaginatedResponse<Activity>> {
-        const params = new URLSearchParams();
-        params.append('page', page.toString());
-        params.append('limit', limit.toString());
-
-        if (filters?.geographicAreaId) {
-            params.append('geographicAreaId', filters.geographicAreaId);
-        }
-
-        // Activity category filter (OR logic within dimension)
-        if (filters?.activityCategoryIds && filters.activityCategoryIds.length > 0) {
-            filters.activityCategoryIds.forEach(id => {
-                params.append('activityCategoryId', id);
-            });
-        }
-
-        // Activity type filter (OR logic within dimension)
-        if (filters?.activityTypeIds && filters.activityTypeIds.length > 0) {
-            filters.activityTypeIds.forEach(id => {
-                params.append('activityTypeId', id);
-            });
-        }
-
-        // Status filter (OR logic within dimension)
-        if (filters?.status && filters.status.length > 0) {
-            filters.status.forEach(s => {
-                params.append('status', s);
-            });
-        }
-
-        // Population filter (OR logic within dimension)
-        if (filters?.populationIds && filters.populationIds.length > 0) {
-            filters.populationIds.forEach(id => {
-                params.append('populationId', id);
-            });
-        }
-
-        // Date range filter
-        if (filters?.startDate) {
-            params.append('startDate', filters.startDate);
-        }
-        if (filters?.endDate) {
-            params.append('endDate', filters.endDate);
-        }
-
-        const query = params.toString();
-        return ApiClient.get<PaginatedResponse<Activity>>(`/activities${query ? `?${query}` : ''}`);
     }
 
     static async getActivity(id: string): Promise<Activity> {

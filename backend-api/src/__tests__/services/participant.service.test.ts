@@ -81,31 +81,7 @@ describe('ParticipantService', () => {
         });
     });
 
-    describe('searchParticipants', () => {
-        it('should search participants by query', async () => {
-            const mockParticipants = [
-                { id: '1', name: 'John Doe', email: 'john@example.com', phone: null, notes: null, createdAt: new Date(), updatedAt: new Date() },
-            ];
-            mockParticipantRepo.search = jest.fn().mockResolvedValue(mockParticipants);
 
-            const result = await service.searchParticipants('John');
-
-            expect(result).toEqual(mockParticipants);
-            expect(mockParticipantRepo.search).toHaveBeenCalledWith('John');
-        });
-
-        it('should return all participants for empty query', async () => {
-            const mockParticipants = [
-                { id: '1', name: 'John Doe', email: 'john@example.com', phone: null, notes: null, createdAt: new Date(), updatedAt: new Date() },
-            ];
-            mockParticipantRepo.findAll = jest.fn().mockResolvedValue(mockParticipants);
-
-            const result = await service.searchParticipants('');
-
-            expect(result).toEqual(mockParticipants);
-            expect(mockParticipantRepo.findAll).toHaveBeenCalled();
-        });
-    });
 
     describe('createParticipant', () => {
         it('should create participant with valid data', async () => {

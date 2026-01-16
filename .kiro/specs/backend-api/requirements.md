@@ -31,6 +31,11 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Batched_Loading**: A technique where large datasets are fetched in multiple smaller requests (batches of 100 items) and rendered progressively as each batch arrives
 - **Incremental_Rendering**: A UI pattern where entities are displayed on screen as soon as they are fetched, without waiting for all data to be loaded
 - **Batch_Details_Endpoint**: An API endpoint that accepts multiple entity IDs and returns complete entity details for all specified entities in a single request, complementing the batch-ancestors endpoint by providing full geographic area data after ancestor IDs are fetched
+- **High_Cardinality_Field**: A text field with potentially millions of unique values requiring partial matching support (e.g., participant name, email, venue address)
+- **Low_Cardinality_Field**: An enumerated field with a limited set of predefined values requiring exact matching only (e.g., activity status, venue type, area type)
+- **Partial_Matching**: A filtering technique that matches records containing the search text anywhere within the field value using case-insensitive comparison
+- **Attribute_Selection**: A query optimization technique where clients specify which entity attributes to return in the response, reducing payload size and database query overhead
+- **Dot_Notation**: A syntax for requesting nested relation fields in the fields parameter (e.g., activityType.name, activityType.activityCategory.name)
 
 ## Requirements
 
@@ -109,26 +114,25 @@ The Backend API package provides the RESTful API service that implements all bus
 3. THE API SHALL provide a POST /api/participants endpoint that creates a new participant
 4. THE API SHALL provide a PUT /api/participants/:id endpoint that updates a participant
 5. THE API SHALL provide a DELETE /api/participants/:id endpoint that deletes a participant
-6. THE API SHALL provide a GET /api/participants/search endpoint that searches by name or email
-7. WHEN creating a participant, THE API SHALL require name
-8. WHEN creating a participant, THE API SHALL accept optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields
-9. WHEN creating a participant with an email, THE API SHALL validate email format and uniqueness
-10. WHEN updating a participant with an email, THE API SHALL validate email format and uniqueness
+6. WHEN creating a participant, THE API SHALL require name
+7. WHEN creating a participant, THE API SHALL accept optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields
+8. WHEN creating a participant with an email, THE API SHALL validate email format and uniqueness
+9. WHEN updating a participant with an email, THE API SHALL validate email format and uniqueness
 10. WHEN creating a participant, THE API SHALL accept an optional home venue ID
 11. WHEN creating a participant with dateOfBirth, THE API SHALL validate that it is a valid date in the past
 12. WHEN creating a participant with dateOfRegistration, THE API SHALL validate that it is a valid date
 13. WHEN updating a participant's home venue, THE API SHALL create a new address history record with the venue and effective start date
-12. THE API SHALL provide a GET /api/participants/:id/address-history endpoint that returns the participant's home address history ordered by effective start date descending
-13. THE API SHALL provide a POST /api/participants/:id/address-history endpoint that creates a new address history record
-14. THE API SHALL provide a PUT /api/participants/:id/address-history/:historyId endpoint that updates an existing address history record
-15. THE API SHALL provide a DELETE /api/participants/:id/address-history/:historyId endpoint that deletes an address history record
-16. WHEN creating an address history record, THE API SHALL require venue ID
-17. WHEN creating an address history record, THE API SHALL accept an optional effective start date (effectiveFrom)
-18. WHEN creating an address history record with a null effectiveFrom date, THE API SHALL treat it as the oldest home address for that participant
-19. THE API SHALL enforce that at most one address history record can have a null effectiveFrom date for any given participant
-20. WHEN creating an address history record, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same participant
-18. THE API SHALL provide a GET /api/participants/:id/activities endpoint that returns all activity assignments for the participant with activity and role details
-19. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only participants whose current home venue is in the specified geographic area or its descendants
+14. THE API SHALL provide a GET /api/participants/:id/address-history endpoint that returns the participant's home address history ordered by effective start date descending
+15. THE API SHALL provide a POST /api/participants/:id/address-history endpoint that creates a new address history record
+16. THE API SHALL provide a PUT /api/participants/:id/address-history/:historyId endpoint that updates an existing address history record
+17. THE API SHALL provide a DELETE /api/participants/:id/address-history/:historyId endpoint that deletes an address history record
+18. WHEN creating an address history record, THE API SHALL require venue ID
+19. WHEN creating an address history record, THE API SHALL accept an optional effective start date (effectiveFrom)
+20. WHEN creating an address history record with a null effectiveFrom date, THE API SHALL treat it as the oldest home address for that participant
+21. THE API SHALL enforce that at most one address history record can have a null effectiveFrom date for any given participant
+22. WHEN creating an address history record, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same participant
+23. THE API SHALL provide a GET /api/participants/:id/activities endpoint that returns all activity assignments for the participant with activity and role details
+24. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only participants whose current home venue is in the specified geographic area or its descendants
 
 ### Requirement 4: Create and Manage Activities
 
@@ -156,24 +160,6 @@ The Backend API package provides the RESTful API service that implements all bus
 18. THE API SHALL enforce that at most one activity-venue association can have a null effectiveFrom date for any given activity
 19. WHEN creating an activity-venue association, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same activity
 20. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only activities whose current venue is in the specified geographic area or its descendants
-21. THE API SHALL accept an optional activityTypeIds array filter on GET /api/activities endpoint to filter by one or more activity types
-22. WHEN an activityTypeIds filter is provided, THE API SHALL return only activities of at least one of the specified activity types (OR logic within dimension)
-23. THE API SHALL accept an optional activityCategoryIds array filter on GET /api/activities endpoint to filter by one or more activity categories
-24. WHEN an activityCategoryIds filter is provided, THE API SHALL return only activities belonging to at least one of the specified activity categories (OR logic within dimension)
-25. THE API SHALL accept an optional status array filter on GET /api/activities endpoint to filter by one or more activity statuses
-26. WHEN a status filter is provided, THE API SHALL return only activities with at least one of the specified statuses (OR logic within dimension)
-27. THE API SHALL accept an optional populationIds array filter on GET /api/activities endpoint to filter by one or more populations
-28. WHEN a populationIds filter is provided, THE API SHALL return only activities that have at least one participant belonging to at least one of the specified populations (OR logic within dimension)
-29. THE API SHALL accept an optional startDate filter on GET /api/activities endpoint to filter by activities starting on or after the specified date
-30. WHEN a startDate filter is provided, THE API SHALL return only activities whose startDate is greater than or equal to the specified date
-31. THE API SHALL accept an optional endDate filter on GET /api/activities endpoint to filter by activities ending on or before the specified date
-32. WHEN an endDate filter is provided, THE API SHALL return only activities whose endDate is less than or equal to the specified date (or null for ongoing activities)
-33. WHEN multiple filter dimensions are provided on GET /api/activities endpoint (e.g., activityTypeIds AND status AND populationIds), THE API SHALL apply all filters using AND logic across dimensions
-34. WHEN multiple values are provided within a single filter dimension (e.g., status=[ACTIVE, PLANNED]), THE API SHALL apply OR logic within that dimension (status IN (ACTIVE, PLANNED))
-35. THE API SHALL use Zod preprocess to normalize array query parameters (activityTypeIds, activityCategoryIds, status, populationIds) before validation
-36. WHEN a single value is provided for an array parameter, THE API SHALL parse it as an array with one element
-37. WHEN multiple values are provided for an array parameter (e.g., ?status=ACTIVE&status=PLANNED), THE API SHALL parse them as an array with multiple elements
-38. WHEN comma-separated values are provided for an array parameter (e.g., ?status=ACTIVE,PLANNED), THE API SHALL parse them as an array with multiple elements
 
 ### Requirement 5: Assign Participants to Activities
 
@@ -200,16 +186,15 @@ The Backend API package provides the RESTful API service that implements all bus
 3. THE API SHALL provide a POST /api/venues endpoint that creates a new venue
 4. THE API SHALL provide a PUT /api/venues/:id endpoint that updates a venue
 5. THE API SHALL provide a DELETE /api/venues/:id endpoint that deletes a venue
-6. THE API SHALL provide a GET /api/venues/search endpoint that searches venues by name or address
-7. WHEN creating a venue, THE API SHALL require name, address, and geographic area ID
-8. WHEN creating a venue, THE API SHALL validate that the geographic area exists
-9. WHEN creating a venue, THE API SHALL accept optional fields for latitude, longitude, and venue type (PUBLIC_BUILDING or PRIVATE_RESIDENCE)
-10. WHEN deleting a venue, THE API SHALL prevent deletion if activities or participants reference it
-11. WHEN deleting a venue, THE API SHALL return an error message explaining which entities reference it
-12. THE API SHALL provide a GET /api/venues/:id/activities endpoint that returns all activities associated with a venue
-13. THE API SHALL provide a GET /api/venues/:id/participants endpoint that returns all participants with this venue as their current home address
-14. WHEN retrieving venue participants, THE API SHALL only include participants whose most recent address history record is at this venue
-15. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only venues in the specified geographic area or its descendants
+6. WHEN creating a venue, THE API SHALL require name, address, and geographic area ID
+7. WHEN creating a venue, THE API SHALL validate that the geographic area exists
+8. WHEN creating a venue, THE API SHALL accept optional fields for latitude, longitude, and venue type (PUBLIC_BUILDING or PRIVATE_RESIDENCE)
+9. WHEN deleting a venue, THE API SHALL prevent deletion if activities or participants reference it
+10. WHEN deleting a venue, THE API SHALL return an error message explaining which entities reference it
+11. THE API SHALL provide a GET /api/venues/:id/activities endpoint that returns all activities associated with a venue
+12. THE API SHALL provide a GET /api/venues/:id/participants endpoint that returns all participants with this venue as their current home address
+13. WHEN retrieving venue participants, THE API SHALL only include participants whose most recent address history record is at this venue
+14. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only venues in the specified geographic area or its descendants
 
 ### Requirement 5B: Manage Geographic Areas
 
@@ -659,27 +644,6 @@ The Backend API package provides the RESTful API service that implements all bus
 4. THE API SHALL document version changes in the OpenAPI specification
 5. THE API SHALL support multiple API versions simultaneously during transition periods
 
-### Requirement 21: High-Cardinality Entity Filtering with Batched Loading
-
-**User Story:** As a client developer working with large datasets, I want API endpoints to support efficient text-based filtering and batched pagination for venues, participants, and geographic areas, so that dropdown lists and table views can scale to millions of records with low initial latency, incremental rendering, and continuous progress feedback.
-
-#### Acceptance Criteria
-
-1. THE API SHALL support text-based filtering on GET /api/v1/venues endpoint via a query parameter (e.g., ?search=text)
-2. THE API SHALL support text-based filtering on GET /api/v1/participants endpoint via a query parameter (e.g., ?search=text)
-3. THE API SHALL support text-based filtering on GET /api/v1/geographic-areas endpoint via a query parameter (e.g., ?search=text)
-4. WHEN a search query parameter is provided for venues, THE API SHALL return only venues whose name or address contains the search text (case-insensitive partial match)
-5. WHEN a search query parameter is provided for participants, THE API SHALL return only participants whose name or email contains the search text (case-insensitive partial match)
-6. WHEN a search query parameter is provided for geographic areas, THE API SHALL return only geographic areas whose name contains the search text (case-insensitive partial match)
-7. WHEN both search and geographicAreaId query parameters are provided, THE API SHALL apply both filters using AND logic
-8. THE API SHALL support pagination on all filtered results using page and limit query parameters with batches of 100 items
-9. WHEN returning filtered and paginated results, THE API SHALL include pagination metadata (page, limit, total, totalPages)
-10. THE API SHALL return the total count of matching records on the first page request to enable progress indicators
-11. THE API SHALL optimize database queries for text-based filtering using appropriate indexes on name, address, and email fields
-12. THE API SHALL return the first page of results by default when no page parameter is specified
-13. THE API SHALL limit the maximum page size to 100 items to prevent performance issues
-14. THE API SHALL calculate total count efficiently using database COUNT queries optimized for large datasets
-
 ### Requirement 22: Clear Optional Fields
 
 **User Story:** As a community organizer, I want to clear optional fields that have been previously populated, so that I can remove information that is no longer relevant or was entered incorrectly.
@@ -882,6 +846,100 @@ The Backend API package provides the RESTful API service that implements all bus
 38. WHEN removing fake data, THE script SHALL provide progress output showing the number of records deleted for each entity type
 39. WHEN removing fake data, THE script SHALL complete successfully and output a summary of all deleted records
 40. THE script SHALL allow mixing auto-generated fake data with manually entered test data, enabling selective removal of only the auto-generated records
+
+### Requirement 28: Flexible Server-Side Filtering with Customizable Attribute Selection
+
+**User Story:** As a frontend developer, I want to filter entity lists by any high-cardinality text field with partial matching and customize which attributes are returned in the response, so that I can efficiently load dropdown options, support advanced filtering in FilterGroupingPanel, and optimize network bandwidth by requesting only the data I need.
+
+#### Acceptance Criteria
+
+**General Filtering Capabilities:**
+
+1. THE API SHALL support server-side filtering on all high-cardinality text fields for GET /api/v1/participants endpoint
+2. THE API SHALL support server-side filtering on all high-cardinality text fields for GET /api/v1/venues endpoint
+3. THE API SHALL support server-side filtering on all high-cardinality text fields for GET /api/v1/activities endpoint
+4. THE API SHALL support server-side filtering on all high-cardinality text fields for GET /api/v1/geographic-areas endpoint
+5. THE API SHALL classify the following as high-cardinality text fields requiring partial matching support: participant name, participant email, participant phone, participant nickname, venue name, venue address, activity name, geographic area name
+6. THE API SHALL classify the following as low-cardinality enumerated fields NOT requiring partial matching: activity category, activity type, participant role, population, area type, venue type, activity status, user role, authorization rule type
+7. WHEN filtering by high-cardinality text fields, THE API SHALL perform case-insensitive partial matching (ILIKE '%text%' or equivalent)
+8. WHEN filtering by low-cardinality enumerated fields, THE API SHALL perform exact matching using IN clauses for array parameters
+9. THE API SHALL accept filter query parameters in the format ?filter[fieldName]=value for all filterable fields
+10. THE API SHALL support multiple filter parameters simultaneously (e.g., ?filter[name]=john&filter[email]=gmail)
+11. WHEN multiple filter parameters are provided, THE API SHALL apply all filters using AND logic
+12. THE API SHALL continue to support existing specialized filter parameters (geographicAreaId, activityTypeIds, status, etc.) for backward compatibility
+13. WHEN both legacy filter parameters and new filter[fieldName] parameters are provided, THE API SHALL apply all filters using AND logic
+
+**Customizable Attribute Selection:**
+
+14. THE API SHALL accept an optional fields query parameter specifying which attributes to return in the response
+15. THE fields parameter SHALL accept a comma-separated list of field names (e.g., ?fields=id,name,email)
+16. WHEN the fields parameter is provided, THE API SHALL return only the specified attributes for each entity in the response
+17. WHEN the fields parameter is omitted, THE API SHALL return all attributes for each entity (default behavior, backward compatible)
+18. THE API SHALL validate that all requested field names in the fields parameter are valid attributes of the entity type
+19. WHEN an invalid field name is provided in the fields parameter, THE API SHALL return 400 Bad Request with a validation error listing the invalid field names
+20. THE API SHALL support requesting nested relation fields using dot notation (e.g., ?fields=id,name,activityType.name,activityType.activityCategory.name)
+21. WHEN nested relation fields are requested, THE API SHALL include the necessary database joins to fetch the related data
+22. THE API SHALL optimize database queries to SELECT only the requested fields, reducing data transfer and query execution time
+23. THE API SHALL support the fields parameter on GET /api/v1/participants endpoint
+24. THE API SHALL support the fields parameter on GET /api/v1/venues endpoint
+25. THE API SHALL support the fields parameter on GET /api/v1/activities endpoint
+26. THE API SHALL support the fields parameter on GET /api/v1/geographic-areas endpoint
+
+**Participant Filtering:**
+
+27. THE API SHALL accept ?filter[name]=text parameter on GET /api/v1/participants to filter by participant name (case-insensitive partial match)
+28. THE API SHALL accept ?filter[email]=text parameter on GET /api/v1/participants to filter by participant email (case-insensitive partial match)
+29. THE API SHALL accept ?filter[phone]=text parameter on GET /api/v1/participants to filter by participant phone (case-insensitive partial match)
+30. THE API SHALL accept ?filter[nickname]=text parameter on GET /api/v1/participants to filter by participant nickname (case-insensitive partial match)
+31. THE API SHALL accept ?filter[dateOfBirth]=date parameter on GET /api/v1/participants to filter by exact date of birth
+32. THE API SHALL accept ?filter[dateOfRegistration]=date parameter on GET /api/v1/participants to filter by exact date of registration
+33. THE API SHALL accept ?filter[populationIds]=uuid1,uuid2 parameter on GET /api/v1/participants to filter by one or more populations (OR logic within dimension)
+34. WHEN multiple participant filter parameters are provided, THE API SHALL apply all filters using AND logic
+
+**Venue Filtering:**
+
+35. THE API SHALL accept ?filter[name]=text parameter on GET /api/v1/venues to filter by venue name (case-insensitive partial match)
+36. THE API SHALL accept ?filter[address]=text parameter on GET /api/v1/venues to filter by venue address (case-insensitive partial match)
+37. THE API SHALL accept ?filter[venueType]=type parameter on GET /api/v1/venues to filter by venue type (exact match, PUBLIC_BUILDING or PRIVATE_RESIDENCE)
+38. WHEN multiple venue filter parameters are provided, THE API SHALL apply all filters using AND logic
+
+**Activity Filtering:**
+
+39. THE API SHALL accept ?filter[name]=text parameter on GET /api/v1/activities to filter by activity name (case-insensitive partial match)
+40. THE API SHALL accept ?filter[activityTypeIds]=uuid1,uuid2 parameter on GET /api/v1/activities to filter by one or more activity types (OR logic within dimension)
+41. THE API SHALL accept ?filter[activityCategoryIds]=uuid1,uuid2 parameter on GET /api/v1/activities to filter by one or more activity categories (OR logic within dimension)
+42. THE API SHALL accept ?filter[status]=status1,status2 parameter on GET /api/v1/activities to filter by one or more statuses (OR logic within dimension)
+43. THE API SHALL accept ?filter[populationIds]=uuid1,uuid2 parameter on GET /api/v1/activities to filter by one or more populations (OR logic within dimension)
+44. THE API SHALL accept ?filter[startDate]=date parameter on GET /api/v1/activities to filter by activities starting on or after the specified date
+45. THE API SHALL accept ?filter[endDate]=date parameter on GET /api/v1/activities to filter by activities ending on or before the specified date
+46. WHEN multiple activity filter parameters are provided, THE API SHALL apply all filters using AND logic
+
+**Geographic Area Filtering:**
+
+47. THE API SHALL accept ?filter[name]=text parameter on GET /api/v1/geographic-areas to filter by geographic area name (case-insensitive partial match)
+48. THE API SHALL accept ?filter[areaType]=type parameter on GET /api/v1/geographic-areas to filter by area type (exact match)
+49. THE API SHALL accept ?filter[parentGeographicAreaId]=uuid parameter on GET /api/v1/geographic-areas to filter by parent geographic area
+50. WHEN multiple geographic area filter parameters are provided, THE API SHALL apply all filters using AND logic
+
+**Performance and Optimization:**
+
+51. THE API SHALL use database indexes on all high-cardinality text fields to optimize partial matching queries
+52. THE API SHALL push all filtering logic down to the database layer using Prisma WHERE clauses
+53. THE API SHALL push all field selection logic down to the database layer using Prisma SELECT and INCLUDE clauses
+54. THE API SHALL optimize queries to avoid N+1 problems when fetching nested relations
+55. THE API SHALL maintain existing pagination behavior (page, limit, total, totalPages) when filters and fields parameters are used
+56. THE API SHALL apply geographic authorization filtering before applying custom filters
+57. THE API SHALL calculate total count based on all applied filters (geographic authorization + geographicAreaId + filter[] parameters)
+58. WHEN no filters are specified, THE API SHALL return all entities subject to geographic authorization and pagination
+59. WHEN no fields parameter is specified, THE API SHALL return all entity attributes
+
+**Example Use Cases:**
+
+60. WHEN a client requests GET /api/v1/participants?filter[email]=@gmail.com&fields=id,email, THE API SHALL return only participants with "@gmail.com" in their email, returning only id and email fields
+61. WHEN a client requests GET /api/v1/venues?filter[name]=community&filter[venueType]=PUBLIC_BUILDING&fields=id,name, THE API SHALL return only public building venues with "community" in their name, returning only id and name fields
+62. WHEN a client requests GET /api/v1/activities?filter[name]=study&filter[status]=ACTIVE,PLANNED&fields=id,name,activityType.name, THE API SHALL return only active or planned activities with "study" in their name, returning id, name, and the nested activity type name
+63. WHEN a client requests GET /api/v1/geographic-areas?filter[areaType]=CITY&fields=id,name,areaType,childCount, THE API SHALL return only city-type geographic areas, returning id, name, areaType, and childCount fields
+64. WHEN a client requests GET /api/v1/participants?geographicAreaId=<uuid>&filter[name]=john&fields=id,name, THE API SHALL combine geographic area filtering with name filtering and return only specified fields
 
 ### Requirement 27: Provide Optimized Map Data API Endpoints
 

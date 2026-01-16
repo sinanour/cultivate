@@ -222,9 +222,21 @@ src/
 - Allows interaction with already-loaded participants while additional batches load
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
 - Provides actions for edit and delete (no separate View button)
-- Implements client-side search across name and email
+- Uses FilterGroupingPanel component for server-side filtering
+- Configures FilterGroupingPanel without grouping controls (filtering only, no grouping)
+- Configures FilterGroupingPanel with filter properties: Name, Email, Date of Birth, Date of Registration, Population
+- Implements lazy loading of filter property values with 300ms debouncing
+- When "Update" button clicked on FilterGroupingPanel: sends filter criteria to backend as query parameters
+- Applies OR logic within filter dimensions (e.g., multiple populations)
+- Applies AND logic across filter dimensions (e.g., populations AND date of birth range)
+- Persists filter selections to URL query parameters for shareability
+- Restores filters from URL parameters on page load
+- **URL Filter Initialization:** When page loads with URL filter parameters, waits for FilterGroupingPanel to resolve display names to UUIDs before fetching participant data
+- **URL Filter Initialization:** When page loads without URL filter parameters, immediately fetches participant data
+- **URL Filter Initialization:** After FilterGroupingPanel resolves URL filters, automatically triggers initial data fetch with resolved filter values
 - Applies global geographic area filter from context when active
 - Filters to show only participants whose current home venue is in the filtered geographic area or its descendants
+- Integrates FilterGroupingPanel filters with global geographic area filter using AND logic
 
 **ParticipantFormPage**
 - Dedicated full-page form for creating/editing participants (not a modal)
@@ -298,8 +310,10 @@ src/
 
 **ActivityList**
 - Displays table with comprehensive server-side filtering capabilities
-- Uses CloudScape PropertyFilter component for multi-dimensional filtering
-- Uses CloudScape DateRangePicker component for date range filtering
+- Uses FilterGroupingPanel component for server-side filtering
+- Configures FilterGroupingPanel without grouping controls (filtering only, no grouping)
+- Configures FilterGroupingPanel with CloudScape DateRangePicker for date range filtering
+- Configures FilterGroupingPanel with CloudScape PropertyFilter for multi-dimensional filtering
 - PropertyFilter supports filtering by: Activity Category, Activity Type, Status, Population
 - Implements lazy loading of property values with debounced async fetching (300ms delay)
 - Displays human-readable names in filter tokens instead of UUIDs
@@ -310,9 +324,12 @@ src/
 - Supports only equals (=) operator, NOT not-equals (!=) operator
 - Applies OR logic within each filter dimension (e.g., multiple categories)
 - Applies AND logic across different filter dimensions (e.g., categories AND statuses AND populations)
+- When "Update" button clicked on FilterGroupingPanel: sends filter criteria to backend API as query parameters
 - Persists all filter tokens and date range to URL query parameters for shareability
 - Restores filters from URL parameters on page load
-- Sends filter criteria to backend API as query parameters
+- **URL Filter Initialization:** When page loads with URL filter parameters, waits for FilterGroupingPanel to resolve display names to UUIDs before fetching activity data
+- **URL Filter Initialization:** When page loads without URL filter parameters, immediately fetches activity data
+- **URL Filter Initialization:** After FilterGroupingPanel resolves URL filters, automatically triggers initial data fetch with resolved filter values
 - Uses CloudScape Table with batched pagination (100 items per batch)
 - Fetches activities in batches and renders incrementally
 - Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
@@ -334,7 +351,7 @@ src/
 - Shows activity dates and status badges
 - Applies global geographic area filter from context when active
 - Filters to show only activities whose current venue is in the filtered geographic area or its descendants
-- Integrates PropertyFilter with global geographic area filter using AND logic
+- Integrates FilterGroupingPanel filters with global geographic area filter using AND logic
 
 **ActivityFormPage**
 - Dedicated full-page form for creating/editing activities (not a modal)
@@ -423,8 +440,7 @@ src/
 
 **VenueList**
 - Displays table of venues with name, address, and geographic area
-- Uses CloudScape Table with search, sort, and filter capabilities
-- Uses batched pagination (100 items per batch)
+- Uses CloudScape Table with batched pagination (100 items per batch)
 - Fetches venues in batches and renders incrementally
 - Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
 - Loading indicator positioned next to entity count in header
@@ -439,9 +455,21 @@ src/
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
 - Renders geographic area name as hyperlink in geographic area column (links to /geographic-areas/:id)
 - Provides actions for edit and delete (no separate View button)
-- Implements client-side search across name and address
+- Uses FilterGroupingPanel component for server-side filtering
+- Configures FilterGroupingPanel without grouping controls (filtering only, no grouping)
+- Configures FilterGroupingPanel with filter properties: Name, Address, Geographic Area, Venue Type
+- Implements lazy loading of filter property values with 300ms debouncing
+- When "Update" button clicked on FilterGroupingPanel: sends filter criteria to backend as query parameters
+- Applies OR logic within filter dimensions (e.g., multiple geographic areas, multiple venue types)
+- Applies AND logic across filter dimensions (e.g., geographic areas AND venue types)
+- Persists filter selections to URL query parameters for shareability
+- Restores filters from URL parameters on page load
+- **URL Filter Initialization:** When page loads with URL filter parameters, waits for FilterGroupingPanel to resolve display names to UUIDs before fetching venue data
+- **URL Filter Initialization:** When page loads without URL filter parameters, immediately fetches venue data
+- **URL Filter Initialization:** After FilterGroupingPanel resolves URL filters, automatically triggers initial data fetch with resolved filter values
 - Applies global geographic area filter from context when active
 - Filters to show only venues in the filtered geographic area or its descendants
+- Integrates FilterGroupingPanel filters with global geographic area filter using AND logic
 
 **VenueFormPage**
 - Dedicated full-page form for creating/editing venues (not a modal)
@@ -1080,14 +1108,17 @@ src/
 - MapView overlay: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="markers" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
 
 **FilterGroupingPanel**
-- Reusable component for consistent filtering and grouping interface across all data visualization pages
-- Combines date range selection, property-based filtering, and grouping controls in a unified panel
+- Reusable component for consistent filtering and grouping interface across data visualization pages and list pages
+- Combines date range selection, property-based filtering, and optional grouping controls in a unified panel
 - Provides explicit "Update" button to apply selected filters and grouping options
 - Supports both additive grouping (multi-select) and exclusive grouping (SegmentedControl) modes
-- Consists of three main sections arranged horizontally or vertically:
-  1. CloudScape DateRangePicker for date range selection
-  2. CloudScape PropertyFilter for multi-dimensional filtering
-  3. Grouping controls (multi-select dropdown or SegmentedControl based on mode)
+- Supports filtering-only mode without grouping controls for list pages
+- Uses vertical stacked layout where each filtering component renders on its own row:
+  1. **First row**: First filtering component (DateRangePicker if included, otherwise PropertyFilter) with action buttons (Update, Clear All) positioned beside it with appropriate spacing
+  2. **Second row** (if DateRangePicker is on first row): CloudScape PropertyFilter for multi-dimensional filtering spanning full width
+  3. **Third row** (if grouping controls are included): Grouping controls (multi-select dropdown or SegmentedControl based on mode) spanning full width
+- Action buttons (Update and Clear All) are positioned on the first row, beside the first filtering component with appropriate spacing
+- Each filtering component (DateRangePicker, PropertyFilter, grouping controls) occupies its own horizontal row
 - Does NOT automatically apply filters as user makes selections
 - Allows users to adjust multiple filters and grouping options before applying
 - Invokes callback with complete filter and grouping state when "Update" button is clicked
@@ -1099,11 +1130,45 @@ src/
 - When "Clear All" clicked: resets date range, clears all filter tokens, resets grouping to default
 - Displays loading indicator on "Update" button while parent component fetches new data
 - Disables all controls while parent component is fetching data to prevent conflicting updates
-- Integrates with URL query parameter synchronization (parent component responsibility)
 - Supports all PropertyFilter features: lazy loading, debouncing, token consolidation, de-duplication
 - Uses consistent styling and layout across all pages
 - Responsive design adapts to different screen sizes
 - Provides clear labels for all controls
+
+**Lazy Loading Support for High-Cardinality Properties:**
+- Accepts lazy loading callback functions for each filter property to support high-cardinality dimensions
+- When user types in PropertyFilter input, invokes the corresponding property's lazy loading callback with user's input text
+- Lazy loading callbacks return Promises resolving to arrays of property value options matching user input
+- Implements 300ms debouncing for lazy loading callback invocations to avoid excessive API requests
+- Displays loading indicator in PropertyFilter while waiting for lazy loading callback results
+- Handles lazy loading callback errors gracefully with appropriate error messages
+- Lazy loading callbacks are responsible for fetching data from backend APIs, applying search filters, and returning formatted options
+- Supports lazy loading for high-cardinality properties such as participants, venues, and geographic areas
+
+**Non-Destructive URL Synchronization:**
+- Encapsulates logic for synchronizing filter and grouping state to URL query parameters
+- Uses consistent naming pattern with namespace prefixes (e.g., "filter_activityCategory", "filter_venue") to map property names to URL parameter keys
+- Preserves all existing query parameters that do not pertain to its own filter properties when updating URL
+- Does NOT mutate, remove, or interfere with query parameters managed by other components (e.g., global geographic area filter parameter)
+- Removes corresponding query parameter when a filter is cleared
+- Removes all filter-related query parameters when "Clear All" is clicked, while preserving other page parameters
+- Reads initial filter state from URL query parameters on component mount
+- Updates URL query parameters when "Update" button is clicked and filters are applied
+- Uses React Router's useSearchParams hook to update URL without causing page reloads
+- Supports browser back/forward navigation by responding to URL query parameter changes
+- Maintains separation of concerns: FilterGroupingPanel manages its own URL parameters, parent components manage their own (e.g., geographicArea parameter)
+
+**Initial URL Filter Resolution:**
+- When component mounts with URL filter parameters, extracts filter tokens from URL query parameters
+- For each filter token containing display names, invokes the corresponding loadItems callback to resolve display names to UUIDs
+- Displays loading indicator while resolving filter values from URL parameters
+- After all filter values are resolved, stores resolved UUIDs in internal state
+- Marks initial resolution as complete
+- Does NOT mark state as "dirty" during initial URL filter resolution (allows "Update" button to remain disabled)
+- After resolution completes, automatically invokes onUpdate callback with resolved filter state to trigger initial data fetch
+- When no URL filter parameters are present, skips resolution and allows immediate data fetch
+- Handles both URL filters and global geographic area filter together during initialization
+- Ensures list pages wait for filter resolution before fetching entity data when URL parameters are present
 
 **Grouping Mode Behavior:**
 - **Additive Mode**: Uses multi-select dropdown (CloudScape Multiselect component)
@@ -1115,22 +1180,38 @@ src/
   - Example: Group by "All" OR "Activity Type" OR "Activity Category"
   - Used on Growth Dashboard with options: "All", "Activity Type", "Activity Category"
   - Used on Map View with options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
+- **No Grouping Mode**: Omits grouping controls entirely
+  - Used on list pages (ParticipantList, VenueList, ActivityList) for record retrieval
+  - Focuses solely on filtering without dimensional grouping
 
 **Implementation Details:**
 - Accepts props:
-  - filterProperties: Array of property definitions for PropertyFilter (name, label, operators, loadItems function)
-  - groupingMode: 'additive' | 'exclusive'
-  - groupingDimensions: Array of available grouping dimensions (for additive mode) or options (for exclusive mode)
+  - filterProperties: Array of property definitions for PropertyFilter with lazy loading callbacks
+    - Each property includes: key (string), label (string), operators (array), loadItems (async callback function)
+    - loadItems callback signature: `(filterText: string, filteringProperty: PropertyFilterProperty) => Promise<PropertyFilterOption[]>`
+  - groupingMode?: 'additive' | 'exclusive' | 'none' - Grouping mode (defaults to 'none' for list pages)
+  - groupingDimensions?: Array of available grouping dimensions (for additive mode) or options (for exclusive mode)
+  - includeDateRange?: boolean - Whether to include DateRangePicker (defaults to false for list pages without temporal filtering)
   - initialDateRange?: { startDate, endDate } - Initial date range selection
   - initialFilterTokens?: PropertyFilterToken[] - Initial filter tokens
   - initialGrouping?: string[] (additive) | string (exclusive) - Initial grouping selection
   - onUpdate: (state: FilterGroupingState) => void - Callback invoked when "Update" clicked
   - isLoading?: boolean - Whether parent is fetching data
   - disablePopulationFilter?: boolean - Whether to disable population filter (e.g., in Venues map mode)
+  - urlParamPrefix?: string - Optional prefix for URL parameters (defaults to "filter_")
 - Returns JSX element containing the complete filtering/grouping panel
-- Uses CloudScape SpaceBetween or Grid for layout
+- Uses vertical stacked layout with CloudScape SpaceBetween component (direction="vertical")
+- First row uses flexbox layout to position first filtering component and action buttons side by side with appropriate spacing (gap: 16px)
+- Action buttons (Update and Clear All) grouped together using CloudScape SpaceBetween (direction="horizontal")
+- Subsequent rows (PropertyFilter if not on first row, grouping controls) span full width
 - Implements internal state management for pending changes
 - Tracks whether current state differs from last applied state
+- Uses React Router's useSearchParams hook internally for URL synchronization
+- Implements URL parameter mapping logic:
+  - Property filters: `filter_<propertyKey>=value1,value2` (comma-separated for multiple values)
+  - Date range: `filter_startDate=YYYY-MM-DD&filter_endDate=YYYY-MM-DD`
+  - Grouping (additive): `filter_groupBy=dim1,dim2,dim3`
+  - Grouping (exclusive): `filter_groupBy=selectedOption`
 - Provides accessible keyboard navigation and ARIA labels
 
 **FilterGroupingState Interface:**
@@ -1138,14 +1219,32 @@ src/
 interface FilterGroupingState {
   dateRange: { startDate?: Date; endDate?: Date } | null;
   filterTokens: PropertyFilterToken[];
-  grouping: string[] | string; // Array for additive, string for exclusive
+  grouping: string[] | string | null; // Array for additive, string for exclusive, null for no grouping
+}
+```
+
+**PropertyFilterProperty Interface (with Lazy Loading):**
+```typescript
+interface PropertyFilterProperty {
+  key: string;
+  label: string;
+  operators: string[];
+  loadItems: (filterText: string, property: PropertyFilterProperty) => Promise<PropertyFilterOption[]>;
+}
+
+interface PropertyFilterOption {
+  value: string;
+  label: string;
 }
 ```
 
 **Usage Examples:**
-- Engagement Dashboard: `<FilterGroupingPanel filterProperties={engagementFilterProps} groupingMode="additive" groupingDimensions={['activityCategory', 'activityType', 'venue', 'geographicArea']} onUpdate={handleFilterUpdate} />`
-- Growth Dashboard: `<FilterGroupingPanel filterProperties={growthFilterProps} groupingMode="exclusive" groupingDimensions={['All', 'Activity Type', 'Activity Category']} onUpdate={handleFilterUpdate} />`
-- Map View: `<FilterGroupingPanel filterProperties={mapFilterProps} groupingMode="exclusive" groupingDimensions={['Activities by Type', 'Activities by Category', 'Participant Homes', 'Venues']} onUpdate={handleFilterUpdate} disablePopulationFilter={mapMode === 'Venues'} />`
+- Engagement Dashboard: `<FilterGroupingPanel filterProperties={engagementFilterProps} groupingMode="additive" groupingDimensions={['activityCategory', 'activityType', 'venue', 'geographicArea']} includeDateRange={true} onUpdate={handleFilterUpdate} />`
+- Growth Dashboard: `<FilterGroupingPanel filterProperties={growthFilterProps} groupingMode="exclusive" groupingDimensions={['All', 'Activity Type', 'Activity Category']} includeDateRange={true} onUpdate={handleFilterUpdate} />`
+- Map View: `<FilterGroupingPanel filterProperties={mapFilterProps} groupingMode="exclusive" groupingDimensions={['Activities by Type', 'Activities by Category', 'Participant Homes', 'Venues']} includeDateRange={true} onUpdate={handleFilterUpdate} disablePopulationFilter={mapMode === 'Venues'} />`
+- ParticipantList: `<FilterGroupingPanel filterProperties={participantFilterProps} groupingMode="none" includeDateRange={false} onUpdate={handleFilterUpdate} />`
+- VenueList: `<FilterGroupingPanel filterProperties={venueFilterProps} groupingMode="none" includeDateRange={false} onUpdate={handleFilterUpdate} />`
+- ActivityList: `<FilterGroupingPanel filterProperties={activityFilterProps} groupingMode="none" includeDateRange={true} onUpdate={handleFilterUpdate} />`
 
 **NavigationGuard (useFormNavigationGuard hook)**
 - Custom React hook for implementing navigation guards on form pages

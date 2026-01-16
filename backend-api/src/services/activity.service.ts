@@ -10,6 +10,7 @@ import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
 import { ImportResult } from '../types/csv.types';
 import { ActivityImportSchema } from '../utils/validation.schemas';
 import { AppError } from '../types/errors.types';
+import { buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
 
 export interface CreateActivityInput {
   name: string;
@@ -28,6 +29,22 @@ export interface UpdateActivityInput {
   endDate?: Date | null;
   status?: ActivityStatus;
   version?: number;
+}
+
+export interface FlexibleActivityQuery {
+  page?: number;
+  limit?: number;
+  geographicAreaId?: string;
+  activityTypeIds?: string[];
+  activityCategoryIds?: string[];
+  status?: ActivityStatus[];
+  populationIds?: string[];
+  startDate?: string;
+  endDate?: string;
+  filter?: Record<string, any>;
+  fields?: string[];
+  authorizedAreaIds?: string[];
+  hasGeographicRestrictions?: boolean;
 }
 
 export class ActivityService {
@@ -84,6 +101,19 @@ export class ActivityService {
     }
 
     // No restrictions and no explicit filter - return undefined (no filtering)
+    return undefined;
+  }
+
+  /**
+   * Normalize a value to an array
+   * Handles comma-separated strings, single values, and arrays
+   */
+  private normalizeToArray(value: string | string[] | undefined): string[] | undefined {
+    if (!value) return undefined;
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      return value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+    }
     return undefined;
   }
 
@@ -224,31 +254,84 @@ export class ActivityService {
     authorizedAreaIds: string[] = [],
     hasGeographicRestrictions: boolean = false
   ): Promise<PaginatedResponse<Activity>> {
-    const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
-
-    // Determine effective geographic area IDs
-    const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
-      filters?.geographicAreaId,
-      authorizedAreaIds,
-      hasGeographicRestrictions
-    );
-
-    // Build filter object for repository
-    const repositoryFilters: any = {
+    // Delegate to flexible query method for backward compatibility
+    return this.getActivitiesFlexible({
+      page,
+      limit,
+      geographicAreaId: filters?.geographicAreaId,
       activityTypeIds: filters?.activityTypeIds,
       activityCategoryIds: filters?.activityCategoryIds,
       status: filters?.status,
       populationIds: filters?.populationIds,
-      startDate: filters?.startDate,
-      endDate: filters?.endDate,
+      startDate: filters?.startDate?.toISOString(),
+      endDate: filters?.endDate?.toISOString(),
+      authorizedAreaIds,
+      hasGeographicRestrictions
+    });
+  }
+
+  /**
+   * Get activities with flexible filtering and customizable attribute selection
+   */
+  async getActivitiesFlexible(query: FlexibleActivityQuery): Promise<PaginatedResponse<Activity>> {
+    const {
+      page,
+      limit,
+      geographicAreaId,
+      activityTypeIds,
+      activityCategoryIds,
+      status,
+      populationIds,
+      startDate,
+      endDate,
+      filter,
+      fields,
+      authorizedAreaIds = [],
+      hasGeographicRestrictions = false
+    } = query;
+
+    const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
+
+    // Build select clause for attribute selection
+    let select: any = undefined;
+    if (fields && fields.length > 0) {
+      try {
+        const validFields = getValidFieldNames('activity');
+        select = buildSelectClause(fields, validFields);
+      } catch (error) {
+        throw new AppError('INVALID_FIELDS', (error as Error).message, 400);
+      }
+    }
+
+    // Determine effective geographic area IDs
+    const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+      geographicAreaId,
+      authorizedAreaIds,
+      hasGeographicRestrictions
+    );
+
+    // Build filter object for repository (merge legacy and flexible filters)
+    const repositoryFilters: any = {
+      activityTypeIds: this.normalizeToArray(activityTypeIds || filter?.activityTypeIds),
+      activityCategoryIds: this.normalizeToArray(activityCategoryIds || filter?.activityCategoryIds),
+      status: this.normalizeToArray(status || filter?.status),
+      populationIds: this.normalizeToArray(populationIds || filter?.populationIds),
+      startDate: startDate ? new Date(startDate) : (filter?.startDate ? new Date(filter.startDate) : undefined),
+      endDate: endDate ? new Date(endDate) : (filter?.endDate ? new Date(filter.endDate) : undefined),
       geographicAreaIds: effectiveAreaIds,
     };
+
+    // Add name filter if provided (high-cardinality text field)
+    if (filter?.name) {
+      repositoryFilters.name = filter.name;
+    }
 
     // Use repository's comprehensive filtering method
     const { data, total } = await this.activityRepository.findWithFilters(
       repositoryFilters,
       validPage,
-      validLimit
+      validLimit,
+      select
     );
 
     const activitiesWithComputed = data.map((a) => this.addComputedFields(a));

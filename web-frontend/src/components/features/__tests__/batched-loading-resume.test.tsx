@@ -38,8 +38,9 @@ describe('Batched Loading with Resume', () => {
     const user = userEvent.setup();
 
     // Mock paginated response with 250 total items (3 pages)
-    const mockGetParticipantsPaginated = vi.mocked(ParticipantService.getParticipantsPaginated);
-    mockGetParticipantsPaginated.mockImplementation(async (page: number) => {
+    const mockGetParticipantsFlexible = vi.mocked(ParticipantService.getParticipantsFlexible);
+    mockGetParticipantsFlexible.mockImplementation(async (options: any) => {
+      const page = options.page || 1;
       // Simulate delay
       await new Promise(resolve => setTimeout(resolve, 50));
       
@@ -110,8 +111,9 @@ describe('Batched Loading with Resume', () => {
     const user = userEvent.setup();
 
     // Mock paginated response with 150 total items (2 pages)
-    const mockGetParticipantsPaginated = vi.mocked(ParticipantService.getParticipantsPaginated);
-    mockGetParticipantsPaginated.mockImplementation(async (page: number) => {
+    const mockGetParticipantsFlexible = vi.mocked(ParticipantService.getParticipantsFlexible);
+    mockGetParticipantsFlexible.mockImplementation(async (options: any) => {
+      const page = options.page || 1;
       // Longer delay for page 2 to prevent race condition
       await new Promise(resolve => setTimeout(resolve, page === 2 ? 500 : 50));
       

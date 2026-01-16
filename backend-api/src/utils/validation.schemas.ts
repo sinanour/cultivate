@@ -121,9 +121,7 @@ export const ParticipantUpdateSchema = z.object({
   version: z.number().int().positive().optional(),
 });
 
-export const ParticipantSearchSchema = z.object({
-  q: z.string().optional(),
-});
+// Removed ParticipantSearchSchema - use unified filter[] API instead
 
 // Geographic Area schemas
 export const GeographicAreaCreateSchema = z.object({
@@ -159,9 +157,7 @@ export const VenueUpdateSchema = z.object({
   version: z.number().int().positive().optional(),
 });
 
-export const VenueSearchSchema = z.object({
-  q: z.string().optional(),
-});
+// Removed VenueSearchSchema - use unified filter[] API instead
 
 // Activity schemas
 export const ActivityCreateSchema = z.object({
@@ -182,56 +178,13 @@ export const ActivityUpdateSchema = z.object({
   version: z.number().int().positive().optional(),
 });
 
+// Unified filtering API - removed legacy parameters (activityTypeIds, activityCategoryIds, status, populationIds, startDate, endDate)
+// Use filter[fieldName]=value syntax instead
 export const ActivityQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(100),
   geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
-  activityTypeIds: z.preprocess(
-    (val) => {
-      if (val === undefined || val === null) return undefined;
-      if (Array.isArray(val)) {
-        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
-      }
-      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
-      return values.length > 0 ? values : undefined;
-    },
-    z.array(z.string().uuid('Invalid activity type ID format')).optional()
-  ),
-  activityCategoryIds: z.preprocess(
-    (val) => {
-      if (val === undefined || val === null) return undefined;
-      if (Array.isArray(val)) {
-        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
-      }
-      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
-      return values.length > 0 ? values : undefined;
-    },
-    z.array(z.string().uuid('Invalid activity category ID format')).optional()
-  ),
-  status: z.preprocess(
-    (val) => {
-      if (val === undefined || val === null) return undefined;
-      if (Array.isArray(val)) {
-        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
-      }
-      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
-      return values.length > 0 ? values : undefined;
-    },
-    z.array(z.nativeEnum(ActivityStatus)).optional()
-  ),
-  populationIds: z.preprocess(
-    (val) => {
-      if (val === undefined || val === null) return undefined;
-      if (Array.isArray(val)) {
-        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
-      }
-      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
-      return values.length > 0 ? values : undefined;
-    },
-    z.array(z.string().uuid('Invalid population ID format')).optional()
-  ),
-  startDate: z.string().datetime('Invalid start date format').optional(),
-  endDate: z.string().datetime('Invalid end date format').optional(),
+  // filter and fields are parsed by parseFilterParameters middleware
 });
 
 export const ActivityVenueAssociationSchema = z.object({
@@ -563,12 +516,12 @@ export type UserCreateInput = z.infer<typeof UserCreateSchema>;
 export type UserUpdateInput = z.infer<typeof UserUpdateSchema>;
 export type ParticipantCreateInput = z.infer<typeof ParticipantCreateSchema>;
 export type ParticipantUpdateInput = z.infer<typeof ParticipantUpdateSchema>;
-export type ParticipantSearchQuery = z.infer<typeof ParticipantSearchSchema>;
+// Removed ParticipantSearchQuery - use unified filter[] API instead
 export type GeographicAreaCreateInput = z.infer<typeof GeographicAreaCreateSchema>;
 export type GeographicAreaUpdateInput = z.infer<typeof GeographicAreaUpdateSchema>;
 export type VenueCreateInput = z.infer<typeof VenueCreateSchema>;
 export type VenueUpdateInput = z.infer<typeof VenueUpdateSchema>;
-export type VenueSearchQuery = z.infer<typeof VenueSearchSchema>;
+// Removed VenueSearchQuery - use unified filter[] API instead
 export type ActivityCreateInput = z.infer<typeof ActivityCreateSchema>;
 export type ActivityUpdateInput = z.infer<typeof ActivityUpdateSchema>;
 export type ActivityQueryInput = z.infer<typeof ActivityQuerySchema>;

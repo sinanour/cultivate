@@ -556,31 +556,21 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - DELETE /api/activities/:id/venues/:venueId
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.12, 4.13, 4.14_
 
-  - [x] 11.4a Implement comprehensive activity filtering
-    - Create ActivityQuerySchema validation schema with optional filter arrays (activityTypeIds, activityCategoryIds, status, populationIds) and date range filters (startDate, endDate)
-    - Use Zod preprocess to normalize array parameters (single value, multiple parameters, comma-separated)
-    - Update ActivityService.getActivities() to accept all filter parameters
-    - Implement activity type filter (OR logic: type IN (A, B))
-    - Implement activity category filter (OR logic: category IN (A, B))
-    - Implement status filter (OR logic: status IN (ACTIVE, PLANNED))
-    - Implement population filter (OR logic: activity has at least one participant in specified populations)
-    - Implement startDate filter (activity.startDate >= startDate)
-    - Implement endDate filter (activity.endDate <= endDate OR activity.endDate IS NULL)
-    - Apply AND logic across all filter dimensions
-    - Update ActivityRepository to support all filter combinations
-    - Update GET /api/activities route handler to accept and validate all filter parameters
-    - _Requirements: 4.20, 4.21, 4.22, 4.23, 4.24, 4.25, 4.26, 4.27, 4.28, 4.29, 4.30, 4.31, 4.32, 4.33, 4.34, 4.35, 4.36, 4.37, 4.38_
+  - [x] 11.4a Implement unified flexible filtering for activities
+    - This task is now superseded by task 42 (Implement unified flexible filtering system)
+    - Legacy dedicated filter parameters (activityTypeIds, activityCategoryIds, status, populationIds, startDate, endDate) removed
+    - All filtering now uses unified filter[] API from Requirement 28
+    - _Requirements: 4.20, 28.1-28.67_
 
   - [ ]* 11.4b Write property tests for activity filtering
-    - **Property 212: Activity Type Filter**
-    - **Property 213: Activity Category Filter**
-    - **Property 214: Activity Status Filter**
-    - **Property 215: Activity Population Filter**
-    - **Property 216: Activity Date Range Filter**
+    - **Property 212: Activity Type Filter** (via filter[activityTypeIds])
+    - **Property 213: Activity Category Filter** (via filter[activityCategoryIds])
+    - **Property 214: Activity Status Filter** (via filter[status])
+    - **Property 215: Activity Population Filter** (via filter[populationIds])
+    - **Property 216: Activity Date Range Filter** (via filter[startDate] and filter[endDate])
     - **Property 217: Activity Multi-Dimensional Filter AND Logic**
     - **Property 218: Activity Within-Dimension OR Logic**
-    - **Property 219: Activity Filter Array Parameter Normalization**
-    - **Validates: Requirements 4.21, 4.22, 4.23, 4.24, 4.25, 4.26, 4.27, 4.28, 4.29, 4.30, 4.31, 4.32, 4.33, 4.34, 4.35, 4.36, 4.37, 4.38**
+    - **Validates: Requirements 28.40-28.46**
 
   - [x] 11.5 Create activity venue history repository
     - Implement CRUD operations for venue history
@@ -897,59 +887,74 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Update OpenAPI specification
     - _Requirements: API Contract alignment_
 
-- [x] 22. Implement high-cardinality text-based filtering
-  - [x] 22.1 Add search parameter support to participant endpoints
-    - Update ParticipantService.getParticipants to accept search parameter
-    - Implement case-insensitive partial matching on name and email fields
-    - Combine search filter with geographic area filter using AND logic
-    - Ensure pagination works with filtered results
-    - _Requirements: 21.2, 21.5, 21.7, 21.8, 21.9_
+- [x] 22. Implement unified flexible filtering system
+  - This task consolidates all entity list filtering into a single unified implementation
+  - Removed legacy dedicated filter parameters (search, activityTypeIds, status, etc.)
+  - All filtering now uses filter[] syntax except geographicAreaId which remains first-class
+  - _Requirements: 28.1-28.67_
 
-  - [x] 22.2 Add search parameter support to venue endpoints
-    - Update VenueService.getVenues to accept search parameter
-    - Implement case-insensitive partial matching on name and address fields
-    - Combine search filter with geographic area filter using AND logic
-    - Ensure pagination works with filtered results
-    - _Requirements: 21.1, 21.4, 21.7, 21.8, 21.9_
+  - [x] 22.1 Create filter parser middleware
+    - Parse filter[fieldName] query parameters into structured filter object
+    - Parse fields query parameter into array of field names
+    - Keep geographicAreaId as separate top-level parameter
+    - Validate filter field names against entity schema
+    - _Requirements: 28.9, 28.10, 28.12, 28.18-28.20_
 
-  - [x] 22.3 Add search parameter support to geographic area endpoints
-    - Update GeographicAreaService.getGeographicAreas to accept search parameter
-    - Implement case-insensitive partial matching on name field
-    - Combine search filter with geographic area filter using AND logic
-    - Ensure pagination works with filtered results
-    - _Requirements: 21.3, 21.6, 21.7, 21.8, 21.9_
+  - [x] 22.2 Implement dynamic Prisma query builder in repositories
+    - Create buildWhereClause() method that handles any filter object
+    - Use contains mode for high-cardinality text fields (name, email, phone, address, nickname)
+    - Use in operator for low-cardinality array fields (activityTypeIds, status, populationIds, etc.)
+    - Create buildSelectClause() method that handles fields array
+    - Support dot notation for nested relations (e.g., activityType.name)
+    - Push all filtering to database level - no Node.js filtering
+    - _Requirements: 28.7, 28.8, 28.52, 28.53, 28.54_
 
-  - [x] 22.4 Create database indexes for text search optimization
+  - [x] 22.3 Update service layer to use unified filtering
+    - Update ParticipantService.getParticipants() to accept filter and fields parameters
+    - Update ActivityService.getActivities() to accept filter and fields parameters
+    - Update VenueService.getVenues() to accept filter and fields parameters
+    - Update GeographicAreaService.getGeographicAreas() to accept filter and fields parameters
+    - Remove legacy parameter handling (search, activityTypeIds, status, etc.)
+    - Keep geographicAreaId as first-class parameter
+    - Combine geographicAreaId with filter[] using AND logic
+    - _Requirements: 28.1-28.4, 28.11, 28.14_
+
+  - [x] 22.4 Create database indexes for optimization
     - Add GIN trigram indexes on participants.name and participants.email
     - Add GIN trigram indexes on venues.name and venues.address
     - Add GIN trigram index on geographic_areas.name
+    - Add indexes on activity.name
     - Create Prisma migration for index creation
     - Enable pg_trgm extension in PostgreSQL
-    - _Requirements: 21.10_
+    - _Requirements: 28.51_
 
-  - [x] 22.5 Update route handlers to accept search query parameter
-    - Update GET /api/v1/participants route to accept ?search parameter
-    - Update GET /api/v1/venues route to accept ?search parameter
-    - Update GET /api/v1/geographic-areas route to accept ?search parameter
-    - Validate search parameter (optional string, max 200 chars)
-    - Pass search parameter to service layer
-    - _Requirements: 21.1, 21.2, 21.3_
+  - [x] 22.5 Update route handlers with unified filtering
+    - Update GET /api/v1/participants route to use filter[] and fields parameters
+    - Update GET /api/v1/venues route to use filter[] and fields parameters
+    - Update GET /api/v1/activities route to use filter[] and fields parameters
+    - Update GET /api/v1/geographic-areas route to use filter[] and fields parameters
+    - Remove legacy parameter handling from routes
+    - Keep geographicAreaId and depth parameters
+    - _Requirements: 28.1-28.4, 28.12, 28.24-28.27_
 
   - [x] 22.6 Update OpenAPI documentation
-    - Document search query parameter for participants endpoint
-    - Document search query parameter for venues endpoint
-    - Document search query parameter for geographic areas endpoint
-    - Include examples showing combined search and geographic filtering
-    - _Requirements: 21.1, 21.2, 21.3, 21.7_
+    - Document filter[] parameter syntax for all entity list endpoints
+    - Document fields parameter for attribute selection
+    - Document geographicAreaId as first-class parameter
+    - Remove documentation for legacy parameters (search, activityTypeIds, status, etc.)
+    - Include examples showing filter[] and fields usage
+    - _Requirements: 28.9, 28.15-28.16, 28.60-28.67_
 
-  - [ ]* 22.7 Write property tests for text-based filtering
-    - **Property 118: Venue Text Search Filtering**
-    - **Property 119: Participant Text Search Filtering**
-    - **Property 120: Geographic Area Text Search Filtering**
-    - **Property 121: Combined Search and Geographic Filtering**
-    - **Property 122: Filtered Result Pagination**
-    - **Property 123: Search Query Optimization**
-    - **Validates: Requirements 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10**
+  - [ ]* 22.7 Write property tests for unified filtering
+    - **Property 118: Unified Filter Syntax**
+    - **Property 119: High-Cardinality Partial Matching**
+    - **Property 120: Low-Cardinality Exact Matching**
+    - **Property 121: Multiple Filter AND Logic**
+    - **Property 122: Geographic Area First-Class Filter**
+    - **Property 123: Field Selection Optimization**
+    - **Property 124: Nested Relation Field Selection**
+    - **Property 125: Database-Level Filter Execution**
+    - **Validates: Requirements 28.7, 28.8, 28.9, 28.10, 28.11, 28.12, 28.14, 28.52, 28.53**
 
 - [ ] 23. Enhance Participant entity with additional optional fields
   - [ ] 23.1 Create Prisma migration for new participant fields
@@ -1759,6 +1764,41 @@ if (geographicAreaId) {
   - Verify each group's metrics are correctly filtered
   - Verify grouped results sum to match ungrouped totals
 
+- [x] 43. Fix participant population filtering to handle many-to-many relationship
+  - **Issue:** ParticipantService naively passes populationIds filter to buildWhereClause, which doesn't understand the many-to-many relationship through ParticipantPopulation mapping entity
+  - **Root Cause:** The flexible filtering system (buildWhereClause) is designed for simple field filters, but population filtering requires a nested query through the participantPopulations relation
+  - **Correct Pattern:** Activity repository correctly implements population filtering using nested Prisma query (see activity.repository.ts lines 145-157)
+  - _Requirements: 28.33, 28.34, 3.24_
+
+  - [x] 43.1 Update ParticipantService.getParticipantsFlexible to handle population filter specially
+    - Extract populationIds from filter object before passing to buildWhereClause
+    - Build population filter using nested Prisma query pattern (same as activity repository)
+    - Merge population filter with flexible filter using AND logic
+    - Pass merged filter to repository
+    - _Requirements: 28.33, 28.34_
+
+  - [x] 43.2 Update ParticipantRepository.findAllPaginated to accept pre-built where clause
+    - Modify signature to accept optional where parameter
+    - Merge provided where clause with any additional filters
+    - Ensure backward compatibility with existing calls
+    - _Requirements: 28.33, 28.34_
+
+  - [x]* 43.3 Write integration test for participant population filtering
+    - Create test data with participants in different populations
+    - Request participants with filter[populationIds]=[population1, population2]
+    - Verify only participants in specified populations are returned
+    - Verify OR logic within population dimension (participant in ANY of the specified populations)
+    - Test with single population ID
+    - Test with multiple population IDs
+    - Test with non-existent population ID (returns empty)
+    - **Validates: Requirements 28.33, 28.34, 3.24**
+
+  - [x] 43.4 Update OpenAPI documentation
+    - Document that filter[populationIds] accepts array of UUIDs
+    - Clarify OR logic within population dimension
+    - Add example showing population filtering
+    - _Requirements: 28.33, 28.34_
+
 
 - [x] 41. Implement fake data generation script for load testing
   - [x] 41.1 Create script structure and safety mechanisms
@@ -2222,3 +2262,257 @@ if (geographicAreaId) {
   - Verify ongoing activities are handled correctly
   - Verify participants who moved are shown at all relevant venues
   - Verify null effectiveFrom dates are handled correctly
+
+
+- [x] 44. Implement flexible server-side filtering with customizable attribute selection
+  - [x] 44.1 Create filter parameter parsing middleware
+    - Create middleware to parse filter[fieldName] query parameters into structured filter object
+    - Parse fields query parameter into array of field names
+    - Validate field names against entity schemas
+    - Attach parsed filter and fields to request object for use in services
+    - Handle URL encoding and special characters properly
+    - _Requirements: 28.9, 28.14, 28.15, 28.18_
+
+  - [x] 44.2 Create field classification utility
+    - Create utility function to classify fields as high-cardinality or low-cardinality
+    - Define high-cardinality fields: name, email, phone, address, nickname
+    - Define low-cardinality fields: activityType, activityCategory, role, population, areaType, venueType, status
+    - Use classification to determine matching strategy (partial vs exact)
+    - _Requirements: 28.5, 28.6, 28.7, 28.8_
+
+  - [x] 44.3 Create dynamic Prisma query builder utility
+    - Create buildWhereClause(filter) utility function
+    - For high-cardinality text fields: use { contains: value, mode: 'insensitive' }
+    - For low-cardinality array fields: use { in: values }
+    - For exact match fields: use direct equality
+    - Merge with existing legacy filter parameters using AND logic
+    - _Requirements: 28.7, 28.8, 28.11, 28.12, 28.13_
+
+  - [x] 44.4 Create dynamic Prisma select builder utility
+    - Create buildSelectClause(fields) utility function
+    - Parse field names and build Prisma select object
+    - Handle dot notation for nested relations (e.g., "activityType.name")
+    - Build nested select objects recursively for multi-level relations
+    - Return undefined when fields parameter is omitted (select all fields)
+    - Validate all field names are valid for the entity type
+    - _Requirements: 28.16, 28.17, 28.20, 28.21, 28.22_
+
+  - [x] 44.5 Update ParticipantService for flexible filtering
+    - Update getParticipants() method signature to accept filter and fields parameters
+    - Integrate buildWhereClause() to handle filter[name], filter[email], filter[phone], filter[nickname], filter[dateOfBirth], filter[dateOfRegistration], filter[populationIds]
+    - Integrate buildSelectClause() to handle fields parameter
+    - Merge new filters with existing geographicAreaId and search filters using AND logic
+    - Maintain backward compatibility with existing filter parameters
+    - _Requirements: 28.1, 28.23, 28.27, 28.28, 28.29, 28.30, 28.31, 28.32, 28.33, 28.34_
+
+  - [x] 44.6 Update VenueService for flexible filtering
+    - Update getVenues() method signature to accept filter and fields parameters
+    - Integrate buildWhereClause() to handle filter[name], filter[address], filter[venueType], filter[geographicAreaIds]
+    - Integrate buildSelectClause() to handle fields parameter
+    - Merge new filters with existing geographicAreaId and search filters using AND logic
+    - Maintain backward compatibility with existing filter parameters
+    - _Requirements: 28.2, 28.24, 28.35, 28.36, 28.37, 28.38, 28.39_
+
+  - [x] 44.7 Update ActivityService for flexible filtering
+    - Update getActivities() method signature to accept filter and fields parameters
+    - Integrate buildWhereClause() to handle filter[name], filter[activityTypeIds], filter[activityCategoryIds], filter[status], filter[populationIds], filter[startDate], filter[endDate]
+    - Integrate buildSelectClause() to handle fields parameter
+    - Merge new filters with existing legacy filter parameters using AND logic
+    - Maintain backward compatibility with existing filter parameters
+    - _Requirements: 28.3, 28.25, 28.40, 28.41, 28.42, 28.43, 28.44, 28.45, 28.46, 28.47_
+
+  - [x] 44.8 Update GeographicAreaService for flexible filtering
+    - Update getGeographicAreas() method signature to accept filter and fields parameters
+    - Integrate buildWhereClause() to handle filter[name], filter[areaType], filter[parentGeographicAreaId]
+    - Integrate buildSelectClause() to handle fields parameter
+    - Merge new filters with existing geographicAreaId, search, and depth parameters using AND logic
+    - Maintain backward compatibility with existing filter parameters
+    - _Requirements: 28.4, 28.26, 28.48, 28.49, 28.50, 28.51_
+
+  - [x] 44.9 Update route handlers to accept new query parameters
+    - Update GET /api/v1/participants route to parse and pass filter and fields parameters
+    - Update GET /api/v1/venues route to parse and pass filter and fields parameters
+    - Update GET /api/v1/activities route to parse and pass filter and fields parameters
+    - Update GET /api/v1/geographic-areas route to parse and pass filter and fields parameters
+    - Use filter parsing middleware to extract filter[fieldName] parameters
+    - Parse fields parameter as comma-separated string
+    - Pass parsed parameters to service layer methods
+    - _Requirements: 28.9, 28.10, 28.14, 28.15_
+
+  - [x] 44.10 Update Zod validation schemas
+    - Update ParticipantQuerySchema to include optional filter object and fields string
+    - Update VenueQuerySchema to include optional filter object and fields string
+    - Update ActivityQuerySchema to include optional filter object and fields string
+    - Update GeographicAreaQuerySchema to include optional filter object and fields string
+    - Validate filter field names are valid for each entity type
+    - Validate fields parameter contains valid field names
+    - _Requirements: 28.18, 28.19_
+
+  - [x] 44.11 Optimize database queries for flexible filtering
+    - Ensure existing GIN trigram indexes cover all high-cardinality text fields
+    - Verify indexes exist on: participants.name, participants.email, participants.phone, participants.nickname, venues.name, venues.address, activities.name, geographic_areas.name
+    - Add any missing indexes via Prisma migration
+    - Test query performance with various filter combinations
+    - Use Prisma's select optimization to reduce data transfer
+    - Use Prisma's include optimization for nested relations
+    - _Requirements: 28.52, 28.53, 28.54, 28.55_
+
+  - [x] 44.12 Maintain pagination with flexible filtering
+    - Ensure pagination (page, limit, total, totalPages) works correctly with filter and fields parameters
+    - Calculate total count based on all applied filters (geographic authorization + legacy + flexible)
+    - Verify skip/take logic works with dynamic where clauses
+    - Test pagination with various filter and fields combinations
+    - _Requirements: 28.56, 28.58_
+
+  - [x] 44.13 Apply geographic authorization before flexible filters
+    - Ensure geographic authorization filtering is applied first in the query pipeline
+    - Merge geographic authorization where clauses with flexible filter where clauses using AND logic
+    - Verify authorization filtering works correctly with attribute selection
+    - Test that unauthorized entities are never returned regardless of filter/fields parameters
+    - _Requirements: 28.57_
+
+  - [x] 44.14 Update OpenAPI documentation
+    - Document filter[fieldName] query parameter pattern for all list endpoints
+    - Document fields query parameter for all list endpoints
+    - Provide examples showing flexible filtering with attribute selection
+    - Document high-cardinality vs low-cardinality field behavior
+    - Document dot notation for nested relation fields
+    - Include example requests and responses for common use cases
+    - _Requirements: 28.63, 28.64, 28.65, 28.66_
+
+  - [ ]* 44.15 Write property tests for flexible filtering and attribute selection
+    - **Property 234: High-Cardinality Field Partial Matching**
+    - **Property 235: Low-Cardinality Field Exact Matching**
+    - **Property 236: Multiple Filter AND Logic**
+    - **Property 237: Attribute Selection Field Limiting**
+    - **Property 238: Nested Relation Field Inclusion**
+    - **Property 239: Invalid Field Name Rejection**
+    - **Property 240: Default Full Entity Response**
+    - **Property 241: Legacy and New Filter Combination**
+    - **Property 242: Filtered Total Count Accuracy**
+    - **Property 243: Participant Email Filter Example**
+    - **Property 244: Venue Multi-Filter Example**
+    - **Property 245: Activity Nested Field Example**
+    - **Property 246: Geographic Area Type Filter Example**
+    - **Validates: Requirements 28.7, 28.8, 28.11, 28.12, 28.13, 28.16, 28.17, 28.18, 28.19, 28.20, 28.21, 28.22, 28.23, 28.24, 28.25, 28.26, 28.27, 28.28, 28.29, 28.30, 28.31, 28.32, 28.33, 28.34, 28.35, 28.36, 28.37, 28.38, 28.39, 28.40, 28.41, 28.42, 28.43, 28.44, 28.45, 28.46, 28.47, 28.48, 28.49, 28.50, 28.51, 28.58, 28.60, 28.61, 28.63, 28.64, 28.65, 28.66**
+
+- [x] 45. Checkpoint - Verify flexible filtering and attribute selection
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test filtering on all high-cardinality text fields with partial matching
+  - Test filtering on low-cardinality enumerated fields with exact matching
+  - Test attribute selection with various field combinations
+  - Test nested relation fields with dot notation
+  - Test backward compatibility with existing filter parameters
+  - Test performance with large datasets and complex filters
+  - Verify geographic authorization still works with new filtering
+  - Test example use cases from requirements (email filter, venue multi-filter, activity nested field, geographic area type filter)
+
+
+- [ ] 49. Refactor to remove legacy filter parameters and consolidate to unified filtering API
+  - This task removes all legacy dedicated filter parameters from entity list endpoints
+  - Only geographicAreaId remains as a first-class parameter
+  - All other filtering uses the unified filter[] API
+  - _Requirements: 3.6, 4.20, 5A.6, 28.1-28.67_
+
+  - [ ] 49.1 Remove legacy filter parameters from ActivityService
+    - Remove activityTypeIds, activityCategoryIds, status, populationIds, startDate, endDate parameters from getActivities()
+    - Update method to only accept: page, limit, geographicAreaId, filter, fields
+    - Update internal logic to read these filters from filter object instead
+    - Ensure filter[activityTypeIds], filter[status], filter[populationIds], etc. work correctly
+    - Remove array parameter normalization code (no longer needed at top level)
+    - _Requirements: 4.20, 28.40-28.46_
+
+  - [ ] 49.2 Remove legacy filter parameters from ParticipantService
+    - Remove search parameter from getParticipants()
+    - Update method to only accept: page, limit, geographicAreaId, filter, fields
+    - Ensure filter[name], filter[email] provide same functionality as old search parameter
+    - _Requirements: 3.6, 28.28-28.34_
+
+  - [ ] 49.3 Remove legacy filter parameters from VenueService
+    - Remove search parameter from getVenues()
+    - Update method to only accept: page, limit, geographicAreaId, filter, fields
+    - Ensure filter[name], filter[address] provide same functionality as old search parameter
+    - _Requirements: 5A.6, 28.36-28.39_
+
+  - [ ] 49.4 Remove legacy filter parameters from GeographicAreaService
+    - Remove search parameter from getGeographicAreas()
+    - Update method to only accept: page, limit, geographicAreaId, depth, filter, fields
+    - Ensure filter[name] provides same functionality as old search parameter
+    - _Requirements: 28.47-28.50_
+
+  - [ ] 49.5 Update route handlers to remove legacy parameters
+    - Remove search parameter handling from GET /api/v1/participants route
+    - Remove activityTypeIds, activityCategoryIds, status, populationIds, startDate, endDate from GET /api/v1/activities route
+    - Remove search parameter handling from GET /api/v1/venues route
+    - Remove search parameter handling from GET /api/v1/geographic-areas route
+    - Keep only: page, limit, geographicAreaId, depth (for geographic areas), filter[], fields
+    - _Requirements: 3.1, 4.1, 5A.1, 5B.1, 28.1-28.4_
+
+  - [ ] 49.6 Update Zod validation schemas
+    - Remove search, activityTypeIds, activityCategoryIds, status, populationIds, startDate, endDate from ActivityQuerySchema
+    - Remove search from ParticipantQuerySchema
+    - Remove search from VenueQuerySchema
+    - Remove search from GeographicAreaQuerySchema
+    - Keep only: page, limit, geographicAreaId, depth, filter, fields
+    - _Requirements: 28.1-28.4_
+
+  - [ ] 49.7 Update ActivityRepository to use unified filtering
+    - Remove dedicated filter methods for activityTypeIds, status, etc.
+    - Consolidate into single findMany() method that accepts dynamic where clause
+    - Ensure buildWhereClause() handles all activity filter fields correctly
+    - Test that filter[activityTypeIds], filter[status], etc. work via unified API
+    - _Requirements: 28.3, 28.40-28.46, 28.52_
+
+  - [ ] 49.8 Update ParticipantRepository to use unified filtering
+    - Remove dedicated search methods
+    - Consolidate into single findMany() method that accepts dynamic where clause
+    - Ensure buildWhereClause() handles all participant filter fields correctly
+    - Test that filter[name], filter[email], etc. work via unified API
+    - _Requirements: 28.1, 28.28-28.34, 28.52_
+
+  - [ ] 49.9 Update VenueRepository to use unified filtering
+    - Remove dedicated search methods
+    - Consolidate into single findMany() method that accepts dynamic where clause
+    - Ensure buildWhereClause() handles all venue filter fields correctly
+    - Test that filter[name], filter[address], etc. work via unified API
+    - _Requirements: 28.2, 28.36-28.39, 28.52_
+
+  - [ ] 49.10 Update GeographicAreaRepository to use unified filtering
+    - Remove dedicated search methods
+    - Consolidate into single findMany() method that accepts dynamic where clause
+    - Ensure buildWhereClause() handles all geographic area filter fields correctly
+    - Test that filter[name], filter[areaType], etc. work via unified API
+    - _Requirements: 28.4, 28.47-28.50, 28.52_
+
+  - [ ] 49.11 Update OpenAPI documentation
+    - Remove documentation for legacy parameters (search, activityTypeIds, status, etc.)
+    - Update all entity list endpoint documentation to show only: page, limit, geographicAreaId, filter[], fields
+    - Add comprehensive examples showing filter[] usage for all common scenarios
+    - Document that geographicAreaId is the only first-class filter parameter
+    - _Requirements: 28.12, 28.60-28.67_
+
+  - [ ] 49.12 Update integration tests
+    - Update existing tests that use legacy parameters to use filter[] syntax
+    - Test that filter[activityTypeIds] works same as old activityTypeIds parameter
+    - Test that filter[status] works same as old status parameter
+    - Test that filter[name] works same as old search parameter
+    - Verify all existing functionality still works via unified API
+    - _Requirements: 28.1-28.4, 28.28-28.50_
+
+  - [ ]* 49.13 Write property tests for legacy parameter removal
+    - **Property 247: Activity Type Filter via Unified API**
+    - **Property 248: Activity Status Filter via Unified API**
+    - **Property 249: Participant Name Filter via Unified API**
+    - **Property 250: Venue Name Filter via Unified API**
+    - **Property 251: Geographic Area Name Filter via Unified API**
+    - **Property 252: No Legacy Parameters Accepted**
+    - **Validates: Requirements 3.6, 4.20, 5A.6, 28.1-28.4, 28.28-28.50**
+
+- [ ] 50. Checkpoint - Verify unified filtering refactoring
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify no legacy parameters are accepted (except geographicAreaId)
+  - Test all filtering scenarios work via filter[] syntax
+  - Test field selection works for all entities
+  - Verify performance is optimized (database-level filtering)
+  - Confirm single code path handles all filtering scenarios
+  - Test backward compatibility (no filters = return all entities)

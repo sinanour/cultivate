@@ -172,12 +172,13 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
                 }}
                 entityType="participant"
                 fetchFunction={async (params) => {
-                  return await ParticipantService.getParticipants(
-                    params.page,
-                    params.limit,
-                    params.geographicAreaId,
-                    params.search
-                  );
+                  return await ParticipantService.getParticipantsFlexible({
+                    page: params.page,
+                    limit: params.limit,
+                    geographicAreaId: params.geographicAreaId,
+                    filter: params.filter,
+                    fields: params.fields
+                  });
                 }}
                 formatOption={(p) => ({
                   value: p.id,

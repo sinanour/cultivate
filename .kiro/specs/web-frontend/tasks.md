@@ -303,6 +303,79 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 190: Resume Button Visibility Logic**
     - **Validates: Requirements 26B.17, 26B.18, 26B.19, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.29, 26B.30, 26B.31**
 
+  - [x] 7.3b Integrate FilterGroupingPanel into ParticipantList
+    - Import FilterGroupingPanel component
+    - Remove existing client-side search controls
+    - Configure FilterGroupingPanel with groupingMode="none" (no grouping controls)
+    - Configure FilterGroupingPanel with includeDateRange=false (no date range needed)
+    - Set filterProperties with lazy loading callbacks for each property:
+      - Name: loadItems callback fetches matching participants from ParticipantService with search parameter
+      - Email: loadItems callback fetches matching participants from ParticipantService with search parameter
+      - Date of Birth: loadItems callback provides date range picker (no async loading needed)
+      - Date of Registration: loadItems callback provides date range picker (no async loading needed)
+      - Population: loadItems callback fetches populations from PopulationService
+    - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
+    - Extract filterTokens from FilterGroupingState
+    - Convert filter tokens to API query parameters (name, email, dobStart, dobEnd, dorStart, dorEnd, populationIds)
+    - Apply OR logic within filter dimensions (e.g., multiple populations)
+    - Apply AND logic across filter dimensions (e.g., populations AND date of birth range)
+    - Pass filter parameters to ParticipantService.getParticipants() as query parameters
+    - Note: URL synchronization is now handled by FilterGroupingPanel internally
+    - Pass isLoading prop to FilterGroupingPanel during data fetching
+    - Integrate FilterGroupingPanel filters with global geographic area filter using AND logic
+    - Maintain existing batched loading behavior (100 items per batch)
+    - Keep ProgressIndicator for batched loading feedback
+    - _Requirements: 5B.1, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.11, 5B.12, 5B.13, 5B.14, 5B.15, 5B.16, 5B.17, 5B.18, 5B.19, 5B.20, 5B.21, 5B.22, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
+
+  - [ ]* 7.3c Write property tests for ParticipantList FilterGroupingPanel integration
+    - **Property 202: ParticipantList FilterGroupingPanel Configuration**
+    - **Property 203: ParticipantList Filter Application**
+    - **Property 204: ParticipantList URL Synchronization**
+    - **Property 205: ParticipantList Multi-Dimensional Filtering Logic**
+    - **Validates: Requirements 5B.1, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.12, 5B.13, 5B.14, 5B.15, 5B.16, 5B.17, 5B.18, 5B.19, 5B.20, 5B.21, 5B.22**
+
+  - [x] 7.3d Fix URL filter initialization on list pages
+    - [x] 7.3d.1 Update FilterGroupingPanel to support initial filter resolution
+      - Add internal state to track whether initial URL filters have been resolved
+      - When component mounts with URL parameters, extract filter tokens from URL
+      - For each filter token with display names, invoke the corresponding loadItems callback to resolve display names to UUIDs
+      - Display loading indicator while resolving filter values from URL
+      - After all filter values are resolved, store resolved UUIDs in internal state
+      - Mark initial resolution as complete
+      - Do NOT mark state as dirty during initial URL filter resolution
+      - After resolution completes, automatically invoke onUpdate callback with resolved filter state
+      - _Requirements: 5B.49, 5B.50, 5B.51, 5B.52, 5B.53, 5B.54, 5B.55, 5B.56, 5B.57_
+
+    - [x] 7.3d.2 Update ParticipantList to wait for filter resolution
+      - Modify data fetching logic to wait for FilterGroupingPanel's initial filter resolution
+      - When URL has filter parameters, delay initial data fetch until filters are resolved
+      - When URL has no filter parameters, fetch data immediately
+      - Apply resolved filter UUIDs to API query parameters
+      - Handle both URL filters and global geographic area filter together
+      - _Requirements: 5B.49, 5B.50, 5B.53, 5B.56, 5B.57_
+
+    - [x] 7.3d.3 Update VenueList to wait for filter resolution
+      - Apply same filter resolution logic as ParticipantList
+      - Wait for URL filter resolution before initial data fetch
+      - Handle both URL filters and global geographic area filter together
+      - _Requirements: 5B.49, 5B.50, 5B.53, 5B.56, 5B.57_
+
+    - [x] 7.3d.4 Update ActivityList to wait for filter resolution
+      - Apply same filter resolution logic as ParticipantList
+      - Wait for URL filter resolution before initial data fetch
+      - Handle both URL filters and global geographic area filter together
+      - _Requirements: 5B.49, 5B.50, 5B.53, 5B.56, 5B.57_
+
+    - [ ]* 7.3d.5 Write property tests for URL filter initialization
+      - **Property 219: URL Filter Resolution Before Data Fetch**
+      - **Property 220: Immediate Data Fetch Without URL Filters**
+      - **Property 221: Display Name to UUID Resolution**
+      - **Property 222: Loading Indicator During Resolution**
+      - **Property 223: Automatic Filter Application After Resolution**
+      - **Property 224: Non-Dirty State After URL Restoration**
+      - **Property 225: Combined URL and Global Filter Resolution**
+      - **Validates: Requirements 5B.49, 5B.50, 5B.51, 5B.52, 5B.53, 5B.54, 5B.55, 5B.56, 5B.57**
+
   - [x] 7.2 Create ParticipantFormPage component
     - Dedicated full-page form for create/edit (not a modal)
     - Accessible via routes: /participants/new and /participants/:id/edit
@@ -461,6 +534,36 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 45: Venue Search Functionality**
     - **Property 54a: Venue List Geographic Area Hyperlink**
     - **Validates: Requirements 6A.1, 6A.1a, 6A.2**
+
+  - [x] 8.1a Integrate FilterGroupingPanel into VenueList
+    - Import FilterGroupingPanel component
+    - Remove existing client-side search controls
+    - Configure FilterGroupingPanel with groupingMode="none" (no grouping controls)
+    - Configure FilterGroupingPanel with includeDateRange=false (no date range needed)
+    - Set filterProperties with lazy loading callbacks for each property:
+      - Name: loadItems callback fetches matching venues from VenueService with search parameter
+      - Address: loadItems callback fetches matching venues from VenueService with search parameter
+      - Geographic Area: loadItems callback fetches geographic areas from GeographicAreaService with search parameter
+      - Venue Type: loadItems callback provides predefined venue type options (no async loading needed)
+    - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
+    - Extract filterTokens from FilterGroupingState
+    - Convert filter tokens to API query parameters (name, address, geographicAreaIds, venueTypes)
+    - Apply OR logic within filter dimensions (e.g., multiple geographic areas, multiple venue types)
+    - Apply AND logic across filter dimensions (e.g., geographic areas AND venue types)
+    - Pass filter parameters to VenueService.getVenues() as query parameters
+    - Note: URL synchronization is now handled by FilterGroupingPanel internally
+    - Pass isLoading prop to FilterGroupingPanel during data fetching
+    - Integrate FilterGroupingPanel filters with global geographic area filter using AND logic
+    - Maintain existing batched loading behavior (100 items per batch)
+    - Keep ProgressIndicator for batched loading feedback
+    - _Requirements: 5B.2, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.11, 5B.23, 5B.24, 5B.25, 5B.26, 5B.27, 5B.28, 5B.29, 5B.30, 5B.31, 5B.32, 5B.33, 5B.34, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
+
+  - [ ]* 8.1b Write property tests for VenueList FilterGroupingPanel integration
+    - **Property 206: VenueList FilterGroupingPanel Configuration**
+    - **Property 207: VenueList Filter Application**
+    - **Property 208: VenueList URL Synchronization**
+    - **Property 209: VenueList Multi-Dimensional Filtering Logic**
+    - **Validates: Requirements 5B.2, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.23, 5B.24, 5B.25, 5B.26, 5B.27, 5B.28, 5B.29, 5B.30, 5B.31, 5B.32, 5B.33, 5B.34**
 
   - [x] 8.2 Create VenueFormPage component
     - Dedicated full-page form for create/edit (not a modal)
@@ -655,49 +758,48 @@ This implementation plan covers the React-based web application built with TypeS
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 11. Implement activity management UI
-  - [x] 11.1 Update ActivityList component with PropertyFilter
-    - Replace existing filter controls with CloudScape PropertyFilter component
-    - Add CloudScape DateRangePicker component for date range filtering
-    - Configure PropertyFilter with four filtering properties:
-      - Activity Category (fetched from ActivityCategoryService)
-      - Activity Type (fetched from ActivityTypeService)
-      - Status (PLANNED, ACTIVE, COMPLETED, CANCELLED)
-      - Population (fetched from PopulationService)
-    - Implement handleLoadItems function for async property value loading with debouncing (300ms)
+  - [x] 11.1 Integrate FilterGroupingPanel into ActivityList
+    - Import FilterGroupingPanel component
+    - Remove existing separate PropertyFilter and DateRangePicker controls
+    - Configure FilterGroupingPanel with groupingMode="none" (no grouping controls)
+    - Configure FilterGroupingPanel with includeDateRange=true (date range filtering needed)
+    - Set filterProperties with lazy loading callbacks for each property:
+      - Activity Category: loadItems callback fetches from ActivityCategoryService
+      - Activity Type: loadItems callback fetches from ActivityTypeService
+      - Status: loadItems callback provides predefined status options (PLANNED, ACTIVE, COMPLETED, CANCELLED)
+      - Population: loadItems callback fetches from PopulationService
     - Configure PropertyFilter to support only equals (=) operator (NOT not-equals)
     - Implement token consolidation logic: display multiple values for same property as single token with comma-separated display names
     - Example: "Activity Category = Study Circles, Devotional Gatherings"
     - Implement de-duplication logic using Set to prevent duplicate values within property dimensions
     - Ensure one-to-one mapping between property name and filter token
     - Display human-readable names in tokens (category names, type names, population names) instead of UUIDs
-    - Extract filter values from PropertyFilter tokens (propertyKey and value array)
-    - Convert display names back to IDs for API requests
+    - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
+    - Extract dateRange and filterTokens from FilterGroupingState
+    - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, status, populationIds, startDate, endDate)
     - Apply OR logic within each filter dimension (multiple categories, multiple types, etc.)
     - Apply AND logic across different filter dimensions (categories AND statuses AND populations)
-    - Persist PropertyFilter tokens and date range to URL query parameters
-    - Restore filters from URL parameters on component mount
-    - Send all filter criteria to backend via ActivityService.getActivities() with query parameters
-    - Integrate with global geographic area filter using AND logic
-    - Position DateRangePicker and PropertyFilter in consistent layout matching analytics dashboards
+    - Pass filter parameters to ActivityService.getActivities() as query parameters
+    - Note: URL synchronization is now handled by FilterGroupingPanel internally
+    - Pass isLoading prop to FilterGroupingPanel during data fetching
+    - Integrate FilterGroupingPanel filters with global geographic area filter using AND logic
     - Provide comprehensive i18nStrings for PropertyFilter accessibility
     - Maintain existing batched loading behavior (100 items per batch)
-    - Keep progress indicator during batch loading ("Loading activities: X / Y")
-    - Implement Cancel button to interrupt batched loading
-    - When loading is cancelled, keep already-loaded activities visible
-    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
-    - Position Resume button near entity count where loading indicator was displayed
+    - Keep ProgressIndicator for batched loading feedback
+    - _Requirements: 5B.3, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.11, 5B.35, 5B.36, 5B.37, 5B.38, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.7, 5A.8, 5A.9, 5A.10, 5A.11, 5A.12, 5A.13, 5A.14, 5A.15, 5A.16, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.26, 5A.27, 5A.28, 5A.29, 5A.30, 5A.31, 5A.32, 5A.33, 5A.34, 5A.35, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
     - When Resume button is clicked, continue fetching batches from where loading was interrupted
     - Show Resume button only when loading was cancelled and more items remain
     - Hide Resume button when all items loaded or when filters change
     - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11, 5.12, 5.13, 5.14, 5.15, 5.16, 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.7, 5A.8, 5A.9, 5A.10, 5A.11, 5A.12, 5A.13, 5A.14, 5A.15, 5A.16, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.26, 5A.27, 5A.28, 5A.29, 5A.30, 5A.31, 5A.32, 5A.33, 5A.34, 5A.35, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
 
-  - [ ]* 11.1a Write property tests for ActivityList PropertyFilter
-    - **Property 182: PropertyFilter Token Consolidation**
-    - **Property 183: PropertyFilter Display Name Rendering**
-    - **Property 184: PropertyFilter URL Synchronization**
-    - **Property 185: PropertyFilter Multi-Dimensional Logic**
-    - **Property 186: PropertyFilter De-duplication**
-    - **Validates: Requirements 5A.13, 5A.14, 5A.15, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.27, 5A.28**
+  - [ ]* 11.1a Write property tests for ActivityList FilterGroupingPanel integration
+    - **Property 182: FilterGroupingPanel Token Consolidation**
+    - **Property 183: FilterGroupingPanel Display Name Rendering**
+    - **Property 184: FilterGroupingPanel URL Synchronization**
+    - **Property 185: FilterGroupingPanel Multi-Dimensional Logic**
+    - **Property 186: FilterGroupingPanel De-duplication**
+    - **Property 210: ActivityList FilterGroupingPanel Configuration**
+    - **Validates: Requirements 5B.3, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.35, 5B.36, 5B.37, 5B.38, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5A.13, 5A.14, 5A.15, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.27, 5A.28**
 
   - [ ]* 11.2 Write property tests for activity list
     - **Property 11: Activity List Display**
@@ -882,16 +984,19 @@ This implementation plan covers the React-based web application built with TypeS
     - Remove existing MapFilters component or refactor it to use FilterGroupingPanel
     - Configure FilterGroupingPanel with exclusive grouping mode
     - Set groupingDimensions to: ['Activities by Type', 'Activities by Category', 'Participant Homes', 'Venues']
-    - Set filterProperties to support: Activity Category, Activity Type, Status, Date Range, Population
+    - Set filterProperties with lazy loading callbacks for each property:
+      - Activity Category: loadItems callback fetches from ActivityCategoryService
+      - Activity Type: loadItems callback fetches from ActivityTypeService
+      - Status: loadItems callback provides predefined status options (PLANNED, ACTIVE, COMPLETED, CANCELLED)
+      - Population: loadItems callback fetches from PopulationService
     - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
     - Extract dateRange, filterTokens, and map mode (grouping string) from FilterGroupingState
     - Convert filter tokens to API query parameters for marker endpoints
     - Pass filters and map mode to MapDataService marker fetch methods
-    - Update URL query parameters when filters/map mode applied
-    - Restore filters/map mode from URL on component mount
+    - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during marker fetching
     - Pass disablePopulationFilter prop based on selected map mode (true when mode is "Venues")
-    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56, 6C.57, 6C.58, 6C.59, 6C.60, 7C.23, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
+    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56, 6C.57, 6C.58, 6C.59, 6C.60, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.51, 7C.54_
 
   - [x] 13.5 Update global geographic filter integration
     - Apply global filter to all map modes
@@ -917,40 +1022,74 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 68e: Batch Error Handling with Retry**
     - **Validates: Requirements 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6C.6, 6C.7, 6C.8, 6C.9, 6C.10, 6C.11, 6C.12, 6C.13, 6C.14, 6C.15, 6C.16, 6C.17, 6C.18, 6C.19, 6C.20, 6C.21, 6C.22, 6C.23, 6C.37, 6C.51**
 
-- [ ] 13A. Implement FilterGroupingPanel component
-  - [ ] 13A.1 Create FilterGroupingPanel component
+- [x] 13A. Implement FilterGroupingPanel component
+  - [x] 13A.1 Create FilterGroupingPanel component with lazy loading and URL synchronization
     - Create new component file at web-frontend/src/components/common/FilterGroupingPanel.tsx
-    - Accept props: filterProperties, groupingMode ('additive' | 'exclusive'), groupingDimensions, initialDateRange, initialFilterTokens, initialGrouping, onUpdate, isLoading, disablePopulationFilter
-    - Implement three-section layout: DateRangePicker, PropertyFilter, Grouping Controls
-    - Use CloudScape SpaceBetween or Grid for responsive layout
+    - Accept props: filterProperties (with loadItems callbacks), groupingMode ('additive' | 'exclusive' | 'none'), groupingDimensions, initialDateRange, initialFilterTokens, initialGrouping, onUpdate, isLoading, disablePopulationFilter, urlParamPrefix (optional, defaults to "filter_")
+    - Implement vertical stacked layout where each filtering component renders on its own row
+    - Use CloudScape SpaceBetween with direction="vertical" for overall layout
+    - First row layout:
+      - Use flexbox to create horizontal layout with appropriate spacing (gap: 16px)
+      - First filtering component (DateRangePicker if includeDateRange=true, otherwise PropertyFilter) with flex: 1
+      - Action buttons (Update and Clear All) positioned beside the first component, grouped with SpaceBetween direction="horizontal"
+    - Second row (if DateRangePicker is on first row): PropertyFilter component spanning full width
+    - Third row (if grouping controls included): Grouping controls spanning full width
     - Implement internal state management for pending changes (dateRange, filterTokens, grouping)
     - Track whether current state differs from last applied state (isDirty flag)
-    - Render CloudScape DateRangePicker component for date range selection
+    - Render CloudScape DateRangePicker component for date range selection (when includeDateRange=true)
     - Render CloudScape PropertyFilter component with provided filterProperties
+    - Configure PropertyFilter to use loadItems callbacks from filterProperties prop for lazy loading
+    - When user types in PropertyFilter input: invoke corresponding property's loadItems callback with user's input text
+    - Implement 300ms debouncing for loadItems callback invocations
+    - Display loading indicator in PropertyFilter while waiting for loadItems results
+    - Handle loadItems callback errors gracefully with error messages
     - When groupingMode is 'additive': render CloudScape Multiselect for grouping dimensions
     - When groupingMode is 'exclusive': render CloudScape SegmentedControl for grouping options
+    - When groupingMode is 'none': omit grouping controls entirely
     - Render "Update" button using CloudScape Button with variant="primary"
     - Disable "Update" button when isDirty is false (no changes made)
     - Enable "Update" button when isDirty is true (changes pending)
     - When "Update" button clicked: invoke onUpdate callback with current FilterGroupingState
+    - When "Update" button clicked: synchronize state to URL query parameters
     - When "Update" button clicked: mark current state as applied (set isDirty to false)
     - Render "Clear All" button using CloudScape Button
     - When "Clear All" clicked: reset dateRange to null, clear filterTokens array, reset grouping to default
+    - When "Clear All" clicked: remove all filter-related URL query parameters while preserving other page parameters
     - When isLoading prop is true: display loading indicator on "Update" button
     - When isLoading prop is true: disable all controls (DateRangePicker, PropertyFilter, grouping controls)
     - When disablePopulationFilter prop is true: disable or hide population property in PropertyFilter
+    - Implement URL synchronization using React Router's useSearchParams hook:
+      - Read URL query parameters on component mount to initialize filter state
+      - Use consistent naming pattern with urlParamPrefix (e.g., "filter_activityCategory", "filter_venue")
+      - Map property filters to URL: `filter_<propertyKey>=value1,value2` (comma-separated for multiple values)
+      - Map date range to URL: `filter_startDate=YYYY-MM-DD&filter_endDate=YYYY-MM-DD`
+      - Map grouping (additive) to URL: `filter_groupBy=dim1,dim2,dim3`
+      - Map grouping (exclusive) to URL: `filter_groupBy=selectedOption`
+      - When updating URL, preserve all existing query parameters that don't use the filter prefix
+      - When clearing filters, remove only parameters with the filter prefix
+      - Use setSearchParams with replace: false to support browser back/forward navigation
     - Provide accessible keyboard navigation for all controls
     - Include appropriate ARIA labels for screen readers
-    - _Requirements: 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36_
+    - _Requirements: 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36, 7C.37, 7C.38, 7C.39, 7C.40, 7C.41, 7C.42, 7C.43, 7C.44, 7C.45, 7C.46, 7C.47, 7C.48, 7C.49, 7C.50, 7C.51, 7C.52_
 
   - [ ]* 13A.2 Write property tests for FilterGroupingPanel
-    - **Property 196: FilterGroupingPanel Three-Section Layout**
+    - **Property 196: FilterGroupingPanel Vertical Stacked Layout**
+    - **Property 196a: FilterGroupingPanel First Row Layout with Action Buttons**
+    - **Property 196b: FilterGroupingPanel Action Button Positioning**
     - **Property 197: FilterGroupingPanel Update Button Behavior**
     - **Property 198: FilterGroupingPanel Additive Grouping Mode**
     - **Property 199: FilterGroupingPanel Exclusive Grouping Mode**
     - **Property 200: FilterGroupingPanel Clear All Functionality**
     - **Property 201: FilterGroupingPanel Loading State Handling**
-    - **Validates: Requirements 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.14, 7C.15, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36**
+    - **Property 211: FilterGroupingPanel Lazy Loading Callback Invocation**
+    - **Property 212: FilterGroupingPanel Lazy Loading Debouncing**
+    - **Property 213: FilterGroupingPanel Lazy Loading Error Handling**
+    - **Property 214: FilterGroupingPanel URL Parameter Preservation**
+    - **Property 215: FilterGroupingPanel URL Parameter Removal on Clear**
+    - **Property 216: FilterGroupingPanel URL Parameter Namespace Isolation**
+    - **Property 217: FilterGroupingPanel URL Initialization from Parameters**
+    - **Property 218: FilterGroupingPanel Browser Navigation Support**
+    - **Validates: Requirements 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36, 7C.37, 7C.38, 7C.39, 7C.40, 7C.41, 7C.42, 7C.43, 7C.44, 7C.45, 7C.46, 7C.47, 7C.48, 7C.49, 7C.50, 7C.51, 7C.52**
 
 - [x] 14. Implement analytics dashboards
   - [ ] 14.0 Integrate FilterGroupingPanel into EngagementDashboard
@@ -958,15 +1097,18 @@ This implementation plan covers the React-based web application built with TypeS
     - Remove existing separate filter controls (PropertyFilter, DateRangePicker, grouping dropdowns)
     - Configure FilterGroupingPanel with additive grouping mode
     - Set groupingDimensions to: ['activityCategory', 'activityType', 'venue', 'geographicArea']
-    - Set filterProperties to support: Activity Category, Activity Type, Venue, Population
+    - Set filterProperties with lazy loading callbacks for each property:
+      - Activity Category: loadItems callback fetches from ActivityCategoryService
+      - Activity Type: loadItems callback fetches from ActivityTypeService
+      - Venue: loadItems callback fetches from VenueService with search parameter
+      - Population: loadItems callback fetches from PopulationService
     - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
     - Extract dateRange, filterTokens, and grouping array from FilterGroupingState
     - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, venueIds, populationIds)
     - Pass filters and grouping to analytics API queries
-    - Update URL query parameters when filters/grouping applied
-    - Restore filters/grouping from URL on component mount
+    - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during data fetching
-    - _Requirements: 7.15, 7.16, 7.17, 7.18, 7C.21, 7C.24, 7C.27, 7C.28, 7C.29, 7C.30_
+    - _Requirements: 7.15, 7.16, 7.17, 7.18, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.49, 7C.52_
 
   - [x] 14.1 Create EngagementDashboard component
     - Display comprehensive temporal metrics using CloudScape Cards:
@@ -1164,16 +1306,20 @@ This implementation plan covers the React-based web application built with TypeS
     - Remove existing separate filter controls (dropdowns, SegmentedControl for grouping)
     - Configure FilterGroupingPanel with exclusive grouping mode
     - Set groupingDimensions to: ['All', 'Activity Type', 'Activity Category']
-    - Set filterProperties to support: Activity Category, Activity Type, Geographic Area, Venue, Population
+    - Set filterProperties with lazy loading callbacks for each property:
+      - Activity Category: loadItems callback fetches from ActivityCategoryService
+      - Activity Type: loadItems callback fetches from ActivityTypeService
+      - Geographic Area: loadItems callback fetches from GeographicAreaService with search parameter
+      - Venue: loadItems callback fetches from VenueService with search parameter
+      - Population: loadItems callback fetches from PopulationService
     - Include time period selector within FilterGroupingPanel or adjacent to it
     - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
     - Extract dateRange, filterTokens, and grouping string from FilterGroupingState
     - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds)
     - Pass filters, time period, and grouping mode to growth analytics API queries
-    - Update URL query parameters when filters/grouping applied
-    - Restore filters/grouping from URL on component mount
+    - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during data fetching
-    - _Requirements: 7.85, 7.86, 7.87, 7.88, 7C.22, 7C.25, 7C.27, 7C.28, 7C.29, 7C.30_
+    - _Requirements: 7.85, 7.86, 7.87, 7.88, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.50, 7C.53_
 
   - [x] 14.2 Create GrowthDashboard component
     - Display three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)

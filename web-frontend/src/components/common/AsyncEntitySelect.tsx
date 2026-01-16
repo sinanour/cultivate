@@ -20,7 +20,8 @@ export interface AsyncEntitySelectProps {
     page?: number;
     limit?: number;
     geographicAreaId?: string;
-    search?: string;
+    filter?: Record<string, any>;
+    fields?: string[];
   }) => Promise<{ data: any[]; pagination?: any }>;
   formatOption: (entity: any) => AsyncEntitySelectOption;
   placeholder?: string;
@@ -64,7 +65,7 @@ export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
         page: 1,
         limit: 50,
         geographicAreaId: selectedGeographicAreaId || undefined,
-        search: debouncedSearch || undefined,
+        filter: debouncedSearch ? { name: debouncedSearch } : undefined,
       }),
     staleTime: 30000, // Cache for 30 seconds
   });

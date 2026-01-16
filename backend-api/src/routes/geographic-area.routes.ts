@@ -139,7 +139,7 @@ export class GeographicAreaRoutes {
             const page = req.query.page ? parseInt(req.query.page as string) : undefined;
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
-            const search = req.query.search as string | undefined;
+            // Removed legacy search parameter - use filter[name] instead
             const depth = req.query.depth ? parseInt(req.query.depth as string) : undefined;
 
             // Extract authorization info from request
@@ -164,7 +164,6 @@ export class GeographicAreaRoutes {
                     page,
                     limit,
                     geographicAreaId,
-                    search,
                     depth,
                     authorizedAreaIds,
                     hasGeographicRestrictions,
@@ -174,7 +173,6 @@ export class GeographicAreaRoutes {
             } else {
                 const areas = await this.geographicAreaService.getAllGeographicAreas(
                     geographicAreaId,
-                    search,
                     depth,
                     authorizedAreaIds,
                     hasGeographicRestrictions,

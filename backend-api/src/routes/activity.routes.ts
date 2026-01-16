@@ -4,6 +4,7 @@ import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
 import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
+import { parseFilterParameters, ParsedFilterRequest } from '../middleware/filter-parser.middleware';
 import {
     ActivityCreateSchema,
     ActivityUpdateSchema,
@@ -33,6 +34,7 @@ export class ActivityRoutes {
             '/',
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireAuthenticated(),
+            parseFilterParameters,
             ValidationMiddleware.validateQuery(ActivityQuerySchema),
             this.getAll.bind(this)
         );
@@ -115,24 +117,21 @@ export class ActivityRoutes {
       );
   }
 
-    private async getAll(req: AuthenticatedRequest, res: Response) {
+    private async getAll(req: AuthenticatedRequest & ParsedFilterRequest, res: Response) {
         try {
             // Query parameters are already validated and normalized by ActivityQuerySchema
             const {
                 page,
                 limit,
-                geographicAreaId,
-                activityTypeIds,
-                activityCategoryIds,
-                status,
-                populationIds,
-                startDate: startDateStr,
-                endDate: endDateStr
+                geographicAreaId
             } = req.query as any;
 
-            // Convert date strings to Date objects
-            const startDate = startDateStr ? new Date(startDateStr) : undefined;
-            const endDate = endDateStr ? new Date(endDateStr) : undefined;
+            // Removed legacy parameters: activityTypeIds, activityCategoryIds, status, populationIds, startDate, endDate
+            // Use filter[activityTypeId], filter[status], filter[populationIds], filter[startDate], filter[endDate] instead
+
+            // Extract parsed filter and fields from middleware
+            const filter = req.parsedFilter;
+            const fields = req.parsedFields;
 
             // Extract authorization info from request
             const authorizedAreaIds = req.user?.authorizedAreaIds || [];
@@ -151,28 +150,22 @@ export class ActivityRoutes {
             }
 
             // Check if any filters are provided (beyond pagination and geographic area)
-            const hasAdvancedFilters = activityTypeIds || activityCategoryIds || status || populationIds || startDate || endDate;
+            const hasAdvancedFilters = filter && Object.keys(filter).length > 0;
 
-            if (hasAdvancedFilters) {
-                // Use comprehensive filtering method
-                const result = await this.activityService.getAllActivitiesWithFilters(
+            if (hasAdvancedFilters || fields) {
+                // Use flexible filtering method
+                const result = await this.activityService.getActivitiesFlexible({
                     page,
                     limit,
-                    {
-                        geographicAreaId,
-                        activityTypeIds,
-                        activityCategoryIds,
-                        status,
-                        populationIds,
-                        startDate,
-                        endDate,
-                    },
+                    geographicAreaId,
+                    filter,
+                    fields,
                     authorizedAreaIds,
                     hasGeographicRestrictions
-                );
+                });
                 res.status(200).json({ success: true, ...result });
             } else if (page !== undefined || limit !== undefined) {
-            // Use simple pagination with geographic filter only
+                // Use simple pagination with geographic filter only
                 const result = await this.activityService.getAllActivitiesPaginated(
                     page,
                     limit,

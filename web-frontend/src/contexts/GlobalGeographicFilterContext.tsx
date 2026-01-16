@@ -339,13 +339,13 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
         abortControllerRef.current = new AbortController();
         
         // Fetch first page of areas with pagination
-        const response = await GeographicAreaService.getGeographicAreas(
-          1,  // page 1
-          100,  // limit 100 per page
-          selectedGeographicAreaId,  // geographicAreaId filter
-          searchQuery || undefined,  // search query
-          undefined  // depth - no limit, fetch all matching areas
-        );
+        const response = await GeographicAreaService.getGeographicAreasFlexible({
+          page: 1,
+          limit: 100,
+          geographicAreaId: selectedGeographicAreaId,
+          filter: searchQuery ? { name: searchQuery } : undefined,
+          depth: undefined  // No depth limit, fetch all matching areas
+        });
 
         // Handle both paginated and non-paginated responses
         const areas = Array.isArray(response) ? response : response.data;
@@ -405,13 +405,13 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
       setIsSearching(true);
       const nextPage = currentPage + 1;
 
-      const response = await GeographicAreaService.getGeographicAreas(
-        nextPage,
-        100,
-        selectedGeographicAreaId,
-        searchQuery || undefined,
-        undefined  // No depth limit
-      );
+      const response = await GeographicAreaService.getGeographicAreasFlexible({
+        page: nextPage,
+        limit: 100,
+        geographicAreaId: selectedGeographicAreaId,
+        filter: searchQuery ? { name: searchQuery } : undefined,
+        depth: undefined  // No depth limit
+      });
 
       // Handle both paginated and non-paginated responses
       const areas = Array.isArray(response) ? response : response.data;

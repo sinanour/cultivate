@@ -102,10 +102,9 @@ export function GeographicAreaList() {
   const { data: geographicAreasResponse, isLoading } = useQuery({
     queryKey: ['geographicAreas', selectedGeographicAreaId, 'depth-1'],
     queryFn: () => GeographicAreaService.getGeographicAreas(
-      undefined, 
-      undefined, 
-      selectedGeographicAreaId, 
-      undefined, 
+      undefined,  // page
+      undefined,  // limit
+      selectedGeographicAreaId,  // geographicAreaId
       1  // depth=1 for lazy loading
     ),
   });

@@ -261,6 +261,87 @@ The Web Frontend package provides a responsive React-based web application that 
 34. THE Web_App SHALL position the DateRangePicker and PropertyFilter components together in a consistent layout matching the analytics dashboards
 35. THE Web_App SHALL provide comprehensive i18nStrings for PropertyFilter accessibility and localization
 
+### Requirement 5B: Unified List Filtering with FilterGroupingPanel
+
+**User Story:** As a community organizer, I want to filter participant, venue, and activity lists using the FilterGroupingPanel component with server-side filtering and URL synchronization, so that I can efficiently find specific records with a consistent interface across all list pages.
+
+#### Acceptance Criteria
+
+**General FilterGroupingPanel Integration:**
+
+1. THE Web_App SHALL use the FilterGroupingPanel component on the ParticipantList page for filtering participants
+2. THE Web_App SHALL use the FilterGroupingPanel component on the VenueList page for filtering venues
+3. THE Web_App SHALL use the FilterGroupingPanel component on the ActivityList page for filtering activities
+4. WHEN using FilterGroupingPanel on list pages, THE Web_App SHALL configure it without grouping controls (grouping is not needed for record retrieval)
+5. WHEN using FilterGroupingPanel on list pages, THE Web_App SHALL configure it with property-based filtering only
+6. WHEN the user clicks the "Update" button on the FilterGroupingPanel, THE Web_App SHALL send filter criteria to the backend API as query parameters
+7. THE Web_App SHALL persist all filter selections to URL query parameters for shareability and browser navigation
+8. WHEN a user navigates to a list page URL with filter query parameters, THE Web_App SHALL restore and apply those filters automatically
+9. WHEN a user changes filter selections and clicks "Update", THE Web_App SHALL update the browser URL to reflect the current filter state
+10. THE Web_App SHALL enable browser back/forward navigation to move between different filter configurations on list pages
+11. WHEN a user shares a filtered list page URL, THE Web_App SHALL display the same filtered results for other users
+
+**ParticipantList Filtering:**
+
+12. WHEN using FilterGroupingPanel on ParticipantList, THE Web_App SHALL configure filter properties for: Name, Email, Date of Birth, Date of Registration, Population
+13. THE FilterGroupingPanel on ParticipantList SHALL implement lazy loading of property values when the user types in the filter input
+14. WHEN a user types in the Name or Email filter, THE Web_App SHALL asynchronously fetch matching participants from the backend
+15. THE FilterGroupingPanel on ParticipantList SHALL debounce user input to avoid excessive API requests (minimum 300ms delay)
+16. THE FilterGroupingPanel on ParticipantList SHALL support filtering by one or more populations
+17. WHEN a population filter is applied to ParticipantList with multiple values, THE Web_App SHALL include only participants who belong to at least one of the specified populations (OR logic within dimension)
+18. THE FilterGroupingPanel on ParticipantList SHALL support date range filtering for Date of Birth and Date of Registration
+19. WHEN multiple filter dimensions are applied on ParticipantList (e.g., populations AND date of birth range), THE Web_App SHALL apply all filters using AND logic across dimensions
+20. THE Web_App SHALL send all participant filter parameters to GET /api/v1/participants as query parameters
+21. THE Web_App SHALL persist participant filter selections to URL query parameters (e.g., ?populationIds=uuid1,uuid2&dobStart=2000-01-01&dobEnd=2010-12-31)
+22. WHEN a user navigates to a ParticipantList URL with filter query parameters, THE Web_App SHALL restore the filters and apply them to the participant list
+
+**VenueList Filtering:**
+
+23. WHEN using FilterGroupingPanel on VenueList, THE Web_App SHALL configure filter properties for: Name, Address, Geographic Area, Venue Type
+24. THE FilterGroupingPanel on VenueList SHALL implement lazy loading of property values when the user types in the filter input
+25. WHEN a user types in the Name or Address filter, THE Web_App SHALL asynchronously fetch matching venues from the backend
+26. THE FilterGroupingPanel on VenueList SHALL debounce user input to avoid excessive API requests (minimum 300ms delay)
+27. THE FilterGroupingPanel on VenueList SHALL support filtering by one or more geographic areas
+28. WHEN a geographic area filter is applied to VenueList with multiple values, THE Web_App SHALL include only venues in at least one of the specified geographic areas or their descendants (OR logic within dimension)
+29. THE FilterGroupingPanel on VenueList SHALL support filtering by one or more venue types
+30. WHEN a venue type filter is applied to VenueList with multiple values, THE Web_App SHALL include only venues of at least one of the specified venue types (OR logic within dimension)
+31. WHEN multiple filter dimensions are applied on VenueList (e.g., geographic areas AND venue types), THE Web_App SHALL apply all filters using AND logic across dimensions
+32. THE Web_App SHALL send all venue filter parameters to GET /api/v1/venues as query parameters
+33. THE Web_App SHALL persist venue filter selections to URL query parameters (e.g., ?geographicAreaIds=uuid1,uuid2&venueTypes=COMMUNITY_CENTER,PARK)
+34. WHEN a user navigates to a VenueList URL with filter query parameters, THE Web_App SHALL restore the filters and apply them to the venue list
+
+**ActivityList Filtering Enhancement:**
+
+35. THE Web_App SHALL continue using FilterGroupingPanel on ActivityList as specified in Requirement 5A
+36. THE ActivityList FilterGroupingPanel SHALL include CloudScape DateRangePicker for date range filtering
+37. THE ActivityList FilterGroupingPanel SHALL NOT include grouping controls (grouping is not needed for record retrieval)
+38. THE Web_App SHALL maintain all existing ActivityList filtering behavior specified in Requirement 5A
+
+**Common Filtering Behavior:**
+
+39. THE FilterGroupingPanel on all list pages SHALL support only the equals (=) operator for all properties
+40. THE FilterGroupingPanel on all list pages SHALL NOT support the not equals (!=) operator
+41. WHEN multiple values are selected for a single property dimension on any list page, THE FilterGroupingPanel SHALL display a single token showing all values as a comma-separated list
+42. THE FilterGroupingPanel on all list pages SHALL maintain a one-to-one mapping between property name and filter token
+43. THE FilterGroupingPanel on all list pages SHALL display human-readable display names in filter tokens instead of UUIDs
+44. THE FilterGroupingPanel on all list pages SHALL prevent duplicate values within a single property dimension
+45. THE FilterGroupingPanel on all list pages SHALL allow users to clear all filters at once using the "Clear All" button
+46. WHEN the FilterGroupingPanel is empty on any list page, THE Web_App SHALL display all records without filtering
+47. THE FilterGroupingPanel on all list pages SHALL integrate with the global geographic area filter from the application header
+48. WHEN both FilterGroupingPanel filters and global geographic area filter are active, THE Web_App SHALL apply both filters using AND logic
+
+**URL Filter Initialization and Application:**
+
+49. WHEN a list page loads with filter query parameters in the URL, THE Web_App SHALL wait for filter display names to be resolved to UUIDs before fetching the entity list
+50. WHEN a list page loads without filter query parameters in the URL, THE Web_App SHALL immediately fetch the entity list without waiting
+51. THE FilterGroupingPanel SHALL resolve filter display names to UUIDs by invoking the lazy loading callbacks for each filter property
+52. WHEN filter display names are being resolved from URL parameters, THE FilterGroupingPanel SHALL display a loading indicator
+53. AFTER filter display names are resolved to UUIDs, THE FilterGroupingPanel SHALL automatically trigger the initial data fetch with the resolved filter values
+54. THE FilterGroupingPanel SHALL NOT mark the initial state as "dirty" when filters are restored from URL parameters
+55. AFTER the initial data fetch completes with URL-restored filters, THE FilterGroupingPanel SHALL enable the "Update" button for subsequent user changes
+56. THE Web_App SHALL apply the same URL filter initialization logic whether or not a global geographic area filter is active
+57. WHEN both URL filter parameters and a global geographic area filter are present on page load, THE Web_App SHALL wait for both to be resolved before fetching the entity list
+
 ### Requirement 2A: Form Presentation Pattern for Major Entities
 
 **User Story:** As a mobile user, I want to edit participants, activities, venues, geographic areas, and users on dedicated pages rather than in modal dialogs, so that I can scroll through large forms comfortably and have a better mobile experience.
@@ -738,42 +819,84 @@ The Web Frontend package provides a responsive React-based web application that 
 
 #### Acceptance Criteria
 
+**Component Structure and Behavior:**
+
 1. THE Web_App SHALL provide a reusable FilterGroupingPanel component for use on all data visualization pages
-2. THE FilterGroupingPanel SHALL consist of three sections arranged horizontally or vertically: date range selection, property-based filtering, and grouping controls
-3. THE FilterGroupingPanel SHALL include a CloudScape DateRangePicker component for date range selection
-4. THE FilterGroupingPanel SHALL include a CloudScape PropertyFilter component for multi-dimensional filtering
-5. THE FilterGroupingPanel SHALL include grouping controls that adapt based on the grouping mode (additive or exclusive)
-6. THE FilterGroupingPanel SHALL provide an explicit "Update" button to apply the selected filters and grouping options
-7. WHEN the "Update" button is clicked, THE FilterGroupingPanel SHALL invoke a callback with the current filter and grouping state
-8. THE FilterGroupingPanel SHALL NOT automatically apply filters as the user makes selections
-9. THE FilterGroupingPanel SHALL allow users to adjust multiple filters and grouping options before applying them all at once
-10. WHEN the grouping mode is additive, THE FilterGroupingPanel SHALL display a multi-select dropdown component for grouping dimension selection
-11. WHEN the grouping mode is exclusive, THE FilterGroupingPanel SHALL display a CloudScape SegmentedControl component for grouping dimension selection
-12. THE FilterGroupingPanel SHALL accept configuration props specifying available filter properties, available grouping dimensions, and grouping mode (additive or exclusive)
-13. THE FilterGroupingPanel SHALL accept initial values for date range, filter tokens, and selected grouping dimensions
-14. THE FilterGroupingPanel SHALL maintain internal state for user selections until the "Update" button is clicked
-15. THE FilterGroupingPanel SHALL provide visual feedback when filters or grouping options have been changed but not yet applied (e.g., highlight the "Update" button)
-16. THE FilterGroupingPanel SHALL integrate with URL query parameter synchronization (parent component responsibility)
-17. THE FilterGroupingPanel SHALL support all PropertyFilter features: lazy loading, debouncing, token consolidation, and de-duplication
-18. THE FilterGroupingPanel SHALL use consistent styling and layout across all pages where it is used
-19. THE FilterGroupingPanel SHALL be responsive and adapt to different screen sizes
-20. THE FilterGroupingPanel SHALL provide clear labels for all controls (date range, filters, grouping)
-21. THE Web_App SHALL use the FilterGroupingPanel component on the Engagement Dashboard page
-22. THE Web_App SHALL use the FilterGroupingPanel component on the Growth Dashboard page
-23. THE Web_App SHALL use the FilterGroupingPanel component on the Map View page
-24. WHEN used on the Engagement Dashboard, THE FilterGroupingPanel SHALL support additive grouping with dimensions: activity category, activity type, venue, geographic area
-25. WHEN used on the Growth Dashboard, THE FilterGroupingPanel SHALL support exclusive grouping with options: "All", "Activity Type", "Activity Category"
-26. WHEN used on the Map View, THE FilterGroupingPanel SHALL support exclusive grouping with options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
-27. THE FilterGroupingPanel SHALL accept a prop specifying which filter properties are available (e.g., activity category, activity type, venue, population)
-28. THE FilterGroupingPanel SHALL accept a prop specifying which grouping dimensions are available
-29. THE FilterGroupingPanel SHALL accept a prop specifying the grouping mode (additive or exclusive)
-30. THE FilterGroupingPanel SHALL provide a callback prop that is invoked when the "Update" button is clicked, passing the complete filter and grouping state
-31. THE FilterGroupingPanel SHALL disable the "Update" button when no changes have been made to filters or grouping
-32. THE FilterGroupingPanel SHALL enable the "Update" button when any filter or grouping selection has changed
-33. THE FilterGroupingPanel SHALL provide a "Clear All" button to reset all filters and grouping to their default states
-34. WHEN the "Clear All" button is clicked, THE FilterGroupingPanel SHALL reset date range, clear all filter tokens, and reset grouping to default
-35. THE FilterGroupingPanel SHALL display a loading indicator on the "Update" button while the parent component is fetching new data
-36. THE FilterGroupingPanel SHALL disable all controls while the parent component is fetching new data to prevent conflicting updates
+2. THE FilterGroupingPanel SHALL use a vertical stacked layout where each filtering component renders on its own row
+3. THE FilterGroupingPanel SHALL render the first filtering component (DateRangePicker if included, otherwise PropertyFilter) on the first row with action buttons positioned beside it with appropriate spacing
+4. THE FilterGroupingPanel SHALL render the PropertyFilter component on its own row (second row if DateRangePicker is on first row, otherwise first row)
+5. THE FilterGroupingPanel SHALL render grouping controls (if included) on their own row spanning full width
+6. THE FilterGroupingPanel SHALL position action buttons (Update and Clear All) on the first row, beside the first filtering component with appropriate spacing between them
+7. THE FilterGroupingPanel SHALL include a CloudScape DateRangePicker component for date range selection (when includeDateRange is true)
+8. THE FilterGroupingPanel SHALL include a CloudScape PropertyFilter component for multi-dimensional filtering (always included)
+9. THE FilterGroupingPanel SHALL include grouping controls that adapt based on the grouping mode (additive or exclusive)
+10. THE FilterGroupingPanel SHALL provide an explicit "Update" button to apply the selected filters and grouping options
+11. WHEN the "Update" button is clicked, THE FilterGroupingPanel SHALL invoke a callback with the current filter and grouping state
+12. THE FilterGroupingPanel SHALL NOT automatically apply filters as the user makes selections
+13. THE FilterGroupingPanel SHALL allow users to adjust multiple filters and grouping options before applying them all at once
+14. WHEN the grouping mode is additive, THE FilterGroupingPanel SHALL display a multi-select dropdown component for grouping dimension selection
+15. WHEN the grouping mode is exclusive, THE FilterGroupingPanel SHALL display a CloudScape SegmentedControl component for grouping dimension selection
+
+**Configuration and Props:**
+
+16. THE FilterGroupingPanel SHALL accept configuration props specifying available filter properties, available grouping dimensions, and grouping mode (additive or exclusive)
+17. THE FilterGroupingPanel SHALL accept initial values for date range, filter tokens, and selected grouping dimensions
+18. THE FilterGroupingPanel SHALL accept a prop specifying which filter properties are available (e.g., activity category, activity type, venue, population)
+19. THE FilterGroupingPanel SHALL accept a prop specifying which grouping dimensions are available
+20. THE FilterGroupingPanel SHALL accept a prop specifying the grouping mode (additive or exclusive)
+21. THE FilterGroupingPanel SHALL accept a callback prop that is invoked when the "Update" button is clicked, passing the complete filter and grouping state
+
+**Lazy Loading Support for High-Cardinality Properties:**
+
+22. THE FilterGroupingPanel SHALL accept a prop providing a callback function for each filter property to support lazy loading of property values
+23. WHEN a user types in a PropertyFilter input field, THE FilterGroupingPanel SHALL invoke the corresponding property's lazy loading callback with the user's input text
+24. THE lazy loading callback SHALL return a Promise that resolves to an array of property value options matching the user's input
+25. THE FilterGroupingPanel SHALL debounce lazy loading callback invocations to avoid excessive API requests (minimum 300ms delay)
+26. THE FilterGroupingPanel SHALL display a loading indicator in the PropertyFilter while waiting for lazy loading callback results
+27. THE FilterGroupingPanel SHALL handle lazy loading callback errors gracefully and display appropriate error messages to the user
+28. THE lazy loading callback SHALL be responsible for fetching data from backend APIs, applying search filters, and returning formatted options
+29. THE FilterGroupingPanel SHALL support lazy loading for high-cardinality properties such as participants, venues, and geographic areas
+
+**URL Synchronization (Non-Destructive):**
+
+30. THE FilterGroupingPanel SHALL encapsulate logic for synchronizing its filter and grouping state to URL query parameters
+31. THE FilterGroupingPanel SHALL use a consistent naming pattern to map filter property names to URL query parameter keys
+32. THE FilterGroupingPanel SHALL prefix all filter-related query parameters with a consistent namespace (e.g., "filter_") to avoid conflicts with other page parameters
+33. WHEN updating URL query parameters, THE FilterGroupingPanel SHALL preserve all existing query parameters that do not pertain to its own filter properties
+34. WHEN updating URL query parameters, THE FilterGroupingPanel SHALL NOT mutate, remove, or interfere with query parameters managed by other components (e.g., global geographic area filter)
+35. WHEN a filter is cleared, THE FilterGroupingPanel SHALL remove the corresponding query parameter from the URL
+36. WHEN all filters are cleared via the "Clear All" button, THE FilterGroupingPanel SHALL remove all filter-related query parameters while preserving other page parameters
+37. THE FilterGroupingPanel SHALL read initial filter state from URL query parameters on component mount
+38. THE FilterGroupingPanel SHALL update URL query parameters when the "Update" button is clicked and filters are applied
+39. THE FilterGroupingPanel SHALL use React Router's navigation API (e.g., useSearchParams) to update URL query parameters without causing page reloads
+40. THE FilterGroupingPanel SHALL support browser back/forward navigation by responding to URL query parameter changes
+
+**State Management and User Feedback:**
+
+41. THE FilterGroupingPanel SHALL maintain internal state for user selections until the "Update" button is clicked
+42. THE FilterGroupingPanel SHALL provide visual feedback when filters or grouping options have been changed but not yet applied (e.g., highlight the "Update" button)
+43. THE FilterGroupingPanel SHALL support all PropertyFilter features: lazy loading, debouncing, token consolidation, and de-duplication
+44. THE FilterGroupingPanel SHALL disable the "Update" button when no changes have been made to filters or grouping
+45. THE FilterGroupingPanel SHALL enable the "Update" button when any filter or grouping selection has changed
+46. THE FilterGroupingPanel SHALL provide a "Clear All" button to reset all filters and grouping to their default states
+47. WHEN the "Clear All" button is clicked, THE FilterGroupingPanel SHALL reset date range, clear all filter tokens, and reset grouping to default
+48. THE FilterGroupingPanel SHALL display a loading indicator on the "Update" button while the parent component is fetching new data
+49. THE FilterGroupingPanel SHALL disable all controls while the parent component is fetching new data to prevent conflicting updates
+
+**Styling and Accessibility:**
+
+50. THE FilterGroupingPanel SHALL use consistent styling and layout across all pages where it is used
+51. THE FilterGroupingPanel SHALL be responsive and adapt to different screen sizes
+52. THE FilterGroupingPanel SHALL provide clear labels for all controls (date range, filters, grouping)
+
+**Usage Across Application:**
+
+53. THE Web_App SHALL use the FilterGroupingPanel component on the Engagement Dashboard page
+54. THE Web_App SHALL use the FilterGroupingPanel component on the Growth Dashboard page
+55. THE Web_App SHALL use the FilterGroupingPanel component on the Map View page
+56. WHEN used on the Engagement Dashboard, THE FilterGroupingPanel SHALL support additive grouping with dimensions: activity category, activity type, venue, geographic area
+57. WHEN used on the Growth Dashboard, THE FilterGroupingPanel SHALL support exclusive grouping with options: "All", "Activity Type", "Activity Category"
+58. WHEN used on the Map View, THE FilterGroupingPanel SHALL support exclusive grouping with options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
 
 ### Requirement 8: Authentication UI
 

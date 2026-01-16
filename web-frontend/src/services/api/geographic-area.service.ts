@@ -21,32 +21,57 @@ export interface PaginatedResponse<T> {
   };
 }
 
-export class GeographicAreaService {
-  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null, search?: string, depth?: number): Promise<PaginatedResponse<GeographicArea>> {
-    const params = new URLSearchParams();
-    if (page) params.append('page', page.toString());
-    if (limit) params.append('limit', limit.toString());
-    if (geographicAreaId) params.append('geographicAreaId', geographicAreaId);
-    if (search) params.append('search', search);
-    if (depth !== undefined) params.append('depth', depth.toString());
-    const query = params.toString();
+export interface FlexibleGeographicAreaQuery {
+  page?: number;
+  limit?: number;
+  geographicAreaId?: string | null;
+  depth?: number;
+  filter?: Record<string, any>;
+  fields?: string[];
+}
 
-    // If page or limit is provided, expect paginated response
-    if (page || limit) {
-      return ApiClient.get<PaginatedResponse<GeographicArea>>(`/geographic-areas${query ? `?${query}` : ''}`);
+export class GeographicAreaService {
+  /**
+   * Get geographic areas with flexible filtering and customizable attribute selection
+   */
+  static async getGeographicAreasFlexible(options: FlexibleGeographicAreaQuery): Promise<PaginatedResponse<GeographicArea>> {
+    const params = new URLSearchParams();
+
+    // Add pagination params
+    if (options.page) params.append('page', options.page.toString());
+    if (options.limit) params.append('limit', options.limit.toString());
+
+    // Add geographicAreaId as first-class parameter (not in filter[])
+    if (options.geographicAreaId) params.append('geographicAreaId', options.geographicAreaId);
+
+    // Add depth parameter (geographic areas only)
+    if (options.depth !== undefined) params.append('depth', options.depth.toString());
+
+    // Add flexible filter params using filter[fieldName]=value syntax
+    if (options.filter) {
+      for (const [key, value] of Object.entries(options.filter)) {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            params.append(`filter[${key}]`, value.join(','));
+          } else {
+            params.append(`filter[${key}]`, value.toString());
+          }
+        }
+      }
     }
 
-    // Otherwise, ApiClient returns the array directly (unwrapped), so wrap it
-    const areas = await ApiClient.get<GeographicArea[]>(`/geographic-areas${query ? `?${query}` : ''}`);
-    return {
-      data: areas,
-      pagination: {
-        page: 1,
-        limit: areas.length,
-        total: areas.length,
-        totalPages: 1
-      }
-    };
+    // Add fields param
+    if (options.fields && options.fields.length > 0) {
+      params.append('fields', options.fields.join(','));
+    }
+
+    const query = params.toString();
+    return ApiClient.get<PaginatedResponse<GeographicArea>>(`/geographic-areas${query ? `?${query}` : ''}`);
+  }
+
+  static async getGeographicAreas(page?: number, limit?: number, geographicAreaId?: string | null, depth?: number): Promise<PaginatedResponse<GeographicArea>> {
+    // Delegate to flexible method for backward compatibility
+    return this.getGeographicAreasFlexible({ page, limit, geographicAreaId, depth });
   }
 
   static async getChildrenPaginated(parentId: string, page: number = 1, limit: number = 100): Promise<PaginatedResponse<GeographicArea>> {

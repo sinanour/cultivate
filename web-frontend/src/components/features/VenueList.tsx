@@ -7,15 +7,16 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import Link from '@cloudscape-design/components/link';
-import TextFilter from '@cloudscape-design/components/text-filter';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
+import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import type { Venue } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
+import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
@@ -28,7 +29,6 @@ export function VenueList() {
   const { canCreate, canEdit, canDelete } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
-  const [filteringText, setFilteringText] = useState('');
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -36,7 +36,7 @@ export function VenueList() {
   const [showImportResults, setShowImportResults] = useState(false);
   const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isFetchingRef = useRef(false); // Track if we're currently in a fetch cycle
+  const isFetchingRef = useRef(false);
 
   // Batched loading state
   const [allVenues, setAllVenues] = useState<Venue[]>([]);
@@ -46,6 +46,142 @@ export function VenueList() {
   const [loadingError, setLoadingError] = useState<string | undefined>();
   const [hasMorePages, setHasMorePages] = useState(true);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [filtersReady, setFiltersReady] = useState(false); // Track if initial filters are resolved
+
+  // Separate state variables (like EngagementDashboard) - NOT a single filterState object
+  const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
+    tokens: [],
+    operation: 'and',
+  });
+
+  // Extract individual values from consolidated tokens
+  const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
+    if (!token.value) return [];
+    return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
+  };
+
+  // Filter properties configuration with loadItems callbacks
+  const filterProperties: FilterProperty[] = useMemo(() => [
+    {
+      key: 'name',
+      propertyLabel: 'Name',
+      groupValuesLabel: 'Name values',
+      operators: ['='], // Use equals operator for consistency
+      loadItems: async (filterText: string) => {
+        // Load sample values even with empty filter text
+        const response = await VenueService.getVenuesFlexible({
+          page: 1,
+          limit: 20,
+          geographicAreaId: selectedGeographicAreaId,
+          filter: filterText ? { name: filterText } : undefined,
+          fields: ['id', 'name']
+        });
+        
+        return response.data.map((v: any) => ({
+          propertyKey: 'name',
+          value: v.name,
+          label: v.name,
+        }));
+      },
+    },
+    {
+      key: 'address',
+      propertyLabel: 'Address',
+      groupValuesLabel: 'Address values',
+      operators: ['='], // Use equals operator for consistency
+      loadItems: async (filterText: string) => {
+        // Load sample values even with empty filter text
+        const response = await VenueService.getVenuesFlexible({
+          page: 1,
+          limit: 20,
+          geographicAreaId: selectedGeographicAreaId,
+          filter: filterText ? { address: filterText } : undefined,
+          fields: ['id', 'address']
+        });
+        
+        return response.data.map((v: any) => ({
+          propertyKey: 'address',
+          value: v.address,
+          label: v.address,
+        }));
+      },
+    },
+    {
+      key: 'venueType',
+      propertyLabel: 'Venue Type',
+      groupValuesLabel: 'Venue Type values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        // Only two valid venue types from the backend enum
+        const venueTypes = [
+          { value: 'PUBLIC_BUILDING', label: 'Public Building' },
+          { value: 'PRIVATE_RESIDENCE', label: 'Private Residence' },
+        ];
+        const filtered = venueTypes.filter(vt => 
+          !filterText || vt.label.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        return filtered.map(vt => ({
+          propertyKey: 'venueType',
+          value: vt.value, // Use enum value for backend
+          label: vt.label, // Use human-friendly label for display
+        }));
+      },
+    },
+  ], [selectedGeographicAreaId]); // Depend on selectedGeographicAreaId for venue and area loading
+
+  // Handler for FilterGroupingPanel updates (called when "Update" button clicked)
+  const handleFilterUpdate = (state: FilterGroupingState) => {
+    setPropertyFilterQuery(state.filterTokens);
+  };
+
+  // Handler for when initial URL filter resolution completes
+  const handleInitialResolutionComplete = useCallback(() => {
+    setFiltersReady(true);
+  }, []);
+
+  // Build filter params from propertyFilterQuery
+  const filterParams = useMemo(() => {
+    const params: any = {
+      geographicAreaId: selectedGeographicAreaId,
+      filter: {}, // Initialize filter object
+    };
+    
+    // Extract filters from tokens and add to filter object
+    const nameLabels = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'name' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    
+    const addressLabels = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'address' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    
+    const venueTypeLabels = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'venueType' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    
+    // Add name filter if present
+    if (nameLabels.length > 0) {
+      params.filter.name = nameLabels[0];
+    }
+    
+    // Add address filter if present
+    if (addressLabels.length > 0) {
+      params.filter.address = addressLabels[0];
+    }
+    
+    // Add venueType filter if present
+    if (venueTypeLabels.length > 0) {
+      params.filter.venueType = venueTypeLabels[0];
+    }
+    
+    // Remove empty filter object if no filters
+    if (Object.keys(params.filter).length === 0) {
+      delete params.filter;
+    }
+    
+    return params;
+  }, [propertyFilterQuery, selectedGeographicAreaId]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => VenueService.deleteVenue(id),
@@ -71,8 +207,8 @@ export function VenueList() {
     setLoadingError(undefined);
     setHasMorePages(true);
     setIsCancelled(false);
-    isFetchingRef.current = false; // Reset fetch tracking
-  }, [selectedGeographicAreaId, filteringText]);
+    isFetchingRef.current = false;
+  }, [filterParams]);
 
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
@@ -83,12 +219,12 @@ export function VenueList() {
     setLoadingError(undefined);
 
     try {
-      const response = await VenueService.getVenuesPaginated(
-        currentBatchPage,
-        BATCH_SIZE,
-        selectedGeographicAreaId,
-        filteringText || undefined
-      );
+      const response = await VenueService.getVenuesFlexible({
+        page: currentBatchPage,
+        limit: BATCH_SIZE,
+        geographicAreaId: filterParams.geographicAreaId,
+        filter: filterParams.filter
+      });
       
       setAllVenues(prev => [...prev, ...response.data]);
       setTotalCount(response.pagination.total);
@@ -101,7 +237,7 @@ export function VenueList() {
       setIsLoadingBatch(false);
       isFetchingRef.current = false;
     }
-  }, [currentBatchPage, isLoadingBatch, hasMorePages, selectedGeographicAreaId, filteringText, isCancelled]);
+  }, [currentBatchPage, isLoadingBatch, hasMorePages, filterParams, isCancelled]);
 
   // Cancel loading handler
   const handleCancelLoading = useCallback(() => {
@@ -114,16 +250,18 @@ export function VenueList() {
   const handleResumeLoading = useCallback(() => {
     setIsCancelled(false);
     setHasMorePages(true);
-    // Trigger next batch fetch
     fetchNextBatch();
   }, [fetchNextBatch]);
 
   // Fetch first batch on mount or when dependencies change
   useEffect(() => {
+    // Wait for filters to be ready before fetching
+    if (!filtersReady) return;
+    
     if (currentBatchPage === 1 && hasMorePages && !isLoadingBatch && allVenues.length === 0 && !isFetchingRef.current) {
       fetchNextBatch();
     }
-  }, [currentBatchPage, hasMorePages, isLoadingBatch, allVenues.length, fetchNextBatch]);
+  }, [currentBatchPage, hasMorePages, isLoadingBatch, allVenues.length, fetchNextBatch, filtersReady]);
 
   // Auto-fetch next batch after previous batch renders
   useEffect(() => {
@@ -246,7 +384,19 @@ export function VenueList() {
           {loadingError}
         </Alert>
       )}
+      
       <Table
+        filter={
+          <FilterGroupingPanel
+            filterProperties={filterProperties}
+            groupingMode="none"
+            includeDateRange={false}
+            initialFilterTokens={propertyFilterQuery}
+            onUpdate={handleFilterUpdate}
+            onInitialResolutionComplete={handleInitialResolutionComplete}
+            isLoading={isLoading}
+          />
+        }
         columnDefinitions={[
           {
             id: 'name',
@@ -307,23 +457,12 @@ export function VenueList() {
           <Box textAlign="center" color="inherit">
             <b>No venues</b>
             <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-              {filteringText ? 'No venues match your search.' : 'No venues to display.'}
+              No venues match your filters.
             </Box>
-            {canCreate() && !filteringText && (
+            {canCreate() && (
               <Button onClick={handleCreate}>Create venue</Button>
             )}
           </Box>
-        }
-        filter={
-          <TextFilter
-            filteringText={filteringText}
-            filteringPlaceholder="Search venues by name or address"
-            filteringAriaLabel="Filter venues"
-            onChange={({ detail }) => {
-              setFilteringText(detail.filteringText);
-              setCurrentPageIndex(1);
-            }}
-          />
         }
         header={
           <Header

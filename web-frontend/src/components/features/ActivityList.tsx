@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -8,12 +8,9 @@ import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import Badge from '@cloudscape-design/components/badge';
 import Link from '@cloudscape-design/components/link';
-import PropertyFilter from '@cloudscape-design/components/property-filter';
-import DateRangePicker from '@cloudscape-design/components/date-range-picker';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
-import type { DateRangePickerProps } from '@cloudscape-design/components/date-range-picker';
 import type { Activity } from '../../types';
 import { ActivityService, type ActivityFilterParams } from '../../services/api/activity.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
@@ -24,16 +21,27 @@ import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter
 import { formatDate } from '../../utils/date.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
+import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
 const ITEMS_PER_PAGE = 10;
 const BATCH_SIZE = 100;
 
+// Helper function to convert YYYY-MM-DD to ISO datetime string
+function toISODateTime(dateString: string, isEndOfDay = false): string {
+  const date = new Date(dateString);
+  if (isEndOfDay) {
+    date.setHours(23, 59, 59, 999);
+  } else {
+    date.setHours(0, 0, 0, 0);
+  }
+  return date.toISOString();
+}
+
 export function ActivityList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { canCreate, canEdit, canDelete } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
@@ -44,22 +52,17 @@ export function ActivityList() {
   const [showImportResults, setShowImportResults] = useState(false);
   const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isFetchingRef = useRef(false); // Track if we're currently in a fetch cycle
+  const isFetchingRef = useRef(false);
 
-  // PropertyFilter configuration with bidirectional label-UUID cache
+  // Separate state variables (like EngagementDashboard) - NOT a single filterState object
+  const [dateRange, setDateRange] = useState<FilterGroupingState['dateRange']>(null);
   const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
     tokens: [],
     operation: 'and',
   });
-  const [propertyFilterOptions, setPropertyFilterOptions] = useState<PropertyFilterProps.FilteringOption[]>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
-  // Date range filter
-  const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(null);
-
-  // Bidirectional cache: label ↔ UUID
+  // Bidirectional cache: label ↔ UUID (for converting labels to UUIDs for API calls)
   const [labelToUuid, setLabelToUuid] = useState<Map<string, string>>(new Map());
-  const [uuidToLabel, setUuidToLabel] = useState<Map<string, string>>(new Map());
 
   // Batched loading state
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
@@ -69,58 +72,11 @@ export function ActivityList() {
   const [loadingError, setLoadingError] = useState<string | undefined>();
   const [hasMorePages, setHasMorePages] = useState(true);
   const [isCancelled, setIsCancelled] = useState(false); // Track if user cancelled loading
+  const [filtersReady, setFiltersReady] = useState(false); // Track if initial filters are resolved
 
-  // Helper to add to cache
+  // Helper to add to cache (label -> UUID mapping)
   const addToCache = (uuid: string, label: string) => {
     setLabelToUuid(prev => new Map(prev).set(label, uuid));
-    setUuidToLabel(prev => new Map(prev).set(uuid, label));
-  };
-
-  // Helper to get UUID from label
-  const getUuidFromLabel = (label: string): string | undefined => {
-    return labelToUuid.get(label);
-  };
-
-  // Helper to get label from UUID
-  const getLabelFromUuid = (uuid: string): string | undefined => {
-    return uuidToLabel.get(uuid);
-  };
-
-  // Consolidate tokens: merge multiple tokens for the same property into a single token with comma-separated values
-  const consolidateTokens = (query: PropertyFilterProps.Query): PropertyFilterProps.Query => {
-    const tokensByProperty = new Map<string, PropertyFilterProps.Token[]>();
-    
-    query.tokens.forEach(token => {
-      const key = token.propertyKey || '';
-      if (!tokensByProperty.has(key)) {
-        tokensByProperty.set(key, []);
-      }
-      tokensByProperty.get(key)!.push(token);
-    });
-    
-    const consolidatedTokens: PropertyFilterProps.Token[] = [];
-    tokensByProperty.forEach((tokens, propertyKey) => {
-      if (tokens.length === 0) return;
-      
-      const allValues = tokens
-        .filter(t => t.operator === '=')
-        .flatMap(t => extractValuesFromToken(t));
-      
-      const uniqueValues = Array.from(new Set(allValues));
-      
-      if (uniqueValues.length > 0) {
-        consolidatedTokens.push({
-          propertyKey,
-          operator: '=',
-          value: uniqueValues.join(', '),
-        });
-      }
-    });
-    
-    return {
-      ...query,
-      tokens: consolidatedTokens,
-    };
   };
 
   // Extract individual values from consolidated tokens
@@ -129,69 +85,52 @@ export function ActivityList() {
     return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
   };
 
-  const filteringProperties: PropertyFilterProps.FilteringProperty[] = [
+  // Filter properties configuration with loadItems callbacks
+  const filterProperties: FilterProperty[] = useMemo(() => [
     {
       key: 'activityCategory',
       propertyLabel: 'Activity Category',
       groupValuesLabel: 'Activity Category values',
       operators: ['='],
+      loadItems: async (filterText: string) => {
+        const categories = await activityCategoryService.getActivityCategories();
+        const filtered = categories.filter((cat: any) => 
+          !filterText || cat.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        filtered.forEach((cat: any) => addToCache(cat.id, cat.name));
+        return filtered.map((cat: any) => ({
+          propertyKey: 'activityCategory',
+          value: cat.name, // Store label as value for display in tokens
+          label: cat.name, // Display label in dropdown
+        }));
+      },
     },
     {
       key: 'activityType',
       propertyLabel: 'Activity Type',
       groupValuesLabel: 'Activity Type values',
       operators: ['='],
+      loadItems: async (filterText: string) => {
+        const types = await ActivityTypeService.getActivityTypes();
+        const filtered = types.filter((type: any) => 
+          !filterText || type.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        filtered.forEach((type: any) => addToCache(type.id, type.name));
+        return filtered.map((type: any) => ({
+          propertyKey: 'activityType',
+          value: type.name, // Store label as value for display in tokens
+          label: type.name, // Display label in dropdown
+        }));
+      },
     },
     {
       key: 'status',
       propertyLabel: 'Status',
       groupValuesLabel: 'Status values',
       operators: ['='],
-    },
-    {
-      key: 'population',
-      propertyLabel: 'Population',
-      groupValuesLabel: 'Population values',
-      operators: ['='],
-    },
-  ];
-
-  // Async loading of property values with cache population
-  const handleLoadItems = async ({ detail }: { detail: PropertyFilterProps.LoadItemsDetail }) => {
-    const { filteringProperty, filteringText } = detail;
-    
-    if (!filteringProperty) return;
-
-    setIsLoadingOptions(true);
-
-    try {
-      let options: PropertyFilterProps.FilteringOption[] = [];
-
-      if (filteringProperty.key === 'activityCategory') {
-        const categories = await activityCategoryService.getActivityCategories();
-        const filtered = categories.filter((cat: any) => 
-          !filteringText || cat.name.toLowerCase().includes(filteringText.toLowerCase())
-        );
-        
-        filtered.forEach((cat: any) => addToCache(cat.id, cat.name));
-        options = filtered.map((cat: any) => ({
-          propertyKey: 'activityCategory',
-          value: cat.name,
-          label: cat.name,
-        }));
-      } else if (filteringProperty.key === 'activityType') {
-        const types = await ActivityTypeService.getActivityTypes();
-        const filtered = types.filter((type: any) => 
-          !filteringText || type.name.toLowerCase().includes(filteringText.toLowerCase())
-        );
-        
-        filtered.forEach((type: any) => addToCache(type.id, type.name));
-        options = filtered.map((type: any) => ({
-          propertyKey: 'activityType',
-          value: type.name,
-          label: type.name,
-        }));
-      } else if (filteringProperty.key === 'status') {
+      loadItems: async (filterText: string) => {
         const statuses = [
           { value: 'PLANNED', label: 'Planned' },
           { value: 'ACTIVE', label: 'Active' },
@@ -199,295 +138,140 @@ export function ActivityList() {
           { value: 'CANCELLED', label: 'Cancelled' },
         ];
         const filtered = statuses.filter(s => 
-          !filteringText || s.label.toLowerCase().includes(filteringText.toLowerCase())
+          !filterText || s.label.toLowerCase().includes(filterText.toLowerCase())
         );
         
         filtered.forEach(s => addToCache(s.value, s.label));
-        options = filtered.map(s => ({
+        return filtered.map(s => ({
           propertyKey: 'status',
-          value: s.label,
-          label: s.label,
+          value: s.label, // Store label as value for display in tokens
+          label: s.label, // Display label in dropdown
         }));
-      } else if (filteringProperty.key === 'population') {
+      },
+    },
+    {
+      key: 'population',
+      propertyLabel: 'Population',
+      groupValuesLabel: 'Population values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
         const populations = await PopulationService.getPopulations();
         const filtered = populations.filter((pop: any) => 
-          !filteringText || pop.name.toLowerCase().includes(filteringText.toLowerCase())
+          !filterText || pop.name.toLowerCase().includes(filterText.toLowerCase())
         );
         
         filtered.forEach((pop: any) => addToCache(pop.id, pop.name));
-        options = filtered.map((pop: any) => ({
+        return filtered.map((pop: any) => ({
           propertyKey: 'population',
-          value: pop.name,
-          label: pop.name,
+          value: pop.name, // Store label as value for display in tokens
+          label: pop.name, // Display label in dropdown
         }));
-      }
+      },
+    },
+  ], []); // Empty deps - functions are stable
 
-      setPropertyFilterOptions(options);
-    } catch (error) {
-      console.error('Error loading property filter options:', error);
-      setPropertyFilterOptions([]);
-    } finally {
-      setIsLoadingOptions(false);
-    }
-  };
-
-  // Helper to validate and parse UUID arrays from URL
-  const getValidatedUUIDs = (params: URLSearchParams, key: string): string[] => {
-    const values = params.getAll(key);
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return values.filter(v => uuidRegex.test(v));
-  };
-
-  // Initialize PropertyFilter from URL parameters
+  // Pre-populate cache when filter tokens are restored from URL
   useEffect(() => {
-    const initializeFiltersFromUrl = async () => {
-      const tokensByProperty = new Map<string, string[]>();
+    const populateCache = async () => {
+      // Check if we have any filter tokens that need cache population
+      const needsCache = propertyFilterQuery.tokens.some(
+        t => ['activityCategory', 'activityType', 'status', 'population'].includes(t.propertyKey || '')
+      );
       
-      // Activity Categories
-      const catIds = getValidatedUUIDs(searchParams, 'activityCategoryIds');
-      const catLabels: string[] = [];
-      for (const id of catIds) {
-        let label = getLabelFromUuid(id);
-        if (!label) {
-          try {
-            const categories = await activityCategoryService.getActivityCategories();
-            const category = categories.find((c: any) => c.id === id);
-            if (category) {
-              label = category.name;
-              addToCache(category.id, category.name);
-            } else {
-              continue;
-            }
-          } catch (error) {
-            console.error('Error fetching activity category:', error);
-            continue;
-          }
-        }
-        if (label) {
-          catLabels.push(label);
-        }
-      }
-      if (catLabels.length > 0) {
-        tokensByProperty.set('activityCategory', catLabels);
-      }
+      if (!needsCache) return;
       
-      // Activity Types
-      const typeIds = getValidatedUUIDs(searchParams, 'activityTypeIds');
-      const typeLabels: string[] = [];
-      for (const id of typeIds) {
-        let label = getLabelFromUuid(id);
-        if (!label) {
-          try {
-            const types = await ActivityTypeService.getActivityTypes();
-            const type = types.find((t: any) => t.id === id);
-            if (type) {
-              label = type.name;
-              addToCache(type.id, type.name);
-            } else {
-              continue;
-            }
-          } catch (error) {
-            console.error('Error fetching activity type:', error);
-            continue;
-          }
-        }
-        if (label) {
-          typeLabels.push(label);
-        }
-      }
-      if (typeLabels.length > 0) {
-        tokensByProperty.set('activityType', typeLabels);
-      }
-      
-      // Statuses
-      const statusValues = searchParams.getAll('status');
-      const statusLabels: string[] = [];
-      const statusMap: Record<string, string> = {
-        'PLANNED': 'Planned',
-        'ACTIVE': 'Active',
-        'COMPLETED': 'Completed',
-        'CANCELLED': 'Cancelled',
-      };
-      for (const value of statusValues) {
-        const label = statusMap[value];
-        if (label) {
-          addToCache(value, label);
-          statusLabels.push(label);
-        }
-      }
-      if (statusLabels.length > 0) {
-        tokensByProperty.set('status', statusLabels);
-      }
-      
-      // Populations
-      const popIds = getValidatedUUIDs(searchParams, 'populationIds');
-      const popLabels: string[] = [];
-      for (const id of popIds) {
-        let label = getLabelFromUuid(id);
-        if (!label) {
-          try {
-            const populations = await PopulationService.getPopulations();
-            const population = populations.find((p: any) => p.id === id);
-            if (population) {
-              label = population.name;
-              addToCache(population.id, population.name);
-            } else {
-              continue;
-            }
-          } catch (error) {
-            console.error('Error fetching population:', error);
-            continue;
-          }
-        }
-        if (label) {
-          popLabels.push(label);
-        }
-      }
-      if (popLabels.length > 0) {
-        tokensByProperty.set('population', popLabels);
-      }
-      
-      // Create consolidated tokens
-      const tokens: PropertyFilterProps.Token[] = [];
-      tokensByProperty.forEach((labels, propertyKey) => {
-        if (labels.length > 0) {
-          tokens.push({
-            propertyKey,
-            operator: '=',
-            value: labels.join(', '),
-          });
-        }
-      });
-      
-      if (tokens.length > 0) {
-        setPropertyFilterQuery({ tokens, operation: 'and' });
-      }
-      
-      // Initialize date range from URL
-      const startDate = searchParams.get('startDate');
-      const endDate = searchParams.get('endDate');
-      if (startDate && endDate) {
-        setDateRange({
-          type: 'absolute',
-          startDate,
-          endDate,
-        });
+      try {
+        // Fetch all reference data to populate the cache
+        const [categories, types, populations] = await Promise.all([
+          activityCategoryService.getActivityCategories(),
+          ActivityTypeService.getActivityTypes(),
+          PopulationService.getPopulations(),
+        ]);
+        
+        categories.forEach((cat: any) => addToCache(cat.id, cat.name));
+        types.forEach((type: any) => addToCache(type.id, type.name));
+        populations.forEach((pop: any) => addToCache(pop.id, pop.name));
+        
+        // Add status mappings
+        const statuses = [
+          { value: 'PLANNED', label: 'Planned' },
+          { value: 'ACTIVE', label: 'Active' },
+          { value: 'COMPLETED', label: 'Completed' },
+          { value: 'CANCELLED', label: 'Cancelled' },
+        ];
+        statuses.forEach(s => addToCache(s.value, s.label));
+      } catch (error) {
+        console.error('Error pre-populating filter cache:', error);
       }
     };
     
-    if (propertyFilterQuery.tokens.length === 0 && !dateRange) {
-      initializeFiltersFromUrl();
-    }
+    populateCache();
   }, []); // Only run once on mount
 
-  // Synchronize filters to URL
-  useEffect(() => {
-    // Start with existing URL parameters to preserve non-filter params
-    const params = new URLSearchParams(window.location.search);
-    
-    // Remove all filter-related parameters that we manage
-    params.delete('geographicArea');
-    params.delete('startDate');
-    params.delete('endDate');
-    params.delete('activityCategoryIds');
-    params.delete('activityTypeIds');
-    params.delete('status');
-    params.delete('populationIds');
-    
-    // Add current filter values
-    
-    // Global geographic area filter
-    if (selectedGeographicAreaId) {
-      params.append('geographicArea', selectedGeographicAreaId);
-    }
-    
-    // Date range
-    if (dateRange?.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
-      params.append('startDate', dateRange.startDate);
-      params.append('endDate', dateRange.endDate);
-    }
-    
-    // PropertyFilter tokens (convert labels to UUIDs)
-    const activityCategoryLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-    activityCategoryIds.forEach(id => params.append('activityCategoryIds', id));
-    
-    const activityTypeLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-    activityTypeIds.forEach(id => params.append('activityTypeIds', id));
-    
-    const statusLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'status' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const statusValues = statusLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-    statusValues.forEach(value => params.append('status', value));
-    
-    const populationLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'population' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-    populationIds.forEach(id => params.append('populationIds', id));
-    
-    // Only update URL if parameters actually changed
-    const currentSearch = window.location.search.slice(1); // Remove leading '?'
-    const newSearch = params.toString();
-    
-    if (currentSearch !== newSearch) {
-      setSearchParams(params, { replace: true });
-    }
-  }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, setSearchParams, getUuidFromLabel]);
+  // Handler for FilterGroupingPanel updates (called when "Update" button clicked)
+  const handleFilterUpdate = (state: FilterGroupingState) => {
+    setDateRange(state.dateRange);
+    setPropertyFilterQuery(state.filterTokens);
+  };
 
-  // Build filter params from PropertyFilter tokens and date range
+  // Handler for when initial URL filter resolution completes
+  const handleInitialResolutionComplete = useCallback(() => {
+    setFiltersReady(true);
+  }, []);
+
+  // Build filter params from dateRange and propertyFilterQuery
   const filterParams = useMemo((): ActivityFilterParams => {
     const params: ActivityFilterParams = {
       geographicAreaId: selectedGeographicAreaId,
+      filter: {}, // Initialize filter object
     };
     
-    // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
+    // Extract filters from propertyFilterQuery tokens (convert labels to UUIDs)
     const activityCategoryLabels = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
       .flatMap(t => extractValuesFromToken(t));
-    const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+    const activityCategoryIds = activityCategoryLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
     if (activityCategoryIds.length > 0) {
-      params.activityCategoryIds = activityCategoryIds;
+      params.filter!.activityCategoryIds = activityCategoryIds.join(',');
     }
     
     const activityTypeLabels = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
       .flatMap(t => extractValuesFromToken(t));
-    const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+    const activityTypeIds = activityTypeLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
     if (activityTypeIds.length > 0) {
-      params.activityTypeIds = activityTypeIds;
+      params.filter!.activityTypeIds = activityTypeIds.join(',');
     }
     
     const statusLabels = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'status' && t.operator === '=')
       .flatMap(t => extractValuesFromToken(t));
-    const statusValues = statusLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+    const statusValues = statusLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
     if (statusValues.length > 0) {
-      params.status = statusValues;
+      params.filter!.status = statusValues.join(',');
     }
     
     const populationLabels = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'population' && t.operator === '=')
       .flatMap(t => extractValuesFromToken(t));
-    const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+    const populationIds = populationLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
     if (populationIds.length > 0) {
-      params.populationIds = populationIds;
+      params.filter!.populationIds = populationIds.join(',');
     }
     
-    // Date range
+    // Date range - convert to ISO datetime format and add to filter
     if (dateRange?.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
-      params.startDate = dateRange.startDate;
-      params.endDate = dateRange.endDate;
+      params.filter!.startDate = toISODateTime(dateRange.startDate, false);
+      params.filter!.endDate = toISODateTime(dateRange.endDate, true);
+    }
+    
+    // Remove empty filter object if no filters
+    if (Object.keys(params.filter!).length === 0) {
+      delete params.filter;
     }
     
     return params;
-  }, [propertyFilterQuery, dateRange, selectedGeographicAreaId, getUuidFromLabel]);
+  }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, labelToUuid]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => ActivityService.deleteActivity(id),
@@ -512,9 +296,9 @@ export function ActivityList() {
     setIsLoadingBatch(false);
     setLoadingError(undefined);
     setHasMorePages(true);
-    setIsCancelled(false); // Reset cancellation state
-    isFetchingRef.current = false; // Reset fetch tracking
-  }, [selectedGeographicAreaId, propertyFilterQuery, dateRange]);
+    setIsCancelled(false);
+    isFetchingRef.current = false;
+  }, [selectedGeographicAreaId, dateRange, propertyFilterQuery]);
 
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
@@ -525,11 +309,11 @@ export function ActivityList() {
     setLoadingError(undefined);
 
     try {
-      const response = await ActivityService.getActivitiesPaginated(
-        currentBatchPage,
-        BATCH_SIZE,
-        filterParams
-      );
+      const response = await ActivityService.getActivitiesFlexible({
+        page: currentBatchPage,
+        limit: BATCH_SIZE,
+        ...filterParams
+      });
       
       setAllActivities(prev => [...prev, ...response.data]);
       setTotalCount(response.pagination.total);
@@ -561,10 +345,13 @@ export function ActivityList() {
 
   // Fetch first batch on mount or when filters change (only when page is 1)
   useEffect(() => {
+    // Wait for filters to be ready before fetching
+    if (!filtersReady) return;
+    
     if (currentBatchPage === 1 && hasMorePages && !isLoadingBatch && allActivities.length === 0 && !isFetchingRef.current) {
       fetchNextBatch();
     }
-  }, [currentBatchPage, hasMorePages, isLoadingBatch, allActivities.length, fetchNextBatch]);
+  }, [currentBatchPage, hasMorePages, isLoadingBatch, allActivities.length, fetchNextBatch, filtersReady]);
 
   // Auto-fetch next batch after previous batch renders
   useEffect(() => {
@@ -689,106 +476,6 @@ export function ActivityList() {
         </Alert>
       )}
       
-      {/* Filters: DateRangePicker and PropertyFilter */}
-      <SpaceBetween direction="vertical" size="m">
-        <DateRangePicker
-          onChange={({ detail }) => setDateRange(detail.value)}
-          value={dateRange}
-          relativeOptions={[
-            { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
-            { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
-            { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
-            { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
-          ]}
-          isValidRange={(range) => {
-            if (range?.type === 'absolute') {
-              const start = new Date(range.startDate);
-              const end = new Date(range.endDate);
-              if (start > end) {
-                return {
-                  valid: false,
-                  errorMessage: 'Start date must be before end date',
-                };
-              }
-            }
-            return { valid: true };
-          }}
-          i18nStrings={{
-            todayAriaLabel: 'Today',
-            nextMonthAriaLabel: 'Next month',
-            previousMonthAriaLabel: 'Previous month',
-            customRelativeRangeDurationLabel: 'Duration',
-            customRelativeRangeDurationPlaceholder: 'Enter duration',
-            customRelativeRangeOptionLabel: 'Custom range',
-            customRelativeRangeOptionDescription: 'Set a custom range in the past',
-            customRelativeRangeUnitLabel: 'Unit of time',
-            formatRelativeRange: (e) => {
-              const n = e.amount === 1 ? e.unit : `${e.unit}s`;
-              return `Last ${e.amount} ${n}`;
-            },
-            formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
-            dateTimeConstraintText: 'Range must be between 6 and 30 days. Use 24 hour format.',
-            relativeModeTitle: 'Relative range',
-            absoluteModeTitle: 'Absolute range',
-            relativeRangeSelectionHeading: 'Choose a range',
-            startDateLabel: 'Start date',
-            endDateLabel: 'End date',
-            startTimeLabel: 'Start time',
-            endTimeLabel: 'End time',
-            clearButtonLabel: 'Clear and dismiss',
-            cancelButtonLabel: 'Cancel',
-            applyButtonLabel: 'Apply',
-          }}
-          placeholder="Filter by date range"
-        />
-        
-        <PropertyFilter
-          query={propertyFilterQuery}
-          onChange={({ detail }) => {
-            const consolidated = consolidateTokens(detail);
-            setPropertyFilterQuery(consolidated);
-            setCurrentPageIndex(1); // Reset to first page when filters change
-          }}
-          filteringProperties={filteringProperties}
-          filteringOptions={propertyFilterOptions}
-          filteringLoadingText="Loading options"
-          filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
-          onLoadItems={handleLoadItems}
-          i18nStrings={{
-            filteringAriaLabel: 'Filter activities',
-            dismissAriaLabel: 'Dismiss',
-            filteringPlaceholder: 'Filter activities by property',
-            groupValuesText: 'Values',
-            groupPropertiesText: 'Properties',
-            operatorsText: 'Operators',
-            operationAndText: 'and',
-            operationOrText: 'or',
-            operatorLessText: 'Less than',
-            operatorLessOrEqualText: 'Less than or equal',
-            operatorGreaterText: 'Greater than',
-            operatorGreaterOrEqualText: 'Greater than or equal',
-            operatorContainsText: 'Contains',
-            operatorDoesNotContainText: 'Does not contain',
-            operatorEqualsText: 'Equals',
-            operatorDoesNotEqualText: 'Does not equal',
-            editTokenHeader: 'Edit filter',
-            propertyText: 'Property',
-            operatorText: 'Operator',
-            valueText: 'Value',
-            cancelActionText: 'Cancel',
-            applyActionText: 'Apply',
-            allPropertiesLabel: 'All properties',
-            tokenLimitShowMore: 'Show more',
-            tokenLimitShowFewer: 'Show fewer',
-            clearFiltersText: 'Clear filters',
-            removeTokenButtonAriaLabel: (token) =>
-              `Remove token ${token.propertyKey} ${token.operator} ${token.value}`,
-            enteredTextLabel: (text) => `Use: "${text}"`,
-          }}
-          filteringEmpty="No suggestions"
-        />
-      </SpaceBetween>
-      
       <Table
         columnDefinitions={[
           {
@@ -874,6 +561,18 @@ export function ActivityList() {
               <Button onClick={handleCreate}>Create activity</Button>
             )}
           </Box>
+        }
+        filter={
+          <FilterGroupingPanel
+            filterProperties={filterProperties}
+            groupingMode="none"
+            includeDateRange={true}
+            initialDateRange={dateRange}
+            initialFilterTokens={propertyFilterQuery}
+            onUpdate={handleFilterUpdate}
+            onInitialResolutionComplete={handleInitialResolutionComplete}
+            isLoading={isLoading}
+          />
         }
         header={
           <Header

@@ -7,15 +7,17 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import Link from '@cloudscape-design/components/link';
-import TextFilter from '@cloudscape-design/components/text-filter';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
+import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import type { Participant } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
+import { PopulationService } from '../../services/api/population.service';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
+import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
@@ -28,7 +30,6 @@ export function ParticipantList() {
   const { canCreate, canEdit, canDelete } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
-  const [filteringText, setFilteringText] = useState('');
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -36,7 +37,16 @@ export function ParticipantList() {
   const [showImportResults, setShowImportResults] = useState(false);
   const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isFetchingRef = useRef(false); // Track if we're currently in a fetch cycle
+  const isFetchingRef = useRef(false);
+
+  // Separate state variables (like EngagementDashboard) - NOT a single filterState object
+  const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
+    tokens: [],
+    operation: 'and',
+  });
+
+  // Bidirectional cache: label ↔ UUID (for converting labels to UUIDs for API calls)
+  const [labelToUuid, setLabelToUuid] = useState<Map<string, string>>(new Map());
 
   // Batched loading state
   const [allParticipants, setAllParticipants] = useState<Participant[]>([]);
@@ -45,7 +55,168 @@ export function ParticipantList() {
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [loadingError, setLoadingError] = useState<string | undefined>();
   const [hasMorePages, setHasMorePages] = useState(true);
-  const [isCancelled, setIsCancelled] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false); // Track if user cancelled loading
+  const [filtersReady, setFiltersReady] = useState(false); // Track if initial filters are resolved
+
+  // Helper to add to cache (label -> UUID mapping)
+  const addToCache = (uuid: string, label: string) => {
+    setLabelToUuid(prev => new Map(prev).set(label, uuid));
+  };
+
+  // Extract individual values from consolidated tokens
+  const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
+    if (!token.value) return [];
+    return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
+  };
+
+  // Filter properties configuration with loadItems callbacks
+  const filterProperties: FilterProperty[] = useMemo(() => [
+    {
+      key: 'name',
+      propertyLabel: 'Name',
+      groupValuesLabel: 'Name values',
+      operators: ['='], // Use equals operator for consistency
+      loadItems: async (filterText: string) => {
+        // Load sample values even with empty filter text
+        const response = await ParticipantService.getParticipantsFlexible({
+          page: 1,
+          limit: 20,
+          geographicAreaId: selectedGeographicAreaId,
+          filter: filterText ? { name: filterText } : undefined,
+          fields: ['id', 'name']
+        });
+        
+        return response.data.map((p: any) => ({
+          propertyKey: 'name',
+          value: p.name,
+          label: p.name,
+        }));
+      },
+    },
+    {
+      key: 'email',
+      propertyLabel: 'Email',
+      groupValuesLabel: 'Email values',
+      operators: ['='], // Use equals operator for consistency
+      loadItems: async (filterText: string) => {
+        // Load sample values even with empty filter text
+        const response = await ParticipantService.getParticipantsFlexible({
+          page: 1,
+          limit: 20,
+          geographicAreaId: selectedGeographicAreaId,
+          filter: filterText ? { email: filterText } : undefined,
+          fields: ['id', 'email']
+        });
+        
+        return response.data
+          .filter((p: any) => p.email)
+          .map((p: any) => ({
+            propertyKey: 'email',
+            value: p.email!,
+            label: p.email!,
+          }));
+      },
+    },
+    {
+      key: 'population',
+      propertyLabel: 'Population',
+      groupValuesLabel: 'Population values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        const populations = await PopulationService.getPopulations();
+        const filtered = populations.filter((pop: any) => 
+          !filterText || pop.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        // Cache both directions: UUID -> label and label -> UUID
+        filtered.forEach((pop: any) => addToCache(pop.id, pop.name));
+        
+        return filtered.map((pop: any) => ({
+          propertyKey: 'population',
+          value: pop.name, // Store label as value for display in tokens
+          label: pop.name, // Display label in dropdown
+        }));
+      },
+    },
+  ], []); // Empty deps - functions are stable
+
+  // Pre-populate cache when filter tokens are restored from URL
+  useEffect(() => {
+    const populateCache = async () => {
+      // Get all population tokens
+      const populationTokens = propertyFilterQuery.tokens.filter(
+        t => t.propertyKey === 'population'
+      );
+      
+      if (populationTokens.length === 0) {
+        return;
+      }
+      
+      // Fetch all populations to populate the cache
+      try {
+        const populations = await PopulationService.getPopulations();
+        populations.forEach((pop: any) => addToCache(pop.id, pop.name));
+      } catch (error) {
+        console.error('Error pre-populating population cache:', error);
+      }
+    };
+    
+    populateCache();
+  }, []); // Only run once on mount
+
+  // Handler for FilterGroupingPanel updates (called when "Update" button clicked)
+  const handleFilterUpdate = (state: FilterGroupingState) => {
+    setPropertyFilterQuery(state.filterTokens);
+  };
+
+  // Handler for when initial URL filter resolution completes
+  const handleInitialResolutionComplete = useCallback(() => {
+    setFiltersReady(true);
+  }, []);
+
+  // Build filter params from propertyFilterQuery
+  const filterParams = useMemo(() => {
+    const params: any = {
+      geographicAreaId: selectedGeographicAreaId,
+      filter: {}, // Initialize filter object
+    };
+    
+    // Extract filters from tokens and add to filter object
+    const nameLabels = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'name' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    
+    const emailLabels = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'email' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    
+    // Add name filter if present
+    if (nameLabels.length > 0) {
+      params.filter.name = nameLabels[0];
+    }
+    
+    // Add email filter if present
+    if (emailLabels.length > 0) {
+      params.filter.email = emailLabels[0];
+    }
+    
+    
+    const populationLabels = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'population' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    // Convert labels to UUIDs for API call
+    const populationIds = populationLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
+    if (populationIds.length > 0) {
+      params.filter!.populationIds = populationIds.join(',');
+    }
+    
+    // Remove empty filter object if no filters
+    if (Object.keys(params.filter).length === 0) {
+      delete params.filter;
+    }
+    
+    return params;
+  }, [propertyFilterQuery, selectedGeographicAreaId, labelToUuid]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => ParticipantService.deleteParticipant(id),
@@ -71,8 +242,8 @@ export function ParticipantList() {
     setLoadingError(undefined);
     setHasMorePages(true);
     setIsCancelled(false);
-    isFetchingRef.current = false; // Reset fetch tracking
-  }, [selectedGeographicAreaId, filteringText]);
+    isFetchingRef.current = false;
+  }, [selectedGeographicAreaId, propertyFilterQuery]);
 
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
@@ -83,12 +254,11 @@ export function ParticipantList() {
     setLoadingError(undefined);
 
     try {
-      const response = await ParticipantService.getParticipantsPaginated(
-        currentBatchPage,
-        BATCH_SIZE,
-        selectedGeographicAreaId,
-        filteringText || undefined
-      );
+      const response = await ParticipantService.getParticipantsFlexible({
+        page: currentBatchPage,
+        limit: BATCH_SIZE,
+        ...filterParams
+      });
       
       setAllParticipants(prev => [...prev, ...response.data]);
       setTotalCount(response.pagination.total);
@@ -101,12 +271,12 @@ export function ParticipantList() {
       setIsLoadingBatch(false);
       isFetchingRef.current = false;
     }
-  }, [currentBatchPage, isLoadingBatch, hasMorePages, selectedGeographicAreaId, filteringText, isCancelled]);
+  }, [currentBatchPage, isLoadingBatch, hasMorePages, filterParams, isCancelled]);
 
   // Cancel loading handler
   const handleCancelLoading = useCallback(() => {
     setIsCancelled(true);
-    setHasMorePages(false);
+    setHasMorePages(false); // Stop auto-fetching
     isFetchingRef.current = false;
   }, []);
 
@@ -118,12 +288,15 @@ export function ParticipantList() {
     fetchNextBatch();
   }, [fetchNextBatch]);
 
-  // Fetch first batch on mount or when dependencies change
+  // Fetch first batch on mount or when filters change (only when page is 1)
   useEffect(() => {
+    // Wait for filters to be ready before fetching
+    if (!filtersReady) return;
+    
     if (currentBatchPage === 1 && hasMorePages && !isLoadingBatch && allParticipants.length === 0 && !isFetchingRef.current) {
       fetchNextBatch();
     }
-  }, [currentBatchPage, hasMorePages, isLoadingBatch, allParticipants.length, fetchNextBatch]);
+  }, [currentBatchPage, hasMorePages, isLoadingBatch, allParticipants.length, fetchNextBatch, filtersReady]);
 
   // Auto-fetch next batch after previous batch renders
   useEffect(() => {
@@ -211,6 +384,7 @@ export function ParticipantList() {
 
   const isLoading = isLoadingBatch && currentBatchPage === 1;
   const loadedCount = allParticipants.length;
+  const hasActiveFilters = propertyFilterQuery.tokens.length > 0;
 
   return (
     <SpaceBetween size="l">
@@ -246,6 +420,7 @@ export function ParticipantList() {
           {loadingError}
         </Alert>
       )}
+      
       <Table
         columnDefinitions={[
           {
@@ -302,22 +477,22 @@ export function ParticipantList() {
           <Box textAlign="center" color="inherit">
             <b>No participants</b>
             <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-              {filteringText ? 'No participants match your search.' : 'No participants to display.'}
+              {hasActiveFilters ? 'No participants match your filters.' : 'No participants to display.'}
             </Box>
-            {canCreate() && !filteringText && (
+            {canCreate() && !hasActiveFilters && (
               <Button onClick={handleCreate}>Create participant</Button>
             )}
           </Box>
         }
         filter={
-          <TextFilter
-            filteringText={filteringText}
-            filteringPlaceholder="Search participants by name or email"
-            filteringAriaLabel="Filter participants"
-            onChange={({ detail }) => {
-              setFilteringText(detail.filteringText);
-              setCurrentPageIndex(1);
-            }}
+          <FilterGroupingPanel
+            filterProperties={filterProperties}
+            groupingMode="none"
+            includeDateRange={false}
+            initialFilterTokens={propertyFilterQuery}
+            onUpdate={handleFilterUpdate}
+            onInitialResolutionComplete={handleInitialResolutionComplete}
+            isLoading={isLoading}
           />
         }
         header={

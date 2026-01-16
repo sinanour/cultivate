@@ -109,16 +109,15 @@ DELETE /api/v1/users/:id/geographic-authorizations/:authId -> Delete authorizati
 GET    /api/v1/users/:id/authorized-areas -> Get user's effective authorized areas (admin only)
 
 // Participant Routes
-GET    /api/v1/participants            -> List all participants (supports ?geographicAreaId=<id> and ?search=<text> filters)
+GET    /api/v1/participants            -> List all participants (supports ?geographicAreaId=<id>, ?filter[fieldName]=<value>, and ?fields=<comma-separated-fields> parameters)
 GET    /api/v1/participants/:id        -> Get participant by ID
 GET    /api/v1/participants/:id/activities -> Get participant's activity assignments
-GET    /api/v1/participants/search     -> Search participants
 POST   /api/v1/participants            -> Create participant
 PUT    /api/v1/participants/:id        -> Update participant
 DELETE /api/v1/participants/:id        -> Delete participant
 
 // Activity Routes
-GET    /api/v1/activities              -> List all activities (supports ?geographicAreaId=<id>, ?activityTypeIds=<ids>, ?activityCategoryIds=<ids>, ?status=<statuses>, ?populationIds=<ids>, ?startDate=<date>, ?endDate=<date> filters)
+GET    /api/v1/activities              -> List all activities (supports ?geographicAreaId=<id>, ?filter[fieldName]=<value>, and ?fields=<comma-separated-fields> parameters)
 GET    /api/v1/activities/:id          -> Get activity by ID
 POST   /api/v1/activities              -> Create activity
 PUT    /api/v1/activities/:id          -> Update activity
@@ -136,9 +135,8 @@ POST   /api/v1/activities/:id/venues                 -> Associate venue with act
 DELETE /api/v1/activities/:id/venues/:venueId        -> Remove venue association
 
 // Venue Routes
-GET    /api/v1/venues                  -> List all venues (supports ?geographicAreaId=<id> and ?search=<text> filters)
+GET    /api/v1/venues                  -> List all venues (supports ?geographicAreaId=<id>, ?filter[fieldName]=<value>, and ?fields=<comma-separated-fields> parameters)
 GET    /api/v1/venues/:id              -> Get venue by ID
-GET    /api/v1/venues/search           -> Search venues
 POST   /api/v1/venues                  -> Create venue
 PUT    /api/v1/venues/:id              -> Update venue
 DELETE /api/v1/venues/:id              -> Delete venue
@@ -146,7 +144,7 @@ GET    /api/v1/venues/:id/activities   -> List activities at venue
 GET    /api/v1/venues/:id/participants -> List participants with venue as home
 
 // Geographic Area Routes
-GET    /api/v1/geographic-areas        -> List all geographic areas (supports ?geographicAreaId=<id>, ?search=<text>, and ?depth=<n> filters)
+GET    /api/v1/geographic-areas        -> List all geographic areas (supports ?geographicAreaId=<id>, ?depth=<n>, ?filter[fieldName]=<value>, and ?fields=<comma-separated-fields> parameters)
 GET    /api/v1/geographic-areas/:id    -> Get geographic area by ID (includes childCount field)
 POST   /api/v1/geographic-areas        -> Create geographic area
 PUT    /api/v1/geographic-areas/:id    -> Update geographic area
@@ -198,11 +196,11 @@ Services implement business logic and coordinate operations:
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
 - **PopulationService**: Manages population CRUD operations (admin only for create/update/delete), validates uniqueness, prevents deletion of referenced populations, manages participant-population associations (many-to-many), validates participant and population existence, prevents duplicate associations
 - **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction, handles user deletion with cascade deletion of associated geographic authorization rules, prevents deletion of the last administrator user
-- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, implements search, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering and text-based search filtering for list queries
-- **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports comprehensive filtering for list queries (geographic area, activity type, activity category, status, populations, date range) with OR logic within dimensions and AND logic across dimensions
+- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
+- **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
-- **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), implements search, supports geographic area filtering and text-based search filtering for list queries
-- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering and text-based search filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context), provides batch ancestor fetching for multiple areas in a single request, provides batch details fetching for complete entity data of multiple areas in a single request
+- **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
+- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context), provides batch ancestor fetching for multiple areas in a single request, provides batch details fetching for complete entity data of multiple areas in a single request, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering with OR logic within dimensions and AND logic across dimensions (array filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data, supports growth metrics with multi-dimensional filtering (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) where multiple values within a dimension use OR logic and multiple dimensions use AND logic
 - **MapDataService**: Provides optimized map visualization data with lightweight marker endpoints, batched pagination (100 items per batch), and lazy-loaded popup content, returns minimal fields for fast marker rendering (coordinates and IDs only), supports incremental rendering through paginated responses with total count metadata, fetches detailed popup content on-demand when markers are clicked, supports all filtering dimensions (geographic area, activity category, activity type, venue, population, date range, status), applies geographic authorization filtering, excludes entities without coordinates from marker responses, groups participant homes by venue to avoid duplicate markers
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
@@ -221,11 +219,11 @@ Repositories encapsulate Prisma database access:
 - **ParticipantPopulationRepository**: CRUD operations for participant-population associations, duplicate prevention
 - **UserGeographicAuthorizationRepository**: CRUD operations for geographic authorization rules, queries for user's authorization rules, calculates effective authorized areas with descendants and ancestors
 - **UserRepository**: CRUD operations for users, includes findAll, findByEmail, findById, create, and update methods
-- **ParticipantRepository**: CRUD operations and text-based search for participants (supports filtering by name/email and geographic area with pagination)
-- **ActivityRepository**: CRUD operations and queries for activities
+- **ParticipantRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination)
+- **ActivityRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination)
 - **AssignmentRepository**: CRUD operations for participant assignments
-- **VenueRepository**: CRUD operations and text-based search for venues (supports filtering by name/address and geographic area with pagination), queries for associated activities and current residents (filters participants by most recent address history)
-- **GeographicAreaRepository**: CRUD operations for geographic areas with text-based search (supports filtering by name and geographic area with pagination), hierarchical queries for ancestors and descendants with depth limiting, child count calculation, statistics aggregation
+- **VenueRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination), queries for associated activities and current residents (filters participants by most recent address history)
+- **GeographicAreaRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination), hierarchical queries for ancestors and descendants with depth limiting, child count calculation, statistics aggregation
 - **ParticipantAddressHistoryRepository**: Temporal tracking operations for participant home address changes
 - **ActivityVenueHistoryRepository**: Temporal tracking operations for activity-venue associations
 - **AuditLogRepository**: Audit log storage and retrieval
@@ -417,6 +415,229 @@ GrowthQuerySchema = {
   venueIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
   populationIds: string[] (optional, array of valid UUIDs, OR logic within dimension)
 }
+
+// Flexible Filtering Schema (applies to all entity list endpoints)
+FlexibleFilterSchema = {
+  filter: object (optional, key-value pairs where keys are field names and values are filter criteria),
+  fields: string (optional, comma-separated list of field names to return, supports dot notation for nested relations)
+}
+
+// Participant Query Schema
+ParticipantQuerySchema = {
+  page: number (optional, default 1),
+  limit: number (optional, default 100, max 100),
+  geographicAreaId: string (optional, valid UUID, filters to specific area + descendants),
+  filter: {
+    name: string (optional, case-insensitive partial match),
+    email: string (optional, case-insensitive partial match),
+    phone: string (optional, case-insensitive partial match),
+    nickname: string (optional, case-insensitive partial match),
+    dateOfBirth: date (optional, exact match),
+    dateOfRegistration: date (optional, exact match),
+    populationIds: string[] (optional, array of valid UUIDs, OR logic)
+  },
+  fields: string (optional, comma-separated field names like "id,name,email" or "id,name,addressHistory.venue.name")
+}
+
+// Venue Query Schema
+VenueQuerySchema = {
+  page: number (optional, default 1),
+  limit: number (optional, default 100, max 100),
+  geographicAreaId: string (optional, valid UUID, filters to specific area + descendants),
+  filter: {
+    name: string (optional, case-insensitive partial match),
+    address: string (optional, case-insensitive partial match),
+    venueType: enum (optional, PUBLIC_BUILDING | PRIVATE_RESIDENCE, exact match)
+  },
+  fields: string (optional, comma-separated field names like "id,name,address" or "id,name,geographicArea.name")
+}
+
+// Activity Query Schema
+ActivityQuerySchema = {
+  page: number (optional, default 1),
+  limit: number (optional, default 100, max 100),
+  geographicAreaId: string (optional, valid UUID, filters to specific area + descendants),
+  filter: {
+    name: string (optional, case-insensitive partial match),
+    activityTypeIds: string[] (optional, array of valid UUIDs, OR logic),
+    activityCategoryIds: string[] (optional, array of valid UUIDs, OR logic),
+    status: string[] (optional, array of PLANNED | ACTIVE | COMPLETED | CANCELLED, OR logic),
+    populationIds: string[] (optional, array of valid UUIDs, OR logic),
+    startDate: string (optional, ISO 8601 datetime format, >= filter),
+    endDate: string (optional, ISO 8601 datetime format, <= filter)
+  },
+  fields: string (optional, comma-separated field names like "id,name,status" or "id,name,activityType.name,activityType.activityCategory.name")
+}
+
+// Geographic Area Query Schema
+GeographicAreaQuerySchema = {
+  page: number (optional, default 1),
+  limit: number (optional, default 50, max 100),
+  geographicAreaId: string (optional, valid UUID, filters to specific area + descendants + ancestors),
+  depth: number (optional, limits recursive depth of children fetched, omit for all descendants),
+  filter: {
+    name: string (optional, case-insensitive partial match),
+    areaType: enum (optional, exact match on area type),
+    parentGeographicAreaId: string (optional, valid UUID, exact match)
+  },
+  fields: string (optional, comma-separated field names like "id,name,areaType" or "id,name,parent.name,childCount")
+}
+```
+
+### Unified Filtering and Attribute Selection Architecture
+
+**Design Pattern:**
+
+The API implements a unified filtering system that allows clients to filter on any entity field and customize which attributes are returned in responses. This single implementation pattern applies to all entity list endpoints (participants, activities, venues, geographic areas).
+
+**Key Design Principles:**
+
+1. **Geographic Area Filter is First-Class:** The `geographicAreaId` parameter remains a top-level query parameter for hierarchical filtering
+2. **Unified Filter Syntax:** All other attribute filtering uses `filter[fieldName]=value` syntax
+3. **Database-Level Optimization:** All filtering and field selection pushed to Prisma WHERE and SELECT clauses
+4. **Single Code Path:** One implementation handles all filtering scenarios
+5. **No Legacy Parameters:** Removed dedicated parameters like `activityTypeIds`, `status`, `search` - all use unified `filter[]` API
+
+**Filter Parameter Format:**
+```typescript
+// URL format: ?filter[fieldName]=value
+// Example: ?filter[name]=john&filter[email]=gmail.com
+
+// Parsed into object:
+{
+  filter: {
+    name: "john",
+    email: "gmail.com"
+  }
+}
+```
+
+**Fields Parameter Format:**
+```typescript
+// URL format: ?fields=field1,field2,relation.field3
+// Example: ?fields=id,name,activityType.name
+
+// Parsed into array:
+["id", "name", "activityType.name"]
+```
+
+**Implementation Strategy:**
+
+1. **Query Parameter Parsing:**
+   - Use Express middleware to parse `filter[fieldName]` parameters into structured filter object
+   - Parse `fields` parameter into array of field names
+   - Validate field names against entity schema
+   - Keep `geographicAreaId` as a separate top-level parameter
+
+2. **Dynamic Prisma Query Building:**
+   - Build Prisma `where` clause dynamically based on filter object
+   - Use `contains` mode for high-cardinality text fields (case-insensitive partial match)
+   - Use `in` operator for low-cardinality array fields (exact match)
+   - Build Prisma `select` clause dynamically based on fields array
+   - Use Prisma `include` for nested relation fields with dot notation
+   - All filtering logic executed at database level (no Node.js filtering)
+
+3. **Field Classification:**
+   - **High-Cardinality Fields** (partial matching): name, email, phone, address, nickname
+   - **Low-Cardinality Fields** (exact matching): activityTypeIds, activityCategoryIds, role, populationIds, areaType, venueType, status
+
+**Service Layer Pattern:**
+
+```typescript
+interface UnifiedQueryOptions {
+  page?: number;
+  limit?: number;
+  geographicAreaId?: string;      // First-class geographic filter
+  filter?: Record<string, any>;   // Dynamic filter object
+  fields?: string[];               // Array of field names to return
+  depth?: number;                  // For geographic areas only
+}
+
+async getEntities(options: UnifiedQueryOptions) {
+  // Build geographic area filter (first-class)
+  const geographicWhere = await this.buildGeographicFilter(options.geographicAreaId);
+  
+  // Build dynamic attribute filters
+  const attributeWhere = this.buildWhereClause(options.filter);
+  
+  // Combine filters with AND logic
+  const where = { ...geographicWhere, ...attributeWhere };
+  
+  // Build dynamic select clause
+  const select = options.fields 
+    ? this.buildSelectClause(options.fields)
+    : undefined;  // undefined = return all fields
+  
+  // Execute single optimized query
+  return this.repository.findMany({
+    where,
+    select,
+    skip: (options.page - 1) * options.limit,
+    take: options.limit
+  });
+}
+
+private buildWhereClause(filter?: Record<string, any>): any {
+  if (!filter) return {};
+  
+  const where: any = {};
+  
+  for (const [field, value] of Object.entries(filter)) {
+    if (this.isHighCardinalityField(field)) {
+      // Partial matching for text fields
+      where[field] = { contains: value, mode: 'insensitive' };
+    } else if (Array.isArray(value)) {
+      // Exact matching for array fields (OR logic within dimension)
+      where[field] = { in: value };
+    } else {
+      // Exact matching for single values
+      where[field] = value;
+    }
+  }
+  
+  return where;
+}
+
+private buildSelectClause(fields: string[]): any {
+  const select: any = {};
+  
+  for (const field of fields) {
+    if (field.includes('.')) {
+      // Nested relation field (e.g., "activityType.name")
+      const [relation, ...nestedFields] = field.split('.');
+      if (!select[relation]) {
+        select[relation] = { select: {} };
+      }
+      // Build nested select recursively
+      this.addNestedField(select[relation].select, nestedFields);
+    } else {
+      // Direct field
+      select[field] = true;
+    }
+  }
+  
+  return select;
+}
+```
+
+**Performance Optimizations:**
+
+- Database indexes on all high-cardinality text fields (name, email, address, phone)
+- All filtering logic executed at database level via Prisma WHERE clauses
+- All field selection executed at database level via Prisma SELECT and INCLUDE clauses
+- Efficient JOIN handling for nested relation fields
+- No post-query filtering in Node.js - everything pushed to PostgreSQL
+
+**Design Rationale:**
+
+- **Unified API**: Single implementation path for all entity filtering - simpler codebase
+- **Geographic Area First-Class**: Hierarchical filtering remains a top-level parameter for clarity
+- **Flexible Filtering**: Enables FilterGroupingPanel to filter on any field without backend code changes
+- **Attribute Selection**: Reduces network bandwidth by 80-90% for lightweight requests (e.g., dropdown options)
+- **Type-Safe**: Zod validation ensures filter and field names are valid
+- **Performance**: Database-level filtering and field selection minimize data transfer and CPU usage
+- **Extensible**: Adding new filterable fields requires no API changes, only schema updates
+- **Simplified**: Removed legacy parameters (search, activityTypeIds, status, etc.) - all use unified filter[] API
 ```
 
 ### Optional Field Clearing
@@ -2141,6 +2362,60 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Property 51: Database error handling**
 *For any* database operation failure, the API should return an appropriate error response with a descriptive message.
 **Validates: Requirements 8.5**
+
+### Flexible Filtering and Attribute Selection Properties
+
+**Property 234: High-cardinality field partial matching**
+*For any* high-cardinality text field filter (name, email, phone, address, nickname), all returned entities should contain the filter text anywhere within the field value (case-insensitive).
+**Validates: Requirements 28.7, 28.27, 28.28, 28.29, 28.30, 28.35, 28.36, 28.40, 28.48**
+
+**Property 235: Low-cardinality field exact matching**
+*For any* low-cardinality enumerated field filter (activityType, activityCategory, role, population, areaType, venueType, status), all returned entities should have field values exactly matching at least one of the specified values.
+**Validates: Requirements 28.8, 28.37, 28.43, 28.44, 28.49**
+
+**Property 236: Multiple filter AND logic**
+*For any* combination of filter parameters, all returned entities should satisfy all specified filter conditions (AND logic across different filters).
+**Validates: Requirements 28.11, 28.34, 28.39, 28.47, 28.51**
+
+**Property 237: Attribute selection field limiting**
+*For any* fields parameter specifying a subset of entity attributes, the response should contain only the specified attributes for each entity.
+**Validates: Requirements 28.16, 28.23, 28.24, 28.25, 28.26**
+
+**Property 238: Nested relation field inclusion**
+*For any* fields parameter using dot notation (e.g., "activityType.name"), the response should include the nested relation data with only the specified nested fields.
+**Validates: Requirements 28.20, 28.21**
+
+**Property 239: Invalid field name rejection**
+*For any* fields parameter containing invalid field names, the API should return 400 Bad Request with a validation error listing the invalid field names.
+**Validates: Requirements 28.18, 28.19**
+
+**Property 240: Default full entity response**
+*For any* list query without a fields parameter, the API should return all attributes for each entity (backward compatible behavior).
+**Validates: Requirements 28.17, 28.61**
+
+**Property 241: Legacy and new filter combination**
+*For any* combination of legacy filter parameters (geographicAreaId, activityTypeIds, search) and new filter[fieldName] parameters, the API should apply all filters using AND logic.
+**Validates: Requirements 28.12, 28.13, 28.60**
+
+**Property 242: Filtered total count accuracy**
+*For any* combination of filters (geographic authorization + legacy filters + flexible filters), the total count in pagination metadata should reflect the count of entities matching all applied filters.
+**Validates: Requirements 28.58**
+
+**Property 243: Participant email filter example**
+*For any* request GET /api/v1/participants?filter[email]=@gmail.com&fields=id,email, the response should contain only participants with "@gmail.com" in their email, returning only id and email fields.
+**Validates: Requirements 28.63**
+
+**Property 244: Venue multi-filter example**
+*For any* request GET /api/v1/venues?filter[name]=community&filter[venueType]=PUBLIC_BUILDING&fields=id,name, the response should contain only public building venues with "community" in their name, returning only id and name fields.
+**Validates: Requirements 28.64**
+
+**Property 245: Activity nested field example**
+*For any* request GET /api/v1/activities?filter[name]=study&filter[status]=ACTIVE,PLANNED&fields=id,name,activityType.name, the response should contain only active or planned activities with "study" in their name, returning id, name, and the nested activity type name.
+**Validates: Requirements 28.65**
+
+**Property 246: Geographic area type filter example**
+*For any* request GET /api/v1/geographic-areas?filter[areaType]=CITY&fields=id,name,areaType,childCount, the response should contain only city-type geographic areas, returning id, name, areaType, and childCount fields.
+**Validates: Requirements 28.66**
 
 ### Synchronization Properties
 

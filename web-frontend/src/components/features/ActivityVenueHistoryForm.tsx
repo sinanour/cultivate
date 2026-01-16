@@ -160,12 +160,13 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
               }}
               entityType="venue"
               fetchFunction={async (params) => {
-                return await VenueService.getVenues(
-                  params.page,
-                  params.limit,
-                  params.geographicAreaId,
-                  params.search
-                );
+                return await VenueService.getVenuesFlexible({
+                  page: params.page,
+                  limit: params.limit,
+                  geographicAreaId: params.geographicAreaId,
+                  filter: params.filter,
+                  fields: params.fields
+                });
               }}
               formatOption={(v) => ({
                 value: v.id,

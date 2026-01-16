@@ -64,10 +64,8 @@ export class GeographicAuthorizationRoutes {
     private async getAuthorizationRules(req: AuthenticatedRequest, res: any) {
         try {
             const { userId } = req.params;
-            console.log(`[GeographicAuthorizationRoutes] Getting authorization rules for user: ${userId}`);
 
             const rules = await this.geographicAuthorizationService.getAuthorizationRules(userId);
-            console.log(`[GeographicAuthorizationRoutes] Found ${rules.length} authorization rules`);
 
             res.json({
                 success: true,
@@ -137,10 +135,8 @@ export class GeographicAuthorizationRoutes {
     private async getAuthorizedAreas(req: AuthenticatedRequest, res: any) {
         try {
             const { userId } = req.params;
-            console.log(`[GeographicAuthorizationRoutes] Getting authorized areas for user: ${userId}`);
 
             const areas = await this.geographicAuthorizationService.getAuthorizedAreas(userId);
-            console.log(`[GeographicAuthorizationRoutes] Found ${areas.length} authorized areas`);
 
             res.json({
                 success: true,

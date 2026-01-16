@@ -7,6 +7,7 @@ import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
 import { ImportResult } from '../types/csv.types';
 import { VenueImportSchema } from '../utils/validation.schemas';
 import { AppError } from '../types/errors.types';
+import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
 
 export interface CreateVenueInput {
     name: string;
@@ -25,6 +26,17 @@ export interface UpdateVenueInput {
     longitude?: number | null;
     venueType?: VenueType | null;
     version?: number;
+}
+
+export interface FlexibleVenueQuery {
+    page?: number;
+    limit?: number;
+    geographicAreaId?: string;
+    // Removed legacy search parameter - use filter.name or filter.address instead
+    filter?: Record<string, any>;
+    fields?: string[];
+    authorizedAreaIds?: string[];
+    hasGeographicRestrictions?: boolean;
 }
 
 export class VenueService {
@@ -82,17 +94,10 @@ export class VenueService {
 
     async getAllVenues(
         geographicAreaId?: string,
-        search?: string,
         authorizedAreaIds: string[] = [],
         hasGeographicRestrictions: boolean = false
     ): Promise<Venue[]> {
-        // Build search filter
-        const searchWhere = search ? {
-            OR: [
-                { name: { contains: search, mode: 'insensitive' as const } },
-                { address: { contains: search, mode: 'insensitive' as const } }
-            ]
-        } : {};
+        // Removed legacy search parameter - use filter API instead
 
         // Determine effective geographic area IDs
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
@@ -102,34 +107,36 @@ export class VenueService {
         );
 
         if (!effectiveAreaIds) {
-            // No geographic filter, just apply search if provided
-            if (search) {
-                return this.venueRepository.search(search);
-            }
+            // No geographic filter
             return this.venueRepository.findAll();
         }
 
-        // Filter venues by geographic area and search
-        return this.venueRepository.findByGeographicAreaIds(effectiveAreaIds, searchWhere);
+        // Filter venues by geographic area
+        return this.venueRepository.findByGeographicAreaIds(effectiveAreaIds, {});
     }
 
-    async getAllVenuesPaginated(
-        page?: number,
-        limit?: number,
-        geographicAreaId?: string,
-        search?: string,
-        authorizedAreaIds: string[] = [],
-        hasGeographicRestrictions: boolean = false
-    ): Promise<PaginatedResponse<Venue>> {
+    /**
+     * Get venues with flexible filtering and customizable attribute selection
+     */
+    async getVenuesFlexible(query: FlexibleVenueQuery): Promise<PaginatedResponse<Venue>> {
+        const { page, limit, geographicAreaId, filter, fields, authorizedAreaIds = [], hasGeographicRestrictions = false } = query;
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
-        // Build search filter
-        const searchWhere = search ? {
-            OR: [
-                { name: { contains: search, mode: 'insensitive' as const } },
-                { address: { contains: search, mode: 'insensitive' as const } }
-            ]
-        } : {};
+        // Removed legacy search parameter handling - use filter.name or filter.address instead
+
+        // Build flexible filter where clause
+        const flexibleWhere = filter ? buildWhereClause('venue', filter) : undefined;
+
+        // Build select clause for attribute selection
+        let select: any = undefined;
+        if (fields && fields.length > 0) {
+            try {
+                const validFields = getValidFieldNames('venue');
+                select = buildSelectClause(fields, validFields);
+            } catch (error) {
+                throw new AppError('INVALID_FIELDS', (error as Error).message, 400);
+            }
+        }
 
         // Determine effective geographic area IDs
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
@@ -139,13 +146,13 @@ export class VenueService {
         );
 
         if (!effectiveAreaIds) {
-            // No geographic filter, just apply search if provided
-            const { data, total } = await this.venueRepository.findAllPaginated(validPage, validLimit, searchWhere);
+            // No geographic filter, just apply flexible filters
+            const { data, total } = await this.venueRepository.findAllPaginated(validPage, validLimit, flexibleWhere, select);
             return PaginationHelper.createResponse(data, validPage, validLimit, total);
         }
 
-        // Filter venues by geographic area with pagination and search
-        const { data, total } = await this.venueRepository.findByGeographicAreaIdsPaginated(effectiveAreaIds, validPage, validLimit, searchWhere);
+        // Filter venues by geographic area with pagination and flexible filters
+        const { data, total } = await this.venueRepository.findByGeographicAreaIdsPaginated(effectiveAreaIds, validPage, validLimit, flexibleWhere, select);
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 
@@ -186,12 +193,7 @@ export class VenueService {
         return venue;
     }
 
-    async searchVenues(query: string): Promise<Venue[]> {
-        if (!query || query.trim().length === 0) {
-            return this.venueRepository.findAll();
-        }
-        return this.venueRepository.search(query);
-    }
+    // Removed deprecated searchVenues method - use getVenuesFlexible with filter instead
 
     async createVenue(
         data: CreateVenueInput,
@@ -339,7 +341,7 @@ export class VenueService {
         hasGeographicRestrictions: boolean = false
     ): Promise<string> {
         // Get all venues (with geographic filter if provided)
-        const venues = await this.getAllVenues(geographicAreaId, undefined, authorizedAreaIds, hasGeographicRestrictions);
+        const venues = await this.getAllVenues(geographicAreaId, authorizedAreaIds, hasGeographicRestrictions);
 
         // Fetch venues with geographic area included
         const venuesWithArea = await Promise.all(

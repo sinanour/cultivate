@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Container from '@cloudscape-design/components/container';
@@ -27,7 +27,6 @@ import {
   type GroupingDimension as FilterGroupingDimension 
 } from '../common/FilterGroupingPanel';
 import type { TimePeriod } from '../../utils/constants';
-import { isValidUUID, setMultiValueParam, getValidatedUUIDs } from '../../utils/url-params.utils';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -63,7 +62,7 @@ function getColorForGroup(groupName: string, allGroups: string[]): string {
 type ViewMode = 'all' | 'type' | 'category';
 
 export function GrowthDashboard() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
   // Initialize state from URL parameters
@@ -150,27 +149,18 @@ export function GrowthDashboard() {
     tokens: [],
     operation: 'and',
   });
-  const [propertyFilterOptions, setPropertyFilterOptions] = useState<PropertyFilterProps.FilteringOption[]>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   
   // Bidirectional cache: label ↔ UUID
   const [labelToUuidCache, setLabelToUuidCache] = useState<Map<string, string>>(new Map());
-  const [uuidToLabelCache, setUuidToLabelCache] = useState<Map<string, string>>(new Map());
 
   // Helper to add to cache
   const addToCache = (uuid: string, label: string) => {
     setLabelToUuidCache(prev => new Map(prev).set(label, uuid));
-    setUuidToLabelCache(prev => new Map(prev).set(uuid, label));
   };
 
   // Helper to get UUID from label
   const getUuidFromLabel = (label: string): string | undefined => {
     return labelToUuidCache.get(label);
-  };
-
-  // Helper to get label from UUID
-  const getLabelFromUuid = (uuid: string): string | undefined => {
-    return uuidToLabelCache.get(uuid);
   };
 
   // Extract individual values from consolidated tokens (split comma-separated values)
@@ -180,33 +170,87 @@ export function GrowthDashboard() {
     return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
   };
 
-  // FilterGroupingPanel configuration
-  const filteringProperties: FilterProperty[] = [
+  // FilterGroupingPanel configuration with loadItems callbacks
+  const filteringProperties: FilterProperty[] = useMemo(() => [
     {
       key: 'activityCategory',
       propertyLabel: 'Activity Category',
       groupValuesLabel: 'Activity Category values',
       operators: ['='],
+      loadItems: async (filterText: string) => {
+        const categories = await activityCategoryService.getActivityCategories();
+        const filtered = categories.filter(cat => 
+          !filterText || cat.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        filtered.forEach(cat => addToCache(cat.id, cat.name));
+        return filtered.map(cat => ({
+          propertyKey: 'activityCategory',
+          value: cat.name,
+          label: cat.name,
+        }));
+      },
     },
     {
       key: 'activityType',
       propertyLabel: 'Activity Type',
       groupValuesLabel: 'Activity Type values',
       operators: ['='],
+      loadItems: async (filterText: string) => {
+        const types = await ActivityTypeService.getActivityTypes();
+        const filtered = types.filter(type => 
+          !filterText || type.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        filtered.forEach(type => addToCache(type.id, type.name));
+        return filtered.map(type => ({
+          propertyKey: 'activityType',
+          value: type.name,
+          label: type.name,
+        }));
+      },
     },
     {
       key: 'venue',
       propertyLabel: 'Venue',
       groupValuesLabel: 'Venue values',
       operators: ['='],
+      loadItems: async (filterText: string) => {
+        const venuesResponse = await VenueService.getVenuesFlexible({
+          page: 1,
+          limit: 50,
+          geographicAreaId: selectedGeographicAreaId,
+          filter: filterText ? { name: filterText } : undefined
+        });
+        
+        venuesResponse.data.forEach(venue => addToCache(venue.id, venue.name));
+        return venuesResponse.data.map(venue => ({
+          propertyKey: 'venue',
+          value: venue.name,
+          label: venue.name,
+        }));
+      },
     },
     {
       key: 'population',
       propertyLabel: 'Population',
       groupValuesLabel: 'Population values',
       operators: ['='],
+      loadItems: async (filterText: string) => {
+        const populations = await PopulationService.getPopulations();
+        const filtered = populations.filter(pop => 
+          !filterText || pop.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        filtered.forEach(pop => addToCache(pop.id, pop.name));
+        return filtered.map(pop => ({
+          propertyKey: 'population',
+          value: pop.name,
+          label: pop.name,
+        }));
+      },
     },
-  ];
+  ], [selectedGeographicAreaId]); // Depend on selectedGeographicAreaId for venue loading
 
   const groupingDimensionsConfig: FilterGroupingDimension[] = [
     { value: 'all', label: 'All' },
@@ -222,288 +266,6 @@ export function GrowthDashboard() {
       setViewMode(state.grouping as ViewMode);
     }
   };
-
-  // Async loading of property values with cache population
-  const handleLoadItems: PropertyFilterProps['onLoadItems'] = async ({ detail }) => {
-    const { filteringProperty, filteringText } = detail;
-    
-    if (!filteringProperty) return;
-
-    setIsLoadingOptions(true);
-
-    try {
-      let options: PropertyFilterProps.FilteringOption[] = [];
-
-      if (filteringProperty.key === 'activityCategory') {
-        const categories = await activityCategoryService.getActivityCategories();
-        const filtered = categories.filter(cat => 
-          !filteringText || cat.name.toLowerCase().includes(filteringText.toLowerCase())
-        );
-        
-        // Add to cache and create options with labels as values
-        filtered.forEach(cat => addToCache(cat.id, cat.name));
-        options = filtered.map(cat => ({
-          propertyKey: 'activityCategory',
-          value: cat.name, // Use label as value for display
-          label: cat.name,
-        }));
-      } else if (filteringProperty.key === 'activityType') {
-        const types = await ActivityTypeService.getActivityTypes();
-        const filtered = types.filter(type => 
-          !filteringText || type.name.toLowerCase().includes(filteringText.toLowerCase())
-        );
-        
-        // Add to cache and create options with labels as values
-        filtered.forEach(type => addToCache(type.id, type.name));
-        options = filtered.map(type => ({
-          propertyKey: 'activityType',
-          value: type.name, // Use label as value for display
-          label: type.name,
-        }));
-      } else if (filteringProperty.key === 'venue') {
-        const venuesResponse = await VenueService.getVenues(undefined, undefined, selectedGeographicAreaId, filteringText || undefined);
-        
-        // Add to cache and create options with labels as values
-        venuesResponse.data.forEach(venue => addToCache(venue.id, venue.name));
-        options = venuesResponse.data.map(venue => ({
-          propertyKey: 'venue',
-          value: venue.name, // Use label as value for display
-          label: venue.name,
-        }));
-      } else if (filteringProperty.key === 'population') {
-        const populations = await PopulationService.getPopulations();
-        const filtered = populations.filter(pop => 
-          !filteringText || pop.name.toLowerCase().includes(filteringText.toLowerCase())
-        );
-        
-        // Add to cache and create options with labels as values
-        filtered.forEach(pop => addToCache(pop.id, pop.name));
-        options = filtered.map(pop => ({
-          propertyKey: 'population',
-          value: pop.name, // Use label as value for display
-          label: pop.name,
-        }));
-      }
-
-      setPropertyFilterOptions(options);
-    } catch (error) {
-      console.error('Error loading property filter options:', error);
-      setPropertyFilterOptions([]);
-    } finally {
-      setIsLoadingOptions(false);
-    }
-  };
-
-  // Initialize PropertyFilter from URL parameters (convert UUIDs to labels)
-  useEffect(() => {
-    const initializeFiltersFromUrl = async () => {
-      const tokensByProperty = new Map<string, string[]>();
-      
-      // Activity Categories - use correct param name with validation
-      const catIds = getValidatedUUIDs(searchParams, 'activityCategoryIds');
-      const catLabels: string[] = [];
-      for (const id of catIds) {
-        let label = getLabelFromUuid(id);
-        if (!label) {
-          // Cache miss - fetch the category to get its label
-          try {
-            const categories = await activityCategoryService.getActivityCategories();
-            const category = categories.find(c => c.id === id);
-            if (category) {
-              label = category.name;
-              addToCache(category.id, category.name);
-            } else {
-              console.warn(`Invalid activity category ID in URL: ${id}`);
-              continue;
-            }
-          } catch (error) {
-            console.error('Error fetching activity category:', error);
-            continue;
-          }
-        }
-        if (label) {
-          catLabels.push(label);
-        }
-      }
-      if (catLabels.length > 0) {
-        tokensByProperty.set('activityCategory', catLabels);
-      }
-      
-      // Activity Types - use correct param name with validation
-      const typeIds = getValidatedUUIDs(searchParams, 'activityTypeIds');
-      const typeLabels: string[] = [];
-      for (const id of typeIds) {
-        let label = getLabelFromUuid(id);
-        if (!label) {
-          // Cache miss - fetch the type to get its label
-          try {
-            const types = await ActivityTypeService.getActivityTypes();
-            const type = types.find(t => t.id === id);
-            if (type) {
-              label = type.name;
-              addToCache(type.id, type.name);
-            } else {
-              console.warn(`Invalid activity type ID in URL: ${id}`);
-              continue;
-            }
-          } catch (error) {
-            console.error('Error fetching activity type:', error);
-            continue;
-          }
-        }
-        if (label) {
-          typeLabels.push(label);
-        }
-      }
-      if (typeLabels.length > 0) {
-        tokensByProperty.set('activityType', typeLabels);
-      }
-      
-      // Venues - use correct param name with validation
-      const venueIds = getValidatedUUIDs(searchParams, 'venueIds');
-      const venueLabels: string[] = [];
-      for (const id of venueIds) {
-        let label = getLabelFromUuid(id);
-        if (!label) {
-          // Cache miss - fetch the venue to get its label
-          try {
-            const venuesResponse = await VenueService.getVenues();
-            const venue = venuesResponse.data.find(v => v.id === id);
-            if (venue) {
-              label = venue.name;
-              addToCache(venue.id, venue.name);
-            } else {
-              console.warn(`Invalid venue ID in URL: ${id}`);
-              continue;
-            }
-          } catch (error) {
-            console.error('Error fetching venue:', error);
-            continue;
-          }
-        }
-        if (label) {
-          venueLabels.push(label);
-        }
-      }
-      if (venueLabels.length > 0) {
-        tokensByProperty.set('venue', venueLabels);
-      }
-      
-      // Populations - use correct param name with validation
-      const popIds = getValidatedUUIDs(searchParams, 'populationIds');
-      const popLabels: string[] = [];
-      for (const id of popIds) {
-        let label = getLabelFromUuid(id);
-        if (!label) {
-          // Cache miss - fetch the population to get its label
-          try {
-            const populations = await PopulationService.getPopulations();
-            const population = populations.find(p => p.id === id);
-            if (population) {
-              label = population.name;
-              addToCache(population.id, population.name);
-            } else {
-              console.warn(`Invalid population ID in URL: ${id}`);
-              continue;
-            }
-          } catch (error) {
-            console.error('Error fetching population:', error);
-            continue;
-          }
-        }
-        if (label) {
-          popLabels.push(label);
-        }
-      }
-      if (popLabels.length > 0) {
-        tokensByProperty.set('population', popLabels);
-      }
-      
-      // Create consolidated tokens (one token per property with comma-separated values)
-      const tokens: PropertyFilterProps.Token[] = [];
-      tokensByProperty.forEach((labels, propertyKey) => {
-        if (labels.length > 0) {
-          tokens.push({
-            propertyKey,
-            operator: '=',
-            value: labels.join(', '), // Comma-separated values in single token
-          });
-        }
-      });
-
-      if (tokens.length > 0) {
-        setPropertyFilterQuery({ tokens, operation: 'and' });
-      }
-    };
-    
-    // Only initialize once on mount
-    if (propertyFilterQuery.tokens.length === 0) {
-      initializeFiltersFromUrl();
-    }
-  }, []); // Empty dependency array - run once on mount
-
-  // Sync state to URL whenever filters change
-  useEffect(() => {
-    // Start with empty params - write only what this dashboard owns
-    const params = new URLSearchParams();
-
-    // CRITICAL: Add global geographic area filter if active
-    // Read from context (not URL) to ensure it's always included
-    if (selectedGeographicAreaId) {
-      params.set('geographicArea', selectedGeographicAreaId);
-    }
-
-    // Dashboard-specific params
-    params.set('period', period);
-    params.set('growthGroupBy', viewMode);
-
-    // Shared date range - preserve relative or absolute format
-    if (dateRange) {
-      if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
-        // Store as relative (e.g., "-90d", "-6m")
-        const unitChar = dateRange.unit.charAt(0); // 'd', 'w', 'm', 'y'
-        params.set('relativePeriod', `-${dateRange.amount}${unitChar}`);
-      } else if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
-        // Store as absolute dates
-        params.set('startDate', dateRange.startDate);
-        params.set('endDate', dateRange.endDate);
-      }
-    }
-
-    // Shared PropertyFilter tokens (extract UUIDs inline to avoid stale closures)
-    // Tokens now contain comma-separated values, so we need to split them
-    const activityCategoryIds = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t))
-      .map(label => getUuidFromLabel(label))
-      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
-    setMultiValueParam(params, 'activityCategoryIds', activityCategoryIds);
-
-    const activityTypeIds = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t))
-      .map(label => getUuidFromLabel(label))
-      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
-    setMultiValueParam(params, 'activityTypeIds', activityTypeIds);
-
-    const venueIds = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'venue' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t))
-      .map(label => getUuidFromLabel(label))
-      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
-    setMultiValueParam(params, 'venueIds', venueIds);
-
-    const populationIds = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'population' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t))
-      .map(label => getUuidFromLabel(label))
-      .filter((uuid): uuid is string => !!uuid && isValidUUID(uuid));
-    setMultiValueParam(params, 'populationIds', populationIds);
-
-    setSearchParams(params, { replace: true });
-  }, [period, viewMode, dateRange, propertyFilterQuery, selectedGeographicAreaId]);
-  // Note: selectedGeographicAreaId IS in dependencies - we want to update URL when it changes
-  // This is safe because we're reading from context, not from URL (no circular dependency)
 
   // Store view mode in localStorage
   useEffect(() => {
@@ -726,9 +488,6 @@ export function GrowthDashboard() {
             initialFilterTokens={propertyFilterQuery}
             initialGrouping={viewMode}
             onUpdate={handleFilterUpdate}
-            onLoadItems={handleLoadItems}
-            filteringOptions={propertyFilterOptions}
-            filteringStatusType={isLoadingOptions ? 'loading' : 'finished'}
             isLoading={isLoading}
           />
         </SpaceBetween>

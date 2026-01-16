@@ -31,19 +31,26 @@ export class VenueRepository {
     });
   }
 
-  async findAllPaginated(page: number, limit: number, where?: any): Promise<{ data: Venue[]; total: number }> {
+  async findAllPaginated(page: number, limit: number, where?: any, select?: any): Promise<{ data: any[]; total: number }> {
     const skip = (page - 1) * limit;
 
+    const queryOptions: any = {
+      where,
+      skip,
+      take: limit,
+      orderBy: { name: 'asc' },
+    };
+
+    if (select) {
+      queryOptions.select = select;
+    } else {
+      queryOptions.include = {
+        geographicArea: true,
+      };
+    }
+
     const [data, total] = await Promise.all([
-      this.prisma.venue.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: 'asc' },
-        include: {
-          geographicArea: true,
-        },
-      }),
+      this.prisma.venue.findMany(queryOptions),
       this.prisma.venue.count({ where }),
     ]);
 
@@ -192,23 +199,30 @@ export class VenueRepository {
     });
   }
 
-  async findByGeographicAreaIdsPaginated(areaIds: string[], page: number, limit: number, searchWhere?: any): Promise<{ data: Venue[]; total: number }> {
+  async findByGeographicAreaIdsPaginated(areaIds: string[], page: number, limit: number, searchWhere?: any, select?: any): Promise<{ data: any[]; total: number }> {
     const skip = (page - 1) * limit;
     const where = {
       geographicAreaId: { in: areaIds },
       ...searchWhere
     };
 
+    const queryOptions: any = {
+      where,
+      skip,
+      take: limit,
+      orderBy: { name: 'asc' },
+    };
+
+    if (select) {
+      queryOptions.select = select;
+    } else {
+      queryOptions.include = {
+        geographicArea: true,
+      };
+    }
+
     const [data, total] = await Promise.all([
-      this.prisma.venue.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: 'asc' },
-        include: {
-          geographicArea: true,
-        },
-      }),
+      this.prisma.venue.findMany(queryOptions),
       this.prisma.venue.count({ where }),
     ]);
 

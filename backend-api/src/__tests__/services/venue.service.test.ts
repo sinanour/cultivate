@@ -51,18 +51,7 @@ describe('VenueService', () => {
         });
     });
 
-    describe('searchVenues', () => {
-        it('should search venues by query', async () => {
-            const mockVenues = [
-                { id: '1', name: 'Community Center', address: '123 Main St', geographicAreaId: 'area-1', latitude: null, longitude: null, venueType: null, createdAt: new Date(), updatedAt: new Date() },
-            ];
-            mockVenueRepo.search = jest.fn().mockResolvedValue(mockVenues);
 
-            const result = await service.searchVenues('Community');
-
-            expect(result).toEqual(mockVenues);
-        });
-    });
 
     describe('createVenue', () => {
         it('should create venue with valid data', async () => {

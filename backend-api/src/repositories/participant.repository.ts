@@ -27,12 +27,13 @@ export class ParticipantRepository {
     });
   }
 
-  async findAllPaginated(page: number, limit: number, where?: any): Promise<{ data: Participant[]; total: number }> {
+  async findAllPaginated(page: number, limit: number, where?: any, select?: any): Promise<{ data: any[]; total: number }> {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
       this.prisma.participant.findMany({
         where,
+        select,
         skip,
         take: limit,
         orderBy: { name: 'asc' },

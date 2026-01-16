@@ -202,7 +202,6 @@ describe('Geographic Area Filtering with DENY Rules', () => {
             // Get participants with explicit city filter
             const participants = await participantService.getAllParticipants(
                 cityId, // Explicit filter for city
-                undefined, // No search
                 authInfo.authorizedAreaIds,
                 authInfo.hasGeographicRestrictions
             );
@@ -223,14 +222,13 @@ describe('Geographic Area Filtering with DENY Rules', () => {
             const authInfo = await geoAuthService.getAuthorizationInfo(testUserId);
 
             // Get participants with explicit city filter (paginated)
-            const result = await participantService.getAllParticipantsPaginated(
-                1, // page
-                10, // limit
-                cityId, // Explicit filter for city
-                undefined, // No search
-                authInfo.authorizedAreaIds,
-                authInfo.hasGeographicRestrictions
-            );
+            const result = await participantService.getParticipantsFlexible({
+                page: 1,
+                limit: 10,
+                geographicAreaId: cityId,
+                authorizedAreaIds: authInfo.authorizedAreaIds,
+                hasGeographicRestrictions: authInfo.hasGeographicRestrictions
+            });
 
             console.log('Paginated participants returned:', result.data.map(p => ({ id: p.id, name: p.name })));
 
@@ -250,7 +248,6 @@ describe('Geographic Area Filtering with DENY Rules', () => {
             // Get participants WITHOUT explicit filter (implicit filtering)
             const participants = await participantService.getAllParticipants(
                 undefined, // No explicit filter
-                undefined, // No search
                 authInfo.authorizedAreaIds,
                 authInfo.hasGeographicRestrictions
             );

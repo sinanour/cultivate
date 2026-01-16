@@ -4,10 +4,10 @@ import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
 import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
+import { parseFilterParameters, ParsedFilterRequest } from '../middleware/filter-parser.middleware';
 import {
     ParticipantCreateSchema,
     ParticipantUpdateSchema,
-    ParticipantSearchSchema,
     ParticipantAddressHistoryCreateSchema,
     ParticipantAddressHistoryUpdateSchema,
     UuidParamSchema,
@@ -35,6 +35,7 @@ export class ParticipantRoutes {
             '/',
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireAuthenticated(),
+            parseFilterParameters,
             this.getAll.bind(this)
         );
 
@@ -53,13 +54,7 @@ export class ParticipantRoutes {
             this.importCSV.bind(this)
         );
 
-        this.router.get(
-            '/search',
-            this.authMiddleware.authenticate(),
-            this.authorizationMiddleware.requireAuthenticated(),
-            ValidationMiddleware.validateQuery(ParticipantSearchSchema),
-            this.search.bind(this)
-        );
+        // Removed deprecated GET /search endpoint - use unified filter[] API with GET / instead
 
         this.router.get(
             '/:id',
@@ -146,12 +141,16 @@ export class ParticipantRoutes {
         );
     }
 
-    private async getAll(req: AuthenticatedRequest, res: Response) {
+    private async getAll(req: AuthenticatedRequest & ParsedFilterRequest, res: Response) {
         try {
             const page = req.query.page ? parseInt(req.query.page as string) : undefined;
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
             let geographicAreaId = req.query.geographicAreaId as string | undefined;
-            const search = req.query.search as string | undefined;
+            // Removed legacy search parameter - use filter[name] or filter[email] instead
+
+            // Extract parsed filter and fields from middleware
+            const filter = req.parsedFilter;
+            const fields = req.parsedFields;
 
             // Extract authorization info from request
             const authorizedAreaIds = req.user?.authorizedAreaIds || [];
@@ -178,19 +177,19 @@ export class ParticipantRoutes {
             }
 
             if (page !== undefined || limit !== undefined) {
-                const result = await this.participantService.getAllParticipantsPaginated(
+                const result = await this.participantService.getParticipantsFlexible({
                     page,
                     limit,
                     geographicAreaId,
-                    search,
+                    filter,
+                    fields,
                     authorizedAreaIds,
                     hasGeographicRestrictions
-                );
+                });
                 res.status(200).json({ success: true, ...result });
             } else {
                 const participants = await this.participantService.getAllParticipants(
                     geographicAreaId,
-                    search,
                     authorizedAreaIds,
                     hasGeographicRestrictions
                 );
@@ -200,6 +199,14 @@ export class ParticipantRoutes {
             if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
                 res.status(403).json({
                     code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
+            if (error instanceof Error && error.message.includes('INVALID_FIELDS')) {
+                res.status(400).json({
+                    code: 'VALIDATION_ERROR',
                     message: error.message,
                     details: {},
                 });
@@ -283,19 +290,7 @@ export class ParticipantRoutes {
         }
     }
 
-    private async search(req: AuthenticatedRequest, res: Response) {
-        try {
-            const { q } = req.query;
-            const participants = await this.participantService.searchParticipants((q as string) || '');
-            res.status(200).json({ success: true, data: participants });
-        } catch (error) {
-            res.status(500).json({
-                code: 'INTERNAL_ERROR',
-                message: 'An error occurred while searching participants',
-                details: {},
-            });
-        }
-    }
+    // Removed deprecated search method - use unified filter[] API with getAll instead
 
     private async create(req: AuthenticatedRequest, res: Response) {
         try {

@@ -170,13 +170,24 @@ export class ActivityRepository {
   async findWithFilters(
     filters: ActivityFilters,
     page: number,
-    limit: number
-  ): Promise<{ data: Activity[]; total: number }> {
+    limit: number,
+    select?: any
+  ): Promise<{ data: any[]; total: number }> {
     const skip = (page - 1) * limit;
 
     // Build where clause
     const where: any = {};
     const andConditions: any[] = [];
+
+    // Name filter (high-cardinality text field with partial matching)
+    if ((filters as any).name) {
+      andConditions.push({
+        name: {
+          contains: (filters as any).name,
+          mode: 'insensitive'
+        }
+      });
+    }
 
     // Activity type filter (OR logic within dimension)
     if (filters.activityTypeIds && filters.activityTypeIds.length > 0) {
@@ -230,7 +241,6 @@ export class ActivityRepository {
     }
 
     // Geographic area filter (activities at venues in specified areas)
-    // This filter requires checking the CURRENT venue (most recent venue history)
     if (filters.geographicAreaIds && filters.geographicAreaIds.length > 0) {
       andConditions.push({
         activityVenueHistory: {
@@ -248,20 +258,27 @@ export class ActivityRepository {
       where.AND = andConditions;
     }
 
-    const [data, total] = await Promise.all([
-      this.prisma.activity.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { startDate: 'desc' },
-        include: {
-          activityType: {
-            include: {
-              activityCategory: true,
-            },
+    const queryOptions: any = {
+      where,
+      skip,
+      take: limit,
+      orderBy: { startDate: 'desc' },
+    };
+
+    if (select) {
+      queryOptions.select = select;
+    } else {
+      queryOptions.include = {
+        activityType: {
+          include: {
+            activityCategory: true,
           },
         },
-      }),
+      };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.activity.findMany(queryOptions),
       this.prisma.activity.count({ where }),
     ]);
 

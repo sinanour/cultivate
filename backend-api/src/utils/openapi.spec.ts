@@ -3,7 +3,9 @@ export const openApiSpec = {
     info: {
         title: 'Cultivate API',
         version: '1.0.0',
-        description: 'RESTful API for managing community activities, participants, and analytics',
+        description: 'RESTful API for managing community activities, participants, and analytics. ' +
+            'Supports flexible filtering via filter[fieldName] parameters. ' +
+            'Population filtering: Use filter[populationIds]=uuid1,uuid2 to filter participants by population (OR logic within dimension).',
         contact: {
             name: 'API Support',
         },

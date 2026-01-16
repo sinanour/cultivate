@@ -10,6 +10,7 @@ import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
 import { ImportResult } from '../types/csv.types';
 import { ParticipantImportSchema } from '../utils/validation.schemas';
 import { AppError } from '../types/errors.types';
+import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
 
 export interface CreateParticipantInput {
     name: string;
@@ -42,6 +43,17 @@ export interface CreateAddressHistoryInput {
 export interface UpdateAddressHistoryInput {
     venueId?: string;
     effectiveFrom?: Date | null;
+}
+
+export interface FlexibleParticipantQuery {
+    page?: number;
+    limit?: number;
+    geographicAreaId?: string;
+    // Removed legacy search parameter - use filter.name or filter.email instead
+    filter?: Record<string, any>;
+    fields?: string[];
+    authorizedAreaIds?: string[];
+    hasGeographicRestrictions?: boolean;
 }
 
 export class ParticipantService {
@@ -100,14 +112,8 @@ export class ParticipantService {
         return undefined;
     }
 
-    async getAllParticipants(geographicAreaId?: string, search?: string, authorizedAreaIds: string[] = [], hasGeographicRestrictions: boolean = false): Promise<Participant[]> {
-        // Build search filter
-        const searchWhere = search ? {
-            OR: [
-                { name: { contains: search, mode: 'insensitive' as const } },
-                { email: { contains: search, mode: 'insensitive' as const } }
-            ]
-        } : {};
+    async getAllParticipants(geographicAreaId?: string, authorizedAreaIds: string[] = [], hasGeographicRestrictions: boolean = false): Promise<Participant[]> {
+    // Removed legacy search parameter - use filter API instead
 
         // Determine effective geographic area IDs
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
@@ -117,10 +123,7 @@ export class ParticipantService {
         );
 
         if (!effectiveAreaIds) {
-            // No geographic filter, just apply search if provided
-            if (search) {
-                return this.participantRepository.search(search);
-            }
+            // No geographic filter
             return this.participantRepository.findAll();
         }
 
@@ -135,7 +138,6 @@ export class ParticipantService {
         };
 
         const allParticipants = await this.prisma.participant.findMany({
-            where: searchWhere,
             include: {
                 addressHistory: {
                     where: {
@@ -160,16 +162,68 @@ export class ParticipantService {
         return filteredParticipants.map(({ addressHistory, ...participant }) => participant as Participant);
     }
 
-    async getAllParticipantsPaginated(page?: number, limit?: number, geographicAreaId?: string, search?: string, authorizedAreaIds: string[] = [], hasGeographicRestrictions: boolean = false): Promise<PaginatedResponse<Participant>> {
+    /**
+     * Get participants with flexible filtering and customizable attribute selection
+     * Supports unified filter[fieldName] + fields parameters
+     */
+    async getParticipantsFlexible(query: FlexibleParticipantQuery): Promise<PaginatedResponse<Participant>> {
+        const { page, limit, geographicAreaId, filter, fields, authorizedAreaIds = [], hasGeographicRestrictions = false } = query;
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
-        // Build search filter
-        const searchWhere = search ? {
-            OR: [
-                { name: { contains: search, mode: 'insensitive' as const } },
-                { email: { contains: search, mode: 'insensitive' as const } }
-            ]
-        } : {};
+        // Removed legacy search parameter handling - use filter.name or filter.email instead
+
+        // Extract populationIds from filter for special handling (many-to-many relationship)
+        let populationWhere: any = undefined;
+        let filterWithoutPopulations = filter;
+
+        if (filter?.populationIds) {
+            // Normalize to array (handle comma-separated strings)
+            const populationIdsRaw = filter.populationIds;
+            const populationIds = Array.isArray(populationIdsRaw)
+                ? populationIdsRaw
+                : (typeof populationIdsRaw === 'string'
+                    ? populationIdsRaw.split(',').map(v => v.trim()).filter(v => v.length > 0)
+                    : [populationIdsRaw]);
+
+            if (populationIds.length > 0) {
+                // Build nested query for many-to-many relationship through ParticipantPopulation
+                populationWhere = {
+                    participantPopulations: {
+                        some: {
+                            populationId: { in: populationIds }
+                        }
+                    }
+                };
+            }
+
+            // Remove populationIds from filter object to avoid passing to buildWhereClause
+            const { populationIds: _, ...restFilter } = filter;
+            filterWithoutPopulations = restFilter;
+        }
+
+        // Build flexible filter where clause (without populationIds)
+        const flexibleWhere = filterWithoutPopulations ? buildWhereClause('participant', filterWithoutPopulations) : undefined;
+
+        // Merge population filter with flexible filter using AND logic
+        let combinedWhere: any = undefined;
+        if (populationWhere && flexibleWhere) {
+            combinedWhere = { AND: [populationWhere, flexibleWhere] };
+        } else if (populationWhere) {
+            combinedWhere = populationWhere;
+        } else if (flexibleWhere) {
+            combinedWhere = flexibleWhere;
+        }
+
+        // Build select clause for attribute selection
+        let select: any = undefined;
+        if (fields && fields.length > 0) {
+            try {
+                const validFields = getValidFieldNames('participant');
+                select = buildSelectClause(fields, validFields);
+            } catch (error) {
+                throw new AppError('INVALID_FIELDS', (error as Error).message, 400);
+            }
+        }
 
         // Determine effective geographic area IDs
         const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
@@ -179,8 +233,8 @@ export class ParticipantService {
         );
 
         if (!effectiveAreaIds) {
-            // No geographic filter, just apply search if provided
-            const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit, searchWhere);
+            // No geographic filter, just apply flexible filters
+            const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit, combinedWhere, select);
             return PaginationHelper.createResponse(data, validPage, validLimit, total);
         }
 
@@ -194,35 +248,73 @@ export class ParticipantService {
             }>;
         };
 
-        const allParticipants = await this.prisma.participant.findMany({
-            where: searchWhere,
-            include: {
+        // Build query options
+        const queryOptions: any = {
+            where: combinedWhere,
+            orderBy: { name: 'asc' }
+        };
+
+        if (select) {
+            queryOptions.select = select;
+        } else {
+            queryOptions.include = {
                 addressHistory: {
                     where: {
-                        venue: {}, // Only include address history with valid venues (venue exists)
+                        venue: {}, // Only include address history with valid venues
                     },
                     orderBy: { effectiveFrom: 'desc' },
                     take: 1,
                     include: { venue: true }
                 }
-            },
-            orderBy: { name: 'asc' }
-        }) as ParticipantWithAddress[];
+            };
+        }
 
-        // Filter to only those whose current address is in the geographic area
-        const filteredParticipants = allParticipants.filter(p =>
-            p.addressHistory.length > 0 &&
-            p.addressHistory[0].venue && // Ensure venue exists
-            areaIds.includes(p.addressHistory[0].venue.geographicAreaId)
-        );
+        const allParticipants = await this.prisma.participant.findMany(queryOptions) as any;
+
+        // When using select, we need to fetch address history separately for filtering
+        let filteredParticipants: any[];
+        if (select) {
+            // Fetch participant IDs that match geographic filter
+            const participantsWithAddress = await this.prisma.participant.findMany({
+                where: combinedWhere,
+                include: {
+                    addressHistory: {
+                        where: { venue: {} },
+                        orderBy: { effectiveFrom: 'desc' },
+                        take: 1,
+                        include: { venue: true }
+                    }
+                }
+            }) as ParticipantWithAddress[];
+
+            const matchingIds = participantsWithAddress
+                .filter(p =>
+                    p.addressHistory.length > 0 &&
+                    p.addressHistory[0].venue &&
+                    areaIds.includes(p.addressHistory[0].venue.geographicAreaId)
+                )
+                .map(p => p.id);
+
+            // Filter selected participants to only those matching geographic filter
+            filteredParticipants = allParticipants.filter((p: any) => matchingIds.includes(p.id));
+        } else {
+            // Filter to only those whose current address is in the geographic area
+            filteredParticipants = allParticipants.filter((p: ParticipantWithAddress) =>
+                p.addressHistory.length > 0 &&
+                p.addressHistory[0].venue &&
+                areaIds.includes(p.addressHistory[0].venue.geographicAreaId)
+            );
+        }
 
         // Apply pagination
         const total = filteredParticipants.length;
         const skip = (validPage - 1) * validLimit;
         const paginatedParticipants = filteredParticipants.slice(skip, skip + validLimit);
 
-        // Remove the included relations for the response
-        const data = paginatedParticipants.map(({ addressHistory, ...participant }) => participant as Participant);
+        // Remove the included relations for the response (if not using select)
+        const data = select
+            ? paginatedParticipants
+            : paginatedParticipants.map(({ addressHistory, ...participant }: any) => participant as Participant);
 
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
@@ -279,12 +371,7 @@ export class ParticipantService {
         return participant;
     }
 
-    async searchParticipants(query: string): Promise<Participant[]> {
-        if (!query || query.trim().length === 0) {
-            return this.participantRepository.findAll();
-        }
-        return this.participantRepository.search(query);
-    }
+    // Removed deprecated searchParticipants method - use getParticipantsFlexible with filter instead
 
     async createParticipant(data: CreateParticipantInput): Promise<Participant> {
         // Validate required fields

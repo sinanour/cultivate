@@ -42,7 +42,7 @@ export class ConnectionMonitor {
 
         // Process sync queue
         try {
-            const result = await SyncQueue.processQueue();
+            await SyncQueue.processQueue();
         } catch (error) {
             console.error('Failed to process sync queue:', error);
         }
