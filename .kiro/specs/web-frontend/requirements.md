@@ -44,6 +44,7 @@ The Web Frontend package provides a responsive React-based web application that 
 - **FilterGroupingPanel**: A reusable component that combines date range selection, property-based filtering, and grouping controls with an explicit "Update" button for applying changes to data visualization pages
 - **Additive_Grouping**: A grouping mode where multiple dimensions can be selected simultaneously (e.g., group by activity type AND venue AND geographic area)
 - **Exclusive_Grouping**: A grouping mode where only one dimension can be selected at a time (e.g., group by activity type OR activity category OR no grouping)
+- **Population_Badge**: A visual indicator displayed beside a participant's name showing which populations they belong to, enabling quick identification of participant demographics
 
 ## Requirements
 
@@ -1560,3 +1561,30 @@ The Web Frontend package provides a responsive React-based web application that 
 18. THE Web_App SHALL provide explanatory text describing how allow-listing and deny-listing rules work
 19. THE Web_App SHALL provide explanatory text describing that allow-listed areas grant access to descendants and read-only access to ancestors
 20. THE Web_App SHALL provide a back button or breadcrumb navigation to return to the User Administration page
+
+### Requirement 32: Display Population Badges in Participant Lists
+
+**User Story:** As a community organizer, I want to see population badges displayed beside each participant's name in all participant lists, so that I can quickly identify which demographic or interest groups each participant belongs to without navigating to their detail page.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display population badges beside each participant's name in the ParticipantList component
+2. THE Web_App SHALL display population badges beside each participant's name in the VenueDetail component's participant list (participants with venue as home address)
+3. THE Web_App SHALL display population badges beside each participant's name in the ActivityDetail component's assigned participants list
+4. THE Web_App SHALL display population badges beside each participant's name in the AssignmentList component (embedded in ActivityForm)
+5. WHEN a participant belongs to zero populations, THE Web_App SHALL NOT display any population badges for that participant
+6. WHEN a participant belongs to one population, THE Web_App SHALL display a single population badge beside the participant's name
+7. WHEN a participant belongs to multiple populations, THE Web_App SHALL display all population badges beside the participant's name
+8. THE Web_App SHALL use CloudScape Badge component to render population badges
+9. THE Web_App SHALL display population badges with the population name as the badge text
+10. THE Web_App SHALL use a consistent color scheme for population badges across all participant lists
+11. THE Web_App SHALL position population badges immediately after the participant's name with appropriate spacing
+12. THE Web_App SHALL wrap multiple population badges to the next line if they exceed the available horizontal space
+13. THE Web_App SHALL retrieve population associations from the populations array field included in the participant object from the API response
+14. THE Web_App SHALL NOT make additional API requests to fetch population associations for each participant in the list
+15. THE Web_App SHALL handle missing or null populations array gracefully by displaying no badges
+16. THE Web_App SHALL sort population badges alphabetically by population name for consistent display
+17. THE Web_App SHALL provide appropriate spacing between multiple population badges (e.g., 4-8px gap)
+18. THE Web_App SHALL ensure population badges do not interfere with the clickability of the participant name hyperlink
+19. THE Web_App SHALL display population badges in all participant list contexts consistently (list pages, detail pages, embedded lists)
+20. THE Web_App SHALL use the populations data already included in the API response without requiring additional data fetching or transformation

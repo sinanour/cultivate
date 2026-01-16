@@ -21,6 +21,7 @@ import { ActivityVenueHistoryTable } from './ActivityVenueHistoryTable';
 import { ActivityVenueHistoryForm } from './ActivityVenueHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/date.utils';
+import { renderPopulationBadges } from '../../utils/population-badge.utils';
 
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -339,9 +340,12 @@ export function ActivityDetail() {
             id: 'participant',
             header: 'Participant',
             cell: (item) => (
-              <Link href={`/participants/${item.participantId}`}>
-                {item.participant?.name || 'Unknown'}
-              </Link>
+              <>
+                <Link href={`/participants/${item.participantId}`}>
+                  {item.participant?.name || 'Unknown'}
+                </Link>
+                {renderPopulationBadges(item.participant?.populations)}
+              </>
             ),
           },
           {

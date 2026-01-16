@@ -196,7 +196,7 @@ Services implement business logic and coordinate operations:
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
 - **PopulationService**: Manages population CRUD operations (admin only for create/update/delete), validates uniqueness, prevents deletion of referenced populations, manages participant-population associations (many-to-many), validates participant and population existence, prevents duplicate associations
 - **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction, handles user deletion with cascade deletion of associated geographic authorization rules, prevents deletion of the last administrator user
-- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
+- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, includes population associations in all participant list responses to enable population badge display without additional API round trips, pushes all filtering and field selection to database layer via Prisma
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
@@ -219,7 +219,7 @@ Repositories encapsulate Prisma database access:
 - **ParticipantPopulationRepository**: CRUD operations for participant-population associations, duplicate prevention
 - **UserGeographicAuthorizationRepository**: CRUD operations for geographic authorization rules, queries for user's authorization rules, calculates effective authorized areas with descendants and ancestors
 - **UserRepository**: CRUD operations for users, includes findAll, findByEmail, findById, create, and update methods
-- **ParticipantRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination)
+- **ParticipantRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination), includes population associations in queries using Prisma include to avoid N+1 problems
 - **ActivityRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination)
 - **AssignmentRepository**: CRUD operations for participant assignments
 - **VenueRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination), queries for associated activities and current residents (filters participants by most recent address history)
@@ -439,6 +439,21 @@ ParticipantQuerySchema = {
   fields: string (optional, comma-separated field names like "id,name,email" or "id,name,addressHistory.venue.name")
 }
 
+// Participant Response Schema
+ParticipantResponse = {
+  id: string (UUID),
+  name: string,
+  email: string (optional, nullable),
+  phone: string (optional, nullable),
+  notes: string (optional, nullable),
+  dateOfBirth: string (optional, nullable, ISO 8601 date),
+  dateOfRegistration: string (optional, nullable, ISO 8601 date),
+  nickname: string (optional, nullable),
+  createdAt: string (ISO 8601 datetime),
+  updatedAt: string (ISO 8601 datetime),
+  populations: Array<{ id: string, name: string }> (array of population objects, empty array if no populations)
+}
+
 // Venue Query Schema
 VenueQuerySchema = {
   page: number (optional, default 1),
@@ -627,6 +642,63 @@ private buildSelectClause(fields: string[]): any {
 - All field selection executed at database level via Prisma SELECT and INCLUDE clauses
 - Efficient JOIN handling for nested relation fields
 - No post-query filtering in Node.js - everything pushed to PostgreSQL
+- Population associations included in participant queries using Prisma include to avoid N+1 problems
+
+**Population Associations in Participant Responses:**
+
+All participant list endpoints (GET /api/v1/participants, GET /api/v1/venues/:id/participants, GET /api/v1/activities/:id/participants) include population associations by default to enable population badge display in the frontend without additional API round trips.
+
+**Implementation Pattern:**
+
+```typescript
+// In ParticipantRepository
+async findAllPaginated(options: QueryOptions) {
+  return prisma.participant.findMany({
+    where: buildWhereClause(options),
+    select: options.fields ? buildSelectClause(options.fields) : undefined,
+    include: {
+      participantPopulations: {
+        include: {
+          population: {
+            select: { id: true, name: true }
+          }
+        }
+      }
+    },
+    skip: (options.page - 1) * options.limit,
+    take: options.limit
+  });
+}
+
+// Transform response to flatten populations
+function transformParticipantResponse(participant: any) {
+  return {
+    ...participant,
+    populations: participant.participantPopulations?.map(pp => pp.population) || []
+  };
+}
+```
+
+**Response Format:**
+
+```typescript
+{
+  success: true,
+  data: [
+    {
+      id: "uuid",
+      name: "John Doe",
+      email: "john@example.com",
+      populations: [
+        { id: "pop-uuid-1", name: "Youth" },
+        { id: "pop-uuid-2", name: "Seekers" }
+      ],
+      // ... other fields
+    }
+  ],
+  pagination: { page: 1, limit: 100, total: 250, totalPages: 3 }
+}
+```
 
 **Design Rationale:**
 
@@ -2040,6 +2112,10 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 **Property 18A: Participant activities retrieval**
 *For any* existing participant, retrieving their activities should return all assignments with complete activity and role details.
 **Validates: Requirements 3.18**
+
+**Property 18B: Participant population associations inclusion**
+*For any* participant list endpoint (GET /api/v1/participants, GET /api/v1/venues/:id/participants, GET /api/v1/activities/:id/participants), each participant object in the response should include a populations array containing all population objects (with id and name fields) the participant belongs to, fetched in a single optimized query without N+1 problems.
+**Validates: Requirements 29.1, 29.2, 29.3, 29.4, 29.5, 29.6, 29.7, 29.8, 29.9, 29.10, 29.14**
 
 **Property 19: Activity retrieval by ID**
 *For any* existing activity, retrieving it by ID should return the correct activity data including related activity type.

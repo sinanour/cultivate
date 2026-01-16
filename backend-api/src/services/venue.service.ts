@@ -8,6 +8,7 @@ import { ImportResult } from '../types/csv.types';
 import { VenueImportSchema } from '../utils/validation.schemas';
 import { AppError } from '../types/errors.types';
 import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
+import { transformParticipantResponses } from '../utils/participant.utils';
 
 export interface CreateVenueInput {
     name: string;
@@ -332,7 +333,9 @@ export class VenueService {
         // Validate authorization by calling getVenueById (which enforces geographic authorization)
         await this.getVenueById(venueId, userId, userRole);
 
-        return this.venueRepository.findParticipants(venueId);
+        const participants = await this.venueRepository.findParticipants(venueId);
+        // Transform to include flattened populations array
+        return transformParticipantResponses(participants);
     }
 
     async exportVenuesToCSV(

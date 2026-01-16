@@ -1799,6 +1799,73 @@ if (geographicAreaId) {
     - Add example showing population filtering
     - _Requirements: 28.33, 28.34_
 
+- [x] 44. Include population associations in participant list responses
+  - [x] 44.1 Update ParticipantRepository to include populations in queries
+    - Modify findAllPaginated() method to include participantPopulations relation with nested population data
+    - Use Prisma include with nested select to fetch population id and name
+    - Ensure single optimized query with JOIN operations (no N+1 problems)
+    - Apply same pattern to all participant query methods
+    - _Requirements: 29.1, 29.2, 29.7, 29.14_
+
+  - [x] 44.2 Add population transformation to participant responses
+    - Create transformParticipantResponse() utility function
+    - Transform participantPopulations array to flat populations array
+    - Map each participantPopulation to its nested population object
+    - Return empty array when participant has no population associations
+    - Apply transformation consistently across all participant endpoints
+    - _Requirements: 29.8, 29.9, 29.10, 29.12_
+
+  - [x] 44.3 Update GET /api/v1/participants endpoint to include populations
+    - Update ParticipantService.getParticipants() to include populations in response
+    - Apply population transformation to each participant in the list
+    - Ensure populations array is included by default (no query parameter needed)
+    - Maintain backward compatibility with existing response structure
+    - _Requirements: 29.1, 29.2, 29.11, 29.12_
+
+  - [x] 44.4 Update GET /api/v1/venues/:id/participants endpoint to include populations
+    - Update VenueService.getVenueParticipants() to include populations in response
+    - Apply population transformation to each participant in the list
+    - Ensure populations array is included for current residents
+    - _Requirements: 29.3, 29.4, 29.11, 29.13_
+
+  - [x] 44.5 Update GET /api/v1/activities/:id/participants endpoint to include populations
+    - Update AssignmentService or ActivityService method that returns activity participants
+    - Include populations in the participant object within each assignment
+    - Apply population transformation to participant data in assignments
+    - Ensure populations array is included in the nested participant object
+    - _Requirements: 29.5, 29.6, 29.11, 29.13_
+
+  - [x] 44.6 Support populations in fields parameter for attribute selection
+    - Update buildSelectClause() to handle populations field
+    - Support fields=populations to include full population objects
+    - Support fields=populations.id,populations.name for specific population fields
+    - Ensure proper Prisma include/select syntax for nested relations
+    - _Requirements: 29.15_
+
+  - [x] 44.7 Update OpenAPI documentation
+    - Add populations array field to Participant response schema
+    - Document that populations is included by default in all participant list responses
+    - Add example responses showing populations array with zero, one, and multiple populations
+    - Document population object structure (id, name)
+    - Update all participant list endpoint documentation
+    - _Requirements: 29.10, 29.11, 29.12_
+
+  - [ ]* 44.8 Write property tests for population associations in responses
+    - **Property 18B: Participant Population Associations Inclusion**
+    - Test GET /api/v1/participants includes populations array
+    - Test GET /api/v1/venues/:id/participants includes populations array
+    - Test GET /api/v1/activities/:id/participants includes populations in participant objects
+    - Test empty populations array for participants with no associations
+    - Test single and multiple population associations
+    - Test query optimization (verify single query, no N+1)
+    - **Validates: Requirements 29.1, 29.2, 29.3, 29.4, 29.5, 29.6, 29.7, 29.8, 29.9, 29.10, 29.14**
+
+- [x] 45. Checkpoint - Verify population associations in participant responses
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test that populations array is present in all participant list responses
+  - Verify no additional API calls are needed to fetch populations
+  - Confirm query performance with EXPLAIN ANALYZE
+
 
 - [x] 41. Implement fake data generation script for load testing
   - [x] 41.1 Create script structure and safety mechanisms

@@ -54,6 +54,7 @@ export interface Participant {
     dateOfBirth?: string;
     dateOfRegistration?: string;
     nickname?: string;
+    populations?: Array<{ id: string; name: string }>;  // Population associations included by default
     version: number;
     createdAt: string;
     updatedAt: string;

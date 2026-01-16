@@ -17,6 +17,7 @@ import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/date.utils';
+import { renderPopulationBadges } from '../../utils/population-badge.utils';
 
 export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -217,9 +218,12 @@ export function VenueDetail() {
             id: 'name',
             header: 'Name',
             cell: (item) => (
-              <Link href={`/participants/${item.id}`}>
-                {item.name || 'Unknown'}
-              </Link>
+              <>
+                <Link href={`/participants/${item.id}`}>
+                  {item.name || 'Unknown'}
+                </Link>
+                {renderPopulationBadges(item.populations)}
+              </>
             ),
           },
           {

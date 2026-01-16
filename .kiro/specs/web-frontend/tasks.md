@@ -3046,3 +3046,67 @@ See `API_ALIGNMENT_SUMMARY.md` for detailed alignment documentation.
   - ✅ MapDataService sends date parameters to backend API
   - ✅ Date range changes trigger marker refetch
   - ✅ Temporal filtering working correctly for activities and participant homes
+
+- [x] 43. Display population badges in participant lists
+  - [x] 43.1 Update ParticipantList component to display population badges
+    - Add population badge rendering beside participant name in table cells
+    - Use CloudScape Badge component for each population
+    - Retrieve populations from populations array field in participant object (already included in API response)
+    - Sort badges alphabetically by population name
+    - Position badges immediately after participant name with 8px spacing
+    - Wrap multiple badges to next line if needed
+    - Display no badges when populations array is empty or undefined
+    - Ensure badges don't interfere with participant name hyperlink clickability
+    - Use consistent badge color scheme (e.g., color="blue")
+    - _Requirements: 32.1, 32.5, 32.8, 32.9, 32.10, 32.11, 32.12, 32.13, 32.14, 32.15, 32.16, 32.17, 32.18, 32.19, 32.20_
+
+  - [x] 43.2 Update VenueDetail component to display population badges
+    - Add population badge rendering beside participant names in the participants list
+    - Use same badge rendering pattern as ParticipantList
+    - Retrieve populations from populations array field in participant object
+    - Apply consistent styling and spacing
+    - _Requirements: 32.2, 32.8, 32.9, 32.10, 32.11, 32.13, 32.14, 32.16, 32.17, 32.18, 32.19, 32.20_
+
+  - [x] 43.3 Update ActivityDetail/AssignmentList component to display population badges
+    - Add population badge rendering beside participant names in the assigned participants list
+    - Use same badge rendering pattern as ParticipantList
+    - Retrieve populations from populations array field in participant object within assignment
+    - Apply consistent styling and spacing
+    - _Requirements: 32.3, 32.4, 32.8, 32.9, 32.10, 32.11, 32.13, 32.14, 32.16, 32.17, 32.18, 32.19, 32.20_
+
+  - [x] 43.4 Update AssignmentList component (embedded in ActivityForm) to display population badges
+    - Add population badge rendering beside participant names in the temporary assignments table
+    - Use same badge rendering pattern as ParticipantList
+    - Retrieve populations from populations array field in participant object
+    - Apply consistent styling and spacing
+    - Ensure badges display correctly for both existing and newly-added assignments
+    - _Requirements: 32.4, 32.8, 32.9, 32.10, 32.11, 32.13, 32.14, 32.16, 32.17, 32.18, 32.19, 32.20_
+
+  - [x] 43.5 Create utility function for rendering population badges
+    - Create renderPopulationBadges(populations: Population[]) utility function
+    - Accept populations array and return JSX with sorted badges
+    - Handle null/undefined populations array gracefully
+    - Sort populations alphabetically by name
+    - Apply consistent spacing between badges (4-8px gap)
+    - Use CloudScape Badge with consistent color
+    - Make function reusable across all participant list contexts
+    - _Requirements: 32.8, 32.9, 32.10, 32.11, 32.16, 32.17, 32.19_
+
+  - [ ]* 43.6 Write property tests for population badge display
+    - **Property 234: Population Badge Display in ParticipantList**
+    - **Property 235: Population Badge Display in VenueDetail**
+    - **Property 236: Population Badge Display in ActivityDetail**
+    - **Property 237: Population Badge Display in AssignmentList**
+    - **Property 238: Population Badge Zero Populations Handling**
+    - **Property 239: Population Badge Multiple Populations Display**
+    - **Property 240: Population Badge Alphabetical Sorting**
+    - **Property 241: Population Badge Consistent Styling**
+    - **Property 242: Population Badge No Additional API Calls**
+    - **Validates: Requirements 32.1, 32.2, 32.3, 32.4, 32.5, 32.6, 32.7, 32.8, 32.9, 32.10, 32.11, 32.12, 32.13, 32.14, 32.15, 32.16, 32.17, 32.18, 32.19, 32.20**
+
+- [x] 44. Checkpoint - Verify population badge display
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify badges display correctly in all participant list contexts
+  - Verify no additional API calls are made to fetch populations
+  - Verify consistent styling across all views
+  - Test with zero, one, and multiple population memberships

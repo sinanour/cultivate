@@ -32,6 +32,7 @@ import { formatDate } from '../../utils/date.utils';
 import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
 import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { useAuth } from '../../hooks/useAuth';
+import { renderPopulationBadges } from '../../utils/population-badge.utils';
 
 interface ActivityFormProps {
   activity: Activity | null;
@@ -1050,9 +1051,12 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                     id: 'participant',
                     header: 'Participant',
                     cell: (item) => item.participant ? (
-                      <Link href={`/participants/${item.participantId}`}>
-                        {item.participant.name}
-                      </Link>
+                      <>
+                        <Link href={`/participants/${item.participantId}`}>
+                          {item.participant.name}
+                        </Link>
+                        {renderPopulationBadges(item.participant.populations)}
+                      </>
                     ) : 'Unknown',
                   },
                   {

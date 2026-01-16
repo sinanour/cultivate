@@ -30,14 +30,31 @@ export class ParticipantRepository {
   async findAllPaginated(page: number, limit: number, where?: any, select?: any): Promise<{ data: any[]; total: number }> {
     const skip = (page - 1) * limit;
 
+    // Build query with population associations included
+    const queryOptions: any = {
+      where,
+      skip,
+      take: limit,
+      orderBy: { name: 'asc' },
+    };
+
+    // If select is provided, use it; otherwise include populations by default
+    if (select) {
+      queryOptions.select = select;
+    } else {
+      queryOptions.include = {
+        participantPopulations: {
+          include: {
+            population: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      };
+    }
+
     const [data, total] = await Promise.all([
-      this.prisma.participant.findMany({
-        where,
-        select,
-        skip,
-        take: limit,
-        orderBy: { name: 'asc' },
-      }),
+      this.prisma.participant.findMany(queryOptions),
       this.prisma.participant.count({ where }),
     ]);
 

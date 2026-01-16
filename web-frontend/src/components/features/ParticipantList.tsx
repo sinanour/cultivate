@@ -20,6 +20,7 @@ import { ProgressIndicator } from '../common/ProgressIndicator';
 import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
+import { renderPopulationBadges } from '../../utils/population-badge.utils';
 
 const ITEMS_PER_PAGE = 10;
 const BATCH_SIZE = 100;
@@ -427,9 +428,12 @@ export function ParticipantList() {
             id: 'name',
             header: 'Name',
             cell: (item) => (
-              <Link href={`/participants/${item.id}`}>
-                {item.name}
-              </Link>
+              <>
+                <Link href={`/participants/${item.id}`}>
+                  {item.name}
+                </Link>
+                {renderPopulationBadges(item.populations)}
+              </>
             ),
             sortingField: 'name',
           },

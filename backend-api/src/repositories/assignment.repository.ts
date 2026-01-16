@@ -19,7 +19,17 @@ export class AssignmentRepository {
     return this.prisma.assignment.findMany({
       where: { activityId },
       include: {
-        participant: true,
+        participant: {
+          include: {
+            participantPopulations: {
+              include: {
+                population: {
+                  select: { id: true, name: true }
+                }
+              }
+            }
+          }
+        },
         role: true,
       },
       orderBy: { createdAt: 'asc' },

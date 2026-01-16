@@ -36,6 +36,7 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Partial_Matching**: A filtering technique that matches records containing the search text anywhere within the field value using case-insensitive comparison
 - **Attribute_Selection**: A query optimization technique where clients specify which entity attributes to return in the response, reducing payload size and database query overhead
 - **Dot_Notation**: A syntax for requesting nested relation fields in the fields parameter (e.g., activityType.name, activityType.activityCategory.name)
+- **Population_Badge**: A visual indicator displayed beside a participant's name showing which populations they belong to, enabling quick identification of participant demographics
 
 ## Requirements
 
@@ -991,3 +992,25 @@ The Backend API package provides the RESTful API service that implements all bus
 42. WHEN calculating participant address temporal overlap with null effectiveFrom, THE API SHALL treat null as the earliest possible date (older than any non-null date)
 43. WHEN a participant's address history spans the entire query period with a single address, THE API SHALL include that venue in the marker results
 44. WHEN a participant moved during the query period, THE API SHALL include both the old and new venue addresses in the marker results
+
+### Requirement 29: Include Population Associations in Participant List Responses
+
+**User Story:** As a frontend developer, I want participant list endpoints to include population associations in the response, so that I can display population badges beside participant names without making additional API round trips for each participant.
+
+#### Acceptance Criteria
+
+1. THE API SHALL include population associations in the response for GET /api/v1/participants endpoint
+2. WHEN returning participants from GET /api/v1/participants, THE API SHALL include a populations array field for each participant containing the population objects (id, name) the participant belongs to
+3. THE API SHALL include population associations in the response for GET /api/v1/venues/:id/participants endpoint
+4. WHEN returning participants from GET /api/v1/venues/:id/participants, THE API SHALL include a populations array field for each participant containing the population objects (id, name) the participant belongs to
+5. THE API SHALL include population associations in the response for GET /api/v1/activities/:id/participants endpoint
+6. WHEN returning participants from GET /api/v1/activities/:id/participants (activity assignments), THE API SHALL include a populations array field for each participant object containing the population objects (id, name) the participant belongs to
+7. THE API SHALL optimize population association queries using Prisma's include or select with nested relations to avoid N+1 query problems
+8. WHEN a participant belongs to zero populations, THE API SHALL return an empty populations array for that participant
+9. WHEN a participant belongs to one or more populations, THE API SHALL return all population associations in the populations array
+10. THE populations array SHALL contain population objects with at minimum: id (UUID) and name (string) fields
+11. THE API SHALL NOT require an additional query parameter to include populations (they should be included by default in participant list responses)
+12. THE API SHALL maintain backward compatibility by adding the populations field to existing participant response schemas
+13. THE API SHALL apply the same population inclusion logic to all participant list endpoints consistently
+14. THE API SHALL use a single optimized database query with JOIN operations to fetch participants and their populations together
+15. WHEN using the fields parameter for attribute selection, THE API SHALL support requesting populations via fields=populations or fields=populations.id,populations.name

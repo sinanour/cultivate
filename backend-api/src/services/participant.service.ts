@@ -11,6 +11,7 @@ import { ImportResult } from '../types/csv.types';
 import { ParticipantImportSchema } from '../utils/validation.schemas';
 import { AppError } from '../types/errors.types';
 import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
+import { transformParticipantResponses, transformParticipantResponse } from '../utils/participant.utils';
 
 export interface CreateParticipantInput {
     name: string;
@@ -235,7 +236,9 @@ export class ParticipantService {
         if (!effectiveAreaIds) {
             // No geographic filter, just apply flexible filters
             const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit, combinedWhere, select);
-            return PaginationHelper.createResponse(data, validPage, validLimit, total);
+            // Transform to include flattened populations array
+            const transformedData = transformParticipantResponses(data);
+            return PaginationHelper.createResponse(transformedData, validPage, validLimit, total);
         }
 
         // Use effective area IDs for filtering
@@ -265,6 +268,13 @@ export class ParticipantService {
                     orderBy: { effectiveFrom: 'desc' },
                     take: 1,
                     include: { venue: true }
+                },
+                participantPopulations: {
+                    include: {
+                        population: {
+                            select: { id: true, name: true }
+                        }
+                    }
                 }
             };
         }
@@ -311,10 +321,13 @@ export class ParticipantService {
         const skip = (validPage - 1) * validLimit;
         const paginatedParticipants = filteredParticipants.slice(skip, skip + validLimit);
 
-        // Remove the included relations for the response (if not using select)
+        // Remove the included relations for the response (if not using select) and transform populations
         const data = select
             ? paginatedParticipants
-            : paginatedParticipants.map(({ addressHistory, ...participant }: any) => participant as Participant);
+            : paginatedParticipants.map(({ addressHistory, ...participant }: any) => {
+                // Transform to include flattened populations array
+                return transformParticipantResponse(participant);
+            });
 
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }

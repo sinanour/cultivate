@@ -3,6 +3,7 @@ import { AssignmentRepository } from '../repositories/assignment.repository';
 import { ActivityRepository } from '../repositories/activity.repository';
 import { ParticipantRepository } from '../repositories/participant.repository';
 import { RoleRepository } from '../repositories/role.repository';
+import { transformParticipantResponse } from '../utils/participant.utils';
 
 export interface CreateAssignmentInput {
     participantId: string;
@@ -29,7 +30,13 @@ export class AssignmentService {
             throw new Error('Activity not found');
         }
 
-        return this.assignmentRepository.findByActivityId(activityId);
+        const assignments = await this.assignmentRepository.findByActivityId(activityId);
+
+        // Transform participant data to include flattened populations array
+        return assignments.map(assignment => ({
+            ...assignment,
+            participant: transformParticipantResponse(assignment.participant)
+        }));
     }
 
     async assignParticipant(activityId: string, data: CreateAssignmentInput): Promise<Assignment> {

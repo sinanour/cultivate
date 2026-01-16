@@ -144,12 +144,19 @@ export class VenueRepository {
   }
 
   async findParticipants(venueId: string) {
-    // Get all participants with their address history
+    // Get all participants with their address history and populations
     const participants = await this.prisma.participant.findMany({
       include: {
         addressHistory: {
           orderBy: { effectiveFrom: 'desc' },
         },
+        participantPopulations: {
+          include: {
+            population: {
+              select: { id: true, name: true }
+            }
+          }
+        }
       },
       orderBy: { name: 'asc' },
     });
@@ -161,7 +168,7 @@ export class VenueRepository {
       return mostRecentAddress.venueId === venueId;
     });
 
-    // Remove the addressHistory from the response
+    // Remove the addressHistory from the response but keep participantPopulations for transformation
     return currentResidents.map(({ addressHistory, ...participant }) => participant);
   }
 

@@ -221,6 +221,13 @@ src/
 - Does NOT use Alert components for loading progress
 - Allows interaction with already-loaded participants while additional batches load
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
+- Displays population badges beside each participant name using CloudScape Badge component
+- Retrieves population data from populations array field included in API response (no additional API calls)
+- Shows all populations the participant belongs to as badges with consistent color scheme
+- Positions badges immediately after participant name with appropriate spacing
+- Wraps multiple badges to next line if needed
+- Sorts badges alphabetically by population name
+- Displays no badges for participants with zero population memberships
 - Provides actions for edit and delete (no separate View button)
 - Uses FilterGroupingPanel component for server-side filtering
 - Configures FilterGroupingPanel without grouping controls (filtering only, no grouping)
@@ -433,6 +440,12 @@ src/
 **AssignmentList**
 - Displays assigned participants on activity detail
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
+- Displays population badges beside each participant name using CloudScape Badge component
+- Retrieves population data from populations array field in participant object from API response
+- Shows all populations the participant belongs to as badges with consistent color scheme
+- Positions badges immediately after participant name with appropriate spacing
+- Sorts badges alphabetically by population name
+- Displays no badges for participants with zero population memberships
 - Shows role and notes for each assignment
 - Provides remove button for each assignment (no separate View button)
 
@@ -519,6 +532,12 @@ src/
 - Shows edit and delete buttons when user has EDITOR or ADMINISTRATOR role
 - Lists all activities associated with the venue (current and historical) with activity names hyperlinked to /activities/:id
 - Lists all participants with this venue as their current home address (most recent address history) with participant names hyperlinked to /participants/:id
+- Displays population badges beside each participant name using CloudScape Badge component
+- Retrieves population data from populations array field in participant object from API response
+- Shows all populations each participant belongs to as badges with consistent color scheme
+- Positions badges immediately after participant name with appropriate spacing
+- Sorts badges alphabetically by population name
+- Displays no badges for participants with zero population memberships
 - Displays geographic area hierarchy path
 
 #### 9. Geographic Area Management
@@ -1106,6 +1125,39 @@ src/
 - VenueList header: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="venues" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
 - GeographicAreaList: Similar pattern for tree node loading progress
 - MapView overlay: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="markers" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
+
+**PopulationBadge (Rendering Pattern)**
+- Inline rendering pattern for displaying population badges beside participant names in all participant lists
+- Uses CloudScape Badge component for each population
+- Retrieves population data from populations array field in participant object (no additional API calls needed)
+- Displays population name as badge text
+- Uses consistent color scheme across all participant list contexts
+- Positions badges immediately after participant name with 8px horizontal spacing
+- Wraps multiple badges to next line if horizontal space is insufficient
+- Sorts badges alphabetically by population name for consistent display
+- Displays no badges when populations array is empty or undefined
+- Ensures badges do not interfere with participant name hyperlink clickability
+- Applies to all participant list contexts:
+  - ParticipantList component (main participant list page)
+  - VenueDetail component (participants with venue as home address)
+  - ActivityDetail component (assigned participants list)
+  - AssignmentList component (embedded in ActivityForm)
+
+**Implementation Pattern:**
+```typescript
+// In any component displaying participant lists
+{participant.name} {/* Hyperlinked */}
+{participant.populations?.sort((a, b) => a.name.localeCompare(b.name)).map(pop => (
+  <Badge key={pop.id} color="blue">{pop.name}</Badge>
+))}
+```
+
+**Design Rationale:**
+- Inline pattern (not separate component) for simplicity and flexibility
+- Uses populations data already in API response - no additional fetching
+- Consistent visual treatment across all participant list contexts
+- Alphabetical sorting ensures predictable badge order
+- Graceful handling of missing or empty populations array
 
 **FilterGroupingPanel**
 - Reusable component for consistent filtering and grouping interface across data visualization pages and list pages
