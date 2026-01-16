@@ -1011,8 +1011,12 @@ src/
 - Renders options incrementally as each batch is fetched
 - Displays loading indicator at bottom of dropdown while fetching additional batches
 - Automatically fetches next batch when user scrolls near bottom
-- Supports text-based filtering using CloudScape's filteringType="auto" (client-side filtering)
-- Displays loading indicator using statusType="loading" while fetching
+- **Supports server-side text-based filtering using backend's flexible filtering API (filter[name] parameter)**
+- **When user types in search field, sends debounced request (300ms) to GET /api/v1/geographic-areas?filter[name]=<text>&fields=id,name,areaType,parentGeographicAreaId**
+- **Uses backend's case-insensitive partial matching on geographic area names for efficient search**
+- **Combines name filtering with other query parameters (geographicAreaId for scope, depth for lazy loading) using AND logic**
+- **Leverages database GIN trigram indexes for fast partial matching on potentially millions of geographic areas**
+- Displays loading indicator using statusType="loading" while fetching filtered results
 - Supports pagination for large result sets with batches of 100 items
 - Accepts optional props to filter results by parent area or other criteria
 - Handles empty states when no results match search
@@ -1033,6 +1037,9 @@ src/
 - Uses React useMemo to optimize option rendering
 - Maintains pagination state for batched loading
 - Tracks total count from API response for determining when all batches are loaded
+- Implements debounced search handler (300ms delay) to avoid excessive API requests
+- Uses backend's filter[name] parameter for server-side name filtering
+- Uses fields parameter to request only necessary attributes (id, name, areaType, parentGeographicAreaId) for optimal bandwidth
 - Integrates with existing geographic area utilities (getAreaTypeBadgeColor)
 - Can be wrapped with additional UI elements (e.g., BreadcrumbGroup for global filter)
 

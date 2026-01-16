@@ -458,12 +458,16 @@ The Web Frontend package provides a responsive React-based web application that 
 12. THE Geographic_Area_Selector SHALL render options incrementally as each batch is fetched
 13. THE Geographic_Area_Selector SHALL display a loading indicator at the bottom of the dropdown while fetching additional batches
 14. THE Geographic_Area_Selector SHALL automatically fetch the next batch when the user scrolls near the bottom of the dropdown
-15. THE Geographic_Area_Selector SHALL support text-based filtering using CloudScape Select's filteringType="auto" property
-16. THE Geographic_Area_Selector SHALL display a loading indicator using statusType="loading" while fetching results
-17. THE Geographic_Area_Selector SHALL support pagination for large result sets with batches of 100 items
-18. THE Geographic_Area_Selector SHALL accept optional props to filter results by parent geographic area or other criteria
-19. THE Geographic_Area_Selector SHALL handle empty states when no results match the search
-20. THE Geographic_Area_Selector SHALL handle error states gracefully
+15. THE Geographic_Area_Selector SHALL support text-based filtering using the backend's flexible filtering API
+16. WHEN a user types in the Geographic_Area_Selector search field, THE Web_App SHALL send the search text to GET /api/v1/geographic-areas using ?filter[name]=<text> parameter
+17. THE Geographic_Area_Selector SHALL use the backend's case-insensitive partial matching on geographic area names for search functionality
+18. THE Geographic_Area_Selector SHALL combine name filtering with other query parameters (geographicAreaId for scope, depth for lazy loading, fields for attribute selection) using AND logic
+19. THE Geographic_Area_Selector SHALL use the fields parameter to request only necessary attributes (e.g., ?fields=id,name,areaType,parentGeographicAreaId) for optimal performance
+20. THE Geographic_Area_Selector SHALL display a loading indicator using statusType="loading" while fetching filtered results
+21. THE Geographic_Area_Selector SHALL support pagination for large result sets with batches of 100 items
+22. THE Geographic_Area_Selector SHALL accept optional props to filter results by parent geographic area or other criteria
+23. THE Geographic_Area_Selector SHALL handle empty states when no results match the search
+24. THE Geographic_Area_Selector SHALL handle error states gracefully
 21. THE Geographic_Area_Selector SHALL provide accessible keyboard navigation
 22. THE Geographic_Area_Selector SHALL be decoupled from any specific parent component (not tied to BreadcrumbGroup or global filter)
 23. THE Geographic_Area_Selector SHALL accept standard form control props (value, onChange, disabled, error, placeholder, inlineLabelText, etc.)
@@ -480,6 +484,8 @@ The Web Frontend package provides a responsive React-based web application that 
 34. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAreaForm for parent geographic area selection
 35. THE Web_App SHALL use the Geographic_Area_Selector component in GeographicAuthorizationForm for geographic area selection
 36. THE Web_App SHALL use the Geographic_Area_Selector component in any other forms or interfaces that require geographic area selection
+37. WHEN a user types in the Geographic_Area_Selector, THE Web_App SHALL debounce the search input to avoid excessive API requests (minimum 300ms delay)
+38. THE Geographic_Area_Selector SHALL leverage the backend's flexible filtering system (Requirement 28 in Backend API) for efficient name-based searching
 
 ### Requirement 6C: Map View UI with Optimized Loading
 

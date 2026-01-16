@@ -200,7 +200,7 @@ Services implement business logic and coordinate operations:
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
-- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context), provides batch ancestor fetching for multiple areas in a single request, provides batch details fetching for complete entity data of multiple areas in a single request, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
+- **GeographicAreaService**: Manages geographic area CRUD operations, validates parent references, prevents circular relationships, prevents deletion of referenced areas, calculates hierarchical statistics, supports depth-limited hierarchical fetching for lazy loading, includes child count in responses, supports geographic area filtering for list queries (returns selected area, descendants with depth limit, and ancestors for hierarchy context), provides batch ancestor fetching for multiple areas in a single request, provides batch details fetching for complete entity data of multiple areas in a single request, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for geographic area name as high-cardinality text field, exact matching for low-cardinality fields like areaType and parentGeographicAreaId), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma, enables efficient name-based searching for global geographic area filter dropdown
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering with OR logic within dimensions and AND logic across dimensions (array filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data, supports growth metrics with multi-dimensional filtering (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) where multiple values within a dimension use OR logic and multiple dimensions use AND logic
 - **MapDataService**: Provides optimized map visualization data with lightweight marker endpoints, batched pagination (100 items per batch), and lazy-loaded popup content, returns minimal fields for fast marker rendering (coordinates and IDs only), supports incremental rendering through paginated responses with total count metadata, fetches detailed popup content on-demand when markers are clicked, supports all filtering dimensions (geographic area, activity category, activity type, venue, population, date range, status), applies geographic authorization filtering, excludes entities without coordinates from marker responses, groups participant homes by venue to avoid duplicate markers
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
@@ -343,9 +343,16 @@ GeographicAreaQuerySchema = {
   page: number (optional, default 1),
   limit: number (optional, default 50, max 100),
   geographicAreaId: string (optional, valid UUID, filters to specific area + descendants + ancestors),
-  search: string (optional, max 200 chars, case-insensitive partial match on name),
-  depth: number (optional, limits recursive depth of children fetched, omit for all descendants)
+  depth: number (optional, limits recursive depth of children fetched, omit for all descendants),
+  filter: {
+    name: string (optional, case-insensitive partial match),
+    areaType: enum (optional, exact match on area type),
+    parentGeographicAreaId: string (optional, valid UUID, exact match)
+  },
+  fields: string (optional, comma-separated field names like "id,name,areaType" or "id,name,parent.name,childCount")
 }
+
+// Note: The legacy 'search' parameter has been replaced by filter[name] for consistency with unified filtering API
 
 // Sync Operation Schema
 SyncOperationSchema = {
@@ -553,8 +560,8 @@ The API implements a unified filtering system that allows clients to filter on a
    - All filtering logic executed at database level (no Node.js filtering)
 
 3. **Field Classification:**
-   - **High-Cardinality Fields** (partial matching): name, email, phone, address, nickname
-   - **Low-Cardinality Fields** (exact matching): activityTypeIds, activityCategoryIds, role, populationIds, areaType, venueType, status
+   - **High-Cardinality Fields** (partial matching): participant name, participant email, participant phone, participant nickname, venue name, venue address, activity name, geographic area name
+   - **Low-Cardinality Fields** (exact matching): activityTypeIds, activityCategoryIds, role, populationIds, areaType, venueType, status, parentGeographicAreaId
 
 **Service Layer Pattern:**
 
@@ -710,7 +717,7 @@ function transformParticipantResponse(participant: any) {
 - **Performance**: Database-level filtering and field selection minimize data transfer and CPU usage
 - **Extensible**: Adding new filterable fields requires no API changes, only schema updates
 - **Simplified**: Removed legacy parameters (search, activityTypeIds, status, etc.) - all use unified filter[] API
-```
+- **Geographic Area Name Search**: The filter[name] parameter enables efficient searching in the global geographic area filter dropdown, supporting fast typeahead with partial matching on potentially millions of geographic areas using GIN trigram indexes
 
 ### Optional Field Clearing
 

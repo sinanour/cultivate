@@ -919,8 +919,13 @@ The Backend API package provides the RESTful API service that implements all bus
 
 47. THE API SHALL accept ?filter[name]=text parameter on GET /api/v1/geographic-areas to filter by geographic area name (case-insensitive partial match)
 48. THE API SHALL accept ?filter[areaType]=type parameter on GET /api/v1/geographic-areas to filter by area type (exact match)
-49. THE API SHALL accept ?filter[parentGeographicAreaId]=uuid parameter on GET /api/v1/geographic-areas to filter by parent geographic area
+49. THE API SHALL accept ?filter[parentGeographicAreaId]=uuid parameter on GET /api/v1/geographic-areas to filter by parent geographic area (exact match)
 50. WHEN multiple geographic area filter parameters are provided, THE API SHALL apply all filters using AND logic
+51. THE API SHALL support filtering geographic areas by name in the global geographic area filter dropdown using ?filter[name]=text parameter
+52. WHEN a user types in the global geographic area filter dropdown, THE Web_App SHALL send the search text as ?filter[name]=<text> to GET /api/v1/geographic-areas
+53. THE API SHALL return geographic areas matching the search text with case-insensitive partial matching on the name field
+54. THE API SHALL combine name filtering with other filters (geographicAreaId for scope, depth for lazy loading) using AND logic
+55. THE API SHALL optimize geographic area name searches using database indexes on the name field
 
 **Performance and Optimization:**
 
@@ -933,6 +938,8 @@ The Backend API package provides the RESTful API service that implements all bus
 57. THE API SHALL calculate total count based on all applied filters (geographic authorization + geographicAreaId + filter[] parameters)
 58. WHEN no filters are specified, THE API SHALL return all entities subject to geographic authorization and pagination
 59. WHEN no fields parameter is specified, THE API SHALL return all entity attributes
+60. THE API SHALL create a GIN trigram index on geographic_areas.name field for efficient partial matching
+61. THE API SHALL use the pg_trgm PostgreSQL extension for optimized text search on geographic area names
 
 **Example Use Cases:**
 
@@ -941,6 +948,9 @@ The Backend API package provides the RESTful API service that implements all bus
 62. WHEN a client requests GET /api/v1/activities?filter[name]=study&filter[status]=ACTIVE,PLANNED&fields=id,name,activityType.name, THE API SHALL return only active or planned activities with "study" in their name, returning id, name, and the nested activity type name
 63. WHEN a client requests GET /api/v1/geographic-areas?filter[areaType]=CITY&fields=id,name,areaType,childCount, THE API SHALL return only city-type geographic areas, returning id, name, areaType, and childCount fields
 64. WHEN a client requests GET /api/v1/participants?geographicAreaId=<uuid>&filter[name]=john&fields=id,name, THE API SHALL combine geographic area filtering with name filtering and return only specified fields
+65. WHEN a client requests GET /api/v1/geographic-areas?filter[name]=downtown&fields=id,name,areaType, THE API SHALL return only geographic areas with "downtown" in their name (case-insensitive), returning only id, name, and areaType fields
+66. WHEN a client requests GET /api/v1/geographic-areas?geographicAreaId=<city-uuid>&filter[name]=park&depth=1&fields=id,name, THE API SHALL return geographic areas within the specified city that have "park" in their name, limited to immediate children, returning only id and name fields
+67. WHEN the global geographic area filter dropdown sends GET /api/v1/geographic-areas?filter[name]=van&fields=id,name,areaType, THE API SHALL return all geographic areas with "van" in their name with minimal fields for efficient dropdown rendering
 
 ### Requirement 27: Provide Optimized Map Data API Endpoints
 

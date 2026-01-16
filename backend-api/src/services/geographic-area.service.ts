@@ -6,6 +6,7 @@ import { generateCSV, formatDateForCSV, parseCSV } from '../utils/csv.utils';
 import { ImportResult } from '../types/csv.types';
 import { GeographicAreaImportSchema } from '../utils/validation.schemas';
 import { AppError } from '../types/errors.types';
+import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
 
 export interface CreateGeographicAreaInput {
     name: string;
@@ -25,6 +26,18 @@ export interface GeographicAreaStatistics {
     totalParticipants: number;
     totalVenues: number;
     activeActivities: number;
+}
+
+export interface FlexibleGeographicAreaQuery {
+    page?: number;
+    limit?: number;
+    geographicAreaId?: string;
+    depth?: number;
+    filter?: Record<string, any>;
+    fields?: string[];
+    authorizedAreaIds?: string[];
+    hasGeographicRestrictions?: boolean;
+    readOnlyAreaIds?: string[];
 }
 
 export class GeographicAreaService {
@@ -231,6 +244,285 @@ export class GeographicAreaService {
 
         // Apply pagination
         const total = allAreasWithCount.length;
+        const skip = (validPage - 1) * validLimit;
+        const paginatedAreas = allAreasWithCount.slice(skip, skip + validLimit);
+
+        return PaginationHelper.createResponse(paginatedAreas as any, validPage, validLimit, total);
+    }
+
+    /**
+     * Get geographic areas with flexible filtering and customizable attribute selection (non-paginated)
+     * Supports filter[name], filter[areaType], filter[parentGeographicAreaId] and fields parameter
+     */
+    async getAllGeographicAreasFlexible(query: FlexibleGeographicAreaQuery): Promise<GeographicArea[]> {
+        const {
+            geographicAreaId,
+            depth,
+            filter,
+            fields,
+            authorizedAreaIds = [],
+            hasGeographicRestrictions = false,
+            readOnlyAreaIds = []
+        } = query;
+
+        // Build flexible filter where clause
+        const flexibleWhere = filter ? buildWhereClause('geographicArea', filter) : undefined;
+
+        // Build select clause for attribute selection
+        let select: any = undefined;
+        if (fields && fields.length > 0) {
+            try {
+                const validFields = getValidFieldNames('geographicArea');
+                select = buildSelectClause(fields, validFields);
+            } catch (error) {
+                throw new AppError('INVALID_FIELDS', (error as Error).message, 400);
+            }
+        }
+
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
+        // If depth is specified, use depth-limited fetching
+        if (depth !== undefined) {
+            const parentId = geographicAreaId || null;
+            const areas = await this.geographicAreaRepository.findWithDepth(parentId, depth);
+
+            // Apply flexible filter if provided
+            let filteredAreas = areas;
+            if (flexibleWhere) {
+                const queryOptions: any = {
+                    where: {
+                        AND: [
+                            { id: { in: areas.map(a => a.id) } },
+                            flexibleWhere
+                        ]
+                    },
+                    orderBy: { name: 'asc' }
+                };
+
+                if (select) {
+                    queryOptions.select = select;
+                }
+
+                filteredAreas = await this.prisma.geographicArea.findMany(queryOptions);
+            }
+
+            // If filtering by geographic area, also fetch ancestors for context
+            if (geographicAreaId) {
+                const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+                return [...ancestors, ...filteredAreas];
+            }
+
+            return filteredAreas;
+        }
+
+        if (!effectiveAreaIds) {
+            // No geographic filter, fetch all areas with flexible filter
+            const queryOptions: any = {
+                where: flexibleWhere,
+                orderBy: { name: 'asc' }
+            };
+
+            if (select) {
+                queryOptions.select = select;
+            }
+
+            const areas = await this.prisma.geographicArea.findMany(queryOptions);
+
+            // Add childCount if not using custom select
+            if (!select) {
+                return Promise.all(areas.map(async (area: any) => ({
+                    ...area,
+                    childCount: await this.geographicAreaRepository.countChildren(area.id),
+                }))) as any;
+            }
+
+            return areas;
+        }
+
+        // When filtering by geographic area, include the selected area, its descendants, and ancestors
+        const selectedArea = geographicAreaId ? await this.geographicAreaRepository.findById(geographicAreaId) : null;
+
+        let allAreaIds: string[];
+        if (selectedArea) {
+            // Explicit filter: Get ancestors for context
+            const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
+            // Combine: selected area, descendants (from effectiveAreaIds), and ancestors
+            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestors.map(a => a.id)])];
+        } else {
+            // No explicit filter, but user has restrictions
+            // Include authorized areas + read-only ancestors for navigation context
+            allAreaIds = [...new Set([...effectiveAreaIds, ...readOnlyAreaIds])];
+        }
+
+        // Fetch all areas with flexible filter
+        const whereClause = flexibleWhere
+            ? { AND: [{ id: { in: allAreaIds } }, flexibleWhere] }
+            : { id: { in: allAreaIds } };
+
+        const queryOptions: any = {
+            where: whereClause,
+            orderBy: { name: 'asc' }
+        };
+
+        if (select) {
+            queryOptions.select = select;
+        } else {
+            queryOptions.include = { parent: true };
+        }
+
+        const allAreas = await this.prisma.geographicArea.findMany(queryOptions);
+
+        // Add childCount if not using custom select
+        if (!select) {
+            return Promise.all(allAreas.map(async (area: any) => ({
+                ...area,
+                childCount: await this.geographicAreaRepository.countChildren(area.id),
+            }))) as any;
+        }
+
+        return allAreas;
+    }
+
+    /**
+     * Get geographic areas with flexible filtering and customizable attribute selection (paginated)
+     * Supports filter[name], filter[areaType], filter[parentGeographicAreaId] and fields parameter
+     */
+    async getAllGeographicAreasPaginatedFlexible(query: FlexibleGeographicAreaQuery): Promise<PaginatedResponse<GeographicArea>> {
+        const {
+            page,
+            limit,
+            geographicAreaId,
+            depth,
+            filter,
+            fields,
+            authorizedAreaIds = [],
+            hasGeographicRestrictions = false,
+            readOnlyAreaIds = []
+        } = query;
+
+        const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
+
+        // Build flexible filter where clause
+        const flexibleWhere = filter ? buildWhereClause('geographicArea', filter) : undefined;
+
+        // Build select clause for attribute selection
+        let select: any = undefined;
+        if (fields && fields.length > 0) {
+            try {
+                const validFields = getValidFieldNames('geographicArea');
+                select = buildSelectClause(fields, validFields);
+            } catch (error) {
+                throw new AppError('INVALID_FIELDS', (error as Error).message, 400);
+            }
+        }
+
+        // If depth is specified, use non-paginated depth-limited fetching
+        // (pagination doesn't make sense with hierarchical depth-limited data)
+        if (depth !== undefined) {
+            const areas = await this.getAllGeographicAreasFlexible({
+                geographicAreaId,
+                depth,
+                filter,
+                fields,
+                authorizedAreaIds,
+                hasGeographicRestrictions,
+                readOnlyAreaIds
+            });
+            return PaginationHelper.createResponse(areas, validPage, validLimit, areas.length);
+        }
+
+        // Determine effective geographic area IDs
+        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+            geographicAreaId,
+            authorizedAreaIds,
+            hasGeographicRestrictions
+        );
+
+        if (!effectiveAreaIds) {
+            // No geographic filter, just apply flexible filters with pagination
+            const whereClause = flexibleWhere || {};
+
+            const queryOptions: any = {
+                where: whereClause,
+                skip: (validPage - 1) * validLimit,
+                take: validLimit,
+                orderBy: { name: 'asc' }
+            };
+
+            if (select) {
+                queryOptions.select = select;
+            }
+
+            const [data, total] = await Promise.all([
+                this.prisma.geographicArea.findMany(queryOptions),
+                this.prisma.geographicArea.count({ where: whereClause })
+            ]);
+
+            // Add childCount if not using custom select
+            if (!select) {
+                const dataWithCount = await Promise.all(data.map(async (area: any) => ({
+                    ...area,
+                    childCount: await this.geographicAreaRepository.countChildren(area.id),
+                })));
+                return PaginationHelper.createResponse(dataWithCount as any, validPage, validLimit, total);
+            }
+
+            return PaginationHelper.createResponse(data as any, validPage, validLimit, total);
+        }
+
+        // When filtering by geographic area, include the selected area, its descendants, and ancestors
+        const selectedArea = geographicAreaId ? await this.geographicAreaRepository.findById(geographicAreaId) : null;
+
+        let allAreaIds: string[];
+        if (selectedArea) {
+            // Explicit filter: Get ancestors for context
+            const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
+            // Combine: selected area, descendants (from effectiveAreaIds), and ancestors
+            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestors.map(a => a.id)])];
+        } else {
+            // No explicit filter, but user has restrictions
+            // Include authorized areas + read-only ancestors for navigation context
+            allAreaIds = [...new Set([...effectiveAreaIds, ...readOnlyAreaIds])];
+        }
+
+        // Fetch all areas with flexible filter
+        const whereClause = flexibleWhere
+            ? { AND: [{ id: { in: allAreaIds } }, flexibleWhere] }
+            : { id: { in: allAreaIds } };
+
+        const queryOptions: any = {
+            where: whereClause,
+            orderBy: { name: 'asc' }
+        };
+
+        if (select) {
+            queryOptions.select = select;
+        } else {
+            queryOptions.include = { parent: true };
+        }
+
+        const [allAreas, total] = await Promise.all([
+            this.prisma.geographicArea.findMany(queryOptions),
+            this.prisma.geographicArea.count({ where: whereClause })
+        ]);
+
+        // Add childCount if not using custom select
+        let allAreasWithCount: any[];
+        if (!select) {
+            allAreasWithCount = await Promise.all(allAreas.map(async (area: any) => ({
+                ...area,
+                childCount: await this.geographicAreaRepository.countChildren(area.id),
+            })));
+        } else {
+            allAreasWithCount = allAreas;
+        }
+
+        // Apply pagination
         const skip = (validPage - 1) * validLimit;
         const paginatedAreas = allAreasWithCount.slice(skip, skip + validLimit);
 

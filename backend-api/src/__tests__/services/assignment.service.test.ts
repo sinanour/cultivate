@@ -36,7 +36,7 @@ describe('AssignmentService', () => {
                     activityId,
                     participantId: 'p1',
                     roleId: 'role-1',
-                    participant: { id: 'p1', name: 'John Doe', email: 'john@example.com' },
+                    participant: { id: 'p1', name: 'John Doe', email: 'john@example.com', populations: [] },
                     role: { id: 'role-1', name: 'Participant' },
                     createdAt: new Date(),
                 },

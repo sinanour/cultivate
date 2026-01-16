@@ -922,11 +922,11 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
   - [x] 22.4 Create database indexes for optimization
     - Add GIN trigram indexes on participants.name and participants.email
     - Add GIN trigram indexes on venues.name and venues.address
-    - Add GIN trigram index on geographic_areas.name
+    - Add GIN trigram index on geographic_areas.name for efficient name-based searching in global filter dropdown
     - Add indexes on activity.name
     - Create Prisma migration for index creation
     - Enable pg_trgm extension in PostgreSQL
-    - _Requirements: 28.51_
+    - _Requirements: 28.51, 28.60, 28.61_
 
   - [x] 22.5 Update route handlers with unified filtering
     - Update GET /api/v1/participants route to use filter[] and fields parameters
@@ -943,7 +943,9 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Document geographicAreaId as first-class parameter
     - Remove documentation for legacy parameters (search, activityTypeIds, status, etc.)
     - Include examples showing filter[] and fields usage
-    - _Requirements: 28.9, 28.15-28.16, 28.60-28.67_
+    - Add specific examples for geographic area name filtering in global filter dropdown
+    - Document how filter[name] enables efficient typeahead search for geographic areas
+    - _Requirements: 28.9, 28.15-28.16, 28.47-28.50, 28.60-28.67_
 
   - [ ]* 22.7 Write property tests for unified filtering
     - **Property 118: Unified Filter Syntax**
@@ -954,7 +956,8 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 123: Field Selection Optimization**
     - **Property 124: Nested Relation Field Selection**
     - **Property 125: Database-Level Filter Execution**
-    - **Validates: Requirements 28.7, 28.8, 28.9, 28.10, 28.11, 28.12, 28.14, 28.52, 28.53**
+    - **Property 126: Geographic Area Name Filtering for Global Filter Dropdown**
+    - **Validates: Requirements 28.7, 28.8, 28.9, 28.10, 28.11, 28.12, 28.14, 28.47, 28.51, 28.52, 28.53, 28.54, 28.52, 28.53**
 
 - [ ] 23. Enhance Participant entity with additional optional fields
   - [ ] 23.1 Create Prisma migration for new participant fields

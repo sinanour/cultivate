@@ -4,6 +4,7 @@ import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
 import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
+import { parseFilterParameters, ParsedFilterRequest } from '../middleware/filter-parser.middleware';
 import {
     GeographicAreaCreateSchema,
     GeographicAreaUpdateSchema,
@@ -31,6 +32,7 @@ export class GeographicAreaRoutes {
             '/',
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireAuthenticated(),
+            parseFilterParameters,
             this.getAll.bind(this)
         );
 
@@ -134,13 +136,16 @@ export class GeographicAreaRoutes {
         );
     }
 
-    private async getAll(req: AuthenticatedRequest, res: Response) {
+    private async getAll(req: AuthenticatedRequest & ParsedFilterRequest, res: Response) {
         try {
             const page = req.query.page ? parseInt(req.query.page as string) : undefined;
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
             const geographicAreaId = req.query.geographicAreaId as string | undefined;
-            // Removed legacy search parameter - use filter[name] instead
             const depth = req.query.depth ? parseInt(req.query.depth as string) : undefined;
+
+            // Extract parsed filter and fields from middleware
+            const filter = req.parsedFilter;
+            const fields = req.parsedFields;
 
             // Extract authorization info from request
             const authorizedAreaIds = req.user?.authorizedAreaIds || [];
@@ -160,24 +165,28 @@ export class GeographicAreaRoutes {
             }
 
             if (page !== undefined || limit !== undefined) {
-                const result = await this.geographicAreaService.getAllGeographicAreasPaginated(
+                const result = await this.geographicAreaService.getAllGeographicAreasPaginatedFlexible({
                     page,
                     limit,
                     geographicAreaId,
                     depth,
+                    filter,
+                    fields,
                     authorizedAreaIds,
                     hasGeographicRestrictions,
                     readOnlyAreaIds
-                );
+                });
                 res.status(200).json({ success: true, ...result });
             } else {
-                const areas = await this.geographicAreaService.getAllGeographicAreas(
+                const areas = await this.geographicAreaService.getAllGeographicAreasFlexible({
                     geographicAreaId,
                     depth,
+                    filter,
+                    fields,
                     authorizedAreaIds,
                     hasGeographicRestrictions,
                     readOnlyAreaIds
-                );
+                });
                 res.status(200).json({ success: true, data: areas });
             }
         } catch (error) {
@@ -190,6 +199,14 @@ export class GeographicAreaRoutes {
                 return;
             }
             if (error instanceof Error && error.message.includes('Page')) {
+                res.status(400).json({
+                    code: 'VALIDATION_ERROR',
+                    message: error.message,
+                    details: {},
+                });
+                return;
+            }
+            if (error instanceof Error && error.message.includes('INVALID_FIELDS')) {
                 res.status(400).json({
                     code: 'VALIDATION_ERROR',
                     message: error.message,

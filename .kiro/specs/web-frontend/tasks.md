@@ -2069,7 +2069,23 @@ This implementation plan covers the React-based web application built with TypeS
     - Clear search when dropdown is closed or selection is made
     - _Requirements: 26.3, 26.8, 26.9, 26.10_
 
-  - [ ]* 23D.4 Write property tests for server-side search
+  - [x] 23D.4 Migrate to unified flexible filtering API (filter[name] parameter)
+    - Update GeographicAreaService.getGeographicAreas() to use filter[name] parameter instead of legacy search parameter
+    - Change API call from ?search=<text> to ?filter[name]=<text>
+    - Add fields parameter to request only necessary attributes: ?fields=id,name,areaType,parentGeographicAreaId
+    - Update GlobalGeographicFilterContext to pass filter object instead of search string
+    - Verify backward compatibility - ensure existing functionality continues to work
+    - Update any tests that reference the search parameter
+    - _Requirements: 6B1.16, 6B1.17, 6B1.18, 6B1.19, 6B1.37, 6B1.38, 28.47, 28.51, 28.52, 28.53, 28.54_
+
+  - [ ]* 23D.5 Write property tests for unified flexible filtering integration
+    - **Property 234: Geographic Area Selector Uses Flexible Filtering API**
+    - **Property 235: Geographic Area Selector Sends filter[name] Parameter**
+    - **Property 236: Geographic Area Selector Uses fields Parameter**
+    - **Property 237: Geographic Area Selector Combines Filters with AND Logic**
+    - **Validates: Requirements 6B1.16, 6B1.17, 6B1.18, 6B1.19, 6B1.38, 28.47, 28.51, 28.52, 28.53, 28.54**
+
+  - [ ]* 23D.6 Write property tests for server-side search (original tests)
     - **Property 191: Geographic Filter Search API Requests**
     - **Property 192: Geographic Filter Search Debouncing**
     - **Property 193: Geographic Filter Search Results Display**
