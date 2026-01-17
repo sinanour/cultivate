@@ -109,10 +109,44 @@ export function GeographicAreaList() {
     ),
   });
 
+  // When a filter is active, also fetch the filtered area itself
+  const { data: filteredArea } = useQuery({
+    queryKey: ['geographicArea', selectedGeographicAreaId],
+    queryFn: () => GeographicAreaService.getGeographicAreaById(selectedGeographicAreaId!),
+    enabled: !!selectedGeographicAreaId,
+  });
+
+  // Fetch ancestors when filter is active
+  const { data: ancestors = [] } = useQuery({
+    queryKey: ['geographicAreaAncestors', selectedGeographicAreaId],
+    queryFn: () => GeographicAreaService.getAncestors(selectedGeographicAreaId!),
+    enabled: !!selectedGeographicAreaId,
+  });
+
   // Extract array from response (handle both paginated and non-paginated)
-  const geographicAreas = geographicAreasResponse 
+  const descendantAreas = geographicAreasResponse 
     ? (Array.isArray(geographicAreasResponse) ? geographicAreasResponse : geographicAreasResponse.data)
     : [];
+
+  // Combine filtered area, ancestors, and descendants into a single array with deduplication
+  const geographicAreas = selectedGeographicAreaId && filteredArea
+    ? (() => {
+        // Create a map to deduplicate by ID
+        const areaMap = new Map<string, GeographicArea>();
+        
+        // Add ancestors
+        ancestors.forEach(area => areaMap.set(area.id, area));
+        
+        // Add filtered area itself
+        areaMap.set(filteredArea.id, filteredArea);
+        
+        // Add descendants
+        descendantAreas.forEach(area => areaMap.set(area.id, area));
+        
+        // Return deduplicated array
+        return Array.from(areaMap.values());
+      })()
+    : descendantAreas;
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => GeographicAreaService.deleteGeographicArea(id),
@@ -652,7 +686,7 @@ export function GeographicAreaList() {
           key="container"
           header={
             <Header
-              variant="h2"
+              variant="h1"
               counter={`(${geographicAreas.length})`}
               actions={
                 <SpaceBetween direction="horizontal" size="xs">
