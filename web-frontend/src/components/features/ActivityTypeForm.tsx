@@ -203,7 +203,7 @@ export function ActivityTypeForm({ activityType, onSuccess, onCancel }: Activity
             <FormField label="Activity Category" errorText={categoryError}>
               <EntitySelectorWithActions
                 onRefresh={handleRefreshCategories}
-                addEntityUrl="/configuration"
+                addEntityType="activityCategory"
                 canAdd={canAddCategory}
                 isRefreshing={isRefreshingCategories}
                 entityTypeName="activity category"

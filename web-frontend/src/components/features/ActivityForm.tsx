@@ -80,10 +80,12 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const [assignmentFormErrors, setAssignmentFormErrors] = useState<{ participant?: string; role?: string; duplicate?: string }>({});
   const [isRefreshingParticipants, setIsRefreshingParticipants] = useState(false);
   const [isRefreshingRoles, setIsRefreshingRoles] = useState(false);
+  const [isRefreshingActivityTypes, setIsRefreshingActivityTypes] = useState(false);
 
   const canAddVenue = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
   const canAddParticipant = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
   const canAddRole = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
+  const canAddActivityType = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
 
   const handleRefreshVenues = async () => {
     setIsRefreshingVenues(true);
@@ -92,6 +94,16 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       await queryClient.refetchQueries({ queryKey: ['venues'] });
     } finally {
       setIsRefreshingVenues(false);
+    }
+  };
+
+  const handleRefreshActivityTypes = async () => {
+    setIsRefreshingActivityTypes(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['activityTypes'] });
+      await queryClient.refetchQueries({ queryKey: ['activityTypes'] });
+    } finally {
+      setIsRefreshingActivityTypes(false);
     }
   };
 
@@ -737,17 +749,25 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
               />
             </FormField>
             <FormField label="Activity Type" errorText={activityTypeError} constraintText="Required">
-              <Select
-                selectedOption={activityTypeOptions.find((o) => o.value === activityTypeId) || null}
-                onChange={({ detail }) => {
-                  setActivityTypeId(detail.selectedOption.value || '');
-                  if (activityTypeError) validateActivityType(detail.selectedOption.value || '');
-                }}
-                options={activityTypeOptions}
-                placeholder="Select an activity type"
-                disabled={isSubmitting}
-                empty="No activity types available"
-              />
+              <EntitySelectorWithActions
+                onRefresh={handleRefreshActivityTypes}
+                addEntityType="activityType"
+                canAdd={canAddActivityType}
+                isRefreshing={isRefreshingActivityTypes}
+                entityTypeName="activity type"
+              >
+                <Select
+                  selectedOption={activityTypeOptions.find((o) => o.value === activityTypeId) || null}
+                  onChange={({ detail }) => {
+                    setActivityTypeId(detail.selectedOption.value || '');
+                    if (activityTypeError) validateActivityType(detail.selectedOption.value || '');
+                  }}
+                  options={activityTypeOptions}
+                  placeholder="Select an activity type"
+                  disabled={isSubmitting}
+                  empty="No activity types available"
+                />
+              </EntitySelectorWithActions>
             </FormField>
             <FormField label="Status" constraintText="Required">
               <Select
@@ -991,7 +1011,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                     >
                       <EntitySelectorWithActions
                         onRefresh={handleRefreshRoles}
-                        addEntityUrl="/configuration"
+                        addEntityType="participantRole"
                         canAdd={canAddRole}
                         isRefreshing={isRefreshingRoles}
                         entityTypeName="role"

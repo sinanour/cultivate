@@ -1154,25 +1154,32 @@ The Web Frontend package provides a responsive React-based web application that 
 2. THE refresh button SHALL use the CloudScape refresh icon
 3. THE add button SHALL use the CloudScape add-plus icon
 4. WHEN a user clicks the refresh button, THE Web_App SHALL reload the options for that entity selector from the backend
-5. WHEN a user clicks the add button, THE Web_App SHALL open the entity creation page in a new browser tab
-6. THE add button SHALL use target="_blank" to preserve the current form context in the original tab
-7. AFTER a user adds a new entity in the new tab, THE user SHALL be able to return to the original tab and click refresh to see the newly-added entity
-8. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in VenueForm
-9. THE Web_App SHALL provide refresh and add buttons for the Venue selector in ParticipantForm address history section
-10. THE Web_App SHALL provide refresh and add buttons for the Venue selector in ActivityForm venue history section
-11. THE Web_App SHALL provide refresh and add buttons for the Activity Category selector in ActivityTypeForm
-12. THE Web_App SHALL provide refresh and add buttons for the Participant selector in ActivityForm participant assignments section
-13. THE Web_App SHALL provide refresh and add buttons for the Role selector in ActivityForm participant assignments section
-14. THE Web_App SHALL provide refresh and add buttons for the Population selector in ParticipantForm population membership section
-15. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in GeographicAreaForm parent selection
-16. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in GeographicAuthorizationForm
-17. THE Web_App SHALL position the refresh and add buttons adjacent to the entity selector (typically to the right)
-18. THE Web_App SHALL use CloudScape ButtonGroup or similar layout to group the refresh and add buttons together
-19. THE Web_App SHALL disable the add button when the user does not have permission to create the referenced entity type
-20. THE Web_App SHALL always enable the refresh button regardless of user permissions
-21. WHEN the refresh button is clicked, THE Web_App SHALL display a loading indicator on the button during the reload operation
-22. WHEN the refresh operation completes, THE Web_App SHALL restore the button to its normal state
-23. THE Web_App SHALL maintain the currently selected value in the selector after a refresh operation (if it still exists in the refreshed list)
+5. WHEN a user clicks the add button for major entities (Geographic Areas, Venues, Participants), THE Web_App SHALL open the entity creation page in a new browser tab
+6. WHEN a user clicks the add button for configurable entities (Activity Categories, Activity Types, Participant Roles, Populations), THE Web_App SHALL open an inline modal dialog for entity creation
+7. THE add button for major entities SHALL use target="_blank" to preserve the current form context in the original tab
+8. AFTER a user adds a new major entity in the new tab, THE user SHALL be able to return to the original tab and click refresh to see the newly-added entity
+9. AFTER a user creates a new configurable entity in the inline modal, THE Web_App SHALL automatically refresh the selector options and pre-select the newly created entity
+10. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in VenueForm (opens new tab)
+11. THE Web_App SHALL provide refresh and add buttons for the Venue selector in ParticipantForm address history section (opens new tab)
+12. THE Web_App SHALL provide refresh and add buttons for the Venue selector in ActivityForm venue history section (opens new tab)
+13. THE Web_App SHALL provide refresh and add buttons for the Activity Category selector in ActivityTypeForm (opens inline modal)
+14. THE Web_App SHALL provide refresh and add buttons for the Participant selector in ActivityForm participant assignments section (opens new tab)
+15. THE Web_App SHALL provide refresh and add buttons for the Role selector in ActivityForm participant assignments section (opens inline modal)
+16. THE Web_App SHALL provide refresh and add buttons for the Population selector in ParticipantForm population membership section (opens inline modal)
+17. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in GeographicAreaForm parent selection (opens new tab)
+18. THE Web_App SHALL provide refresh and add buttons for the Geographic Area selector in GeographicAuthorizationForm (opens new tab)
+19. THE Web_App SHALL position the refresh and add buttons adjacent to the entity selector (typically to the right)
+20. THE Web_App SHALL use CloudScape ButtonGroup or similar layout to group the refresh and add buttons together
+21. THE Web_App SHALL disable the add button when the user does not have permission to create the referenced entity type
+22. THE Web_App SHALL always enable the refresh button regardless of user permissions
+23. WHEN the refresh button is clicked, THE Web_App SHALL display a loading indicator on the button during the reload operation
+24. WHEN the refresh operation completes, THE Web_App SHALL restore the button to its normal state
+25. THE Web_App SHALL maintain the currently selected value in the selector after a refresh operation (if it still exists in the refreshed list)
+26. WHEN the inline modal for configurable entities is opened, THE Web_App SHALL render the appropriate form component (ActivityCategoryForm, ActivityTypeForm, ParticipantRoleForm, or PopulationForm)
+27. WHEN a configurable entity is successfully created via the inline modal, THE Web_App SHALL close the modal, refresh the selector options, and automatically select the newly created entity
+28. WHEN the user cancels the inline modal for configurable entities, THE Web_App SHALL close the modal without making any changes to the selector
+29. THE inline modal for configurable entities SHALL use the same validation rules as the standalone configuration forms
+30. THE inline modal for Activity Type creation SHALL require selection of an Activity Category before submission
 
 ### Requirement 18: User Management (Admin Only)
 

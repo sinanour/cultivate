@@ -108,7 +108,7 @@ export function PopulationMembershipManager({
     >
       <EntitySelectorWithActions
         onRefresh={handleRefreshPopulations}
-        addEntityUrl="/configuration"
+        addEntityType="population"
         canAdd={canAddPopulation}
         isRefreshing={isRefreshingPopulations}
         entityTypeName="population"

@@ -2379,103 +2379,93 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 98: Dropdown Combined Filtering**
     - **Validates: Requirements 26.4, 26.5, 26.6, 26.7**
 
-- [x] 25A. Implement entity selector refresh and add actions
-  - [x] 25A.1 Create EntitySelectorWithActions component
-    - Create new file: web-frontend/src/components/common/EntitySelectorWithActions.tsx
-    - Create wrapper component that accepts entity selector as children
-    - Accept props: children, onRefresh, addEntityUrl, canAdd, isRefreshing, entityTypeName
-    - Display refresh button using CloudScape Button with iconName="refresh"
-    - Display add button using CloudScape Button with iconName="add-plus"
-    - Position buttons adjacent to selector (typically to the right) using SpaceBetween or ButtonGroup
-    - When refresh button clicked, call onRefresh callback
-    - Display loading indicator on refresh button when isRefreshing is true
-    - When add button clicked, open addEntityUrl in new tab using window.open(url, '_blank')
-    - Disable add button when canAdd is false
-    - Always enable refresh button regardless of permissions
-    - Add ARIA labels for accessibility (e.g., "Refresh {entityTypeName} list", "Add new {entityTypeName}")
-    - Ensure keyboard navigation works for both buttons
-    - _Requirements: 17A.1, 17A.2, 17A.3, 17A.4, 17A.5, 17A.6, 17A.17, 17A.18, 17A.19, 17A.20, 17A.21, 17A.22_
+- [x] 25A. Enhance entity selector refresh and add actions with inline modal support
+  - [x] 25A.1 Update EntitySelectorWithActions component for inline modal support
+    - Update existing file: web-frontend/src/components/common/EntitySelectorWithActions.tsx
+    - Add new props: addEntityType ('activityCategory' | 'activityType' | 'participantRole' | 'population' | null), onEntityCreated (optional callback), additionalFormProps (optional object)
+    - Keep existing props: children, onRefresh, addEntityUrl, canAdd, isRefreshing, entityTypeName
+    - Add internal state for modal visibility (isModalOpen)
+    - When add button clicked:
+      - If addEntityType is provided (configurable entity): open inline modal
+      - If addEntityUrl is provided (major entity): open URL in new tab using window.open(url, '_blank')
+    - Render CloudScape Modal component when isModalOpen is true
+    - Based on addEntityType, render appropriate form component in modal:
+      - 'activityCategory': render ActivityCategoryForm
+      - 'activityType': render ActivityTypeForm (pass additionalFormProps.activityCategories if provided)
+      - 'participantRole': render ParticipantRoleForm
+      - 'population': render PopulationForm
+    - When form submission succeeds:
+      - Close modal (set isModalOpen to false)
+      - Call onRefresh callback to reload selector options
+      - Call onEntityCreated callback with newly created entity ID
+      - Automatically select newly created entity in parent selector
+    - When user cancels modal: close modal without changes
+    - Ensure modal uses same validation rules as standalone configuration forms
+    - _Requirements: 17A.1, 17A.2, 17A.3, 17A.4, 17A.5, 17A.6, 17A.7, 17A.8, 17A.9, 17A.13, 17A.15, 17A.16, 17A.17, 17A.18, 17A.19, 17A.20, 17A.21, 17A.22, 17A.23, 17A.24, 17A.25, 17A.26, 17A.27, 17A.28, 17A.29, 17A.30_
 
-  - [x] 25A.2 Update VenueFormPage to use EntitySelectorWithActions
-    - Wrap Geographic_Area_Selector with EntitySelectorWithActions
-    - Implement onRefresh callback to reload geographic areas
-    - Set addEntityUrl to "/geographic-areas/new"
-    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
-    - Track isRefreshing state during reload
-    - _Requirements: 17A.8, 17A.17_
-
-  - [x] 25A.3 Update ParticipantFormPage address history to use EntitySelectorWithActions
-    - Wrap venue AsyncEntitySelect in AddressHistoryForm with EntitySelectorWithActions
-    - Implement onRefresh callback to reload venues
-    - Set addEntityUrl to "/venues/new"
-    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
-    - Track isRefreshing state during reload
-    - _Requirements: 17A.9, 17A.17_
-
-  - [x] 25A.4 Update ActivityFormPage venue history to use EntitySelectorWithActions
-    - Wrap venue AsyncEntitySelect in ActivityVenueHistoryForm with EntitySelectorWithActions
-    - Implement onRefresh callback to reload venues
-    - Set addEntityUrl to "/venues/new"
-    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
-    - Track isRefreshing state during reload
+  - [x] 25A.2 Update VenueFormPage to use EntitySelectorWithActions (no changes needed)
+    - Already wraps Geographic_Area_Selector with EntitySelectorWithActions
+    - Uses addEntityUrl="/geographic-areas/new" (major entity - opens new tab)
     - _Requirements: 17A.10, 17A.17_
 
-  - [x] 25A.5 Update ActivityTypeForm to use EntitySelectorWithActions
-    - Wrap activity category Select with EntitySelectorWithActions
-    - Implement onRefresh callback to reload activity categories
-    - Set addEntityUrl to "/configuration" (opens configuration page where categories can be added)
-    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
-    - Track isRefreshing state during reload
+  - [x] 25A.3 Update ParticipantFormPage address history to use EntitySelectorWithActions (no changes needed)
+    - Already wraps venue AsyncEntitySelect in AddressHistoryForm with EntitySelectorWithActions
+    - Uses addEntityUrl="/venues/new" (major entity - opens new tab)
     - _Requirements: 17A.11, 17A.17_
 
-  - [x] 25A.6 Update ActivityFormPage assignments to use EntitySelectorWithActions
-    - Wrap participant AsyncEntitySelect in AssignmentForm with EntitySelectorWithActions
-    - Implement onRefresh callback to reload participants
-    - Set addEntityUrl to "/participants/new"
-    - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
-    - Track isRefreshing state during reload
+  - [x] 25A.4 Update ActivityFormPage venue history to use EntitySelectorWithActions (no changes needed)
+    - Already wraps venue AsyncEntitySelect in ActivityVenueHistoryForm with EntitySelectorWithActions
+    - Uses addEntityUrl="/venues/new" (major entity - opens new tab)
     - _Requirements: 17A.12, 17A.17_
 
-  - [x] 25A.7 Update ActivityFormPage assignments role selector to use EntitySelectorWithActions
-    - Wrap role Select in AssignmentForm with EntitySelectorWithActions
-    - Implement onRefresh callback to reload roles
-    - Set addEntityUrl to "/configuration" (opens configuration page where roles can be added)
+  - [x] 25A.5 Update ActivityTypeForm to use EntitySelectorWithActions with inline modal
+    - Update activity category Select wrapper to use addEntityType="activityCategory" instead of addEntityUrl
+    - Remove addEntityUrl prop
+    - Implement onEntityCreated callback to automatically select newly created category
     - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
-    - Track isRefreshing state during reload
-    - _Requirements: 17A.13, 17A.17_
+    - _Requirements: 17A.13, 17A.26, 17A.27, 17A.29_
 
-  - [x] 25A.8 Update ParticipantFormPage population selector to use EntitySelectorWithActions
-    - Wrap population Select in PopulationMembershipManager with EntitySelectorWithActions
-    - Implement onRefresh callback to reload populations
-    - Set addEntityUrl to "/configuration" (opens configuration page where populations can be added)
-    - Set canAdd to true only for ADMINISTRATOR role
-    - Track isRefreshing state during reload
+  - [x] 25A.6 Update ActivityFormPage assignments to use EntitySelectorWithActions (no changes needed)
+    - Already wraps participant AsyncEntitySelect in AssignmentForm with EntitySelectorWithActions
+    - Uses addEntityUrl="/participants/new" (major entity - opens new tab)
     - _Requirements: 17A.14, 17A.17_
 
-  - [x] 25A.9 Update GeographicAreaFormPage to use EntitySelectorWithActions
-    - Wrap parent Geographic_Area_Selector with EntitySelectorWithActions
-    - Implement onRefresh callback to reload geographic areas
-    - Set addEntityUrl to "/geographic-areas/new"
+  - [x] 25A.7 Update ActivityFormPage assignments role selector to use EntitySelectorWithActions with inline modal
+    - Update role Select wrapper to use addEntityType="participantRole" instead of addEntityUrl
+    - Remove addEntityUrl prop
+    - Implement onEntityCreated callback to automatically select newly created role
     - Set canAdd based on user role (EDITOR or ADMINISTRATOR)
-    - Track isRefreshing state during reload
-    - _Requirements: 17A.15, 17A.17_
+    - _Requirements: 17A.15, 17A.26, 17A.27, 17A.29_
 
-  - [x] 25A.10 Update GeographicAuthorizationForm to use EntitySelectorWithActions
-    - Wrap Geographic_Area_Selector with EntitySelectorWithActions
-    - Implement onRefresh callback to reload geographic areas
-    - Set addEntityUrl to "/geographic-areas/new"
-    - Set canAdd based on user role (ADMINISTRATOR only for this context)
-    - Track isRefreshing state during reload
-    - _Requirements: 17A.16, 17A.17_
+  - [x] 25A.8 Update ParticipantFormPage population selector to use EntitySelectorWithActions with inline modal
+    - Update population Select wrapper to use addEntityType="population" instead of addEntityUrl
+    - Remove addEntityUrl prop
+    - Implement onEntityCreated callback to automatically select newly created population
+    - Set canAdd to true only for ADMINISTRATOR role
+    - _Requirements: 17A.16, 17A.26, 17A.27, 17A.29_
 
-  - [ ]* 25A.11 Write property tests for EntitySelectorWithActions
+  - [x] 25A.9 Update GeographicAreaFormPage to use EntitySelectorWithActions (no changes needed)
+    - Already wraps parent Geographic_Area_Selector with EntitySelectorWithActions
+    - Uses addEntityUrl="/geographic-areas/new" (major entity - opens new tab)
+    - _Requirements: 17A.17, 17A.17_
+
+  - [x] 25A.10 Update GeographicAuthorizationForm to use EntitySelectorWithActions (no changes needed)
+    - Already wraps Geographic_Area_Selector with EntitySelectorWithActions
+    - Uses addEntityUrl="/geographic-areas/new" (major entity - opens new tab)
+    - _Requirements: 17A.18, 17A.17_
+
+  - [ ]* 25A.11 Write property tests for EntitySelectorWithActions with inline modal support
     - **Property 182: Entity Selector Refresh Button Presence**
     - **Property 183: Entity Selector Add Button Presence**
     - **Property 184: Refresh Button Reloads Options**
-    - **Property 185: Add Button Opens New Tab**
+    - **Property 185: Add Button Opens New Tab for Major Entities**
+    - **Property 185a: Add Button Opens Inline Modal for Configurable Entities**
     - **Property 186: Add Button Permission-Based Disabling**
     - **Property 187: Refresh Button Loading Indicator**
-    - **Validates: Requirements 17A.1, 17A.2, 17A.3, 17A.4, 17A.5, 17A.6, 17A.7, 17A.17, 17A.18, 17A.19, 17A.20, 17A.21, 17A.22, 17A.23**
+    - **Property 188: Inline Modal Renders Correct Form Component**
+    - **Property 189: Inline Modal Auto-Selects Created Entity**
+    - **Property 190: Inline Modal Cancel Behavior**
+    - **Validates: Requirements 17A.1, 17A.2, 17A.3, 17A.4, 17A.5, 17A.6, 17A.7, 17A.8, 17A.9, 17A.13, 17A.15, 17A.16, 17A.17, 17A.18, 17A.19, 17A.20, 17A.21, 17A.22, 17A.23, 17A.24, 17A.25, 17A.26, 17A.27, 17A.28, 17A.29, 17A.30**
 
 - [ ] 26. Enhance Participant entity with additional optional fields
   - [ ] 26.1 Update ParticipantForm component

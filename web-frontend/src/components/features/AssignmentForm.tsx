@@ -195,7 +195,7 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
           <FormField label="Role" errorText={roleError} constraintText="Required">
             <EntitySelectorWithActions
               onRefresh={handleRefreshRoles}
-              addEntityUrl="/configuration"
+              addEntityType="participantRole"
               canAdd={canAddRole}
               isRefreshing={isRefreshingRoles}
               entityTypeName="role"

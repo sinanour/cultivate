@@ -1381,10 +1381,16 @@ interface PropertyFilterOption {
   - Displays loading indicator on button during reload operation
   - Restores button to normal state after reload completes
   - Maintains currently selected value if it still exists in refreshed list
-- When add button is clicked:
+- When add button is clicked for major entities (Geographic Areas, Venues, Participants):
   - Opens entity creation page in new browser tab using target="_blank"
   - Preserves current form context in original tab
   - Allows user to return to original tab and click refresh to see newly-added entity
+- When add button is clicked for configurable entities (Activity Categories, Activity Types, Participant Roles, Populations):
+  - Opens inline modal dialog with appropriate form component
+  - Renders ActivityCategoryForm, ActivityTypeForm, ParticipantRoleForm, or PopulationForm based on entity type
+  - On successful creation: closes modal, refreshes selector options, and automatically selects newly created entity
+  - On cancel: closes modal without changes
+  - Uses same validation rules as standalone configuration forms
 - Disables add button when user lacks permission to create the referenced entity type
 - Always enables refresh button regardless of user permissions
 - Provides accessible keyboard navigation for action buttons
@@ -1394,25 +1400,30 @@ interface PropertyFilterOption {
 - Accepts props: 
   - children (entity selector component to wrap)
   - onRefresh (callback to reload options)
-  - addEntityUrl (URL for entity creation page)
+  - addEntityUrl (URL for entity creation page - used for major entities)
+  - addEntityType ('activityCategory' | 'activityType' | 'participantRole' | 'population' | null - used for configurable entities)
   - canAdd (boolean indicating if user has create permission)
   - isRefreshing (boolean indicating refresh in progress)
-  - entityTypeName (string for accessibility labels, e.g., "geographic area", "venue")
+  - entityTypeName (string for accessibility labels, e.g., "geographic area", "venue", "activity category")
+  - onEntityCreated (optional callback invoked with newly created entity ID after successful inline creation)
+  - additionalFormProps (optional object with additional props to pass to inline form, e.g., { activityCategories } for ActivityTypeForm)
 - Renders selector component as child with action buttons positioned adjacent
 - Uses CloudScape Button components with iconName="refresh" and iconName="add-plus"
 - Implements loading state management for refresh operation
-- Opens add URL in new tab using window.open() or Link with target="_blank"
+- For major entities: opens add URL in new tab using window.open() or Link with target="_blank"
+- For configurable entities: manages modal state and renders appropriate form component
+- Automatically refreshes selector and pre-selects newly created entity after inline creation
 
 **Usage Examples:**
-- Wraps Geographic_Area_Selector in VenueForm
-- Wraps AsyncEntitySelect for venues in ParticipantForm address history
-- Wraps AsyncEntitySelect for venues in ActivityForm venue history
-- Wraps Select for activity categories in ActivityTypeForm
-- Wraps AsyncEntitySelect for participants in ActivityForm assignments
-- Wraps Select for roles in ActivityForm assignments
-- Wraps Select for populations in ParticipantForm
-- Wraps Geographic_Area_Selector in GeographicAreaForm parent selection
-- Wraps Geographic_Area_Selector in GeographicAuthorizationForm
+- Wraps Geographic_Area_Selector in VenueForm (major entity - opens new tab)
+- Wraps AsyncEntitySelect for venues in ParticipantForm address history (major entity - opens new tab)
+- Wraps AsyncEntitySelect for venues in ActivityForm venue history (major entity - opens new tab)
+- Wraps Select for activity categories in ActivityTypeForm (configurable entity - opens inline modal)
+- Wraps AsyncEntitySelect for participants in ActivityForm assignments (major entity - opens new tab)
+- Wraps Select for roles in ActivityForm assignments (configurable entity - opens inline modal)
+- Wraps Select for populations in ParticipantForm (configurable entity - opens inline modal)
+- Wraps Geographic_Area_Selector in GeographicAreaForm parent selection (major entity - opens new tab)
+- Wraps Geographic_Area_Selector in GeographicAuthorizationForm (major entity - opens new tab)
 
 ### Service Layer
 
