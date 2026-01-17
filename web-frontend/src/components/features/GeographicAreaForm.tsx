@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useBlocker } from 'react-router-dom';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -10,7 +10,7 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
 import Modal from '@cloudscape-design/components/modal';
 import Box from '@cloudscape-design/components/box';
-import type { GeographicArea, GeographicAreaWithHierarchy } from '../../types';
+import type { GeographicArea } from '../../types';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
@@ -18,6 +18,7 @@ import { getEntityVersion } from '../../utils/version-conflict.utils';
 import { GeographicAreaSelector } from '../common/GeographicAreaSelector';
 import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { useAuth } from '../../hooks/useAuth';
+import { useGeographicAreaOptions } from '../../hooks/useGeographicAreaOptions';
 
 interface GeographicAreaFormProps {
   geographicArea: GeographicArea | null;
@@ -36,7 +37,6 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
   const [areaTypeError, setAreaTypeError] = useState('');
   const [parentError, setParentError] = useState('');
   const [error, setError] = useState('');
-  const [isRefreshingAreas, setIsRefreshingAreas] = useState(false);
 
   const canAddGeographicArea = user?.role === 'ADMINISTRATOR' || user?.role === 'EDITOR';
 
@@ -144,46 +144,18 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
     onDiscard: onCancel,
   });
 
-  // Fetch geographic areas with hierarchy for the selector
-  const { data: geographicAreas = [], isLoading: isLoadingAreas, refetch: refetchAreas } = useQuery({
-    queryKey: ['geographicAreas', 'withHierarchy'],
-    queryFn: async () => {
-      const response = await GeographicAreaService.getGeographicAreas();
-      
-      // Handle both paginated and non-paginated responses
-      const areas = Array.isArray(response) ? response : response.data;
-      
-      // Fetch ancestors for each area to build hierarchy
-      const areasWithHierarchy = await Promise.all(
-        areas.map(async (area: GeographicArea) => {
-          try {
-            const ancestors = await GeographicAreaService.getAncestors(area.id);
-            const hierarchyPath = ancestors.length > 0
-              ? ancestors.map((a: GeographicArea) => a.name).join(' > ')
-              : '';
-            
-            return {
-              ...area,
-              ancestors,
-              hierarchyPath,
-            } as GeographicAreaWithHierarchy;
-          } catch (error) {
-            console.error(`Failed to fetch ancestors for area ${area.id}:`, error);
-            return {
-              ...area,
-              ancestors: [],
-              hierarchyPath: '',
-            } as GeographicAreaWithHierarchy;
-          }
-        })
-      );
-      
-      // Filter out current area to prevent self-reference
-      return geographicArea 
-        ? areasWithHierarchy.filter((a: GeographicAreaWithHierarchy) => a.id !== geographicArea.id)
-        : areasWithHierarchy;
-    },
+  // Geographic area options with lazy loading
+  const {
+    options: geographicAreas,
+    isLoading: isLoadingAreas,
+    handleLoadItems: handleGeographicAreaSearch,
+    refetch: refetchAreas,
+  } = useGeographicAreaOptions({
+    ensureIncluded: geographicArea?.parentGeographicAreaId,
+    excludeAreaId: geographicArea?.id, // Prevent self-reference
   });
+
+  const [isRefreshingAreas, setIsRefreshingAreas] = useState(false);
 
   const handleRefreshAreas = async () => {
     setIsRefreshingAreas(true);
@@ -390,6 +362,8 @@ export function GeographicAreaForm({ geographicArea, onSuccess, onCancel }: Geog
                   disabled={isSubmitting}
                   error={parentError}
                   placeholder="Select parent area (optional)"
+                  onLoadItems={handleGeographicAreaSearch}
+                  filteringType="manual"
                 />
               </EntitySelectorWithActions>
             </FormField>

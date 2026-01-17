@@ -2000,7 +2000,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 26B.1, 26B.2, 26B.3, 26B.4, 26B.5, 26B.6, 26B.11, 26B.12, 26B.13, 26B.14**
 
 - [ ] 23C. Create reusable Geographic_Area_Selector component
-  - [ ] 23B.1 Extract Geographic_Area_Selector from GeographicAreaFilterSelector
+  - [x] 23B.1 Extract Geographic_Area_Selector from GeographicAreaFilterSelector
     - Create new file: web-frontend/src/components/common/GeographicAreaSelector.tsx
     - Extract the Select portion from GeographicAreaFilterSelector.tsx
     - Create component that accepts props: value, onChange, options (GeographicAreaWithHierarchy[]), loading, disabled, error, placeholder, inlineLabelText
@@ -2017,7 +2017,12 @@ This implementation plan covers the React-based web application built with TypeS
     - Support empty/unselected state with placeholder text
     - Do NOT inject "Global" or "All Areas" option
     - Use React useMemo to optimize option transformation
-    - _Requirements: 6B1.1, 6B1.2, 6B1.3, 6B1.4, 6B1.5, 6B1.6, 6B1.7, 6B1.8, 6B1.9, 6B1.15, 6B1.16, 6B1.17, 6B1.18, 6B1.19, 6B1.20, 6B1.21, 6B1.22, 6B1.24, 6B1.25, 6B1.26_
+    - **Maintain separate state for: (1) dropdown options (areas matching filter), (2) ancestor cache (for hierarchy paths)**
+    - **Fetch ancestors using batch-ancestors endpoint WITHOUT adding them to dropdown options**
+    - **Use ancestor data exclusively for populating hierarchy path descriptions**
+    - **When value prop changes to an area not in current options, fetch that area and add it to options (but not its ancestors)**
+    - **Prevent cascading population of options list when fetching ancestors**
+    - _Requirements: 6B1.1, 6B1.2, 6B1.3, 6B1.4, 6B1.5, 6B1.6, 6B1.7, 6B1.8, 6B1.9, 6B1.15, 6B1.16, 6B1.17, 6B1.18, 6B1.19, 6B1.20, 6B1.21, 6B1.22, 6B1.24, 6B1.25, 6B1.26, 6B1.39, 6B1.40, 6B1.41, 6B1.42, 6B1.43, 6B1.44, 6B1.45, 6B1.46_
 
   - [ ] 23B.2 Refactor GeographicAreaFilterSelector to use Geographic_Area_Selector
     - Import Geographic_Area_Selector component
@@ -2034,7 +2039,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 179: Geographic Area Selector Empty State**
     - **Property 180: Geographic Area Selector No Global Option**
     - **Property 181: Geographic Area Selector Accessibility**
-    - **Validates: Requirements 6B1.3, 6B1.4, 6B1.5, 6B1.6, 6B1.7, 6B1.8, 6B1.9, 6B1.17, 6B1.18, 6B1.19, 6B1.22, 6B1.24, 6B1.25, 6B1.26_
+    - **Property 226: Ancestor Data Used Only for Hierarchy Paths**
+    - **Property 227: Ancestors Not Added to Options List**
+    - **Property 228: Pre-Selected Area Fetching**
+    - **Property 229: Pre-Selected Area Without Ancestors in Options**
+    - **Property 230: Cascading Population Prevention**
+    - **Validates: Requirements 6B1.3, 6B1.4, 6B1.5, 6B1.6, 6B1.7, 6B1.8, 6B1.9, 6B1.17, 6B1.18, 6B1.19, 6B1.22, 6B1.24, 6B1.25, 6B1.26, 6B1.39, 6B1.40, 6B1.41, 6B1.42, 6B1.43, 6B1.44, 6B1.45, 6B1.46_
 
 - [x] 23D. Fix global geographic filter search functionality
   - [x] 23D.1 Update GlobalGeographicFilterContext to support server-side search
@@ -2092,7 +2102,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 26.3, 26.8, 26.9, 26.10**
 
 - [x] 24. Implement global persistent geographic area filter
-  - [x] 24.1 Create GlobalGeographicFilterContext
+  - [x] 24.1 Create GlobalGeographicFilterContext with batch ancestor fetching using WITH RECURSIVE
     - Create React context for global geographic area filter state
     - Provide selectedGeographicAreaId (string | null)
     - Provide selectedGeographicArea (GeographicArea | null)
@@ -2115,26 +2125,32 @@ This implementation plan covers the React-based web application built with TypeS
     - Fetch available areas based on current filter scope in batches of 100:
       - When filter is "Global": fetch all geographic areas
       - When filter is active: fetch only descendants of filtered area
-    - **Implement intelligent ancestor batching with chunking:**
-      - Maintain in-memory cache (Map<areaId, ancestors[]>) for areas with complete ancestor metadata
+    - **Implement intelligent ancestor batching with chunking using ONLY batch endpoints:**
+      - Maintain in-memory cache (Map<areaId, parentId>) for parent relationships from batch-ancestors
+      - Maintain in-memory cache (Map<areaId, GeographicArea>) for full area details from batch-details
       - After fetching each batch of N geographic areas, extract unique parent IDs from all areas
-      - Check ancestor cache to determine which parent areas are missing complete ancestor data
+      - Check parent map cache to determine which parent IDs are missing
       - Split missing parent IDs into chunks of 100 IDs each
       - For each chunk of parent IDs:
         - Call POST /geographic-areas/batch-ancestors with up to 100 area IDs
-        - Collect ancestor IDs from response
-      - Merge all ancestor IDs from all chunks into a single unique set
-      - Split collected ancestor IDs into chunks of 100 IDs each
+        - Merge parent map results (areaId → parentId) into cache
+      - Traverse parent maps to collect all unique ancestor IDs by following parent pointers until reaching null
+      - Determine which ancestor IDs are missing full details from details cache
+      - Split missing ancestor IDs into chunks of 100 IDs each
       - For each chunk of ancestor IDs:
         - Call POST /geographic-areas/batch-details with up to 100 ancestor IDs
-        - Merge results into ancestor cache
-      - Update ancestor cache with all newly fetched ancestor chains
-      - Build hierarchyPath string for each area using cached ancestor data
+        - Merge full geographic area objects into details cache
+      - Build hierarchyPath string for each area by traversing parent map and looking up names from details cache
       - Format: "Ancestor1 > Ancestor2 > Ancestor3" (closest to most distant)
       - Store areas with complete hierarchy information in availableAreas state
-      - Reuse cached ancestor data across batches to minimize redundant requests
-      - Respect API endpoint limits of 100 IDs per request for both batch-ancestors and batch-details
-    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.20, 25.21, 25.22, 25.26, 25.27, 25.28, 25.29, 25.30, 25.31, 25.32, 25.33, 25.36_
+      - **DO NOT add fetched ancestors to availableAreas - use them ONLY for building hierarchy paths**
+      - **Keep availableAreas containing ONLY the areas from the original batches that match the filter**
+      - **Store ancestor details in separate cache for hierarchy path construction**
+      - Reuse cached data across batches to minimize redundant requests
+      - Respect API endpoint limits of 1-100 IDs per request for both batch-ancestors and batch-details
+      - DO NOT use deprecated GET /geographic-areas/:id/ancestors endpoint
+      - Leverage backend's WITH RECURSIVE CTE implementation for sub-20ms database latency per batch
+    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.7, 25.8, 25.9, 25.12, 25.13, 25.14, 25.15, 25.16, 25.17, 25.20, 25.21, 25.22, 25.26, 25.27, 25.28, 25.29, 25.30, 25.31, 25.32, 25.33, 25.34, 25.35, 25.36, 25.37, 6B1.35, 6B1.36, 6B1.37, 6B1.38, 6B1.39, 6B1.40, 6B1.41, 6B1.42, 6B1.46_
 
   - [ ] 24.2 Create useGlobalGeographicFilter hook
     - Export custom hook to access GlobalGeographicFilterContext

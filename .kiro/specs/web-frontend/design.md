@@ -1031,6 +1031,17 @@ src/
 - Uses selectedAriaLabel property for accessibility
 - Usable in both modal forms and full-page forms
 
+**Ancestor Fetching for Hierarchy Display:**
+- Fetches ancestor data ONLY for displaying hierarchy paths in option descriptions
+- Does NOT add fetched ancestors to the dropdown options list
+- When ancestors are fetched for a batch of areas, uses ancestor data exclusively to populate hierarchy path descriptions
+- Maintains dropdown options list as containing ONLY areas matching current filter text (or initial batch when no filter applied)
+- When a specific area needs to be pre-selected (e.g., editing a venue), fetches that specific area and its ancestors if not already in options
+- When pre-selecting a specific area, adds ONLY that specific area to options list (not its ancestors)
+- Uses fetched ancestor data to populate hierarchy path description for pre-selected area
+- Prevents cascading population of options list when fetching ancestors for hierarchy display purposes
+- Ensures dropdown remains manageable even when displaying thousands of areas with deep hierarchies
+
 **Implementation Details:**
 - Accepts props: value (selected area ID), onChange (callback), options (GeographicAreaWithHierarchy[]), loading, disabled, error, placeholder, inlineLabelText
 - Transforms GeographicAreaWithHierarchy objects into Select options with custom labelContent
@@ -1042,6 +1053,9 @@ src/
 - Uses fields parameter to request only necessary attributes (id, name, areaType, parentGeographicAreaId) for optimal bandwidth
 - Integrates with existing geographic area utilities (getAreaTypeBadgeColor)
 - Can be wrapped with additional UI elements (e.g., BreadcrumbGroup for global filter)
+- Maintains separate state for: (1) dropdown options (areas matching filter), (2) ancestor cache (for hierarchy paths)
+- Fetches ancestors in batches using batch-ancestors endpoint without adding them to dropdown options
+- When value prop changes to an area not in current options, fetches that area and adds it to options (but not its ancestors)
 
 **Usage Examples:**
 - Global geographic area filter in AppLayout header
@@ -1399,20 +1413,23 @@ interface PropertyFilterOption {
   - When filter is active: fetches only descendants of the filtered area in batches of 100
 - **Intelligent Ancestor Batching:**
   - After fetching each batch of N geographic areas, identifies unique parent IDs from all areas in the batch
-  - Maintains an in-memory cache of areas with complete ancestor metadata (Map<areaId, ancestors[]>)
-  - Determines which parent areas are missing from the ancestor cache
-  - Fetches missing parent areas and their complete ancestor chains using batch-ancestors endpoint
+  - Maintains an in-memory cache of parent maps (Map<areaId, parentId>) from batch-ancestors responses
+  - Determines which parent areas are missing from the cache
+  - Fetches missing parent IDs and their complete ancestor chains using batch-ancestors endpoint with WITH RECURSIVE CTE
   - **Handles large ancestor sets (>100) by batching:**
     - Splits missing parent IDs into chunks of 100 IDs each
     - Calls POST `/geographic-areas/batch-ancestors` for each chunk of up to 100 area IDs
-    - Collects all unique ancestor IDs from all batch-ancestors responses
+    - Merges parent map results from all batch-ancestors responses into cache
+    - Traverses parent map to build complete ancestor chains for each area
+    - Collects all unique ancestor IDs by following parent pointers until reaching null
     - Splits collected ancestor IDs into chunks of 100 IDs each
     - Calls POST `/geographic-areas/batch-details` for each chunk of up to 100 ancestor IDs
     - Merges results from all batch-details responses into ancestor cache
   - Caches all fetched ancestor data to avoid redundant requests across subsequent batches
   - Ensures every area in `availableAreas` has complete ancestor hierarchy before rendering dropdown options
-  - Minimizes backend round trips by grouping multiple ancestor fetch requests into batched operations (IDs first, then details)
-  - Respects API endpoint limits of 100 IDs per request for both batch-ancestors and batch-details
+  - Minimizes backend round trips by grouping multiple ancestor fetch requests into batched operations (parent IDs first, then details)
+  - Respects API endpoint limits of 1-100 IDs per request for both batch-ancestors and batch-details
+  - Leverages backend's WITH RECURSIVE CTE implementation for sub-20ms database latency per batch
 - Formats options for Geographic_Area_Selector with label (area name) and description (hierarchy path)
 - Builds hierarchy paths using cached ancestor data for all visible areas
 

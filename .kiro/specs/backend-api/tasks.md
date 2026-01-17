@@ -446,77 +446,97 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - GET /api/geographic-areas/:id/statistics
     - _Requirements: 5B.1, 5B.2, 5B.9, 5B.13, 5B.14, 5B.15, 5B.22, 5B.23, 5B.24, 5B.25, 5B.26_
 
-  - [x] 9.5 Implement batch ancestors endpoint
-    - [x] 9.5.1 Add getBatchAncestors method to GeographicAreaRepository
-      - Accept array of area IDs (max 100)
-      - Collect all unique parent IDs from the requested areas
-      - Recursively fetch all ancestors using efficient query (CTE or iterative traversal)
-      - Build map of areaId → ancestors array
-      - Return ancestors ordered from closest to most distant for each area
-      - Optimize by fetching all unique ancestors in a single database query
-      - _Requirements: 5B.28, 5B.29, 5B.30, 5B.32_
+  - [x] 9.5 Implement batch ancestors endpoint with WITH RECURSIVE CTE
+    - [x] 9.5.1 Add findBatchAncestorsOptimized method to GeographicAreaRepository
+      - Accept array of area IDs (min 1, max 100)
+      - Use raw SQL query with WITH RECURSIVE CTE to fetch all ancestors in single database round trip
+      - Base case: SELECT requested area IDs with their parent IDs
+      - Recursive case: JOIN to fetch parents of current level until reaching root (null parent)
+      - Return parent map where each area ID maps to its immediate parent ID (or null for root)
+      - Use prisma.$queryRaw() for raw SQL execution
+      - Handle PostgreSQL array parameter binding (ANY($1::uuid[]))
+      - Optimize with DISTINCT to avoid duplicate rows
+      - _Requirements: 5B.28, 5B.29, 5B.30, 5B.32, 5B.33, 5B.34, 5B.51, 5B.52, 5B.53_
 
     - [x] 9.5.2 Add getBatchAncestors method to GeographicAreaService
       - Validate all area IDs are valid UUIDs
-      - Validate array length does not exceed 100 items
-      - Call repository method to fetch batch ancestors
-      - Return formatted response with areaId → ancestors mapping
-      - Handle non-existent area IDs gracefully (return empty array)
-      - _Requirements: 5B.28, 5B.29, 5B.30, 5B.31, 5B.33, 5B.34, 5B.35, 5B.36_
+      - Validate array length is between 1 and 100 items
+      - Call repository method to fetch batch ancestors using WITH RECURSIVE
+      - Return formatted response with areaId → parentId mapping
+      - Handle non-existent area IDs gracefully (omit from result)
+      - Apply geographic authorization filtering to parent map
+      - _Requirements: 5B.28, 5B.29, 5B.30, 5B.31, 5B.35, 5B.36, 5B.37, 5B.38_
 
     - [x] 9.5.3 Create POST /api/v1/geographic-areas/batch-ancestors route
-      - Create validation schema for request body (areaIds array, max 100 UUIDs)
+      - Create validation schema for request body (areaIds array, min 1, max 100 UUIDs)
       - Implement route handler that calls service method
-      - Return 200 OK with batch ancestors data
+      - Return 200 OK with batch ancestors data (parent map format)
       - Return 400 Bad Request for validation errors
       - Apply authentication middleware (require valid JWT)
-      - _Requirements: 5B.28, 5B.33, 5B.34, 5B.35, 5B.36_
+      - _Requirements: 5B.28, 5B.35, 5B.36, 5B.37, 5B.38_
 
-    - [ ]* 9.5.4 Write property tests for batch ancestors
+    - [x] 9.5.4 Deprecate single-area GET /api/geographic-areas/:id/ancestors endpoint
+      - Add deprecation warning to OpenAPI documentation
+      - Update route handler to log deprecation warning
+      - Recommend using batch endpoint with single-element array instead
+      - Plan for eventual removal in next major version
+      - _Requirements: 5B.24, 5B.54_
+
+    - [ ]* 9.5.5 Write property tests for batch ancestors with WITH RECURSIVE
       - **Property 220: Batch Ancestors Response Format**
-      - **Property 221: Batch Ancestors Ordering**
-      - **Property 222: Batch Ancestors Empty Array for Top-Level**
-      - **Property 223: Batch Ancestors Query Optimization**
+      - **Property 221: Batch Ancestors Parent Map Structure**
+      - **Property 222: Batch Ancestors Null for Root Areas**
+      - **Property 223: Batch Ancestors Single Query Optimization**
       - **Property 224: Batch Ancestors UUID Validation**
       - **Property 225: Batch Ancestors Size Limit**
-      - **Validates: Requirements 5B.28, 5B.29, 5B.30, 5B.31, 5B.32, 5B.33, 5B.34, 5B.35, 5B.36**
+      - **Property 226: WITH RECURSIVE CTE Performance**
+      - **Validates: Requirements 5B.28, 5B.29, 5B.30, 5B.31, 5B.32, 5B.33, 5B.34, 5B.35, 5B.36, 5B.37, 5B.38, 5B.51, 5B.52, 5B.53**
 
-  - [x] 9.6 Implement batch details endpoint
-    - [x] 9.6.1 Add getBatchDetails method to GeographicAreaRepository
-      - Accept array of area IDs (max 100)
+  - [x] 9.6 Implement batch details endpoint with optimized queries
+    - [x] 9.6.1 Add findBatchDetails method to GeographicAreaRepository
+      - Accept array of area IDs (min 1, max 100)
       - Fetch all requested geographic areas in a single database query using WHERE id IN (...)
       - Return map of areaId → complete geographic area object
       - Include all fields: id, name, areaType, parentGeographicAreaId, childCount, createdAt, updatedAt
+      - Optimize childCount calculation using batched COUNT queries or subquery
       - Omit non-existent area IDs from response map (graceful handling)
-      - _Requirements: 5B.37, 5B.38, 5B.39, 5B.40, 5B.45_
+      - _Requirements: 5B.39, 5B.40, 5B.41, 5B.42, 5B.47, 5B.51, 5B.52, 5B.53_
 
     - [x] 9.6.2 Add getBatchDetails method to GeographicAreaService
       - Validate all area IDs are valid UUIDs
-      - Validate array length does not exceed 100 items
+      - Validate array length is between 1 and 100 items
       - Call repository method to fetch batch details
       - Apply geographic authorization filtering (omit unauthorized areas)
       - Return formatted response with areaId → geographic area object mapping
       - Handle non-existent area IDs gracefully (omit from response)
-      - _Requirements: 5B.37, 5B.38, 5B.39, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47_
+      - _Requirements: 5B.39, 5B.40, 5B.41, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 5B.49_
 
     - [x] 9.6.3 Create POST /api/v1/geographic-areas/batch-details route
-      - Create validation schema for request body (areaIds array, max 100 UUIDs)
+      - Create validation schema for request body (areaIds array, min 1, max 100 UUIDs)
       - Implement route handler that calls service method
       - Return 200 OK with batch details data
       - Return 400 Bad Request for validation errors
       - Apply authentication middleware (require valid JWT)
-      - _Requirements: 5B.37, 5B.41, 5B.42, 5B.43, 5B.44_
+      - _Requirements: 5B.39, 5B.43, 5B.44, 5B.45, 5B.46_
 
     - [ ]* 9.6.4 Write property tests for batch details
-      - **Property 226: Batch Details Response Format**
-      - **Property 227: Batch Details Complete Entity Data**
-      - **Property 228: Batch Details Query Optimization**
-      - **Property 229: Batch Details UUID Validation**
-      - **Property 230: Batch Details Size Limit**
-      - **Property 231: Batch Details Graceful Non-Existent ID Handling**
-      - **Property 232: Batch Details Authorization Filtering**
-      - **Property 233: Batch Details Complements Batch Ancestors**
-      - **Validates: Requirements 5B.37, 5B.38, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48**
+      - **Property 227: Batch Details Response Format**
+      - **Property 228: Batch Details Complete Entity Data**
+      - **Property 229: Batch Details Query Optimization**
+      - **Property 230: Batch Details UUID Validation**
+      - **Property 231: Batch Details Size Limit**
+      - **Property 232: Batch Details Graceful Non-Existent ID Handling**
+      - **Property 233: Batch Details Authorization Filtering**
+      - **Property 234: Batch Details Complements Batch Ancestors**
+      - **Validates: Requirements 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 5B.49, 5B.50**
+
+  - [x] 9.7 Optimize findDescendants with WITH RECURSIVE CTE
+    - Replace iterative queue-based descendant fetching with WITH RECURSIVE CTE
+    - Implement findDescendantsOptimized() method using raw SQL
+    - Use single database query to fetch all descendants regardless of depth
+    - Update all service methods that call findDescendants() to use optimized version
+    - Measure and verify sub-20ms latency for descendant queries on large hierarchies
+    - _Requirements: 5B.51, 5B.52, 5B.53_
 
 - [x] 10. Checkpoint - Verify core entity management
   - Ensure all tests pass, ask the user if questions arise.

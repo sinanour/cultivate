@@ -150,7 +150,6 @@ POST   /api/v1/geographic-areas        -> Create geographic area
 PUT    /api/v1/geographic-areas/:id    -> Update geographic area
 DELETE /api/v1/geographic-areas/:id    -> Delete geographic area
 GET    /api/v1/geographic-areas/:id/children   -> List child geographic areas (includes childCount for each child)
-GET    /api/v1/geographic-areas/:id/ancestors  -> Get hierarchy path to root
 POST   /api/v1/geographic-areas/batch-ancestors -> Get ancestors for multiple areas in a single request
 POST   /api/v1/geographic-areas/batch-details  -> Get full entity details for multiple areas in a single request
 GET    /api/v1/geographic-areas/:id/venues     -> List venues in geographic area
@@ -223,7 +222,7 @@ Repositories encapsulate Prisma database access:
 - **ActivityRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination)
 - **AssignmentRepository**: CRUD operations for participant assignments
 - **VenueRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination), queries for associated activities and current residents (filters participants by most recent address history)
-- **GeographicAreaRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination), hierarchical queries for ancestors and descendants with depth limiting, child count calculation, statistics aggregation
+- **GeographicAreaRepository**: CRUD operations with unified flexible filtering (supports dynamic WHERE clauses for any field, geographic area filtering, pagination), hierarchical queries for ancestors and descendants with depth limiting using WITH RECURSIVE CTEs for optimal performance, child count calculation, statistics aggregation, raw SQL queries when Prisma ORM cannot efficiently express recursive operations
 - **ParticipantAddressHistoryRepository**: Temporal tracking operations for participant home address changes
 - **ActivityVenueHistoryRepository**: Temporal tracking operations for activity-venue associations
 - **AuditLogRepository**: Audit log storage and retrieval
@@ -846,12 +845,12 @@ Returns activity lifecycle event data showing activities started and completed w
 
 **POST /api/v1/geographic-areas/batch-ancestors**
 
-Returns ancestor data for multiple geographic areas in a single optimized request, minimizing backend round trips for the frontend's intelligent ancestor batching.
+Returns ancestor parent IDs for multiple geographic areas in a single optimized request using WITH RECURSIVE CTEs, minimizing backend round trips for the frontend's intelligent ancestor batching.
 
 **Request Body:**
 ```typescript
 {
-  areaIds: string[]  // Array of geographic area UUIDs (max 100)
+  areaIds: string[]  // Array of geographic area UUIDs (min 1, max 100)
 }
 ```
 
@@ -860,12 +859,7 @@ Returns ancestor data for multiple geographic areas in a single optimized reques
 {
   success: true,
   data: {
-    [areaId: string]: Array<{
-      id: string,
-      name: string,
-      areaType: string,
-      parentGeographicAreaId: string | null
-    }>
+    [areaId: string]: string | null  // Maps area ID to parent ID (null for root areas)
   }
 }
 ```
@@ -882,34 +876,50 @@ POST /api/v1/geographic-areas/batch-ancestors
 {
   "success": true,
   "data": {
-    "area-1-id": [
-      { "id": "parent-1", "name": "City A", "areaType": "CITY", "parentGeographicAreaId": "province-1" },
-      { "id": "province-1", "name": "Province B", "areaType": "PROVINCE", "parentGeographicAreaId": null }
-    ],
-    "area-2-id": [
-      { "id": "parent-2", "name": "City C", "areaType": "CITY", "parentGeographicAreaId": null }
-    ],
-    "area-3-id": []  // No ancestors (top-level area)
+    "area-1-id": "parent-1-id",
+    "parent-1-id": "grandparent-1-id",
+    "grandparent-1-id": null,
+    "area-2-id": "parent-2-id",
+    "parent-2-id": null,
+    "area-3-id": null  // Top-level area (no parent)
   }
 }
 ```
 
 **Business Logic:**
 - Validates all provided area IDs are valid UUIDs (returns 400 if invalid)
-- Limits request to maximum 100 area IDs (returns 400 if exceeded)
+- Validates array contains between 1 and 100 area IDs (returns 400 if out of range)
 - For each area ID, fetches complete ancestor chain from immediate parent to root
-- Optimizes query by collecting all unique ancestor IDs and fetching in a single database query
-- Returns ancestors ordered from closest (immediate parent) to most distant (root)
-- Returns empty array for areas with no parent (top-level areas)
-- Handles non-existent area IDs gracefully (returns empty array for that ID)
-- Uses efficient recursive CTE query or iterative parent traversal to fetch all ancestors
-- Applies geographic authorization filtering (only returns ancestors user is authorized to see)
+- Uses WITH RECURSIVE common table expression (CTE) in PostgreSQL for optimal performance:
+  ```sql
+  WITH RECURSIVE ancestor_tree AS (
+    -- Base case: Start with requested area IDs
+    SELECT id, "parentGeographicAreaId" as parent_id, 0 as depth
+    FROM "GeographicArea"
+    WHERE id = ANY($1::uuid[])
+    
+    UNION ALL
+    
+    -- Recursive case: Get parents of current level
+    SELECT ga.id, ga."parentGeographicAreaId" as parent_id, at.depth + 1
+    FROM "GeographicArea" ga
+    INNER JOIN ancestor_tree at ON ga.id = at.parent_id
+    WHERE ga."parentGeographicAreaId" IS NOT NULL
+  )
+  SELECT DISTINCT id, parent_id FROM ancestor_tree;
+  ```
+- Returns parent map where each area ID maps to its immediate parent ID (or null for root)
+- Clients traverse hierarchy by following parent IDs: area → parent → grandparent → ... → null
+- Returns empty object for non-existent area IDs (graceful handling)
+- Applies geographic authorization filtering (only returns areas user is authorized to see)
+- When Prisma ORM cannot efficiently express WITH RECURSIVE, uses raw SQL via prisma.$queryRaw()
 
 **Performance Optimizations:**
-- Single database query fetches all unique ancestors across all requested areas
-- Deduplicates ancestor IDs before querying to avoid redundant fetches
+- Single WITH RECURSIVE CTE query fetches all ancestors across all requested areas in one database round trip
+- Eliminates N+1 query problem by avoiding iterative parent lookups
 - Uses database indexes on parentGeographicAreaId for fast traversal
-- Returns minimal fields (id, name, areaType, parentGeographicAreaId) for efficiency
+- Returns minimal parent map (not full objects) for efficiency - clients use batch-details for full data
+- Deduplicates ancestor IDs automatically through DISTINCT clause
 
 ### Batch Details Endpoint
 
@@ -920,7 +930,7 @@ Returns complete entity details for multiple geographic areas in a single optimi
 **Request Body:**
 ```typescript
 {
-  areaIds: string[]  // Array of geographic area UUIDs (max 100)
+  areaIds: string[]  // Array of geographic area UUIDs (min 1, max 100)
 }
 ```
 
@@ -979,32 +989,35 @@ POST /api/v1/geographic-areas/batch-details
 
 **Business Logic:**
 - Validates all provided area IDs are valid UUIDs (returns 400 if invalid)
-- Limits request to maximum 100 area IDs (returns 400 if exceeded)
-- Fetches all requested geographic areas in a single database query
+- Validates array contains between 1 and 100 area IDs (returns 400 if out of range)
+- Fetches all requested geographic areas in a single database query using WHERE id IN (...) clause
 - Returns complete geographic area objects with all fields
 - Omits non-existent area IDs from response map (graceful handling)
 - Applies geographic authorization filtering (omits unauthorized areas)
 - Optimizes query by fetching all areas in a single SELECT with WHERE id IN (...) clause
+- Calculates childCount for each area using efficient COUNT subquery or separate batched query
 
 **Performance Optimizations:**
-- Single database query fetches all requested areas
+- Single database query fetches all requested areas using WHERE id IN (...)
 - Uses database indexes on id (primary key) for fast lookup
 - Returns complete entity data including childCount for immediate use
 - Complements batch-ancestors by providing full details after ancestor IDs are obtained
+- Optimizes childCount calculation by batching COUNT queries when possible
 
 **Integration Pattern:**
 ```typescript
-// Step 1: Fetch ancestor IDs for a batch of areas
+// Step 1: Fetch ancestor parent IDs for a batch of areas
 const ancestorResponse = await fetch('/api/v1/geographic-areas/batch-ancestors', {
   method: 'POST',
   body: JSON.stringify({ areaIds: ['area-1', 'area-2', 'area-3'] })
 });
+// Response: { "area-1": "parent-1", "parent-1": "grandparent-1", "grandparent-1": null, ... }
 
-// Step 2: Collect all unique ancestor IDs from the response
+// Step 2: Collect all unique ancestor IDs by traversing parent map
 const allAncestorIds = new Set();
-Object.values(ancestorResponse.data).forEach(ancestors => {
-  ancestors.forEach(ancestor => allAncestorIds.add(ancestor.id));
-});
+for (const [areaId, parentId] of Object.entries(ancestorResponse.data)) {
+  if (parentId) allAncestorIds.add(parentId);
+}
 
 // Step 3: Fetch full details for all ancestors in a single request
 const detailsResponse = await fetch('/api/v1/geographic-areas/batch-details', {
@@ -1014,6 +1027,140 @@ const detailsResponse = await fetch('/api/v1/geographic-areas/batch-details', {
 
 // Now have complete geographic area objects with all fields for display
 ```
+
+### WITH RECURSIVE Implementation for Hierarchical Queries
+
+**Design Rationale:**
+
+Geographic area hierarchies can be arbitrarily deep (e.g., Neighbourhood → City → Province → Country → Continent → Hemisphere → World). Traditional iterative approaches that fetch one level at a time result in N database round trips for N levels of hierarchy, causing unacceptable latency.
+
+PostgreSQL's WITH RECURSIVE common table expressions (CTEs) enable fetching entire hierarchies in a single database query, regardless of depth. This is critical for:
+- Ancestor fetching (traversing up the hierarchy)
+- Descendant fetching (traversing down the hierarchy)
+- Authorization evaluation (checking if an area is within allowed/denied subtrees)
+
+**Ancestor Fetching with WITH RECURSIVE:**
+
+```sql
+-- Fetch all ancestors for multiple areas in one query
+WITH RECURSIVE ancestor_tree AS (
+  -- Base case: Start with requested area IDs
+  SELECT 
+    id, 
+    "parentGeographicAreaId" as parent_id, 
+    0 as depth
+  FROM "GeographicArea"
+  WHERE id = ANY($1::uuid[])
+  
+  UNION ALL
+  
+  -- Recursive case: Get parents of current level
+  SELECT 
+    ga.id, 
+    ga."parentGeographicAreaId" as parent_id, 
+    at.depth + 1
+  FROM "GeographicArea" ga
+  INNER JOIN ancestor_tree at ON ga.id = at.parent_id
+  WHERE ga."parentGeographicAreaId" IS NOT NULL
+)
+SELECT DISTINCT id, parent_id FROM ancestor_tree;
+```
+
+**Descendant Fetching with WITH RECURSIVE:**
+
+```sql
+-- Fetch all descendants for a single area in one query
+WITH RECURSIVE descendant_tree AS (
+  -- Base case: Start with the parent area
+  SELECT 
+    id, 
+    "parentGeographicAreaId", 
+    0 as depth
+  FROM "GeographicArea"
+  WHERE id = $1::uuid
+  
+  UNION ALL
+  
+  -- Recursive case: Get children of current level
+  SELECT 
+    ga.id, 
+    ga."parentGeographicAreaId", 
+    dt.depth + 1
+  FROM "GeographicArea" ga
+  INNER JOIN descendant_tree dt ON ga."parentGeographicAreaId" = dt.id
+)
+SELECT id FROM descendant_tree WHERE id != $1::uuid;
+```
+
+**Prisma ORM Limitations:**
+
+Prisma does not natively support WITH RECURSIVE CTEs in its query builder API. For optimal performance, the repository layer must use raw SQL queries via `prisma.$queryRaw()` or `prisma.$queryRawUnsafe()`:
+
+```typescript
+// In GeographicAreaRepository
+async findBatchAncestorsOptimized(areaIds: string[]): Promise<Record<string, string | null>> {
+  const result = await this.prisma.$queryRaw<Array<{ id: string; parent_id: string | null }>>`
+    WITH RECURSIVE ancestor_tree AS (
+      SELECT id, "parentGeographicAreaId" as parent_id, 0 as depth
+      FROM "GeographicArea"
+      WHERE id = ANY(${areaIds}::uuid[])
+      
+      UNION ALL
+      
+      SELECT ga.id, ga."parentGeographicAreaId" as parent_id, at.depth + 1
+      FROM "GeographicArea" ga
+      INNER JOIN ancestor_tree at ON ga.id = at.parent_id
+      WHERE ga."parentGeographicAreaId" IS NOT NULL
+    )
+    SELECT DISTINCT id, parent_id FROM ancestor_tree;
+  `;
+  
+  // Convert array result to map
+  const parentMap: Record<string, string | null> = {};
+  for (const row of result) {
+    parentMap[row.id] = row.parent_id;
+  }
+  
+  return parentMap;
+}
+
+async findDescendantsOptimized(areaId: string): Promise<string[]> {
+  const result = await this.prisma.$queryRaw<Array<{ id: string }>>`
+    WITH RECURSIVE descendant_tree AS (
+      SELECT id, "parentGeographicAreaId", 0 as depth
+      FROM "GeographicArea"
+      WHERE id = ${areaId}::uuid
+      
+      UNION ALL
+      
+      SELECT ga.id, ga."parentGeographicAreaId", dt.depth + 1
+      FROM "GeographicArea" ga
+      INNER JOIN descendant_tree dt ON ga."parentGeographicAreaId" = dt.id
+    )
+    SELECT id FROM descendant_tree WHERE id != ${areaId}::uuid;
+  `;
+  
+  return result.map(row => row.id);
+}
+```
+
+**Performance Characteristics:**
+
+| Operation | Iterative Approach | WITH RECURSIVE CTE |
+|-----------|-------------------|-------------------|
+| Fetch 5-level hierarchy | 5 database queries | 1 database query |
+| Fetch 100 areas' ancestors | 100-500 queries | 1 query |
+| Latency for deep hierarchy | 50-500ms | 5-20ms |
+| Database load | High (N queries) | Low (1 query) |
+
+**Implementation Requirements:**
+
+1. All ancestor fetching MUST use WITH RECURSIVE CTEs via raw SQL
+2. All descendant fetching MUST use WITH RECURSIVE CTEs via raw SQL
+3. Batch operations MUST process multiple areas in a single CTE query
+4. Single-area operations SHOULD be deprecated in favor of batch operations with array size 1
+5. All geographic area queries MUST be optimized for sub-20ms database latency
+6. Repository layer MUST handle raw SQL result mapping to TypeScript types
 
 ### Map Data API Endpoints
 

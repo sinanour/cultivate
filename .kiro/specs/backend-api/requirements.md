@@ -226,31 +226,36 @@ The Backend API package provides the RESTful API service that implements all bus
 21. WHEN deleting a geographic area, THE API SHALL prevent deletion if venues or child geographic areas reference it
 22. THE API SHALL provide a GET /api/geographic-areas/:id/children endpoint that returns all immediate child geographic areas with their child counts
 23. WHEN fetching children via GET /api/geographic-areas/:id/children, THE API SHALL include childCount for each returned child area
-24. THE API SHALL provide a GET /api/geographic-areas/:id/ancestors endpoint that returns the full hierarchy path to the root
+24. THE API SHALL NOT provide a GET /api/geographic-areas/:id/ancestors endpoint (removed in favor of batch endpoint)
 25. THE API SHALL provide a GET /api/geographic-areas/:id/venues endpoint that returns all venues in the geographic area and all descendant areas (recursive aggregation)
 26. THE API SHALL provide a GET /api/geographic-areas/:id/statistics endpoint that returns activity and participant statistics for the geographic area and all descendants (recursive aggregation)
 27. WHEN a geographic area filter is provided via geographicAreaId query parameter with depth parameter, THE API SHALL return the specified geographic area with children up to the specified depth, plus all ancestors (to maintain hierarchy context for tree view display)
 28. THE API SHALL provide a POST /api/v1/geographic-areas/batch-ancestors endpoint that accepts an array of geographic area IDs and returns ancestor data for all specified areas
-29. WHEN fetching batch ancestors, THE API SHALL accept a request body with an array of geographic area IDs (areaIds)
-30. WHEN fetching batch ancestors, THE API SHALL return a map/object where each key is a geographic area ID and each value is an array of ancestor geographic areas ordered from closest to most distant
-31. WHEN fetching batch ancestors for an area that has no parent, THE API SHALL return an empty array for that area's ancestors
-32. WHEN fetching batch ancestors for multiple areas, THE API SHALL optimize the query to minimize database round trips by fetching all unique ancestors in a single operation
-33. THE API SHALL validate that all provided area IDs in the batch ancestors request are valid UUIDs
-34. WHEN an invalid UUID is provided in the batch ancestors request, THE API SHALL return 400 Bad Request with a validation error
-35. THE API SHALL limit the batch ancestors request to a maximum of 100 area IDs per request
-36. WHEN more than 100 area IDs are provided in a batch ancestors request, THE API SHALL return 400 Bad Request with an error message
-37. THE API SHALL provide a POST /api/v1/geographic-areas/batch-details endpoint that accepts an array of geographic area IDs and returns full entity details for all specified areas
-38. WHEN fetching batch details, THE API SHALL accept a request body with an array of geographic area IDs (areaIds)
-39. WHEN fetching batch details, THE API SHALL return a map/object where each key is a geographic area ID and each value is a complete geographic area object with all fields (id, name, areaType, parentGeographicAreaId, childCount, createdAt, updatedAt)
-40. WHEN fetching batch details for multiple areas, THE API SHALL optimize the query to fetch all requested areas in a single database operation
-41. THE API SHALL validate that all provided area IDs in the batch details request are valid UUIDs
-42. WHEN an invalid UUID is provided in the batch details request, THE API SHALL return 400 Bad Request with a validation error
-43. THE API SHALL limit the batch details request to a maximum of 100 area IDs per request
-44. WHEN more than 100 area IDs are provided in a batch details request, THE API SHALL return 400 Bad Request with an error message
-45. WHEN fetching batch details for a non-existent area ID, THE API SHALL omit that ID from the response map (not return null or error for individual missing IDs)
-46. THE API SHALL apply geographic authorization filtering to the batch details endpoint
-47. WHEN a user requests batch details for areas they are not authorized to access, THE API SHALL omit unauthorized areas from the response map
-48. THE batch details endpoint SHALL complement the batch ancestors endpoint by allowing the frontend to first fetch ancestor IDs via batch-ancestors, then fetch full details for those ancestors via batch-details in a single round trip
+29. WHEN fetching batch ancestors, THE API SHALL accept a request body with an array of geographic area IDs (areaIds) with a minimum of 1 and maximum of 100 IDs
+30. WHEN fetching batch ancestors, THE API SHALL return a map/object where each key is a geographic area ID and each value is its parent ID (or null for root areas), enabling clients to traverse the hierarchy by following parent IDs
+31. WHEN fetching batch ancestors for an area that has no parent, THE API SHALL return null as the parent ID for that area
+32. WHEN fetching batch ancestors for multiple areas, THE API SHALL use a single WITH RECURSIVE common table expression (CTE) query in PostgreSQL to fetch all ancestors in one database round trip
+33. WHEN Prisma ORM cannot efficiently support WITH RECURSIVE CTEs, THE API SHALL use raw SQL queries for ancestor fetching to ensure optimal database performance
+34. THE API SHALL optimize all ancestor fetching operations for both low API latency and low database latency
+35. THE API SHALL validate that all provided area IDs in the batch ancestors request are valid UUIDs
+36. WHEN an invalid UUID is provided in the batch ancestors request, THE API SHALL return 400 Bad Request with a validation error
+37. THE API SHALL limit the batch ancestors request to a minimum of 1 and maximum of 100 area IDs per request
+38. WHEN fewer than 1 or more than 100 area IDs are provided in a batch ancestors request, THE API SHALL return 400 Bad Request with an error message
+39. THE API SHALL provide a POST /api/v1/geographic-areas/batch-details endpoint that accepts an array of geographic area IDs and returns full entity details for all specified areas
+40. WHEN fetching batch details, THE API SHALL accept a request body with an array of geographic area IDs (areaIds) with a minimum of 1 and maximum of 100 IDs
+41. WHEN fetching batch details, THE API SHALL return a map/object where each key is a geographic area ID and each value is a complete geographic area object with all fields (id, name, areaType, parentGeographicAreaId, childCount, createdAt, updatedAt)
+42. WHEN fetching batch details for multiple areas, THE API SHALL optimize the query to fetch all requested areas in a single database operation using WHERE id IN (...) clause
+43. THE API SHALL validate that all provided area IDs in the batch details request are valid UUIDs
+44. WHEN an invalid UUID is provided in the batch details request, THE API SHALL return 400 Bad Request with a validation error
+45. THE API SHALL limit the batch details request to a minimum of 1 and maximum of 100 area IDs per request
+46. WHEN fewer than 1 or more than 100 area IDs are provided in a batch details request, THE API SHALL return 400 Bad Request with an error message
+47. WHEN fetching batch details for a non-existent area ID, THE API SHALL omit that ID from the response map (not return null or error for individual missing IDs)
+48. THE API SHALL apply geographic authorization filtering to the batch details endpoint
+49. WHEN a user requests batch details for areas they are not authorized to access, THE API SHALL omit unauthorized areas from the response map
+50. THE batch details endpoint SHALL complement the batch ancestors endpoint by allowing the frontend to first fetch ancestor IDs via batch-ancestors, then fetch full details for those ancestors via batch-details in a single round trip
+51. THE API SHALL use WITH RECURSIVE common table expressions (CTEs) in PostgreSQL for all descendant fetching operations to minimize database round trips
+52. WHEN Prisma ORM cannot efficiently support WITH RECURSIVE CTEs for descendant queries, THE API SHALL use raw SQL queries for descendant fetching to ensure optimal database performance
+53. THE API SHALL optimize all descendant fetching operations for both low API latency and low database latency
 
 ### Requirement 6: Analyze Community Engagement
 

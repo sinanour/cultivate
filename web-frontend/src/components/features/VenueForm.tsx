@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useBlocker } from 'react-router-dom';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -12,9 +12,8 @@ import Modal from '@cloudscape-design/components/modal';
 import Box from '@cloudscape-design/components/box';
 import Grid from '@cloudscape-design/components/grid';
 import Container from '@cloudscape-design/components/container';
-import type { Venue, GeographicArea, GeocodingResult, GeographicAreaWithHierarchy } from '../../types';
+import type { Venue, GeocodingResult } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
-import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeocodingService } from '../../services/geocoding.service';
 import { VersionConflictModal } from '../common/VersionConflictModal';
 import { useVersionConflict } from '../../hooks/useVersionConflict';
@@ -23,6 +22,7 @@ import { VenueFormMapView } from './VenueFormMapView';
 import { GeographicAreaSelector } from '../common/GeographicAreaSelector';
 import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { useAuth } from '../../hooks/useAuth';
+import { useGeographicAreaOptions } from '../../hooks/useGeographicAreaOptions';
 
 interface VenueFormProps {
   venue: Venue | null;
@@ -52,6 +52,16 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
   const [showResultsDialog, setShowResultsDialog] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Geographic area options with lazy loading
+  const {
+    options: geographicAreas,
+    isLoading: isLoadingAreas,
+    handleLoadItems: handleGeographicAreaSearch,
+    refetch: refetchAreas,
+  } = useGeographicAreaOptions({
+    ensureIncluded: venue?.geographicAreaId,
+  });
 
   // Geographic area refresh state
   const [isRefreshingAreas, setIsRefreshingAreas] = useState(false);
@@ -192,44 +202,6 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
   const versionConflict = useVersionConflict({
     queryKey: ['venues'],
     onDiscard: onCancel,
-  });
-
-  // Fetch geographic areas with hierarchy for the selector
-  const { data: geographicAreas = [], isLoading: isLoadingAreas, refetch: refetchAreas } = useQuery({
-    queryKey: ['geographicAreas', 'withHierarchy'],
-    queryFn: async () => {
-      const response = await GeographicAreaService.getGeographicAreas();
-      
-      // Handle both paginated and non-paginated responses
-      const areas = Array.isArray(response) ? response : response.data;
-      
-      // Fetch ancestors for each area to build hierarchy
-      const areasWithHierarchy = await Promise.all(
-        areas.map(async (area: GeographicArea) => {
-          try {
-            const ancestors = await GeographicAreaService.getAncestors(area.id);
-            const hierarchyPath = ancestors.length > 0
-              ? ancestors.map((a: GeographicArea) => a.name).join(' > ')
-              : '';
-            
-            return {
-              ...area,
-              ancestors,
-              hierarchyPath,
-            } as GeographicAreaWithHierarchy;
-          } catch (error) {
-            console.error(`Failed to fetch ancestors for area ${area.id}:`, error);
-            return {
-              ...area,
-              ancestors: [],
-              hierarchyPath: '',
-            } as GeographicAreaWithHierarchy;
-          }
-        })
-      );
-      
-      return areasWithHierarchy;
-    },
   });
 
   // Handler for refreshing geographic areas
@@ -540,6 +512,8 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
                       disabled={isSubmitting}
                       error={geographicAreaError}
                       placeholder="Select a geographic area"
+                      onLoadItems={handleGeographicAreaSearch}
+                      filteringType="manual"
                     />
                   </EntitySelectorWithActions>
                 </FormField>

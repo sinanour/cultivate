@@ -33,6 +33,7 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Deny_List**: A set of geographic areas that a user is explicitly forbidden from accessing
 - **Authorized_Area**: A geographic area that a user has permission to access based on authorization rules
 - **Geographic_Area_Selector**: A specialized reusable dropdown component for selecting geographic areas that displays hierarchical context, area type badges, and supports async lazy-loading for optimal performance with large datasets
+- **Ancestor_Cache**: An internal data structure used by Geographic_Area_Selector to store ancestor geographic area details for the sole purpose of building hierarchy path descriptions, without adding those ancestors to the dropdown options list
 - **Map_Marker**: A lightweight data structure containing only the essential fields needed to render a pin on a map (coordinates and identifiers)
 - **Popup_Content**: Detailed information about a map marker that is loaded on-demand when a user clicks the marker
 - **Lazy_Loading**: A performance optimization strategy where data is fetched in batches of 100 items using paginated APIs and rendered incrementally to reduce latency and provide continuous loading feedback to the user
@@ -468,16 +469,28 @@ The Web Frontend package provides a responsive React-based web application that 
 22. THE Geographic_Area_Selector SHALL accept optional props to filter results by parent geographic area or other criteria
 23. THE Geographic_Area_Selector SHALL handle empty states when no results match the search
 24. THE Geographic_Area_Selector SHALL handle error states gracefully
-21. THE Geographic_Area_Selector SHALL provide accessible keyboard navigation
-22. THE Geographic_Area_Selector SHALL be decoupled from any specific parent component (not tied to BreadcrumbGroup or global filter)
-23. THE Geographic_Area_Selector SHALL accept standard form control props (value, onChange, disabled, error, placeholder, inlineLabelText, etc.)
-24. THE Geographic_Area_Selector SHALL support an empty/unselected state with configurable placeholder text
-25. THE Geographic_Area_Selector SHALL NOT artificially insert a "Global" or "All Areas" option into the dropdown options list
-26. WHEN no geographic area is selected, THE Geographic_Area_Selector SHALL display the placeholder text (e.g., "Select a geographic area")
-27. THE Geographic_Area_Selector SHALL use expandToViewport property to allow dropdown to expand beyond container boundaries
-28. THE Geographic_Area_Selector SHALL provide renderHighlightedAriaLive callback for screen reader support
-29. THE Geographic_Area_Selector SHALL use selectedAriaLabel property for accessibility
-30. THE Geographic_Area_Selector SHALL be usable in both modal forms and full-page forms
+25. THE Geographic_Area_Selector SHALL provide accessible keyboard navigation
+26. THE Geographic_Area_Selector SHALL be decoupled from any specific parent component (not tied to BreadcrumbGroup or global filter)
+27. THE Geographic_Area_Selector SHALL accept standard form control props (value, onChange, disabled, error, placeholder, inlineLabelText, etc.)
+28. THE Geographic_Area_Selector SHALL support an empty/unselected state with configurable placeholder text
+29. THE Geographic_Area_Selector SHALL NOT artificially insert a "Global" or "All Areas" option into the dropdown options list
+30. WHEN no geographic area is selected, THE Geographic_Area_Selector SHALL display the placeholder text (e.g., "Select a geographic area")
+31. THE Geographic_Area_Selector SHALL use expandToViewport property to allow dropdown to expand beyond container boundaries
+32. THE Geographic_Area_Selector SHALL provide renderHighlightedAriaLive callback for screen reader support
+33. THE Geographic_Area_Selector SHALL use selectedAriaLabel property for accessibility
+34. THE Geographic_Area_Selector SHALL be usable in both modal forms and full-page forms
+35. THE Geographic_Area_Selector SHALL use ONLY the batch-ancestors endpoint (POST /api/v1/geographic-areas/batch-ancestors) for fetching ancestor data
+36. THE Geographic_Area_Selector SHALL NOT use the deprecated single-area GET /api/geographic-areas/:id/ancestors endpoint
+37. WHEN fetching ancestors for multiple areas, THE Geographic_Area_Selector SHALL batch area IDs into groups of up to 100 and call batch-ancestors endpoint for each group
+38. THE Geographic_Area_Selector SHALL leverage the backend's WITH RECURSIVE CTE implementation for sub-20ms ancestor fetching latency
+39. THE Geographic_Area_Selector SHALL fetch ancestor data ONLY for the purpose of displaying hierarchy paths in option descriptions
+40. THE Geographic_Area_Selector SHALL NOT add fetched ancestor areas to the dropdown options list
+41. WHEN ancestors are fetched for a batch of geographic areas, THE Geographic_Area_Selector SHALL use the ancestor data exclusively to populate the hierarchy path description for each area in that batch
+42. THE Geographic_Area_Selector SHALL maintain the dropdown options list as containing ONLY the areas that match the current filter text (or the initial batch when no filter is applied)
+43. WHEN a specific geographic area needs to be pre-selected (e.g., when editing a venue), THE Geographic_Area_Selector SHALL fetch that specific area and its ancestors if not already in the options list
+44. WHEN pre-selecting a specific area, THE Geographic_Area_Selector SHALL add ONLY that specific area to the options list (not its ancestors)
+45. WHEN pre-selecting a specific area, THE Geographic_Area_Selector SHALL use the fetched ancestor data to populate the hierarchy path description for the pre-selected area
+46. THE Geographic_Area_Selector SHALL prevent cascading population of the options list when fetching ancestors for hierarchy display purposes
 31. THE Web_App SHALL use the Geographic_Area_Selector component in all forms and interfaces where geographic area selection is required
 32. THE Web_App SHALL use the Geographic_Area_Selector component in the global geographic area filter (decoupled from BreadcrumbGroup)
 33. THE Web_App SHALL use the Geographic_Area_Selector component in VenueForm for geographic area selection
@@ -486,6 +499,7 @@ The Web Frontend package provides a responsive React-based web application that 
 36. THE Web_App SHALL use the Geographic_Area_Selector component in any other forms or interfaces that require geographic area selection
 37. WHEN a user types in the Geographic_Area_Selector, THE Web_App SHALL debounce the search input to avoid excessive API requests (minimum 300ms delay)
 38. THE Geographic_Area_Selector SHALL leverage the backend's flexible filtering system (Requirement 28 in Backend API) for efficient name-based searching
+39. THE Geographic_Area_Selector SHALL leverage the backend's WITH RECURSIVE CTE implementation for sub-20ms ancestor fetching latency per batch request
 
 ### Requirement 6C: Map View UI with Optimized Loading
 

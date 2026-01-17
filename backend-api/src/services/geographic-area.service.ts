@@ -815,19 +815,12 @@ export class GeographicAreaService {
         return PaginationHelper.createResponse(paginatedChildren, validPage, validLimit, total);
     }
 
-    async getAncestors(id: string, userId?: string, userRole?: string): Promise<GeographicArea[]> {
-        // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
-        await this.getGeographicAreaById(id, userId, userRole);
-
-        return this.geographicAreaRepository.findAncestors(id);
-    }
-
     /**
      * Get batch ancestors for multiple geographic areas.
      * Returns a simplified parent map where each area ID maps to its parent ID.
      * Clients can traverse the hierarchy by following parent IDs.
      * 
-     * @param areaIds - Array of geographic area IDs (max 100)
+     * @param areaIds - Array of geographic area IDs (min 1, max 100)
      * @param userId - Optional user ID for authorization filtering
      * @param userRole - Optional user role for authorization bypass
      * @returns Map of area ID to parent ID (e.g., { "area-1": "parent-1", "parent-1": null })
@@ -837,11 +830,11 @@ export class GeographicAreaService {
         userId?: string,
         userRole?: string
     ): Promise<Record<string, string | null>> {
-        // Validate array length
-        if (areaIds.length > 100) {
+        // Validate array length (min 1, max 100)
+        if (areaIds.length < 1 || areaIds.length > 100) {
             throw new AppError(
                 'VALIDATION_ERROR',
-                'Cannot fetch ancestors for more than 100 areas at once',
+                'Must provide between 1 and 100 area IDs',
                 400
             );
         }
@@ -889,7 +882,7 @@ export class GeographicAreaService {
      * Fetches complete entity details for multiple geographic areas in a single optimized request.
      * Complements getBatchAncestors by providing full geographic area objects after ancestor IDs are obtained.
      * 
-     * @param areaIds - Array of geographic area IDs (max 100)
+     * @param areaIds - Array of geographic area IDs (min 1, max 100)
      * @param userId - Optional user ID for authorization filtering
      * @param userRole - Optional user role for authorization bypass
      * @returns Map of area ID to complete geographic area object with childCount
@@ -899,11 +892,11 @@ export class GeographicAreaService {
         userId?: string,
         userRole?: string
     ): Promise<Record<string, GeographicArea & { childCount: number }>> {
-        // Validate array length
-        if (areaIds.length > 100) {
+        // Validate array length (min 1, max 100)
+        if (areaIds.length < 1 || areaIds.length > 100) {
             throw new AppError(
                 'VALIDATION_ERROR',
-                'Cannot fetch details for more than 100 areas at once',
+                'Must provide between 1 and 100 area IDs',
                 400
             );
         }

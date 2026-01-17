@@ -169,11 +169,10 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
       expect(result[nonExistentId]).toBeUndefined();
     });
 
-    it('should return empty object for empty areaIds array', async () => {
-      const result = await service.getBatchDetails([]);
-
-      expect(result).toBeDefined();
-      expect(Object.keys(result)).toHaveLength(0);
+    it('should throw error for empty areaIds array', async () => {
+      await expect(
+        service.getBatchDetails([])
+      ).rejects.toThrow('Must provide between 1 and 100 area IDs');
     });
 
     it('should throw error for invalid UUID', async () => {

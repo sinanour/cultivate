@@ -106,8 +106,35 @@ export class GeographicAreaService {
     return ApiClient.get<GeographicArea[]>(`/geographic-areas/${id}/children`);
   }
 
+  /**
+   * Fetches ancestors for a single geographic area.
+   * Uses the batch endpoint internally for consistency and performance.
+   * 
+   * @param id - Geographic area ID
+   * @returns Array of ancestor GeographicArea objects ordered from closest to most distant
+   */
   static async getAncestors(id: string): Promise<GeographicArea[]> {
-    return ApiClient.get<GeographicArea[]>(`/geographic-areas/${id}/ancestors`);
+    // Use batch endpoint with single-element array
+    const parentMap = await this.getBatchAncestors([id]);
+
+    // Traverse parent map to build ancestor chain
+    const ancestorIds: string[] = [];
+    let currentId = parentMap[id];
+
+    while (currentId) {
+      ancestorIds.push(currentId);
+      currentId = parentMap[currentId] || null;
+    }
+
+    // Fetch full details for all ancestors
+    if (ancestorIds.length === 0) {
+      return [];
+    }
+
+    const detailsMap = await this.getBatchDetails(ancestorIds);
+
+    // Return ancestors in order (closest to most distant)
+    return ancestorIds.map(ancestorId => detailsMap[ancestorId]).filter(Boolean);
   }
 
   /**

@@ -9,14 +9,13 @@ import {
   Button,
   Alert,
 } from '@cloudscape-design/components';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { geographicAuthorizationService } from '../../services/api/geographic-authorization.service';
 import { GeographicAreaSelector } from '../common/GeographicAreaSelector';
 import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
-import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { useNotification } from '../../hooks/useNotification';
 import { useAuth } from '../../hooks/useAuth';
-import type { GeographicArea, GeographicAreaWithHierarchy } from '../../types';
+import { useGeographicAreaOptions } from '../../hooks/useGeographicAreaOptions';
 
 interface GeographicAuthorizationFormProps {
   userId: string;
@@ -34,62 +33,31 @@ export function GeographicAuthorizationForm({
   localMode = false,
 }: GeographicAuthorizationFormProps) {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [geographicAreaId, setGeographicAreaId] = useState<string>('');
   const [ruleType, setRuleType] = useState<'ALLOW' | 'DENY'>('ALLOW');
   const [validationError, setValidationError] = useState<string>('');
-  const [isRefreshingAreas, setIsRefreshingAreas] = useState(false);
   const { showError } = useNotification();
 
   const canAddGeographicArea = user?.role === 'ADMINISTRATOR';
 
+  // Geographic area options with lazy loading
+  const {
+    options: geographicAreas,
+    isLoading: isLoadingAreas,
+    handleLoadItems: handleGeographicAreaSearch,
+    refetch: refetchAreas,
+  } = useGeographicAreaOptions();
+
+  const [isRefreshingAreas, setIsRefreshingAreas] = useState(false);
+
   const handleRefreshAreas = async () => {
     setIsRefreshingAreas(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: ['geographicAreas'] });
-      await queryClient.refetchQueries({ queryKey: ['geographicAreas'] });
+      await refetchAreas();
     } finally {
       setIsRefreshingAreas(false);
     }
   };
-
-  // Fetch geographic areas with hierarchy for the selector
-  const { data: geographicAreas = [], isLoading: isLoadingAreas } = useQuery({
-    queryKey: ['geographicAreas', 'withHierarchy'],
-    queryFn: async () => {
-      const response = await GeographicAreaService.getGeographicAreas();
-      
-      // Handle both paginated and non-paginated responses
-      const areas = Array.isArray(response) ? response : response.data;
-      
-      // Fetch ancestors for each area to build hierarchy
-      const areasWithHierarchy = await Promise.all(
-        areas.map(async (area: GeographicArea) => {
-          try {
-            const ancestors = await GeographicAreaService.getAncestors(area.id);
-            const hierarchyPath = ancestors.length > 0
-              ? ancestors.map((a: GeographicArea) => a.name).join(' > ')
-              : '';
-            
-            return {
-              ...area,
-              ancestors,
-              hierarchyPath,
-            } as GeographicAreaWithHierarchy;
-          } catch (error) {
-            console.error(`Failed to fetch ancestors for area ${area.id}:`, error);
-            return {
-              ...area,
-              ancestors: [],
-              hierarchyPath: '',
-            } as GeographicAreaWithHierarchy;
-          }
-        })
-      );
-      
-      return areasWithHierarchy;
-    },
-  });
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -177,6 +145,8 @@ export function GeographicAuthorizationForm({
               options={geographicAreas}
               loading={isLoadingAreas}
               placeholder="Select geographic area"
+              onLoadItems={handleGeographicAreaSearch}
+              filteringType="manual"
             />
           </EntitySelectorWithActions>
         </FormField>

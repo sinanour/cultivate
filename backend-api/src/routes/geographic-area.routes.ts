@@ -84,14 +84,6 @@ export class GeographicAreaRoutes {
         );
 
         this.router.get(
-            '/:id/ancestors',
-            this.authMiddleware.authenticate(),
-            this.authorizationMiddleware.requireAuthenticated(),
-            ValidationMiddleware.validateParams(UuidParamSchema),
-            this.getAncestors.bind(this)
-        );
-
-        this.router.get(
             '/:id/venues',
             this.authMiddleware.authenticate(),
             this.authorizationMiddleware.requireAuthenticated(),
@@ -292,37 +284,6 @@ export class GeographicAreaRoutes {
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while fetching children',
-                details: {},
-            });
-        }
-    }
-
-    private async getAncestors(req: AuthenticatedRequest, res: Response) {
-        try {
-            const { id } = req.params;
-            const userId = req.user?.userId;
-            const userRole = req.user?.role;
-
-            const ancestors = await this.geographicAreaService.getAncestors(id, userId, userRole);
-            res.status(200).json({ success: true, data: ancestors });
-        } catch (error) {
-            if (error instanceof Error && error.message === 'Geographic area not found') {
-                return res.status(404).json({
-                    code: 'NOT_FOUND',
-                    message: error.message,
-                    details: {},
-                });
-            }
-            if (error instanceof Error && error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
-                return res.status(403).json({
-                    code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
-                    message: 'You do not have permission to access this geographic area',
-                    details: {},
-                });
-            }
-            res.status(500).json({
-                code: 'INTERNAL_ERROR',
-                message: 'An error occurred while fetching ancestors',
                 details: {},
             });
         }
