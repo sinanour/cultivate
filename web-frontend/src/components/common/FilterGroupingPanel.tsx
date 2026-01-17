@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   SpaceBetween,
@@ -62,7 +62,9 @@ export interface FilterGroupingPanelProps {
   isLoading?: boolean;
   disablePopulationFilter?: boolean;
   urlParamPrefix?: string;
+  hideUpdateButton?: boolean; // Hide Update button for Run Report pattern
   onInitialResolutionComplete?: () => void; // Callback when URL filters are resolved
+  onRegisterTrigger?: (trigger: () => void) => void; // Register a function to trigger update from parent
 }
 
 export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
@@ -77,7 +79,9 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
   isLoading = false,
   disablePopulationFilter = false,
   urlParamPrefix = 'filter_',
+  hideUpdateButton = false,
   onInitialResolutionComplete,
+  onRegisterTrigger,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -409,7 +413,7 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
     }, { replace: false }); // Support browser back/forward navigation
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = useCallback(() => {
     // Extract date range - preserve type (absolute or relative)
     let currentDateRange: FilterGroupingState['dateRange'] = null;
     
@@ -436,7 +440,7 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
     setLastAppliedState(newState);
     syncToURL(newState);
     onUpdate(newState);
-  };
+  }, [dateRange, filterQuery, grouping, onUpdate, syncToURL]);
 
   const handleClearAll = () => {
     setDateRange(null);
@@ -452,6 +456,13 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
     };
     syncToURL(clearedState);
   };
+
+  // Register trigger function with parent (for Run Report pattern)
+  useEffect(() => {
+    if (onRegisterTrigger) {
+      onRegisterTrigger(handleUpdate);
+    }
+  }, [onRegisterTrigger, handleUpdate]);
 
   // Convert groupingDimensions to Multiselect options
   const multiselectOptions: MultiselectProps.Option[] = groupingDimensions.map((dim) => ({
@@ -590,14 +601,16 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
           <Button onClick={handleClearAll} disabled={isLoading}>
             Clear All
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleUpdate}
-            disabled={!isDirty || isLoading}
-            loading={isLoading}
-          >
-            Update
-          </Button>
+          {!hideUpdateButton && (
+            <Button
+              variant="primary"
+              onClick={handleUpdate}
+              disabled={!isDirty || isLoading}
+              loading={isLoading}
+            >
+              Update
+            </Button>
+          )}
         </SpaceBetween>
       </div>
 

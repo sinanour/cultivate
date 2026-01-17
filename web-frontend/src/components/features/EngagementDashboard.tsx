@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
@@ -12,6 +12,7 @@ import Link from '@cloudscape-design/components/link';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import Popover from '@cloudscape-design/components/popover';
 import Icon from '@cloudscape-design/components/icon';
+import Spinner from '@cloudscape-design/components/spinner';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Badge from '@cloudscape-design/components/badge';
@@ -20,7 +21,6 @@ import { activityCategoryService } from '../../services/api/activity-category.se
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { VenueService } from '../../services/api/venue.service';
 import { PopulationService } from '../../services/api/population.service';
-import { LoadingSpinner } from '../common/LoadingSpinner';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import { ActivityLifecycleChart } from './ActivityLifecycleChart';
 import { 
@@ -32,7 +32,6 @@ import {
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotification } from '../../hooks/useNotification';
-import { useDebouncedLoading } from '../../hooks/useDebouncedLoading';
 import { GroupingDimension } from '../../utils/constants';
 import { generateEngagementSummaryCSV, downloadBlob } from '../../utils/csv.utils';
 import { generateEngagementSummaryFilename } from '../../utils/csv-filename.utils';
@@ -110,7 +109,12 @@ const GeographicAreaTick: React.FC<GeographicAreaTickProps> = ({ x = 0, y = 0, p
   );
 };
 
-export function EngagementDashboard() {
+interface EngagementDashboardProps {
+  runReportTrigger?: number; // Increment this to trigger report execution
+  onLoadingChange?: (isLoading: boolean) => void; // Callback to notify parent of loading state
+}
+
+export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: EngagementDashboardProps = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
@@ -184,6 +188,17 @@ export function EngagementDashboard() {
 
   const [dateRange, setDateRange] = useState<FilterGroupingState['dateRange']>(initializeDateRange);
   const [groupByDimensions, setGroupByDimensions] = useState<string[]>(initializeGroupByDimensions);
+  
+  // Run Report pattern: track whether report has been executed
+  const [hasRunReport, setHasRunReport] = useState(false);
+  
+  // Ref to trigger FilterGroupingPanel's internal update
+  const triggerFilterUpdate = useRef<(() => void) | null>(null);
+  
+  // Track applied state (only updated when Run Report is clicked via handleFilterUpdate)
+  const [appliedDateRange, setAppliedDateRange] = useState<FilterGroupingState['dateRange']>(null);
+  const [appliedFilterQuery, setAppliedFilterQuery] = useState<PropertyFilterProps.Query>({ tokens: [], operation: 'and' });
+  const [appliedGroupByDimensions, setAppliedGroupByDimensions] = useState<string[]>([]);
   
   // Activities chart view mode state with localStorage persistence
   const [activitiesViewMode, setActivitiesViewMode] = useState<ActivitiesViewMode>(() => {
@@ -317,13 +332,22 @@ export function EngagementDashboard() {
   ];
 
   // Handler for FilterGroupingPanel updates
-  const handleFilterUpdate = (state: FilterGroupingState) => {
+  // This is called when Run Report button triggers it via the ref
+  const handleFilterUpdate = useCallback((state: FilterGroupingState) => {
+    // Always update pending state (for display in FilterGroupingPanel)
     setDateRange(state.dateRange);
     setPropertyFilterQuery(state.filterTokens);
     if (Array.isArray(state.grouping)) {
       setGroupByDimensions(state.grouping);
     }
-  };
+    
+    // Update applied state (used in queryKey) - this will be called after hasRunReport is set to true
+    setAppliedDateRange(state.dateRange);
+    setAppliedFilterQuery(state.filterTokens);
+    if (Array.isArray(state.grouping)) {
+      setAppliedGroupByDimensions(state.grouping);
+    }
+  }, []);
 
   // Persist activities view mode to localStorage whenever it changes
   useEffect(() => {
@@ -335,34 +359,34 @@ export function EngagementDashboard() {
   }, [activitiesViewMode]);
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['engagementMetrics', dateRange, selectedGeographicAreaId, propertyFilterQuery, groupByDimensions],
+    queryKey: ['engagementMetrics', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, appliedGroupByDimensions, runReportTrigger],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
       let endDate: string | undefined;
       
-      if (dateRange) {
-        if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
-          startDate = toISODateTime(dateRange.startDate, false);
-          endDate = toISODateTime(dateRange.endDate, true);
-        } else if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+      if (appliedDateRange) {
+        if (appliedDateRange.type === 'absolute' && appliedDateRange.startDate && appliedDateRange.endDate) {
+          startDate = toISODateTime(appliedDateRange.startDate, false);
+          endDate = toISODateTime(appliedDateRange.endDate, true);
+        } else if (appliedDateRange.type === 'relative' && appliedDateRange.amount && appliedDateRange.unit) {
           // Calculate absolute dates from relative range
           const now = new Date();
           const end = new Date(now);
           const start = new Date(now);
           
-          switch (dateRange.unit) {
+          switch (appliedDateRange.unit) {
             case 'day':
-              start.setDate(start.getDate() - dateRange.amount);
+              start.setDate(start.getDate() - appliedDateRange.amount);
               break;
             case 'week':
-              start.setDate(start.getDate() - (dateRange.amount * 7));
+              start.setDate(start.getDate() - (appliedDateRange.amount * 7));
               break;
             case 'month':
-              start.setMonth(start.getMonth() - dateRange.amount);
+              start.setMonth(start.getMonth() - appliedDateRange.amount);
               break;
             case 'year':
-              start.setFullYear(start.getFullYear() - dateRange.amount);
+              start.setFullYear(start.getFullYear() - appliedDateRange.amount);
               break;
           }
           
@@ -374,22 +398,22 @@ export function EngagementDashboard() {
       // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
       // Support multiple values per property (OR logic within dimension)
       // Tokens now contain comma-separated values, so we need to split them
-      const activityCategoryLabels = propertyFilterQuery.tokens
+      const activityCategoryLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const activityTypeLabels = propertyFilterQuery.tokens
+      const activityTypeLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const venueLabels = propertyFilterQuery.tokens
+      const venueLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'venue' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const populationLabels = propertyFilterQuery.tokens
+      const populationLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'population' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
@@ -402,44 +426,45 @@ export function EngagementDashboard() {
         activityTypeIds: activityTypeIds.length > 0 ? activityTypeIds : undefined,
         venueIds: venueIds.length > 0 ? venueIds : undefined,
         populationIds: populationIds.length > 0 ? populationIds : undefined,
-        groupBy: groupByDimensions.map(d => d as GroupingDimension),
+        groupBy: appliedGroupByDimensions.map(d => d as GroupingDimension),
       };
       
       return AnalyticsService.getEngagementMetrics(params);
     },
+    enabled: hasRunReport, // Only fetch when report has been run
     placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
 
   // Separate query for geographic breakdown
   const { data: geographicBreakdown } = useQuery({
-    queryKey: ['geographicBreakdown', dateRange, selectedGeographicAreaId, propertyFilterQuery],
+    queryKey: ['geographicBreakdown', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, runReportTrigger],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
       let endDate: string | undefined;
       
-      if (dateRange) {
-        if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
-          startDate = toISODateTime(dateRange.startDate, false);
-          endDate = toISODateTime(dateRange.endDate, true);
-        } else if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+      if (appliedDateRange) {
+        if (appliedDateRange.type === 'absolute' && appliedDateRange.startDate && appliedDateRange.endDate) {
+          startDate = toISODateTime(appliedDateRange.startDate, false);
+          endDate = toISODateTime(appliedDateRange.endDate, true);
+        } else if (appliedDateRange.type === 'relative' && appliedDateRange.amount && appliedDateRange.unit) {
           // Calculate absolute dates from relative range
           const now = new Date();
           const end = new Date(now);
           const start = new Date(now);
           
-          switch (dateRange.unit) {
+          switch (appliedDateRange.unit) {
             case 'day':
-              start.setDate(start.getDate() - dateRange.amount);
+              start.setDate(start.getDate() - appliedDateRange.amount);
               break;
             case 'week':
-              start.setDate(start.getDate() - (dateRange.amount * 7));
+              start.setDate(start.getDate() - (appliedDateRange.amount * 7));
               break;
             case 'month':
-              start.setMonth(start.getMonth() - dateRange.amount);
+              start.setMonth(start.getMonth() - appliedDateRange.amount);
               break;
             case 'year':
-              start.setFullYear(start.getFullYear() - dateRange.amount);
+              start.setFullYear(start.getFullYear() - appliedDateRange.amount);
               break;
           }
           
@@ -456,17 +481,17 @@ export function EngagementDashboard() {
         .flatMap(t => extractValuesFromToken(t));
       const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const activityTypeLabels = propertyFilterQuery.tokens
+      const activityTypeLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const venueLabels = propertyFilterQuery.tokens
+      const venueLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'venue' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const populationLabels = propertyFilterQuery.tokens
+      const populationLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'population' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
@@ -481,11 +506,68 @@ export function EngagementDashboard() {
         populationIds.length > 0 ? populationIds : undefined
       );
     },
+    enabled: hasRunReport, // Only fetch when report has been run
     placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
 
-  // Debounce loading state to prevent flicker from quick requests (500ms delay)
-  const debouncedLoading = useDebouncedLoading(isLoading, 500);
+  // Handler for Run Report button (triggered by parent via runReportTrigger prop)
+  useEffect(() => {
+    if (runReportTrigger > 0) {
+      // Set hasRunReport to true FIRST
+      setHasRunReport(true);
+      // Then trigger FilterGroupingPanel to call handleFilterUpdate with its current state
+      // This ensures handleFilterUpdate will update the applied state
+      if (triggerFilterUpdate.current) {
+        triggerFilterUpdate.current();
+      }
+    }
+  }, [runReportTrigger]);
+
+  // Notify parent of loading state changes
+  useEffect(() => {
+    if (onLoadingChange) {
+      onLoadingChange(isLoading);
+    }
+  }, [isLoading, onLoadingChange]);
+
+  // Update the renderWithLoadingState helper to use actual isLoading state
+  const renderWithLoadingState = (content: React.ReactNode, emptyMessage: string = 'Click "Run Report" to view data') => {
+    if (!hasRunReport) {
+      return (
+        <Box textAlign="center" padding="xxl" color="text-body-secondary">
+          {emptyMessage}
+        </Box>
+      );
+    }
+    
+    // When loading after first run, show content (don't replace with spinner)
+    // The spinner will be shown in the header via the renderHeaderWithLoading helper
+    return content;
+  };
+
+  // Helper to render header with loading indicator
+  const renderHeaderWithLoading = (title: string, actions?: React.ReactNode) => {
+    return (
+      <Header 
+        variant="h3"
+        actions={actions}
+      >
+        <SpaceBetween size="xs" direction="horizontal">
+          <span>{title}</span>
+          {hasRunReport && isLoading && (
+            <Spinner size="normal" />
+          )}
+        </SpaceBetween>
+      </Header>
+    );
+  };
+
+  // Notify parent of loading state changes
+  useEffect(() => {
+    if (onLoadingChange) {
+      onLoadingChange(isLoading);
+    }
+  }, [isLoading, onLoadingChange]);
 
   // Prepare data BEFORE any conditional returns (for hooks)
   const hasDateRange = !!dateRange;
@@ -636,9 +718,10 @@ export function EngagementDashboard() {
     }
   };
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading engagement metrics..." />;
-  }
+  // No longer show full-page loading spinner - we'll show spinners in individual components
+  // if (isLoading) {
+  //   return <LoadingSpinner text="Loading engagement metrics..." />;
+  // }
 
   // Prepare chart data for activities by type (use empty arrays if no data yet)
   const endLabel = hasDateRange ? 'At End' : 'Count';
@@ -693,13 +776,6 @@ export function EngagementDashboard() {
 
   return (
     <SpaceBetween size="l">
-      {/* Show loading overlay when fetching but keep UI mounted - debounced to prevent flicker */}
-      {debouncedLoading && (
-        <Box textAlign="center" padding="s">
-          <LoadingSpinner text="Updating metrics..." />
-        </Box>
-      )}
-      
       {/* Filters Section */}
       <Container
         header={<Header variant="h3">Filters and Grouping</Header>}
@@ -712,7 +788,9 @@ export function EngagementDashboard() {
           initialFilterTokens={propertyFilterQuery}
           initialGrouping={groupByDimensions}
           onUpdate={handleFilterUpdate}
+          onRegisterTrigger={(trigger) => { triggerFilterUpdate.current = trigger; }}
           isLoading={isLoading}
+          hideUpdateButton={true}
         />
       </Container>
 
@@ -733,7 +811,9 @@ export function EngagementDashboard() {
                 </Button>
               )
             }
-            info={
+          >
+            <SpaceBetween size="xs" direction="horizontal">
+              <span>Engagement Summary</span>
               <Popover
                 dismissButton={false}
                 position="top"
@@ -754,14 +834,16 @@ export function EngagementDashboard() {
               >
                 <Icon name="status-info" variant="link" />
               </Popover>
-            }
-          >
-            Engagement Summary
+              {hasRunReport && isLoading && (
+                <Spinner size="normal" />
+              )}
+            </SpaceBetween>
           </Header>
         }
       >
-        <Table
-          columnDefinitions={[
+        {renderWithLoadingState(
+          <Table
+            columnDefinitions={[
             // First column for dimension label or "Total"
             {
               id: 'label',
@@ -1022,7 +1104,9 @@ export function EngagementDashboard() {
               <b>No data available</b>
             </Box>
           }
-        />
+        />,
+          'Click "Run Report" to view engagement summary'
+        )}
       </Container>
 
       {/* Activities Chart with Segmented Control */}
@@ -1042,237 +1126,254 @@ export function EngagementDashboard() {
               />
             }
           >
-            Activities
+            <SpaceBetween size="xs" direction="horizontal">
+              <span>Activities</span>
+              {hasRunReport && isLoading && (
+                <Spinner size="normal" />
+              )}
+            </SpaceBetween>
           </Header>
         }
       >
-        {activitiesChartData.length > 0 ? (
-          <>
-            {/* Screen reader announcement for view mode changes */}
-            <div 
-              role="status" 
-              aria-live="polite" 
-              aria-atomic="true"
-              className="sr-only"
-              style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}
-            >
-              {activitiesViewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
-            </div>
-            {activitiesLegendItems.length > 1 && (
-              <InteractiveLegend
-                chartId="engagement-activities"
-                series={activitiesLegendItems}
-                onVisibilityChange={activitiesLegend.handleVisibilityChange}
-              />
-            )}
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={activitiesChartData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                {/* Render bars in chronological order when date range is selected */}
-                {dateRange ? (
-                  <>
-                    {activitiesLegend.isSeriesVisible('At Start') && (
-                      <Bar dataKey="At Start" fill="#0088FE" />
-                    )}
-                    {activitiesLegend.isSeriesVisible('At End') && (
-                      <Bar dataKey="At End" fill="#00C49F" />
-                    )}
-                  </>
-                ) : (
-                  activitiesLegend.isSeriesVisible('Count') && (
-                    <Bar dataKey="Count" fill="#00C49F" />
-                  )
-                )}
-              </BarChart>
-            </ResponsiveContainer>
-          </>
-        ) : (
-          <Box textAlign="center" padding="l">
-            <b>No activities available for the selected {activitiesViewMode === 'type' ? 'activity types' : 'activity categories'}</b>
-          </Box>
+        {renderWithLoadingState(
+          activitiesChartData.length > 0 ? (
+            <>
+              {/* Screen reader announcement for view mode changes */}
+              <div 
+                role="status" 
+                aria-live="polite" 
+                aria-atomic="true"
+                className="sr-only"
+                style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}
+              >
+                {activitiesViewMode === 'type' ? 'By Type view selected' : 'By Category view selected'}
+              </div>
+              {activitiesLegendItems.length > 1 && (
+                <InteractiveLegend
+                  chartId="engagement-activities"
+                  series={activitiesLegendItems}
+                  onVisibilityChange={activitiesLegend.handleVisibilityChange}
+                />
+              )}
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={activitiesChartData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  {/* Render bars in chronological order when date range is selected */}
+                  {dateRange ? (
+                    <>
+                      {activitiesLegend.isSeriesVisible('At Start') && (
+                        <Bar dataKey="At Start" fill="#0088FE" />
+                      )}
+                      {activitiesLegend.isSeriesVisible('At End') && (
+                        <Bar dataKey="At End" fill="#00C49F" />
+                      )}
+                    </>
+                  ) : (
+                    activitiesLegend.isSeriesVisible('Count') && (
+                      <Bar dataKey="Count" fill="#00C49F" />
+                    )
+                  )}
+                </BarChart>
+              </ResponsiveContainer>
+            </>
+          ) : (
+            <Box textAlign="center" padding="l">
+              <b>No activities available for the selected {activitiesViewMode === 'type' ? 'activity types' : 'activity categories'}</b>
+            </Box>
+          ),
+          'Click "Run Report" to view activities chart'
         )}
       </Container>
 
       {/* Activity Lifecycle Events Chart */}
-      <ActivityLifecycleChart
-        startDate={(() => {
-          if (!dateRange) return undefined;
-          if (dateRange.type === 'absolute' && dateRange.startDate) {
-            return new Date(dateRange.startDate);
-          }
-          if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
-            const start = new Date();
-            switch (dateRange.unit) {
-              case 'day':
-                start.setDate(start.getDate() - dateRange.amount);
-                break;
-              case 'week':
-                start.setDate(start.getDate() - (dateRange.amount * 7));
-                break;
-              case 'month':
-                start.setMonth(start.getMonth() - dateRange.amount);
-                break;
-              case 'year':
-                start.setFullYear(start.getFullYear() - dateRange.amount);
-                break;
+      {hasRunReport && (
+        <ActivityLifecycleChart
+          startDate={(() => {
+            if (!dateRange) return undefined;
+            if (dateRange.type === 'absolute' && dateRange.startDate) {
+              return new Date(dateRange.startDate);
             }
-            return start;
-          }
-          return undefined;
-        })()}
-        endDate={(() => {
-          if (!dateRange) return undefined;
-          if (dateRange.type === 'absolute' && dateRange.endDate) {
-            return new Date(dateRange.endDate);
-          }
-          if (dateRange.type === 'relative') {
-            return new Date();
-          }
-          return undefined;
-        })()}
-        geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
-        activityCategoryIds={(() => {
-          const labels = propertyFilterQuery.tokens
-            .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
-            .flatMap(t => extractValuesFromToken(t));
-          const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-          return uuids.length > 0 ? uuids : undefined;
-        })()}
-        activityTypeIds={(() => {
-          const labels = propertyFilterQuery.tokens
-            .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
-            .flatMap(t => extractValuesFromToken(t));
-          const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-          return uuids.length > 0 ? uuids : undefined;
-        })()}
-        venueIds={(() => {
-          const labels = propertyFilterQuery.tokens
-            .filter(t => t.propertyKey === 'venue' && t.operator === '=')
-            .flatMap(t => extractValuesFromToken(t));
-          const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-          return uuids.length > 0 ? uuids : undefined;
-        })()}
-        populationIds={(() => {
-          const labels = propertyFilterQuery.tokens
-            .filter(t => t.propertyKey === 'population' && t.operator === '=')
-            .flatMap(t => extractValuesFromToken(t));
-          const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-          return uuids.length > 0 ? uuids : undefined;
-        })()}
-      />
+            if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+              const start = new Date();
+              switch (dateRange.unit) {
+                case 'day':
+                  start.setDate(start.getDate() - dateRange.amount);
+                  break;
+                case 'week':
+                  start.setDate(start.getDate() - (dateRange.amount * 7));
+                  break;
+                case 'month':
+                  start.setMonth(start.getMonth() - dateRange.amount);
+                  break;
+                case 'year':
+                  start.setFullYear(start.getFullYear() - dateRange.amount);
+                  break;
+              }
+              return start;
+            }
+            return undefined;
+          })()}
+          endDate={(() => {
+            if (!dateRange) return undefined;
+            if (dateRange.type === 'absolute' && dateRange.endDate) {
+              return new Date(dateRange.endDate);
+            }
+            if (dateRange.type === 'relative') {
+              return new Date();
+            }
+            return undefined;
+          })()}
+          geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
+          activityCategoryIds={(() => {
+            const labels = propertyFilterQuery.tokens
+              .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+              .flatMap(t => extractValuesFromToken(t));
+            const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+            return uuids.length > 0 ? uuids : undefined;
+          })()}
+          activityTypeIds={(() => {
+            const labels = propertyFilterQuery.tokens
+              .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+              .flatMap(t => extractValuesFromToken(t));
+            const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+            return uuids.length > 0 ? uuids : undefined;
+          })()}
+          venueIds={(() => {
+            const labels = propertyFilterQuery.tokens
+              .filter(t => t.propertyKey === 'venue' && t.operator === '=')
+              .flatMap(t => extractValuesFromToken(t));
+            const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+            return uuids.length > 0 ? uuids : undefined;
+          })()}
+          populationIds={(() => {
+            const labels = propertyFilterQuery.tokens
+              .filter(t => t.propertyKey === 'population' && t.operator === '=')
+              .flatMap(t => extractValuesFromToken(t));
+            const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+            return uuids.length > 0 ? uuids : undefined;
+          })()}
+        />
+      )}
 
       {/* Activity Category Pie Chart and Role Distribution - Side by Side */}
       <ColumnLayout columns={2}>
         {/* Activity Category Pie Chart */}
-        <Container header={<Header variant="h3">Activities by Category</Header>}>
-          {activityCategoryPieData.length > 0 ? (
-            <>
-              {activityCategoryLegendItems.length > 0 && (
-                <InteractiveLegend
-                  chartId="activity-category-pie"
-                  series={activityCategoryLegendItems}
-                  onVisibilityChange={activityCategoryLegend.handleVisibilityChange}
-                />
-              )}
-              {activityCategoryPieData.filter(cat => activityCategoryLegend.isSeriesVisible(cat.name)).length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={activityCategoryPieData.filter(cat => 
-                        activityCategoryLegend.isSeriesVisible(cat.name)
-                      )}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={(entry) => `${entry.name}: ${entry.value}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {activityCategoryPieData
-                        .filter(cat => activityCategoryLegend.isSeriesVisible(cat.name))
-                        .map((category) => (
-                          <Cell key={`cell-${category.name}`} fill={categoryColorMap[category.name]} />
-                        ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <Box textAlign="center" padding="l">
-                  <b>All categories are hidden. Toggle legend items to show data.</b>
-                </Box>
-              )}
-            </>
-          ) : (
-            <Box textAlign="center" padding="l">
-              <b>No activity category data available</b>
-            </Box>
+        <Container header={renderHeaderWithLoading('Activities by Category')}>
+          {renderWithLoadingState(
+            activityCategoryPieData.length > 0 ? (
+              <>
+                {activityCategoryLegendItems.length > 0 && (
+                  <InteractiveLegend
+                    chartId="activity-category-pie"
+                    series={activityCategoryLegendItems}
+                    onVisibilityChange={activityCategoryLegend.handleVisibilityChange}
+                  />
+                )}
+                {activityCategoryPieData.filter(cat => activityCategoryLegend.isSeriesVisible(cat.name)).length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={activityCategoryPieData.filter(cat => 
+                          activityCategoryLegend.isSeriesVisible(cat.name)
+                        )}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry) => `${entry.name}: ${entry.value}`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {activityCategoryPieData
+                          .filter(cat => activityCategoryLegend.isSeriesVisible(cat.name))
+                          .map((category) => (
+                            <Cell key={`cell-${category.name}`} fill={categoryColorMap[category.name]} />
+                          ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Box textAlign="center" padding="l">
+                    <b>All categories are hidden. Toggle legend items to show data.</b>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Box textAlign="center" padding="l">
+                <b>No activity category data available</b>
+              </Box>
+            ),
+            'Click "Run Report" to view category breakdown'
           )}
         </Container>
 
         {/* Role Distribution */}
-        <Container header={<Header variant="h3">Role Distribution</Header>}>
-          {roleDistributionChartData.length > 0 ? (
-            <>
-              {roleDistributionLegendItems.length > 0 && (
-                <InteractiveLegend
-                  chartId="role-distribution"
-                  series={roleDistributionLegendItems}
-                  onVisibilityChange={roleDistributionLegend.handleVisibilityChange}
-                />
-              )}
-              {roleDistributionChartData.filter(role => roleDistributionLegend.isSeriesVisible(role.name)).length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={roleDistributionChartData.filter(role => 
-                        roleDistributionLegend.isSeriesVisible(role.name)
-                      )}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={(entry) => `${entry.name}: ${entry.value}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {roleDistributionChartData
-                        .filter(role => roleDistributionLegend.isSeriesVisible(role.name))
-                        .map((role) => (
-                          <Cell key={`cell-${role.name}`} fill={roleColorMap[role.name]} />
-                        ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <Box textAlign="center" padding="l">
-                  <b>All roles are hidden. Toggle legend items to show data.</b>
-                </Box>
-              )}
-            </>
-          ) : (
-            <Box textAlign="center" padding="l">
-              <b>No role distribution data available</b>
-            </Box>
+        <Container header={renderHeaderWithLoading('Role Distribution')}>
+          {renderWithLoadingState(
+            roleDistributionChartData.length > 0 ? (
+              <>
+                {roleDistributionLegendItems.length > 0 && (
+                  <InteractiveLegend
+                    chartId="role-distribution"
+                    series={roleDistributionLegendItems}
+                    onVisibilityChange={roleDistributionLegend.handleVisibilityChange}
+                  />
+                )}
+                {roleDistributionChartData.filter(role => roleDistributionLegend.isSeriesVisible(role.name)).length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={roleDistributionChartData.filter(role => 
+                          roleDistributionLegend.isSeriesVisible(role.name)
+                        )}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry) => `${entry.name}: ${entry.value}`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {roleDistributionChartData
+                          .filter(role => roleDistributionLegend.isSeriesVisible(role.name))
+                          .map((role) => (
+                            <Cell key={`cell-${role.name}`} fill={roleColorMap[role.name]} />
+                          ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Box textAlign="center" padding="l">
+                    <b>All roles are hidden. Toggle legend items to show data.</b>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Box textAlign="center" padding="l">
+                <b>No role distribution data available</b>
+              </Box>
+            ),
+            'Click "Run Report" to view role distribution'
           )}
         </Container>
       </ColumnLayout>
 
       {/* Geographic Breakdown */}
-      <Container header={<Header variant="h3">Geographic Breakdown</Header>}>
-        {geographicBreakdown && geographicBreakdown.length > 0 ? (
-          <>
-            <InteractiveLegend
-              chartId="geographic-breakdown"
-              series={geographicBreakdownLegendItems}
-              onVisibilityChange={geographicBreakdownLegend.handleVisibilityChange}
-            />
-            <ResponsiveContainer width="100%" height={400}>
+      <Container header={renderHeaderWithLoading('Geographic Breakdown')}>
+        {renderWithLoadingState(
+          geographicBreakdown && geographicBreakdown.length > 0 ? (
+            <>
+              <InteractiveLegend
+                chartId="geographic-breakdown"
+                series={geographicBreakdownLegendItems}
+                onVisibilityChange={geographicBreakdownLegend.handleVisibilityChange}
+              />
+              <ResponsiveContainer width="100%" height={400}>
               <BarChart 
                 data={geographicBreakdown} 
                 layout="vertical"
@@ -1362,6 +1463,8 @@ export function EngagementDashboard() {
           <Box textAlign="center" padding="l">
             <b>No geographic breakdown data available</b>
           </Box>
+        ),
+          'Click "Run Report" to view geographic breakdown'
         )}
       </Container>
     </SpaceBetween>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Container from '@cloudscape-design/components/container';
@@ -10,15 +10,14 @@ import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import Popover from '@cloudscape-design/components/popover';
 import Icon from '@cloudscape-design/components/icon';
+import Spinner from '@cloudscape-design/components/spinner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
 import { PopulationService } from '../../services/api/population.service';
 import { activityCategoryService } from '../../services/api/activity-category.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { VenueService } from '../../services/api/venue.service';
-import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
-import { useDebouncedLoading } from '../../hooks/useDebouncedLoading';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import { 
   FilterGroupingPanel, 
@@ -61,7 +60,12 @@ function getColorForGroup(groupName: string, allGroups: string[]): string {
 
 type ViewMode = 'all' | 'type' | 'category';
 
-export function GrowthDashboard() {
+interface GrowthDashboardProps {
+  runReportTrigger?: number; // Increment this to trigger report execution
+  onLoadingChange?: (isLoading: boolean) => void; // Callback to notify parent of loading state
+}
+
+export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: GrowthDashboardProps = {}) {
   const [searchParams] = useSearchParams();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
@@ -143,6 +147,18 @@ export function GrowthDashboard() {
 
     return null;
   });
+
+  // Run Report pattern: track whether report has been executed
+  const [hasRunReport, setHasRunReport] = useState(false);
+
+  // Ref to trigger FilterGroupingPanel's internal update
+  const triggerFilterUpdate = useRef<(() => void) | null>(null);
+
+  // Track applied state (only updated when Run Report is clicked)
+  const [appliedDateRange, setAppliedDateRange] = useState<FilterGroupingState['dateRange']>(null);
+  const [appliedFilterQuery, setAppliedFilterQuery] = useState<PropertyFilterProps.Query>({ tokens: [], operation: 'and' });
+  const [appliedViewMode, setAppliedViewMode] = useState<ViewMode>('all');
+  const [appliedPeriod, setAppliedPeriod] = useState<TimePeriod>('MONTH');
 
   // PropertyFilter configuration with bidirectional label-UUID cache
   const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
@@ -259,13 +275,23 @@ export function GrowthDashboard() {
   ];
 
   // Handler for FilterGroupingPanel updates
-  const handleFilterUpdate = (state: FilterGroupingState) => {
+  // This is called when Run Report button triggers it via the ref
+  const handleFilterUpdate = useCallback((state: FilterGroupingState) => {
+    // Always update pending state (for display in FilterGroupingPanel)
     setDateRange(state.dateRange);
     setPropertyFilterQuery(state.filterTokens);
     if (typeof state.grouping === 'string') {
       setViewMode(state.grouping as ViewMode);
     }
-  };
+    
+    // Update applied state (used in queryKey)
+    setAppliedDateRange(state.dateRange);
+    setAppliedFilterQuery(state.filterTokens);
+    if (typeof state.grouping === 'string') {
+      setAppliedViewMode(state.grouping as ViewMode);
+    }
+    setAppliedPeriod(period);
+  }, [period]);
 
   // Store view mode in localStorage
   useEffect(() => {
@@ -277,34 +303,34 @@ export function GrowthDashboard() {
   }, [viewMode]);
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['growthMetrics', dateRange, period, selectedGeographicAreaId, propertyFilterQuery, viewMode],
+    queryKey: ['growthMetrics', appliedDateRange, appliedPeriod, selectedGeographicAreaId, appliedFilterQuery, appliedViewMode, runReportTrigger],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
       let endDate: string | undefined;
       
-      if (dateRange) {
-        if (dateRange.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
-          startDate = toISODateTime(dateRange.startDate, false);
-          endDate = toISODateTime(dateRange.endDate, true);
-        } else if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
+      if (appliedDateRange) {
+        if (appliedDateRange.type === 'absolute' && appliedDateRange.startDate && appliedDateRange.endDate) {
+          startDate = toISODateTime(appliedDateRange.startDate, false);
+          endDate = toISODateTime(appliedDateRange.endDate, true);
+        } else if (appliedDateRange.type === 'relative' && appliedDateRange.amount && appliedDateRange.unit) {
           // Calculate absolute dates from relative range
           const now = new Date();
           const end = new Date(now);
           const start = new Date(now);
           
-          switch (dateRange.unit) {
+          switch (appliedDateRange.unit) {
             case 'day':
-              start.setDate(start.getDate() - dateRange.amount);
+              start.setDate(start.getDate() - appliedDateRange.amount);
               break;
             case 'week':
-              start.setDate(start.getDate() - (dateRange.amount * 7));
+              start.setDate(start.getDate() - (appliedDateRange.amount * 7));
               break;
             case 'month':
-              start.setMonth(start.getMonth() - dateRange.amount);
+              start.setMonth(start.getMonth() - appliedDateRange.amount);
               break;
             case 'year':
-              start.setFullYear(start.getFullYear() - dateRange.amount);
+              start.setFullYear(start.getFullYear() - appliedDateRange.amount);
               break;
           }
           
@@ -315,22 +341,22 @@ export function GrowthDashboard() {
       
       // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
       // Tokens now contain comma-separated values, so we need to split them
-      const activityCategoryLabels = propertyFilterQuery.tokens
+      const activityCategoryLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const activityTypeLabels = propertyFilterQuery.tokens
+      const activityTypeLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const venueLabels = propertyFilterQuery.tokens
+      const venueLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'venue' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
       
-      const populationLabels = propertyFilterQuery.tokens
+      const populationLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'population' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
@@ -338,22 +364,68 @@ export function GrowthDashboard() {
       const params: GrowthMetricsParams = {
         startDate,
         endDate,
-        period,
+        period: appliedPeriod,
         activityCategoryIds: activityCategoryIds.length > 0 ? activityCategoryIds : undefined,
         activityTypeIds: activityTypeIds.length > 0 ? activityTypeIds : undefined,
         geographicAreaIds: selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined,
         venueIds: venueIds.length > 0 ? venueIds : undefined,
         populationIds: populationIds.length > 0 ? populationIds : undefined,
-        groupBy: viewMode === 'all' ? undefined : viewMode,
+        groupBy: appliedViewMode === 'all' ? undefined : appliedViewMode,
       };
       
       return AnalyticsService.getGrowthMetrics(params);
     },
+    enabled: hasRunReport, // Only fetch when report has been run
     placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
 
-  // Debounce loading state to prevent flicker from quick requests (500ms delay)
-  const debouncedLoading = useDebouncedLoading(isLoading, 500);
+  // Handler for Run Report button (triggered by parent via runReportTrigger prop)
+  useEffect(() => {
+    if (runReportTrigger > 0) {
+      // Set hasRunReport to true FIRST
+      setHasRunReport(true);
+      // Then trigger FilterGroupingPanel to call handleFilterUpdate with its current state
+      if (triggerFilterUpdate.current) {
+        triggerFilterUpdate.current();
+      }
+    }
+  }, [runReportTrigger]);
+
+  // Notify parent of loading state changes
+  useEffect(() => {
+    if (onLoadingChange) {
+      onLoadingChange(isLoading);
+    }
+  }, [isLoading, onLoadingChange]);
+
+  // Update the renderWithLoadingState helper to use actual isLoading state
+  const renderWithLoadingState = (content: React.ReactNode, emptyMessage: string = 'Click "Run Report" to view data') => {
+    if (!hasRunReport) {
+      return (
+        <Box textAlign="center" padding="xxl" color="text-body-secondary">
+          {emptyMessage}
+        </Box>
+      );
+    }
+    
+    // When loading after first run, show content (don't replace with spinner)
+    // The spinner will be shown in the header
+    return content;
+  };
+
+  // Helper to render header with loading indicator
+  const renderHeaderWithLoading = (title: string) => {
+    return (
+      <Header variant="h3">
+        <SpaceBetween size="xs" direction="horizontal">
+          <span>{title}</span>
+          {hasRunReport && isLoading && (
+            <Spinner size="normal" />
+          )}
+        </SpaceBetween>
+      </Header>
+    );
+  };
 
   // Prepare data for grouped view (before hooks)
   const groupNames = metrics?.groupedTimeSeries ? Object.keys(metrics.groupedTimeSeries).sort() : [];
@@ -363,7 +435,7 @@ export function GrowthDashboard() {
   }, {} as Record<string, string>);
 
   // Prepare legend items for interactive legends (before hooks)
-  const participantLegendItems: LegendItem[] = viewMode === 'all' 
+  const participantLegendItems: LegendItem[] = appliedViewMode === 'all' 
     ? []
     : groupNames.map((name) => ({
         name,
@@ -371,7 +443,7 @@ export function GrowthDashboard() {
         dataKey: `uniqueParticipants_${name}`,
       }));
 
-  const activityLegendItems: LegendItem[] = viewMode === 'all'
+  const activityLegendItems: LegendItem[] = appliedViewMode === 'all'
     ? []
     : groupNames.map((name) => ({
         name,
@@ -379,7 +451,7 @@ export function GrowthDashboard() {
         dataKey: `uniqueActivities_${name}`,
       }));
 
-  const participationLegendItems: LegendItem[] = viewMode === 'all'
+  const participationLegendItems: LegendItem[] = appliedViewMode === 'all'
     ? []
     : groupNames.map((name) => ({
         name,
@@ -392,13 +464,14 @@ export function GrowthDashboard() {
   const activityLegend = useInteractiveLegend('growth-activities', activityLegendItems);
   const participationLegend = useInteractiveLegend('growth-participation', participationLegendItems);
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading growth metrics..." />;
-  }
+  // No longer show full-page loading spinner - we'll show spinners in headers
+  // if (isLoading) {
+  //   return <LoadingSpinner text="Loading growth metrics..." />;
+  // }
 
   // Check if we have data - either in timeSeries (all mode) or groupedTimeSeries (type/category mode)
   const hasData = metrics && (
-    viewMode === 'all' 
+    appliedViewMode === 'all' 
       ? (metrics.timeSeries && metrics.timeSeries.length > 0)
       : (metrics.groupedTimeSeries && Object.keys(metrics.groupedTimeSeries).length > 0)
   );
@@ -457,6 +530,7 @@ export function GrowthDashboard() {
 
   return (
     <SpaceBetween size="l">
+      {/* Filters Section */}
       <Container
         header={
           <Header variant="h3">Filters and Grouping</Header>
@@ -488,13 +562,15 @@ export function GrowthDashboard() {
             initialFilterTokens={propertyFilterQuery}
             initialGrouping={viewMode}
             onUpdate={handleFilterUpdate}
+            onRegisterTrigger={(trigger) => { triggerFilterUpdate.current = trigger; }}
             isLoading={isLoading}
+            hideUpdateButton={true}
           />
         </SpaceBetween>
       </Container>
 
-      {/* Only display growth numbers in "All" view mode and when data is available */}
-      {viewMode === 'all' && hasData && (
+      {/* Only display growth numbers in "All" view mode */}
+      {appliedViewMode === 'all' && hasRunReport && hasData && (
         <ColumnLayout columns={3} variant="text-grid">
           <Container>
             <Box variant="awsui-key-label">Activity Growth</Box>
@@ -549,43 +625,27 @@ export function GrowthDashboard() {
         </ColumnLayout>
       )}
 
-      {/* Display charts or empty state */}
-      {!hasData ? (
-        <Container>
-          <Box textAlign="center" padding="xxl">
-            <b>No data available for the selected filters</b>
-            <Box variant="p" color="text-body-secondary" margin={{ top: 'xs' }}>
-              Try adjusting your filters or date range to see growth metrics.
-            </Box>
-          </Box>
-        </Container>
-      ) : null}
-      
-      {/* Always render charts to prevent unmounting - show loading state inline */}
-      {debouncedLoading && (
-        <Box textAlign="center" padding="s">
-          <LoadingSpinner text="Updating growth metrics..." />
-        </Box>
-      )}
-      
-      <Container header={<Header variant="h3">Unique Activities Over Time</Header>}>
-        {viewMode !== 'all' && activityLegendItems.length > 0 && (
-          <InteractiveLegend
-            chartId="growth-activities"
-            series={activityLegendItems}
-            onVisibilityChange={activityLegend.handleVisibilityChange}
-          />
-        )}
-        {hasData ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={mergedTimeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis 
-                label={{ value: 'Unique Activities', angle: -90, position: 'insideLeft' }}
+      {/* Unique Activities Over Time Chart */}
+      <Container header={renderHeaderWithLoading('Unique Activities Over Time')}>
+        {renderWithLoadingState(
+          <>
+            {appliedViewMode !== 'all' && activityLegendItems.length > 0 && (
+              <InteractiveLegend
+                chartId="growth-activities"
+                series={activityLegendItems}
+                onVisibilityChange={activityLegend.handleVisibilityChange}
               />
-              <Tooltip />
-              {viewMode === 'all' ? (
+            )}
+            {hasData ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={mergedTimeSeriesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis 
+                    label={{ value: 'Unique Activities', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip />
+              {appliedViewMode === 'all' ? (
                 <Line
                   type="monotone"
                   dataKey="uniqueActivities"
@@ -614,45 +674,51 @@ export function GrowthDashboard() {
             <b>No data available</b>
           </Box>
         )}
+          </>,
+          'Click "Run Report" to view activities over time'
+        )}
       </Container>
 
-      <Container header={<Header variant="h3">Unique Participants Over Time</Header>}>
-        {viewMode !== 'all' && participantLegendItems.length > 0 && (
-          <InteractiveLegend
-            chartId="growth-participants"
-            series={participantLegendItems}
-            onVisibilityChange={participantLegend.handleVisibilityChange}
-          />
-        )}
-        {hasData ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={mergedTimeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis 
-                label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
+      {/* Unique Participants Over Time Chart */}
+      <Container header={renderHeaderWithLoading('Unique Participants Over Time')}>
+        {renderWithLoadingState(
+          <>
+            {appliedViewMode !== 'all' && participantLegendItems.length > 0 && (
+              <InteractiveLegend
+                chartId="growth-participants"
+                series={participantLegendItems}
+                onVisibilityChange={participantLegend.handleVisibilityChange}
               />
-              <Tooltip />
-              {viewMode === 'all' ? (
-                <Line
-                  type="monotone"
-                  dataKey="uniqueParticipants"
-                  stroke="#0088FE"
-                  strokeWidth={2}
-                  name="Unique Participants"
-                />
-              ) : (
-                groupNames
-                  .filter((groupName) => participantLegend.isSeriesVisible(groupName))
-                  .map((groupName) => (
+            )}
+            {hasData ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={mergedTimeSeriesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis 
+                    label={{ value: 'Unique Participants', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip />
+                  {appliedViewMode === 'all' ? (
                     <Line
-                      key={groupName}
                       type="monotone"
-                      dataKey={`uniqueParticipants_${groupName}`}
-                      stroke={groupColors[groupName]}
+                      dataKey="uniqueParticipants"
+                      stroke="#0088FE"
                       strokeWidth={2}
-                      name={groupName}
+                      name="Unique Participants"
                     />
+                  ) : (
+                    groupNames
+                      .filter((groupName) => participantLegend.isSeriesVisible(groupName))
+                      .map((groupName) => (
+                        <Line
+                          key={groupName}
+                          type="monotone"
+                          dataKey={`uniqueParticipants_${groupName}`}
+                          stroke={groupColors[groupName]}
+                          strokeWidth={2}
+                          name={groupName}
+                        />
                   ))
               )}
             </LineChart>
@@ -662,46 +728,52 @@ export function GrowthDashboard() {
             <b>No data available</b>
           </Box>
         )}
+          </>,
+          'Click "Run Report" to view participants over time'
+        )}
       </Container>
 
-      <Container header={<Header variant="h3">Total Participation Over Time</Header>}>
-        {viewMode !== 'all' && participationLegendItems.length > 0 && (
-          <InteractiveLegend
-            chartId="growth-participation"
-            series={participationLegendItems}
-            onVisibilityChange={participationLegend.handleVisibilityChange}
-          />
-        )}
-        {hasData ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={mergedTimeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis 
-                label={{ value: 'Total Participation', angle: -90, position: 'insideLeft' }}
+      {/* Total Participation Over Time Chart */}
+      <Container header={renderHeaderWithLoading('Total Participation Over Time')}>
+        {renderWithLoadingState(
+          <>
+            {appliedViewMode !== 'all' && participationLegendItems.length > 0 && (
+              <InteractiveLegend
+                chartId="growth-participation"
+                series={participationLegendItems}
+                onVisibilityChange={participationLegend.handleVisibilityChange}
               />
-              <Tooltip />
-              {viewMode === 'all' ? (
-                <Line
-                  type="monotone"
-                  dataKey="totalParticipation"
-                  stroke="#FFBB28"
-                  strokeWidth={2}
-                  name="Total Participation"
-                />
-              ) : (
-                groupNames
-                  .filter((groupName) => participationLegend.isSeriesVisible(groupName))
-                  .map((groupName) => (
+            )}
+            {hasData ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={mergedTimeSeriesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis 
+                    label={{ value: 'Total Participation', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip />
+                  {appliedViewMode === 'all' ? (
                     <Line
-                      key={groupName}
                       type="monotone"
-                      dataKey={`totalParticipation_${groupName}`}
-                      stroke={groupColors[groupName]}
+                      dataKey="totalParticipation"
+                      stroke="#FFBB28"
                       strokeWidth={2}
-                      name={groupName}
+                      name="Total Participation"
                     />
-                  ))
+                  ) : (
+                    groupNames
+                      .filter((groupName) => participationLegend.isSeriesVisible(groupName))
+                      .map((groupName) => (
+                        <Line
+                          key={groupName}
+                          type="monotone"
+                          dataKey={`totalParticipation_${groupName}`}
+                          stroke={groupColors[groupName]}
+                          strokeWidth={2}
+                          name={groupName}
+                        />
+                      ))
               )}
             </LineChart>
           </ResponsiveContainer>
@@ -709,6 +781,9 @@ export function GrowthDashboard() {
           <Box textAlign="center" padding="l">
             <b>No data available</b>
           </Box>
+        )}
+          </>,
+          'Click "Run Report" to view participation over time'
         )}
       </Container>
     </SpaceBetween>

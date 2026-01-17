@@ -688,12 +688,22 @@ src/
 #### 13. Analytics Dashboards
 
 **EngagementDashboard**
+- **Run Report Pattern Implementation:**
+  - Renders in empty state on initial page load (no automatic data fetching)
+  - Displays primary "Run Report" button in page header, right-justified and inline with "Engagement Analytics" header
+  - When "Run Report" button clicked: implicitly applies current filter and grouping selections and fetches engagement metrics
+  - Each chart and table displays CloudScape Spinner while loading data
+  - Spinners hide once individual components finish loading
+  - Charts and tables load independently with individual loading states
 - Uses FilterGroupingPanel component for unified filtering and grouping interface
 - Configures FilterGroupingPanel with:
   - Additive grouping mode supporting dimensions: activity category, activity type, venue, geographic area
   - Filter properties: activity category, activity type, venue, population
   - Date range selection via DateRangePicker
-- When "Update" button clicked on FilterGroupingPanel: fetches new engagement metrics with selected filters and grouping
+  - "Update" button hidden (not needed with Run Report pattern)
+  - "Clear All" button visible for resetting selections
+- When "Clear All" clicked: resets filters and grouping but does NOT auto-fetch data
+- User must click "Run Report" again after clearing to see results
 - Displays comprehensive temporal metrics using CloudScape Cards:
   - Activities at start/end of date range
   - Activities started, completed, cancelled within range
@@ -775,10 +785,12 @@ src/
 - Synchronizes all filter and grouping parameters with URL query parameters:
   - Filter parameters: activityCategory, activityType, venue, geographicArea, startDate, endDate
   - Grouping parameters: groupBy (array)
-  - Reads URL parameters on component mount to initialize dashboard state
-  - Updates URL when user changes filters or grouping
+  - Reads URL parameters on component mount to restore filter/grouping selections
+  - Does NOT automatically fetch data from URL parameters
+  - User must click "Run Report" to view data with URL-restored selections
+  - Updates URL when "Run Report" is clicked to reflect current state
   - Enables browser back/forward navigation between different configurations
-  - Allows URL sharing for collaborative analysis
+  - Allows URL sharing for collaborative analysis (recipients must click "Run Report" to view data)
 - **Flicker-Free Updates:**
   - Keeps all charts, tables, and filtering UI components mounted during filter/grouping changes
   - Uses React Query's placeholderData option to display stale data while fetching new data
@@ -864,13 +876,23 @@ src/
 - Uses same color scheme as other dashboard charts for consistency
 
 **GrowthDashboard**
+- **Run Report Pattern Implementation:**
+  - Renders in empty state on initial page load (no automatic data fetching)
+  - Displays primary "Run Report" button in page header, right-justified and inline with "Growth Analytics" header
+  - When "Run Report" button clicked: implicitly applies current filter, time period, and grouping selections and fetches growth metrics
+  - Each chart displays CloudScape Spinner while loading data
+  - Spinners hide once individual charts finish loading
+  - Charts load independently with individual loading states
 - Uses FilterGroupingPanel component for unified filtering and grouping interface
 - Configures FilterGroupingPanel with:
   - Exclusive grouping mode supporting options: "All", "Activity Type", "Activity Category"
   - Filter properties: activity category, activity type, geographic area, venue, population
   - Date range selection via DateRangePicker
   - Time period selector (day, week, month, year)
-- When "Update" button clicked on FilterGroupingPanel: fetches new growth metrics with selected filters, time period, and grouping mode
+  - "Update" button hidden (not needed with Run Report pattern)
+  - "Clear All" button visible for resetting selections
+- When "Clear All" clicked: resets filters, time period, and grouping but does NOT auto-fetch data
+- User must click "Run Report" again after clearing to see results
 - Displays three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
 - Each time period represents a snapshot of unique participants, unique activities, and total participation engaged at that point in time (not cumulative counts)
 - Provides CloudScape SegmentedControl to view growth metrics with three options:
@@ -917,10 +939,12 @@ src/
     - Examples: `-30d`, `-6m`, `-1y`
   - Filter parameters: activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds (arrays)
   - Grouping parameter: `?groupBy=all` or `?groupBy=type` or `?groupBy=category`
-  - Reads URL parameters on component mount to initialize dashboard state
-  - Updates URL when user changes filters (using React Router's useSearchParams)
+  - Reads URL parameters on component mount to restore filter/grouping selections
+  - Does NOT automatically fetch data from URL parameters
+  - User must click "Run Report" to view data with URL-restored selections
+  - Updates URL when "Run Report" is clicked to reflect current state
   - Enables browser back/forward navigation between different configurations
-  - Allows URL sharing for collaborative analysis
+  - Allows URL sharing for collaborative analysis (recipients must click "Run Report" to view data)
 - **Flicker-Free Updates:**
   - Keeps all charts and filtering UI components mounted during filter/grouping changes
   - Uses React Query's placeholderData option to display stale data while fetching new data
@@ -1275,10 +1299,12 @@ src/
   - isLoading?: boolean - Whether parent is fetching data
   - disablePopulationFilter?: boolean - Whether to disable population filter (e.g., in Venues map mode)
   - urlParamPrefix?: string - Optional prefix for URL parameters (defaults to "filter_")
+  - hideUpdateButton?: boolean - Whether to hide the "Update" button (used with Run Report pattern on analytics dashboards)
 - Returns JSX element containing the complete filtering/grouping panel
 - Uses vertical stacked layout with CloudScape SpaceBetween component (direction="vertical")
 - First row uses flexbox layout to position first filtering component and action buttons side by side with appropriate spacing (gap: 16px)
 - Action buttons (Update and Clear All) grouped together using CloudScape SpaceBetween (direction="horizontal")
+- When hideUpdateButton is true: only displays "Clear All" button
 - Subsequent rows (PropertyFilter if not on first row, grouping controls) span full width
 - Implements internal state management for pending changes
 - Tracks whether current state differs from last applied state
@@ -1315,8 +1341,8 @@ interface PropertyFilterOption {
 ```
 
 **Usage Examples:**
-- Engagement Dashboard: `<FilterGroupingPanel filterProperties={engagementFilterProps} groupingMode="additive" groupingDimensions={['activityCategory', 'activityType', 'venue', 'geographicArea']} includeDateRange={true} onUpdate={handleFilterUpdate} />`
-- Growth Dashboard: `<FilterGroupingPanel filterProperties={growthFilterProps} groupingMode="exclusive" groupingDimensions={['All', 'Activity Type', 'Activity Category']} includeDateRange={true} onUpdate={handleFilterUpdate} />`
+- Engagement Dashboard: `<FilterGroupingPanel filterProperties={engagementFilterProps} groupingMode="additive" groupingDimensions={['activityCategory', 'activityType', 'venue', 'geographicArea']} includeDateRange={true} hideUpdateButton={true} onUpdate={handleFilterUpdate} />`
+- Growth Dashboard: `<FilterGroupingPanel filterProperties={growthFilterProps} groupingMode="exclusive" groupingDimensions={['All', 'Activity Type', 'Activity Category']} includeDateRange={true} hideUpdateButton={true} onUpdate={handleFilterUpdate} />`
 - Map View: `<FilterGroupingPanel filterProperties={mapFilterProps} groupingMode="exclusive" groupingDimensions={['Activities by Type', 'Activities by Category', 'Participant Homes', 'Venues']} includeDateRange={true} onUpdate={handleFilterUpdate} disablePopulationFilter={mapMode === 'Venues'} />`
 - ParticipantList: `<FilterGroupingPanel filterProperties={participantFilterProps} groupingMode="none" includeDateRange={false} onUpdate={handleFilterUpdate} />`
 - VenueList: `<FilterGroupingPanel filterProperties={venueFilterProps} groupingMode="none" includeDateRange={false} onUpdate={handleFilterUpdate} />`

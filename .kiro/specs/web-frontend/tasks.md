@@ -1032,7 +1032,54 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 13A. Implement FilterGroupingPanel component
   - [x] 13A.1 Create FilterGroupingPanel component with lazy loading and URL synchronization
     - Create new component file at web-frontend/src/components/common/FilterGroupingPanel.tsx
-    - Accept props: filterProperties (with loadItems callbacks), groupingMode ('additive' | 'exclusive' | 'none'), groupingDimensions, initialDateRange, initialFilterTokens, initialGrouping, onUpdate, isLoading, disablePopulationFilter, urlParamPrefix (optional, defaults to "filter_")
+    - Accept props: filterProperties (with loadItems callbacks), groupingMode ('additive' | 'exclusive' | 'none'), groupingDimensions, initialDateRange, initialFilterTokens, initialGrouping, onUpdate, isLoading, disablePopulationFilter, urlParamPrefix (optional, defaults to "filter_"), hideUpdateButton (optional, defaults to false)
+    - Implement vertical stacked layout where each filtering component renders on its own row
+    - Use CloudScape SpaceBetween with direction="vertical" for overall layout
+    - First row layout:
+      - Use flexbox to create horizontal layout with appropriate spacing (gap: 16px)
+      - First filtering component (DateRangePicker if includeDateRange=true, otherwise PropertyFilter) with flex: 1
+      - Action buttons (Update and Clear All) positioned beside the first component, grouped with SpaceBetween direction="horizontal"
+      - When hideUpdateButton is true: only display "Clear All" button
+      - When hideUpdateButton is false: display both "Update" and "Clear All" buttons
+    - Second row (if DateRangePicker is on first row): PropertyFilter component spanning full width
+    - Third row (if grouping controls included): Grouping controls spanning full width
+    - Implement internal state management for pending changes (dateRange, filterTokens, grouping)
+    - Track whether current state differs from last applied state (isDirty flag)
+    - Render CloudScape DateRangePicker component for date range selection (when includeDateRange=true)
+    - Render CloudScape PropertyFilter component with provided filterProperties
+    - Configure PropertyFilter to use loadItems callbacks from filterProperties prop for lazy loading
+    - When user types in PropertyFilter input: invoke corresponding property's loadItems callback with user's input text
+    - Implement 300ms debouncing for loadItems callback invocations
+    - Display loading indicator in PropertyFilter while waiting for loadItems results
+    - Handle loadItems callback errors gracefully with error messages
+    - When groupingMode is 'additive': render CloudScape Multiselect for grouping dimensions
+    - When groupingMode is 'exclusive': render CloudScape SegmentedControl for grouping options
+    - When groupingMode is 'none': omit grouping controls entirely
+    - Render "Update" button using CloudScape Button with variant="primary" (only when hideUpdateButton is false)
+    - Disable "Update" button when isDirty is false (no changes made)
+    - Enable "Update" button when isDirty is true (changes pending)
+    - When "Update" button clicked: invoke onUpdate callback with current FilterGroupingState
+    - When "Update" button clicked: synchronize state to URL query parameters
+    - When "Update" button clicked: mark current state as applied (set isDirty to false)
+    - Render "Clear All" button using CloudScape Button
+    - When "Clear All" clicked: reset dateRange to null, clear filterTokens array, reset grouping to default
+    - When "Clear All" clicked: remove all filter-related URL query parameters while preserving other page parameters
+    - When isLoading prop is true: display loading indicator on "Update" button (if visible)
+    - When isLoading prop is true: disable all controls (DateRangePicker, PropertyFilter, grouping controls)
+    - When disablePopulationFilter prop is true: disable or hide population property in PropertyFilter
+    - Implement URL synchronization using React Router's useSearchParams hook:
+      - Read URL query parameters on component mount to initialize filter state
+      - Use consistent naming pattern with urlParamPrefix (e.g., "filter_activityCategory", "filter_venue")
+      - Map property filters to URL: `filter_<propertyKey>=value1,value2` (comma-separated for multiple values)
+      - Map date range to URL: `filter_startDate=YYYY-MM-DD&filter_endDate=YYYY-MM-DD`
+      - Map grouping (additive) to URL: `filter_groupBy=dim1,dim2,dim3`
+      - Map grouping (exclusive) to URL: `filter_groupBy=selectedOption`
+      - When updating URL, preserve all existing query parameters that don't use the filter prefix
+      - When clearing filters, remove only parameters with the filter prefix
+      - Use setSearchParams with replace: false to support browser back/forward navigation
+    - Provide accessible keyboard navigation for all controls
+    - Include appropriate ARIA labels for screen readers
+    - _Requirements: 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36, 7C.37, 7C.38, 7C.39, 7C.40, 7C.41, 7C.42, 7C.43, 7C.44, 7C.45, 7C.46, 7C.47, 7C.48, 7C.49, 7C.50, 7C.51, 7C.52_
     - Implement vertical stacked layout where each filtering component renders on its own row
     - Use CloudScape SpaceBetween with direction="vertical" for overall layout
     - First row layout:
@@ -1099,7 +1146,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Validates: Requirements 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36, 7C.37, 7C.38, 7C.39, 7C.40, 7C.41, 7C.42, 7C.43, 7C.44, 7C.45, 7C.46, 7C.47, 7C.48, 7C.49, 7C.50, 7C.51, 7C.52**
 
 - [x] 14. Implement analytics dashboards
-  - [ ] 14.0 Integrate FilterGroupingPanel into EngagementDashboard
+  - [x] 14.0 Integrate FilterGroupingPanel into EngagementDashboard with Run Report pattern
     - Import FilterGroupingPanel component
     - Remove existing separate filter controls (PropertyFilter, DateRangePicker, grouping dropdowns)
     - Configure FilterGroupingPanel with additive grouping mode
@@ -1109,13 +1156,22 @@ This implementation plan covers the React-based web application built with TypeS
       - Activity Type: loadItems callback fetches from ActivityTypeService
       - Venue: loadItems callback fetches from VenueService with search parameter
       - Population: loadItems callback fetches from PopulationService
-    - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
-    - Extract dateRange, filterTokens, and grouping array from FilterGroupingState
-    - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, venueIds, populationIds)
-    - Pass filters and grouping to analytics API queries
+    - Pass hideUpdateButton={true} prop to hide the "Update" button
+    - Keep "Clear All" button visible
+    - Add primary "Run Report" button in page header, right-justified and inline with "Engagement Analytics" header
+    - Implement initial empty state rendering for all charts and tables
+    - When "Run Report" button clicked:
+      - Extract current filter and grouping state from FilterGroupingPanel
+      - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, venueIds, populationIds)
+      - Fetch engagement metrics from /analytics/engagement endpoint
+      - Update URL query parameters to reflect current state
+    - When "Clear All" clicked: reset filters and grouping but do NOT auto-fetch data
+    - Display CloudScape Spinner in each chart and table container while loading
+    - Hide Spinner once individual component finishes loading
+    - Allow charts and tables to load independently
     - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during data fetching
-    - _Requirements: 7.15, 7.16, 7.17, 7.18, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.49, 7C.52_
+    - _Requirements: 7.1, 7.1a, 7.1b, 7.1c, 7.1d, 7.1e, 7.1f, 7.1g, 7.1h, 7.1i, 7.15, 7.16, 7.17, 7.18, 7.18a, 7.18b, 7.18c, 7.18d, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.49, 7C.52_
 
   - [x] 14.1 Create EngagementDashboard component
     - Display comprehensive temporal metrics using CloudScape Cards:
@@ -1308,7 +1364,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 33n: Engagement Dashboard Flicker-Free Filter Updates**
     - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.8a, 7.8b, 7.8c, 7.8d, 7.8e, 7.8f, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.14a, 7.14b, 7.14c, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.30a, 7.30b, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46, 7.47, 7.48, 7.49, 7.50, 7.51, 7.52, 7.53, 7.54, 7.55, 7.56, 7.57, 7.70, 7.71, 7.72, 7.73, 7.74, 7.75, 7.76, 7.77, 7.78, 7.79, 7.80, 7.81, 7.82, 7.83, 7.103, 7.104, 7.105, 7.106, 7.107, 7.108, 7.109, 7.110, 7.111, 7.112, 7.113, 7.114, 7.115, 7.116, 7.117, 7.118, 7.119, 7.120, 7.121, 7.122, 7.123, 7.124**
 
-  - [ ] 14.1a Integrate FilterGroupingPanel into GrowthDashboard
+  - [x] 14.1a Integrate FilterGroupingPanel into GrowthDashboard with Run Report pattern
     - Import FilterGroupingPanel component
     - Remove existing separate filter controls (dropdowns, SegmentedControl for grouping)
     - Configure FilterGroupingPanel with exclusive grouping mode
@@ -1320,13 +1376,22 @@ This implementation plan covers the React-based web application built with TypeS
       - Venue: loadItems callback fetches from VenueService with search parameter
       - Population: loadItems callback fetches from PopulationService
     - Include time period selector within FilterGroupingPanel or adjacent to it
-    - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
-    - Extract dateRange, filterTokens, and grouping string from FilterGroupingState
-    - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds)
-    - Pass filters, time period, and grouping mode to growth analytics API queries
+    - Pass hideUpdateButton={true} prop to hide the "Update" button
+    - Keep "Clear All" button visible
+    - Add primary "Run Report" button in page header, right-justified and inline with "Growth Analytics" header
+    - Implement initial empty state rendering for all charts
+    - When "Run Report" button clicked:
+      - Extract current filter, time period, and grouping state from FilterGroupingPanel
+      - Convert filter tokens to API query parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds)
+      - Fetch growth metrics from /analytics/growth endpoint
+      - Update URL query parameters to reflect current state
+    - When "Clear All" clicked: reset filters, time period, and grouping but do NOT auto-fetch data
+    - Display CloudScape Spinner in each chart container while loading
+    - Hide Spinner once individual chart finishes loading
+    - Allow charts to load independently
     - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during data fetching
-    - _Requirements: 7.85, 7.86, 7.87, 7.88, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.50, 7C.53_
+    - _Requirements: 7.61, 7.61a, 7.61b, 7.61c, 7.61d, 7.61e, 7.61f, 7.61g, 7.61h, 7.61i, 7.88, 7.89, 7.90, 7.91, 7.91a, 7.91b, 7.91c, 7.91d, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.50, 7C.53_
 
   - [x] 14.2 Create GrowthDashboard component
     - Display three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
