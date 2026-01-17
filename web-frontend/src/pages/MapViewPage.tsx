@@ -22,6 +22,9 @@ type MapMode = 'activitiesByType' | 'activitiesByCategory' | 'participantHomes' 
 export default function MapViewPage() {
   const [searchParams] = useSearchParams();
   
+  // Track whether filters are ready (URL filters resolved)
+  const [filtersReady, setFiltersReady] = useState(false);
+  
   // Map loading state
   const [mapLoadingState, setMapLoadingState] = useState<{ 
     loadedCount: number; 
@@ -168,6 +171,11 @@ export default function MapViewPage() {
     }
   };
 
+  // Handler for when initial URL filters are resolved
+  const handleInitialResolutionComplete = useCallback(() => {
+    setFiltersReady(true);
+  }, []);
+
   // Handle mode change
   const handleModeChange = useCallback((newMode: MapMode) => {
     setMapMode(newMode);
@@ -288,6 +296,7 @@ export default function MapViewPage() {
               initialFilterTokens={propertyFilterQuery}
               initialGrouping={mapMode}
               onUpdate={handleFilterUpdate}
+              onInitialResolutionComplete={handleInitialResolutionComplete}
               isLoading={false}
               disablePopulationFilter={mapMode === 'venues'}
             />
@@ -301,6 +310,7 @@ export default function MapViewPage() {
                 endDate={absoluteDates.endDate}
                 onLoadingStateChange={setMapLoadingState}
                 externalIsCancelled={mapLoadingState.isCancelled}
+                readyToFetch={filtersReady}
               />
             </div>
           </SpaceBetween>

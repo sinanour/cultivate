@@ -40,7 +40,7 @@ export function VenueList() {
 
   // Batched loading state
   const [allVenues, setAllVenues] = useState<Venue[]>([]);
-  const [currentBatchPage, setCurrentBatchPage] = useState(1);
+  const currentBatchPageRef = useRef(1); // Use ref instead of state to avoid stale closures
   const [totalCount, setTotalCount] = useState(0);
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [loadingError, setLoadingError] = useState<string | undefined>();
@@ -190,7 +190,7 @@ export function VenueList() {
       setDeleteError('');
       // Reset batched loading
       setAllVenues([]);
-      setCurrentBatchPage(1);
+      currentBatchPageRef.current = 1; // Reset page ref
       setHasMorePages(true);
     },
     onError: (error: Error) => {
@@ -201,7 +201,7 @@ export function VenueList() {
   // Reset state when filters change
   useEffect(() => {
     setAllVenues([]);
-    setCurrentBatchPage(1);
+    currentBatchPageRef.current = 1; // Reset page ref
     setTotalCount(0);
     setIsLoadingBatch(false);
     setLoadingError(undefined);
@@ -219,17 +219,25 @@ export function VenueList() {
     setLoadingError(undefined);
 
     try {
+      // Capture current page from ref to avoid stale closure
+      const pageToFetch = currentBatchPageRef.current;
+      
       const response = await VenueService.getVenuesFlexible({
-        page: currentBatchPage,
+        page: pageToFetch,
         limit: BATCH_SIZE,
         geographicAreaId: filterParams.geographicAreaId,
         filter: filterParams.filter
       });
       
-      setAllVenues(prev => [...prev, ...response.data]);
+      // If this is the first page, replace venues instead of appending
+      if (pageToFetch === 1) {
+        setAllVenues(response.data);
+      } else {
+        setAllVenues(prev => [...prev, ...response.data]);
+      }
       setTotalCount(response.pagination.total);
-      setHasMorePages(currentBatchPage < response.pagination.totalPages);
-      setCurrentBatchPage(prev => prev + 1);
+      setHasMorePages(pageToFetch < response.pagination.totalPages);
+      currentBatchPageRef.current = pageToFetch + 1; // Increment page ref
     } catch (error) {
       console.error('Error fetching venues batch:', error);
       setLoadingError(error instanceof Error ? error.message : 'Failed to load venues');
@@ -237,7 +245,7 @@ export function VenueList() {
       setIsLoadingBatch(false);
       isFetchingRef.current = false;
     }
-  }, [currentBatchPage, isLoadingBatch, hasMorePages, filterParams, isCancelled]);
+  }, [isLoadingBatch, hasMorePages, filterParams, isCancelled]);
 
   // Cancel loading handler
   const handleCancelLoading = useCallback(() => {
@@ -258,20 +266,20 @@ export function VenueList() {
     // Wait for filters to be ready before fetching
     if (!filtersReady) return;
     
-    if (currentBatchPage === 1 && hasMorePages && !isLoadingBatch && allVenues.length === 0 && !isFetchingRef.current) {
+    if (currentBatchPageRef.current === 1 && hasMorePages && !isLoadingBatch && allVenues.length === 0 && !isFetchingRef.current) {
       fetchNextBatch();
     }
-  }, [currentBatchPage, hasMorePages, isLoadingBatch, allVenues.length, fetchNextBatch, filtersReady]);
+  }, [hasMorePages, isLoadingBatch, allVenues.length, fetchNextBatch, filtersReady]);
 
   // Auto-fetch next batch after previous batch renders
   useEffect(() => {
-    if (!isLoadingBatch && hasMorePages && currentBatchPage > 1) {
+    if (!isLoadingBatch && hasMorePages && currentBatchPageRef.current > 1) {
       const timer = setTimeout(() => {
         fetchNextBatch();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isLoadingBatch, hasMorePages, currentBatchPage, fetchNextBatch]);
+  }, [isLoadingBatch, hasMorePages, fetchNextBatch]);
 
   // Retry function
   const handleRetry = useCallback(() => {
@@ -334,7 +342,7 @@ export function VenueList() {
         queryClient.invalidateQueries({ queryKey: ['venues'] });
         // Reset batched loading
         setAllVenues([]);
-        setCurrentBatchPage(1);
+        currentBatchPageRef.current = 1; // Reset page ref
         setHasMorePages(true);
       }
     } catch (error) {
@@ -347,7 +355,7 @@ export function VenueList() {
     }
   };
 
-  const isLoading = isLoadingBatch && currentBatchPage === 1;
+  const isLoading = isLoadingBatch && currentBatchPageRef.current === 1;
   const loadedCount = allVenues.length;
 
   return (

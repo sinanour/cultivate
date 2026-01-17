@@ -51,7 +51,7 @@ export function ParticipantList() {
 
   // Batched loading state
   const [allParticipants, setAllParticipants] = useState<Participant[]>([]);
-  const [currentBatchPage, setCurrentBatchPage] = useState(1);
+  const currentBatchPageRef = useRef(1); // Use ref instead of state to avoid stale closures
   const [totalCount, setTotalCount] = useState(0);
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [loadingError, setLoadingError] = useState<string | undefined>();
@@ -226,7 +226,7 @@ export function ParticipantList() {
       setDeleteError('');
       // Reset batched loading
       setAllParticipants([]);
-      setCurrentBatchPage(1);
+      currentBatchPageRef.current = 1; // Reset page ref
       setHasMorePages(true);
     },
     onError: (error: Error) => {
@@ -237,7 +237,7 @@ export function ParticipantList() {
   // Reset state when filters change
   useEffect(() => {
     setAllParticipants([]);
-    setCurrentBatchPage(1);
+    currentBatchPageRef.current = 1; // Reset page ref
     setTotalCount(0);
     setIsLoadingBatch(false);
     setLoadingError(undefined);
@@ -255,16 +255,24 @@ export function ParticipantList() {
     setLoadingError(undefined);
 
     try {
+      // Capture current page from ref to avoid stale closure
+      const pageToFetch = currentBatchPageRef.current;
+      
       const response = await ParticipantService.getParticipantsFlexible({
-        page: currentBatchPage,
+        page: pageToFetch,
         limit: BATCH_SIZE,
         ...filterParams
       });
       
-      setAllParticipants(prev => [...prev, ...response.data]);
+      // If this is the first page, replace participants instead of appending
+      if (pageToFetch === 1) {
+        setAllParticipants(response.data);
+      } else {
+        setAllParticipants(prev => [...prev, ...response.data]);
+      }
       setTotalCount(response.pagination.total);
-      setHasMorePages(currentBatchPage < response.pagination.totalPages);
-      setCurrentBatchPage(prev => prev + 1);
+      setHasMorePages(pageToFetch < response.pagination.totalPages);
+      currentBatchPageRef.current = pageToFetch + 1; // Increment page ref
     } catch (error) {
       console.error('Error fetching participants batch:', error);
       setLoadingError(error instanceof Error ? error.message : 'Failed to load participants');
@@ -272,7 +280,7 @@ export function ParticipantList() {
       setIsLoadingBatch(false);
       isFetchingRef.current = false;
     }
-  }, [currentBatchPage, isLoadingBatch, hasMorePages, filterParams, isCancelled]);
+  }, [isLoadingBatch, hasMorePages, filterParams, isCancelled]);
 
   // Cancel loading handler
   const handleCancelLoading = useCallback(() => {
@@ -294,20 +302,20 @@ export function ParticipantList() {
     // Wait for filters to be ready before fetching
     if (!filtersReady) return;
     
-    if (currentBatchPage === 1 && hasMorePages && !isLoadingBatch && allParticipants.length === 0 && !isFetchingRef.current) {
+    if (currentBatchPageRef.current === 1 && hasMorePages && !isLoadingBatch && allParticipants.length === 0 && !isFetchingRef.current) {
       fetchNextBatch();
     }
-  }, [currentBatchPage, hasMorePages, isLoadingBatch, allParticipants.length, fetchNextBatch, filtersReady]);
+  }, [hasMorePages, isLoadingBatch, allParticipants.length, fetchNextBatch, filtersReady]);
 
   // Auto-fetch next batch after previous batch renders
   useEffect(() => {
-    if (!isLoadingBatch && hasMorePages && currentBatchPage > 1) {
+    if (!isLoadingBatch && hasMorePages && currentBatchPageRef.current > 1) {
       const timer = setTimeout(() => {
         fetchNextBatch();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isLoadingBatch, hasMorePages, currentBatchPage, fetchNextBatch]);
+  }, [isLoadingBatch, hasMorePages, fetchNextBatch]);
 
   // Retry function
   const handleRetry = useCallback(() => {
@@ -370,7 +378,7 @@ export function ParticipantList() {
         queryClient.invalidateQueries({ queryKey: ['participants'] });
         // Reset batched loading
         setAllParticipants([]);
-        setCurrentBatchPage(1);
+        currentBatchPageRef.current = 1; // Reset page ref
         setHasMorePages(true);
       }
     } catch (error) {
@@ -383,7 +391,7 @@ export function ParticipantList() {
     }
   };
 
-  const isLoading = isLoadingBatch && currentBatchPage === 1;
+  const isLoading = isLoadingBatch && currentBatchPageRef.current === 1;
   const loadedCount = allParticipants.length;
   const hasActiveFilters = propertyFilterQuery.tokens.length > 0;
 

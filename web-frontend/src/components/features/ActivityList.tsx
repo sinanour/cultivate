@@ -66,7 +66,7 @@ export function ActivityList() {
 
   // Batched loading state
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
-  const [currentBatchPage, setCurrentBatchPage] = useState(1);
+  const currentBatchPageRef = useRef(1); // Use ref instead of state to avoid stale closures
   const [totalCount, setTotalCount] = useState(0);
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [loadingError, setLoadingError] = useState<string | undefined>();
@@ -280,7 +280,7 @@ export function ActivityList() {
       setDeleteError('');
       // Reset batched loading
       setAllActivities([]);
-      setCurrentBatchPage(1);
+      currentBatchPageRef.current = 1; // Reset page ref
       setHasMorePages(true);
     },
     onError: (error: Error) => {
@@ -291,7 +291,7 @@ export function ActivityList() {
   // Reset state when filters change
   useEffect(() => {
     setAllActivities([]);
-    setCurrentBatchPage(1);
+    currentBatchPageRef.current = 1; // Reset page ref
     setTotalCount(0);
     setIsLoadingBatch(false);
     setLoadingError(undefined);
@@ -309,16 +309,24 @@ export function ActivityList() {
     setLoadingError(undefined);
 
     try {
+      // Capture current page from ref to avoid stale closure
+      const pageToFetch = currentBatchPageRef.current;
+      
       const response = await ActivityService.getActivitiesFlexible({
-        page: currentBatchPage,
+        page: pageToFetch,
         limit: BATCH_SIZE,
         ...filterParams
       });
       
-      setAllActivities(prev => [...prev, ...response.data]);
+      // If this is the first page, replace activities instead of appending
+      if (pageToFetch === 1) {
+        setAllActivities(response.data);
+      } else {
+        setAllActivities(prev => [...prev, ...response.data]);
+      }
       setTotalCount(response.pagination.total);
-      setHasMorePages(currentBatchPage < response.pagination.totalPages);
-      setCurrentBatchPage(prev => prev + 1);
+      setHasMorePages(pageToFetch < response.pagination.totalPages);
+      currentBatchPageRef.current = pageToFetch + 1; // Increment page ref
     } catch (error) {
       console.error('Error fetching activities batch:', error);
       setLoadingError(error instanceof Error ? error.message : 'Failed to load activities');
@@ -326,7 +334,7 @@ export function ActivityList() {
       setIsLoadingBatch(false);
       isFetchingRef.current = false;
     }
-  }, [currentBatchPage, isLoadingBatch, hasMorePages, filterParams, isCancelled]);
+  }, [isLoadingBatch, hasMorePages, filterParams, isCancelled]);
 
   // Cancel loading handler
   const handleCancelLoading = useCallback(() => {
@@ -348,20 +356,20 @@ export function ActivityList() {
     // Wait for filters to be ready before fetching
     if (!filtersReady) return;
     
-    if (currentBatchPage === 1 && hasMorePages && !isLoadingBatch && allActivities.length === 0 && !isFetchingRef.current) {
+    if (currentBatchPageRef.current === 1 && hasMorePages && !isLoadingBatch && allActivities.length === 0 && !isFetchingRef.current) {
       fetchNextBatch();
     }
-  }, [currentBatchPage, hasMorePages, isLoadingBatch, allActivities.length, fetchNextBatch, filtersReady]);
+  }, [hasMorePages, isLoadingBatch, allActivities.length, fetchNextBatch, filtersReady]);
 
   // Auto-fetch next batch after previous batch renders
   useEffect(() => {
-    if (!isLoadingBatch && hasMorePages && currentBatchPage > 1) {
+    if (!isLoadingBatch && hasMorePages && currentBatchPageRef.current > 1) {
       const timer = setTimeout(() => {
         fetchNextBatch();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isLoadingBatch, hasMorePages, currentBatchPage, fetchNextBatch]);
+  }, [isLoadingBatch, hasMorePages, fetchNextBatch]);
 
   // Retry function
   const handleRetry = useCallback(() => {
@@ -424,7 +432,7 @@ export function ActivityList() {
         queryClient.invalidateQueries({ queryKey: ['activities'] });
         // Reset batched loading
         setAllActivities([]);
-        setCurrentBatchPage(1);
+        currentBatchPageRef.current = 1; // Reset page ref
         setHasMorePages(true);
       }
     } catch (error) {
@@ -437,7 +445,7 @@ export function ActivityList() {
     }
   };
 
-  const isLoading = isLoadingBatch && currentBatchPage === 1;
+  const isLoading = isLoadingBatch && currentBatchPageRef.current === 1;
   const loadedCount = allActivities.length;
   const hasActiveFilters = propertyFilterQuery.tokens.length > 0 || dateRange !== null;
 

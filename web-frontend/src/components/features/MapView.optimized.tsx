@@ -105,6 +105,7 @@ interface MapViewProps {
   externalIsCancelled?: boolean;
   onCancelRequest?: () => void;
   onResumeRequest?: () => void;
+  readyToFetch?: boolean; // New prop to control when fetching should start
 }
 
 // Component to handle map bounds adjustment and auto-zoom
@@ -291,6 +292,7 @@ export function MapView({
   status,
   onLoadingStateChange,
   externalIsCancelled = false,
+  readyToFetch = true, // Default to true for backward compatibility
 }: MapViewProps) {
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
@@ -298,7 +300,7 @@ export function MapView({
   const [allActivityMarkers, setAllActivityMarkers] = useState<ActivityMarker[]>([]);
   const [allParticipantHomeMarkers, setAllParticipantHomeMarkers] = useState<ParticipantHomeMarker[]>([]);
   const [allVenueMarkers, setAllVenueMarkers] = useState<VenueMarker[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const currentPageRef = useRef(1); // Use ref instead of state to avoid stale closures
   const [totalCount, setTotalCount] = useState(0);
   const [isLoadingBatch, setIsLoadingBatch] = useState(false);
   const [loadingError, setLoadingError] = useState<string | undefined>();
@@ -327,7 +329,7 @@ export function MapView({
     setAllActivityMarkers([]);
     setAllParticipantHomeMarkers([]);
     setAllVenueMarkers([]);
-    setCurrentPage(1);
+    currentPageRef.current = 1; // Reset page ref
     setTotalCount(0);
     setIsLoadingBatch(false);
     setLoadingError(undefined);
@@ -345,31 +347,50 @@ export function MapView({
     setLoadingError(undefined);
 
     try {
+      // Capture current page from ref to avoid stale closure
+      const pageToFetch = currentPageRef.current;
+      
       if (mode === 'activitiesByType' || mode === 'activitiesByCategory') {
-        const response = await MapDataService.getActivityMarkers(filters, currentPage, BATCH_SIZE);
-        setAllActivityMarkers(prev => [...prev, ...response.data]);
+        const response = await MapDataService.getActivityMarkers(filters, pageToFetch, BATCH_SIZE);
+        // If this is the first page, replace markers instead of appending
+        // This ensures filter changes clear previous results
+        if (pageToFetch === 1) {
+          setAllActivityMarkers(response.data);
+        } else {
+          setAllActivityMarkers(prev => [...prev, ...response.data]);
+        }
         setTotalCount(response.pagination.total);
-        setHasMorePages(currentPage < response.pagination.totalPages);
-        setCurrentPage(prev => prev + 1);
+        setHasMorePages(pageToFetch < response.pagination.totalPages);
+        currentPageRef.current = pageToFetch + 1; // Increment page ref
       } else if (mode === 'participantHomes') {
         const response = await MapDataService.getParticipantHomeMarkers({
           geographicAreaIds: filters.geographicAreaIds,
           populationIds: filters.populationIds,
           startDate: filters.startDate,
           endDate: filters.endDate,
-        }, currentPage, BATCH_SIZE);
-        setAllParticipantHomeMarkers(prev => [...prev, ...response.data]);
+        }, pageToFetch, BATCH_SIZE);
+        // If this is the first page, replace markers instead of appending
+        if (pageToFetch === 1) {
+          setAllParticipantHomeMarkers(response.data);
+        } else {
+          setAllParticipantHomeMarkers(prev => [...prev, ...response.data]);
+        }
         setTotalCount(response.pagination.total);
-        setHasMorePages(currentPage < response.pagination.totalPages);
-        setCurrentPage(prev => prev + 1);
+        setHasMorePages(pageToFetch < response.pagination.totalPages);
+        currentPageRef.current = pageToFetch + 1; // Increment page ref
       } else if (mode === 'venues') {
         const response = await MapDataService.getVenueMarkers({
           geographicAreaIds: filters.geographicAreaIds,
-        }, currentPage, BATCH_SIZE);
-        setAllVenueMarkers(prev => [...prev, ...response.data]);
+        }, pageToFetch, BATCH_SIZE);
+        // If this is the first page, replace markers instead of appending
+        if (pageToFetch === 1) {
+          setAllVenueMarkers(response.data);
+        } else {
+          setAllVenueMarkers(prev => [...prev, ...response.data]);
+        }
         setTotalCount(response.pagination.total);
-        setHasMorePages(currentPage < response.pagination.totalPages);
-        setCurrentPage(prev => prev + 1);
+        setHasMorePages(pageToFetch < response.pagination.totalPages);
+        currentPageRef.current = pageToFetch + 1; // Increment page ref
       }
     } catch (error) {
       console.error('Error fetching markers batch:', error);
@@ -378,7 +399,7 @@ export function MapView({
       setIsLoadingBatch(false);
       isFetchingRef.current = false;
     }
-  }, [mode, filters, currentPage, isLoadingBatch, hasMorePages, BATCH_SIZE, isCancelled]);
+  }, [mode, filters, isLoadingBatch, hasMorePages, BATCH_SIZE, isCancelled]);
 
   // Calculate loaded count
   const loadedCount = mode === 'activitiesByType' || mode === 'activitiesByCategory' 
@@ -406,21 +427,22 @@ export function MapView({
   // Fetch first batch on mount or when dependencies change
   useEffect(() => {
     const hasAnyMarkers = allActivityMarkers.length > 0 || allParticipantHomeMarkers.length > 0 || allVenueMarkers.length > 0;
-    if (currentPage === 1 && hasMorePages && !isLoadingBatch && !hasAnyMarkers && !isFetchingRef.current) {
+    // Only fetch if readyToFetch is true (filters are resolved)
+    if (readyToFetch && currentPageRef.current === 1 && hasMorePages && !isLoadingBatch && !hasAnyMarkers && !isFetchingRef.current) {
       fetchNextBatch();
     }
-  }, [currentPage, hasMorePages, isLoadingBatch, allActivityMarkers.length, allParticipantHomeMarkers.length, allVenueMarkers.length, fetchNextBatch]);
+  }, [readyToFetch, hasMorePages, isLoadingBatch, allActivityMarkers.length, allParticipantHomeMarkers.length, allVenueMarkers.length, fetchNextBatch]);
 
   // Auto-fetch next batch after previous batch renders
   useEffect(() => {
-    if (!isLoadingBatch && hasMorePages && currentPage > 1) {
+    if (!isLoadingBatch && hasMorePages && currentPageRef.current > 1) {
       // Small delay to allow rendering of current batch
       const timer = setTimeout(() => {
         fetchNextBatch();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isLoadingBatch, hasMorePages, currentPage, fetchNextBatch]);
+  }, [isLoadingBatch, hasMorePages, fetchNextBatch]);
 
   // Retry function
   const handleRetry = useCallback(() => {
@@ -590,7 +612,7 @@ export function MapView({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <MapBoundsAdjuster markers={markers} isLoading={isLoadingBatch && currentPage === 1} />
+        <MapBoundsAdjuster markers={markers} isLoading={isLoadingBatch && currentPageRef.current === 1} />
         
         <MarkerClusterGroup
           chunkedLoading
