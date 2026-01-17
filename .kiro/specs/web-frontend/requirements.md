@@ -430,6 +430,9 @@ The Web Frontend package provides a responsive React-based web application that 
 17. THE Web_App SHALL use the Geographic_Area_Selector component for parent geographic area selection
 18. THE Web_App SHALL prevent circular parent-child relationships
 19. THE Web_App SHALL display a detail view showing geographic area information, child areas, and associated venues from the area and all descendant areas (recursive aggregation)
+19a. THE Web_App SHALL provide an "Apply Filter" button on the geographic area detail page
+19b. WHEN the "Apply Filter" button is clicked, THE Web_App SHALL update the global geographic area filter to the current geographic area
+19c. WHEN the "Apply Filter" button is clicked, THE Web_App SHALL navigate the user to a relevant view (such as the geographic areas list or map view) where the filter is applied
 20. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
 21. WHEN deleting a geographic area, THE Web_App SHALL display an error message explaining which entities reference it
 22. THE Web_App SHALL display the full hierarchy path for each geographic area

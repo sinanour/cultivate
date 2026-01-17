@@ -15,6 +15,7 @@ import Badge from '@cloudscape-design/components/badge';
 import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 
@@ -22,6 +23,7 @@ export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
+  const { setGeographicAreaFilter } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
 
   const { data: geographicArea, isLoading, error } = useQuery({
@@ -98,6 +100,16 @@ export function GeographicAreaDetail() {
             variant="h2"
             actions={
               <SpaceBetween direction="horizontal" size="xs">
+                <Button 
+                  onClick={() => {
+                    if (id) {
+                      setGeographicAreaFilter(id);
+                      navigate('/geographic-areas');
+                    }
+                  }}
+                >
+                  Apply Filter
+                </Button>
                 {canEdit() && (
                   <>
                     <Button variant="primary" onClick={() => navigate(`/geographic-areas/${id}/edit`)}>
