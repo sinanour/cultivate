@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
+  updateUser: (user: User) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -82,6 +83,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setTokens(newTokens);
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    // Also update localStorage so it persists across page reloads
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   const value = {
     user,
     tokens,
@@ -90,6 +97,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     refreshToken,
+    updateUser,
   };
 
   // Don't render children until we've checked for stored auth

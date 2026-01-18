@@ -4,7 +4,7 @@ import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuthorizationMiddleware } from '../middleware/authorization.middleware';
 import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
-import { UserCreateSchema, UserUpdateSchema, UuidParamSchema } from '../utils/validation.schemas';
+import { UserCreateSchema, UserUpdateSchema, UserProfileUpdateSchema, UuidParamSchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
 
 export class UserRoutes {
@@ -21,6 +21,21 @@ export class UserRoutes {
   }
 
   private initializeRoutes() {
+    // Profile endpoints (all authenticated users)
+    this.router.get(
+      '/me/profile',
+      this.authMiddleware.authenticate(),
+      this.getProfile.bind(this)
+    );
+
+    this.router.put(
+      '/me/profile',
+      this.authMiddleware.authenticate(),
+      ValidationMiddleware.validateBody(UserProfileUpdateSchema),
+      this.auditLoggingMiddleware.logEntityModification('USER_PROFILE'),
+      this.updateProfile.bind(this)
+    );
+
     // All user management endpoints require ADMINISTRATOR role
     this.router.get(
       '/',
@@ -192,6 +207,64 @@ export class UserRoutes {
       res.status(500).json({
         code: 'INTERNAL_ERROR',
         message: 'An error occurred while deleting user',
+        details: {},
+      });
+    }
+  }
+
+  private async getProfile(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user!.userId;
+      const profile = await this.userService.getCurrentUserProfile(userId);
+      res.status(200).json({ success: true, data: profile });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'User not found') {
+        return res.status(404).json({
+          code: 'NOT_FOUND',
+          message: error.message,
+          details: {},
+        });
+      }
+      res.status(500).json({
+        code: 'INTERNAL_ERROR',
+        message: 'An error occurred while fetching profile',
+        details: {},
+      });
+    }
+  }
+
+  private async updateProfile(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user!.userId;
+      const profile = await this.userService.updateCurrentUserProfile(userId, req.body);
+      res.status(200).json({ success: true, data: profile });
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'User not found') {
+          return res.status(404).json({
+            code: 'NOT_FOUND',
+            message: error.message,
+            details: {},
+          });
+        }
+        if ((error as any).code === 'INVALID_CURRENT_PASSWORD') {
+          return res.status(401).json({
+            code: 'INVALID_CURRENT_PASSWORD',
+            message: error.message,
+            details: {},
+          });
+        }
+        if (error.message.includes('required') || error.message.includes('must be')) {
+          return res.status(400).json({
+            code: 'VALIDATION_ERROR',
+            message: error.message,
+            details: {},
+          });
+        }
+      }
+      res.status(500).json({
+        code: 'INTERNAL_ERROR',
+        message: 'An error occurred while updating profile',
         details: {},
       });
     }

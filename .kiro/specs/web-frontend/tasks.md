@@ -1848,6 +1848,95 @@ This implementation plan covers the React-based web application built with TypeS
     - _Requirements: 18.6, 18.7_
 
   - [ ]* 19.7 Write property tests for unified user management
+    - **Property 94: User List Display**
+    - **Property 95: User Form Validation**
+    - **Property 96: User Authorization Rules Embedding**
+    - **Property 97: User Creation with Authorization Rules**
+    - **Property 98: User Form Navigation Guard**
+    - **Validates: Requirements 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8, 18.9, 18.10, 18.11, 18.12, 18.13, 18.14, 18.15, 18.16, 18.17, 18.18, 18.19, 18.20, 18.21, 18.22, 18.23, 18.24, 18.25, 18.26, 18.27, 18.28, 18.29, 18.30, 18.31, 18.32, 18.33**
+
+- [x] 19A. Implement user self-profile management
+  - [x] 19A.1 Add profile routes to router configuration
+    - Add /profile route for user profile page
+    - Protect route with authentication (all roles)
+    - Do NOT restrict to admin only
+    - _Requirements: 18A.2_
+
+  - [x] 19A.2 Create ProfilePage component
+    - Create new page component at /pages/ProfilePage.tsx
+    - Fetch current user profile from GET /api/v1/users/me/profile
+    - Create dedicated ProfileForm component for simplified profile editing
+    - Display user's display name, email (read-only), role (read-only), created date, updated date
+    - Do NOT display password hash
+    - Provide editable display name field with clear button
+    - Provide password change section with three fields: Current Password, New Password, Confirm New Password
+    - Implement navigation guard using useBlocker hook
+    - Display confirmation dialog when user attempts to navigate away with unsaved changes
+    - _Requirements: 18A.2, 18A.3, 18A.4, 18A.5, 18A.6, 18A.7, 18A.8, 18A.9, 18A.10, 18A.11, 18A.21, 18A.32, 18A.33_
+
+  - [x] 19A.3 Create ProfileForm component
+    - Create dedicated ProfileForm component at /components/features/ProfileForm.tsx
+    - Display email as read-only text
+    - Display role as read-only text
+    - Do NOT display geographic authorization management section
+    - Show display name field as editable with clear button
+    - Show password change interface with current password validation
+    - Require currentPassword field when newPassword is provided
+    - Add confirmPassword field for password changes
+    - Validate newPassword and confirmPassword match
+    - Display validation error when passwords don't match
+    - Submit to PUT /api/v1/users/me/profile
+    - _Requirements: 18A.21, 18A.22, 18A.23, 18A.24, 18A.25, 18A.26, 18A.27_
+
+  - [x] 19A.4 Implement password change validation
+    - Add currentPassword, newPassword, and confirmPassword fields to form state
+    - Validate currentPassword is provided when newPassword is provided
+    - Validate newPassword is at least 8 characters
+    - Validate newPassword and confirmPassword match
+    - Display inline validation errors for each field
+    - Clear password fields after successful update
+    - _Requirements: 18A.11, 18A.12, 18A.13, 18A.14, 18A.15, 18A.18_
+
+  - [x] 19A.5 Handle INVALID_CURRENT_PASSWORD error
+    - Catch 401 Unauthorized response with INVALID_CURRENT_PASSWORD error code
+    - Display error message "Current password is incorrect" near current password field
+    - Use CloudScape FormField error prop
+    - Allow user to retry with correct password
+    - _Requirements: 18A.16, 18A.17_
+
+  - [x] 19A.6 Update UserService for profile endpoints
+    - Add getCurrentUserProfile() method to call GET /api/v1/users/me/profile
+    - Add updateCurrentUserProfile(data) method to call PUT /api/v1/users/me/profile
+    - Handle INVALID_CURRENT_PASSWORD error responses
+    - Return user profile data without password hash
+    - _Requirements: 18A.3, 18A.4, 18A.16, 18A.17, 18A.29, 18A.30, 18A.31_
+
+  - [x] 19A.7 Add "My Profile" link to user menu
+    - Update AppLayout component to add "My Profile" link to user menu dropdown
+    - Position link above "Logout" option in menu
+    - Make link accessible to all authenticated users (all roles)
+    - When clicked, navigate to /profile route
+    - _Requirements: 18A.1, 18A.34, 18A.35_
+
+  - [x] 19A.8 Display success and error notifications
+    - Display success notification after successful profile update using CloudScape Flashbar
+    - Display error notifications for validation failures
+    - Display specific error message for INVALID_CURRENT_PASSWORD
+    - Clear password fields after successful password change
+    - _Requirements: 18A.17, 18A.18, 18A.29, 18A.30, 18A.31_
+
+  - [ ]* 19A.9 Write property tests for user self-profile management
+    - **Property 98a: Profile Page Access for All Roles**
+    - **Property 98b: Profile Display Name Editing**
+    - **Property 98c: Profile Email Immutability**
+    - **Property 98d: Profile Role Immutability**
+    - **Property 98e: Profile Authorization Rules Hidden**
+    - **Property 98f: Profile Password Change with Current Password**
+    - **Property 98g: Profile Password Confirmation Matching**
+    - **Property 98h: Profile Current Password Validation Error**
+    - **Property 98i: Profile Restricted Mode Rendering**
+    - **Property 98j: Profile Navigation Link Visibility**
+    - **Validates: Requirements 18A.1, 18A.2, 18A.3, 18A.4, 18A.5, 18A.6, 18A.7, 18A.8, 18A.9, 18A.10, 18A.11, 18A.12, 18A.13, 18A.14, 18A.15, 18A.16, 18A.17, 18A.18, 18A.19, 18A.20, 18A.21, 18A.22, 18A.23, 18A.24, 18A.25, 18A.26, 18A.27, 18A.28, 18A.29, 18A.30, 18A.31, 18A.32, 18A.33, 18A.34, 18A.35**
     - **Property 172: User Form Page Display**
     - **Property 173: User Display Name Validation**
     - **Property 174: User Authorization Rules Embedding**

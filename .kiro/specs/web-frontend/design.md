@@ -993,6 +993,28 @@ src/
 - When user attempts to navigate away with unsaved changes, displays confirmation dialog
 - Allows vertical scrolling to accommodate user fields and embedded authorization management
 - Only accessible to administrators
+- Supports restrictedMode prop for user self-profile editing
+- When restrictedMode is true: hides email field (read-only display), hides role selector (read-only display), hides geographic authorization section, shows editable display name, shows password change interface with current password validation
+- When isSelfProfile is true: requires currentPassword when newPassword is provided, adds confirmPassword field, validates password confirmation matches
+
+**ProfilePage**
+- Dedicated page for user self-profile management at route /profile
+- Accessible to all authenticated users (ADMINISTRATOR, EDITOR, READ_ONLY)
+- Reuses UserFormWithAuthorization component with restrictedMode={true} and isSelfProfile={true}
+- Displays user's display name (editable), email (read-only), role (read-only), created date, updated date
+- Does NOT display password hash
+- Provides editable display name field with clear button (X icon) to set to null
+- Provides password change section with three fields: Current Password, New Password, Confirm New Password
+- Validates current password is provided when changing password
+- Validates new password is at least 8 characters
+- Validates new password and confirm password match
+- Displays validation error when passwords don't match
+- Submits profile updates to PUT /api/v1/users/me/profile
+- Displays error message "Current password is incorrect" when backend returns INVALID_CURRENT_PASSWORD (401)
+- Displays success notification after successful profile update
+- Clears password fields after successful password change
+- Implements navigation guard to detect unsaved changes
+- Displays confirmation dialog when user attempts to navigate away with unsaved changes
 
 **GeographicAuthorizationForm**
 - Modal form for creating authorization rules (opened from UserFormPage)

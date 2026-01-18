@@ -319,6 +319,65 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 68i: Last Administrator Deletion Prevention**
     - **Validates: Requirements 11A.1, 11A.2, 11A.3a, 11A.3b, 11A.3c, 11A.4, 11A.5, 11A.6, 11A.7, 11A.8, 11A.9, 11A.10, 11A.11, 11A.12, 11A.13, 11A.14, 11A.15, 11A.16, 11A.17, 11A.18**
 
+- [x] 6B. Implement user self-profile management
+  - [x] 6B.1 Create validation schema for profile updates
+    - Create UserProfileUpdateSchema in validation.schemas.ts
+    - Accept optional displayName (nullable, min 1 char if provided, max 200 chars)
+    - Accept optional currentPassword (required when newPassword is provided)
+    - Accept optional newPassword (min 8 chars)
+    - Use Zod refinement to enforce currentPassword requirement when newPassword is present
+    - _Requirements: 11B.6, 11B.10, 11B.13, 11B.16, 11B.17, 11B.20_
+
+  - [x] 6B.2 Add profile management methods to UserService
+    - Add getCurrentUserProfile(userId) method to fetch user by ID
+    - Add updateCurrentUserProfile(userId, data) method for profile updates
+    - Validate currentPassword matches existing password when newPassword is provided
+    - Throw error with code INVALID_CURRENT_PASSWORD when currentPassword doesn't match
+    - Hash newPassword with bcrypt before updating
+    - Preserve existing password when newPassword not provided
+    - Allow displayName updates (including null to clear)
+    - Prevent email, role, and authorization rule changes in profile updates
+    - Return user object without password hash
+    - _Requirements: 11B.1, 11B.2, 11B.6, 11B.7, 11B.8, 11B.9, 11B.10, 11B.11, 11B.12, 11B.13, 11B.14, 11B.15, 11B.16, 11B.17_
+
+  - [x] 6B.3 Create profile routes
+    - Add GET /api/v1/users/me/profile route
+    - Add PUT /api/v1/users/me/profile route
+    - Apply authentication middleware (all authenticated users)
+    - Do NOT apply requireAdmin middleware (available to all roles)
+    - Extract userId from req.user.userId
+    - Call UserService.getCurrentUserProfile(userId) for GET
+    - Call UserService.updateCurrentUserProfile(userId, req.body) for PUT
+    - Apply validation middleware with UserProfileUpdateSchema for PUT
+    - Apply audit logging middleware with action type PROFILE_UPDATE for PUT
+    - Return 200 OK with user profile data
+    - Return 401 Unauthorized for INVALID_CURRENT_PASSWORD errors
+    - Return 400 Bad Request for validation errors
+    - _Requirements: 11B.1, 11B.2, 11B.3, 11B.4, 11B.5, 11B.12, 11B.18, 11B.19, 11B.20, 11B.21_
+
+  - [ ] 6B.4 Update OpenAPI documentation
+    - Document GET /api/v1/users/me/profile endpoint
+    - Document PUT /api/v1/users/me/profile endpoint
+    - Document UserProfileUpdateSchema with currentPassword and newPassword fields
+    - Document INVALID_CURRENT_PASSWORD error response
+    - Include examples for profile retrieval and updates
+    - Clarify that these endpoints are available to all authenticated users
+    - _Requirements: 11B.1, 11B.2, 11B.10, 11B.12, 11B.21_
+
+  - [ ]* 6B.5 Write property tests for user self-profile management
+    - **Property 68j: User Profile Retrieval**
+    - **Property 68k: User Profile Display Name Update**
+    - **Property 68l: User Profile Email Immutability**
+    - **Property 68m: User Profile Role Immutability**
+    - **Property 68n: User Profile Authorization Rules Immutability**
+    - **Property 68o: User Profile Password Update with Current Password**
+    - **Property 68p: User Profile Current Password Validation**
+    - **Property 68q: User Profile New Password Validation**
+    - **Property 68r: User Profile Password Preservation**
+    - **Property 68s: User Profile Access for All Roles**
+    - **Property 68t: User Profile Audit Logging**
+    - **Validates: Requirements 11B.1, 11B.2, 11B.3, 11B.4, 11B.5, 11B.6, 11B.7, 11B.8, 11B.9, 11B.10, 11B.11, 11B.12, 11B.13, 11B.14, 11B.15, 11B.16, 11B.17, 11B.18, 11B.19, 11B.20, 11B.21**
+
 - [x] 7. Implement participant management
   - [x] 7.1 Create participant repository
     - Implement CRUD operations

@@ -1222,6 +1222,48 @@ The Web Frontend package provides a responsive React-based web application that 
 32. WHEN a user attempts to navigate away from the user form with unsaved changes, THE Web_App SHALL display a confirmation dialog
 33. THE Web_App SHALL hide user management from non-administrators
 
+### Requirement 18A: User Self-Profile Management
+
+**User Story:** As any logged-in user, I want to view and edit my own profile information in the web interface, so that I can update my display name and password without requiring administrator assistance.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL provide a "My Profile" navigation link in the user menu accessible to all authenticated users
+2. THE Web_App SHALL provide a profile page at route /profile accessible to all authenticated users (ADMINISTRATOR, EDITOR, READ_ONLY)
+3. THE Web_App SHALL display the current user's profile information including display name, email, role, created date, and updated date
+4. THE Web_App SHALL NOT display the user's password hash on the profile page
+5. THE Web_App SHALL provide an editable input field for the user's display name
+6. THE Web_App SHALL allow the user to clear their display name by providing a clear button (X icon) that sets it to null
+7. THE Web_App SHALL display the user's email address as read-only text (not editable)
+8. THE Web_App SHALL display the user's role as read-only text (not editable)
+9. THE Web_App SHALL NOT display the geographic authorization management section on the profile page
+10. THE Web_App SHALL provide a password change section within the profile page
+11. THE password change section SHALL include three input fields: Current Password, New Password, and Confirm New Password
+12. THE Web_App SHALL validate that the current password field is filled when the user wants to change their password
+13. THE Web_App SHALL validate that the new password is at least 8 characters
+14. THE Web_App SHALL validate that the new password and confirm password fields match
+15. WHEN the new password and confirm password do not match, THE Web_App SHALL display a validation error message
+16. WHEN the user submits a profile update with password change, THE Web_App SHALL send currentPassword and newPassword to PUT /api/v1/users/me/profile
+17. WHEN the backend returns INVALID_CURRENT_PASSWORD error (401), THE Web_App SHALL display an error message "Current password is incorrect"
+18. WHEN the password change is successful, THE Web_App SHALL display a success notification and clear the password input fields
+19. THE Web_App SHALL allow the user to update their display name without changing their password
+20. THE Web_App SHALL allow the user to change their password without updating their display name
+21. THE Web_App SHALL reuse the existing UserFormWithAuthorization component in a restricted mode for the profile page
+22. WHEN rendering the profile page for a non-administrator, THE Web_App SHALL pass a restrictedMode prop to UserFormWithAuthorization
+23. WHEN restrictedMode is true, THE UserFormWithAuthorization component SHALL hide the email input field and display email as read-only text
+24. WHEN restrictedMode is true, THE UserFormWithAuthorization component SHALL hide the role selector and display role as read-only text
+25. WHEN restrictedMode is true, THE UserFormWithAuthorization component SHALL hide the geographic authorization management section
+26. WHEN restrictedMode is true, THE UserFormWithAuthorization component SHALL show the display name field as editable
+27. WHEN restrictedMode is true, THE UserFormWithAuthorization component SHALL show the password change interface with current password validation
+28. THE Web_App SHALL display a "Save Changes" button on the profile page
+29. WHEN the user clicks "Save Changes", THE Web_App SHALL submit the profile update to PUT /api/v1/users/me/profile endpoint
+30. WHEN the profile update is successful, THE Web_App SHALL display a success notification
+31. WHEN the profile update fails, THE Web_App SHALL display appropriate error messages
+32. THE Web_App SHALL implement navigation guard to detect unsaved changes on the profile page
+33. WHEN a user attempts to navigate away from the profile page with unsaved changes, THE Web_App SHALL display a confirmation dialog asking if they want to discard changes
+34. THE Web_App SHALL add a "My Profile" link to the user menu dropdown in the AppLayout header
+35. WHEN the "My Profile" link is clicked, THE Web_App SHALL navigate to /profile route
+
 ### Requirement 19: Optimistic Locking and Conflict Resolution
 
 **User Story:** As a user, I want to be notified when my changes conflict with another user's changes, so that I can resolve conflicts appropriately.

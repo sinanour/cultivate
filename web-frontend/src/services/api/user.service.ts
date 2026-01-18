@@ -21,6 +21,12 @@ interface UpdateUserData {
     role?: UserRole;
 }
 
+interface UpdateProfileData {
+    displayName?: string | null;
+    currentPassword?: string;
+    newPassword?: string;
+}
+
 export class UserService {
     static async getUsers(): Promise<User[]> {
         return ApiClient.get<User[]>('/users');
@@ -40,5 +46,14 @@ export class UserService {
 
     static async deleteUser(id: string): Promise<void> {
         return ApiClient.delete<void>(`/users/${id}`);
+    }
+
+    // Profile management (self-service for all users)
+    static async getCurrentUserProfile(): Promise<User> {
+        return ApiClient.get<User>('/users/me/profile');
+    }
+
+    static async updateCurrentUserProfile(data: UpdateProfileData): Promise<User> {
+        return ApiClient.put<User>('/users/me/profile', data);
     }
 }

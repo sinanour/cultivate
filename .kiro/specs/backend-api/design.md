@@ -102,6 +102,10 @@ POST   /api/v1/users                   -> Create user with optional authorizatio
 PUT    /api/v1/users/:id               -> Update user (admin only)
 DELETE /api/v1/users/:id               -> Delete user (admin only)
 
+// User Self-Profile Routes (All Authenticated Users)
+GET    /api/v1/users/me/profile        -> Get current user's profile (all roles)
+PUT    /api/v1/users/me/profile        -> Update current user's profile (all roles)
+
 // Geographic Authorization Routes (Admin Only)
 GET    /api/v1/users/:id/geographic-authorizations -> List user's authorization rules (admin only)
 POST   /api/v1/users/:id/geographic-authorizations -> Create authorization rule (admin only)
@@ -194,7 +198,7 @@ Services implement business logic and coordinate operations:
 - **ActivityTypeService**: Manages activity type CRUD operations, validates uniqueness, validates activity category references, prevents deletion of referenced types
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
 - **PopulationService**: Manages population CRUD operations (admin only for create/update/delete), validates uniqueness, prevents deletion of referenced populations, manages participant-population associations (many-to-many), validates participant and population existence, prevents duplicate associations
-- **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction, handles user deletion with cascade deletion of associated geographic authorization rules, prevents deletion of the last administrator user
+- **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction, handles user deletion with cascade deletion of associated geographic authorization rules, prevents deletion of the last administrator user, provides user self-profile management endpoints (all roles), validates current password before allowing password changes, restricts profile updates to display name and password only (no email, role, or authorization rule changes)
 - **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, includes population associations in all participant list responses to enable population badge display without additional API round trips, pushes all filtering and field selection to database layer via Prisma
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
@@ -383,6 +387,13 @@ UserUpdateSchema = {
   email: string (optional, valid email, unique),
   password: string (optional, min 8 chars),
   role: enum (optional, ADMINISTRATOR | EDITOR | READ_ONLY)
+}
+
+// User Self-Profile Schemas (All Authenticated Users)
+UserProfileUpdateSchema = {
+  displayName: string (optional, nullable, min 1 char if provided, max 200 chars),
+  currentPassword: string (required when newPassword is provided),
+  newPassword: string (optional, min 8 chars)
 }
 
 // Activity Lifecycle Query Schema

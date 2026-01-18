@@ -522,6 +522,34 @@ The Backend API package provides the RESTful API service that implements all bus
 28. THE API SHALL grant read-only access to ancestors when an ALLOW rule is applied to a geographic area
 29. THE API SHALL audit all geographic authorization rule changes in the audit log
 
+### Requirement 11B: User Self-Profile Management
+
+**User Story:** As any logged-in user, I want to view and edit my own profile information, so that I can update my display name and password without requiring administrator assistance.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a GET /api/v1/users/me/profile endpoint that returns the current user's profile information
+2. THE API SHALL provide a PUT /api/v1/users/me/profile endpoint that allows the current user to update their own profile
+3. THE API SHALL allow any authenticated user (ADMINISTRATOR, EDITOR, or READ_ONLY) to access their own profile endpoints
+4. WHEN a user accesses GET /api/v1/users/me/profile, THE API SHALL return the user's id, displayName, email, role, createdAt, and updatedAt fields
+5. THE API SHALL NOT return the password hash in the profile response
+6. WHEN updating their own profile, THE API SHALL allow users to change their display name
+7. WHEN updating their own profile, THE API SHALL NOT allow users to change their email address
+8. WHEN updating their own profile, THE API SHALL NOT allow users to change their role
+9. WHEN updating their own profile, THE API SHALL NOT allow users to modify their geographic authorization rules
+10. WHEN a user attempts to update their password via PUT /api/v1/users/me/profile, THE API SHALL require the currentPassword field in the request body
+11. WHEN a user provides a new password, THE API SHALL validate that the currentPassword matches the user's existing password
+12. WHEN the currentPassword does not match the existing password, THE API SHALL return 401 Unauthorized with error code INVALID_CURRENT_PASSWORD
+13. WHEN the currentPassword matches and a new password is provided, THE API SHALL validate that the new password is at least 8 characters
+14. WHEN the new password is valid, THE API SHALL hash the new password using bcrypt and update the user's password
+15. WHEN updating profile without providing a new password, THE API SHALL preserve the existing password
+16. THE API SHALL validate that display name is between 1 and 200 characters if provided
+17. THE API SHALL allow display name to be set to null to clear it
+18. THE API SHALL audit profile updates in the audit log with action type PROFILE_UPDATE
+19. THE API SHALL return 200 OK with the updated user profile on successful update
+20. THE API SHALL return 400 Bad Request for validation errors (invalid display name length, password too short)
+21. THE API SHALL return 401 Unauthorized when currentPassword is incorrect during password change attempts
+
 ### Requirement 12: Audit User Actions
 
 **User Story:** As a system administrator, I want audit logging via API, so that I can track user actions for security and compliance.

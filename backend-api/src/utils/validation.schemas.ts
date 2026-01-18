@@ -88,6 +88,25 @@ export const UserUpdateSchema = z.object({
   }).optional(),
 });
 
+// User Profile schemas (self-service)
+export const UserProfileUpdateSchema = z.object({
+  displayName: z.string().min(1).max(200).nullable().optional(),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters').optional(),
+}).refine(
+  (data) => {
+    // If newPassword is provided, currentPassword must also be provided
+    if (data.newPassword && !data.currentPassword) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Current password is required when changing password',
+    path: ['currentPassword'],
+  }
+);
+
 // Participant schemas
 export const ParticipantCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),

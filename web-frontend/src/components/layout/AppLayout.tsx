@@ -128,6 +128,11 @@ export function AppLayout() {
                   disabled: true,
                 },
                 {
+                  id: 'profile',
+                  text: 'My Profile',
+                  iconName: 'settings',
+                },
+                {
                   id: 'logout',
                   text: 'Logout',
                 },
@@ -136,6 +141,8 @@ export function AppLayout() {
                 if (detail.id === 'logout') {
                   logout();
                   navigate('/login');
+                } else if (detail.id === 'profile') {
+                  navigate('/profile');
                 }
               },
             },

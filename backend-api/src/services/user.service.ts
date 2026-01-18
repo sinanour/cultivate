@@ -24,6 +24,12 @@ interface UpdateUserData {
   role?: UserRole;
 }
 
+interface UpdateProfileData {
+  displayName?: string | null;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
 export class UserService {
   constructor(
     private userRepository: UserRepository,
@@ -199,5 +205,65 @@ export class UserService {
         where: { id },
       });
     });
+  }
+
+  // Profile management methods (self-service for all users)
+  async getCurrentUserProfile(userId: string): Promise<Omit<User, 'passwordHash'>> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    const { passwordHash, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  async updateCurrentUserProfile(userId: string, data: UpdateProfileData): Promise<Omit<User, 'passwordHash'>> {
+    const existing = await this.userRepository.findById(userId);
+    if (!existing) {
+      throw new Error('User not found');
+    }
+
+    const updateData: { displayName?: string | null; passwordHash?: string } = {};
+
+    // Update displayName if provided (including null to clear)
+    if ('displayName' in data) {
+      updateData.displayName = data.displayName?.trim() || null;
+    }
+
+    // Handle password change with current password validation
+    if (data.newPassword !== undefined && data.newPassword.trim().length > 0) {
+      // Validate current password is provided
+      if (!data.currentPassword) {
+        const error = new Error('Current password is required when changing password');
+        (error as any).code = 'INVALID_CURRENT_PASSWORD';
+        throw error;
+      }
+
+      // Validate current password matches
+      const isValidPassword = await bcrypt.compare(data.currentPassword, existing.passwordHash);
+      if (!isValidPassword) {
+        const error = new Error('Current password is incorrect');
+        (error as any).code = 'INVALID_CURRENT_PASSWORD';
+        throw error;
+      }
+
+      // Validate new password length
+      if (data.newPassword.length < 8) {
+        throw new Error('New password must be at least 8 characters');
+      }
+
+      // Hash new password
+      updateData.passwordHash = await bcrypt.hash(data.newPassword, 10);
+    }
+
+    // Only update if there are changes
+    if (Object.keys(updateData).length === 0) {
+      const { passwordHash: _, ...userWithoutPassword } = existing;
+      return userWithoutPassword;
+    }
+
+    const updated = await this.userRepository.update(userId, updateData);
+    const { passwordHash: _, ...userWithoutPassword } = updated;
+    return userWithoutPassword;
   }
 }
