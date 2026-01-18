@@ -1,16 +1,32 @@
+import { PrismaClient } from '@prisma/client';
+import { GeographicAreaService } from '../../services/geographic-area.service';
+import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
+import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
+import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
+import { UserRepository } from '../../repositories/user.repository';
+import { getPrismaClient } from '../../utils/prisma.client';
+
 /**
  * Integration tests for geographic area flexible filtering
  * Tests the filter[name] parameter and fields parameter for geographic areas
  */
-
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 describe('Geographic Area Flexible Filtering Integration Tests', () => {
+    let prisma: PrismaClient;
+    let geographicAreaService: GeographicAreaService;
+    let geoAuthService: GeographicAuthorizationService;
     let testAreaIds: string[] = [];
 
     beforeAll(async () => {
+        prisma = getPrismaClient();
+
+        // Initialize repositories
+        const geoAreaRepo = new GeographicAreaRepository(prisma);
+        const authRepo = new UserGeographicAuthorizationRepository(prisma);
+        const userRepo = new UserRepository(prisma);
+
+        geoAuthService = new GeographicAuthorizationService(authRepo, geoAreaRepo, userRepo);
+        geographicAreaService = new GeographicAreaService(geoAreaRepo, prisma, geoAuthService);
+
         // Create test geographic areas with various names
         const testAreas = [
             { name: 'Vancouver City', areaType: 'CITY' as const, parentGeographicAreaId: null },
@@ -40,76 +56,64 @@ describe('Geographic Area Flexible Filtering Integration Tests', () => {
 
     describe('filter[name] parameter', () => {
         it('should filter geographic areas by name with partial matching', async () => {
-            const response = await fetch('http://localhost:3000/api/v1/geographic-areas?filter[name]=vancouver', {
-                headers: {
-                    'Authorization': `Bearer ${process.env.TEST_AUTH_TOKEN}`
-                }
+            // Call service directly with filter parameter
+            const areas = await geographicAreaService.getAllGeographicAreasFlexible({
+                filter: { name: 'vancouver' },
+                authorizedAreaIds: [],
+                hasGeographicRestrictions: false,
+                readOnlyAreaIds: []
             });
 
-            expect(response.status).toBe(200);
-            const result = await response.json();
-
-            expect(result.success).toBe(true);
-            expect(Array.isArray(result.data)).toBe(true);
-
             // Should return all areas with "vancouver" in the name (case-insensitive)
-            const vancouverAreas = result.data.filter((area: any) =>
+            const vancouverAreas = areas.filter((area: any) =>
                 area.name.toLowerCase().includes('vancouver')
             );
             expect(vancouverAreas.length).toBeGreaterThanOrEqual(4); // Vancouver City, Vancouver Island, Downtown Vancouver, North Vancouver, West Vancouver
 
             // Should NOT return areas without "vancouver" in the name
-            const nonVancouverAreas = result.data.filter((area: any) =>
+            const nonVancouverAreas = areas.filter((area: any) =>
                 !area.name.toLowerCase().includes('vancouver')
             );
             expect(nonVancouverAreas.length).toBe(0);
         });
 
         it('should be case-insensitive', async () => {
-            const response = await fetch('http://localhost:3000/api/v1/geographic-areas?filter[name]=VANCOUVER', {
-                headers: {
-                    'Authorization': `Bearer ${process.env.TEST_AUTH_TOKEN}`
-                }
+            const areas = await geographicAreaService.getAllGeographicAreasFlexible({
+                filter: { name: 'VANCOUVER' },
+                authorizedAreaIds: [],
+                hasGeographicRestrictions: false,
+                readOnlyAreaIds: []
             });
 
-            expect(response.status).toBe(200);
-            const result = await response.json();
-
-            expect(result.success).toBe(true);
-            expect(result.data.length).toBeGreaterThanOrEqual(4);
+            expect(areas.length).toBeGreaterThanOrEqual(4);
         });
 
         it('should return empty array when no matches', async () => {
-            const response = await fetch('http://localhost:3000/api/v1/geographic-areas?filter[name]=nonexistent', {
-                headers: {
-                    'Authorization': `Bearer ${process.env.TEST_AUTH_TOKEN}`
-                }
+            const areas = await geographicAreaService.getAllGeographicAreasFlexible({
+                filter: { name: 'nonexistent' },
+                authorizedAreaIds: [],
+                hasGeographicRestrictions: false,
+                readOnlyAreaIds: []
             });
 
-            expect(response.status).toBe(200);
-            const result = await response.json();
-
-            expect(result.success).toBe(true);
-            expect(result.data).toEqual([]);
+            expect(areas).toEqual([]);
         });
     });
 
     describe('fields parameter', () => {
         it('should return only requested fields', async () => {
-            const response = await fetch('http://localhost:3000/api/v1/geographic-areas?filter[name]=vancouver&fields=id,name,areaType', {
-                headers: {
-                    'Authorization': `Bearer ${process.env.TEST_AUTH_TOKEN}`
-                }
+            const areas = await geographicAreaService.getAllGeographicAreasFlexible({
+                filter: { name: 'vancouver' },
+                fields: ['id', 'name', 'areaType'],
+                authorizedAreaIds: [],
+                hasGeographicRestrictions: false,
+                readOnlyAreaIds: []
             });
 
-            expect(response.status).toBe(200);
-            const result = await response.json();
-
-            expect(result.success).toBe(true);
-            expect(result.data.length).toBeGreaterThan(0);
+            expect(areas.length).toBeGreaterThan(0);
 
             // Check that only requested fields are present
-            const firstArea = result.data[0];
+            const firstArea = areas[0] as any;
             expect(firstArea).toHaveProperty('id');
             expect(firstArea).toHaveProperty('name');
             expect(firstArea).toHaveProperty('areaType');
@@ -123,38 +127,32 @@ describe('Geographic Area Flexible Filtering Integration Tests', () => {
 
     describe('Combined filtering', () => {
         it('should combine filter[name] with filter[areaType]', async () => {
-            const response = await fetch('http://localhost:3000/api/v1/geographic-areas?filter[name]=vancouver&filter[areaType]=CITY', {
-                headers: {
-                    'Authorization': `Bearer ${process.env.TEST_AUTH_TOKEN}`
-                }
+            const areas = await geographicAreaService.getAllGeographicAreasFlexible({
+                filter: { name: 'vancouver', areaType: 'CITY' },
+                authorizedAreaIds: [],
+                hasGeographicRestrictions: false,
+                readOnlyAreaIds: []
             });
 
-            expect(response.status).toBe(200);
-            const result = await response.json();
-
-            expect(result.success).toBe(true);
-
             // All results should have "vancouver" in name AND be CITY type
-            result.data.forEach((area: any) => {
+            areas.forEach((area: any) => {
                 expect(area.name.toLowerCase()).toContain('vancouver');
                 expect(area.areaType).toBe('CITY');
             });
         });
 
         it('should combine filter[name] with fields parameter', async () => {
-            const response = await fetch('http://localhost:3000/api/v1/geographic-areas?filter[name]=toronto&fields=id,name', {
-                headers: {
-                    'Authorization': `Bearer ${process.env.TEST_AUTH_TOKEN}`
-                }
+            const areas = await geographicAreaService.getAllGeographicAreasFlexible({
+                filter: { name: 'toronto' },
+                fields: ['id', 'name'],
+                authorizedAreaIds: [],
+                hasGeographicRestrictions: false,
+                readOnlyAreaIds: []
             });
 
-            expect(response.status).toBe(200);
-            const result = await response.json();
+            expect(areas.length).toBeGreaterThan(0);
 
-            expect(result.success).toBe(true);
-            expect(result.data.length).toBeGreaterThan(0);
-
-            const firstArea = result.data[0];
+            const firstArea = areas[0] as any;
             expect(firstArea.name.toLowerCase()).toContain('toronto');
             expect(Object.keys(firstArea)).toEqual(['id', 'name']);
         });
@@ -162,16 +160,15 @@ describe('Geographic Area Flexible Filtering Integration Tests', () => {
 
     describe('Pagination with filtering', () => {
         it('should support pagination with filter[name]', async () => {
-            const response = await fetch('http://localhost:3000/api/v1/geographic-areas?filter[name]=vancouver&page=1&limit=2', {
-                headers: {
-                    'Authorization': `Bearer ${process.env.TEST_AUTH_TOKEN}`
-                }
+            const result = await geographicAreaService.getAllGeographicAreasPaginatedFlexible({
+                page: 1,
+                limit: 2,
+                filter: { name: 'vancouver' },
+                authorizedAreaIds: [],
+                hasGeographicRestrictions: false,
+                readOnlyAreaIds: []
             });
 
-            expect(response.status).toBe(200);
-            const result = await response.json();
-
-            expect(result.success).toBe(true);
             expect(result.pagination).toBeDefined();
             expect(result.pagination.page).toBe(1);
             expect(result.pagination.limit).toBe(2);

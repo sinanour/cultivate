@@ -236,8 +236,8 @@ export class ParticipantService {
         if (!effectiveAreaIds) {
             // No geographic filter, just apply flexible filters
             const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit, combinedWhere, select);
-            // Transform to include flattened populations array
-            const transformedData = transformParticipantResponses(data);
+            const transformedData = select ? data : transformParticipantResponses(data);
+
             return PaginationHelper.createResponse(transformedData, validPage, validLimit, total);
         }
 

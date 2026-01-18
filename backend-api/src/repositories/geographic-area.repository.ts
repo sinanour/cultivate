@@ -174,26 +174,10 @@ export class GeographicAreaRepository {
    * @returns Array of ancestor GeographicArea objects ordered from closest to most distant
    */
   async findAncestors(id: string): Promise<GeographicArea[]> {
-    // Use the optimized batch method internally
     const parentMap = await this.findBatchAncestors([id]);
-
-    // Traverse the parent map to build ancestor chain
-    const ancestors: GeographicArea[] = [];
-    let currentId = parentMap[id];
-
-    while (currentId) {
-      // Fetch the full geographic area object
-      const ancestor = await this.prisma.geographicArea.findUnique({
-        where: { id: currentId },
-      });
-
-      if (!ancestor) break;
-
-      ancestors.push(ancestor);
-      currentId = parentMap[currentId] || null;
-    }
-
-    return ancestors;
+    // Filter out the requested area itself - we only want ancestors
+    const ancestorIds = Object.keys(parentMap).filter(areaId => areaId !== id);
+    return Object.values(await this.findBatchDetails(ancestorIds));
   }
 
   /**

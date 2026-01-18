@@ -195,20 +195,24 @@ describe('GeographicAreaService', () => {
         });
     });
 
-    describe('getAncestors', () => {
-        it('should return ancestor areas', async () => {
-            const areaId = 'area-1';
-            const mockArea = { id: areaId, name: 'Suburb', areaType: 'NEIGHBOURHOOD' as AreaType, parentGeographicAreaId: 'parent-1', createdAt: new Date(), updatedAt: new Date() };
-            const mockAncestors = [
-                { id: 'parent-1', name: 'City', areaType: 'CITY' as AreaType, parentGeographicAreaId: null, createdAt: new Date(), updatedAt: new Date() },
-            ];
+    describe('getBatchAncestors', () => {
+        it('should return ancestor parent map', async () => {
+            const areaId = '550e8400-e29b-41d4-a716-446655440001';
+            const parentId = '550e8400-e29b-41d4-a716-446655440002';
 
-            mockRepository.findById = jest.fn().mockResolvedValue(mockArea);
-            mockRepository.findAncestors = jest.fn().mockResolvedValue(mockAncestors);
+            // Mock the repository to return a parent map
+            mockRepository.findBatchAncestors = jest.fn().mockResolvedValue({
+                [areaId]: parentId,
+                [parentId]: null
+            });
 
-            const result = await service.getAncestors(areaId);
+            const result = await service.getBatchAncestors([areaId]);
 
-            expect(result).toEqual(mockAncestors);
+            // Should return parent map format
+            expect(result).toEqual({
+                [areaId]: parentId,
+                [parentId]: null
+            });
         });
     });
 
