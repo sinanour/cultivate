@@ -2606,3 +2606,56 @@ if (geographicAreaId) {
   - Verify performance is optimized (database-level filtering)
   - Confirm single code path handles all filtering scenarios
   - Test backward compatibility (no filters = return all entities)
+
+
+- [x] 46. Fix geographic authorization regression for depth-limited queries
+  - **Issue:** When a user with geographic restrictions makes an unfiltered call to `/api/v1/geographic-areas?depth=1`, they receive ALL areas instead of only authorized areas
+  - **Root Cause:** The `getAllGeographicAreasFlexible` method bypasses authorization filtering when `depth` parameter is specified, calling `findWithDepth` directly without filtering results
+  - **Requirements Violated:** 24.18 (apply geographic authorization filtering to GET /api/v1/geographic-areas), 24.23 (implicit filtering when no explicit geographicAreaId provided)
+  - **Fix Applied:** Updated both `getAllGeographicAreas` and `getAllGeographicAreasFlexible` methods to apply authorization filtering when depth is specified, including flattening nested structures and filtering to authorized areas only
+  - _Requirements: 24.18, 24.23, 24.14, 24.13_
+
+  - [x] 46.1 Fix getAllGeographicAreasFlexible to apply authorization when depth is specified
+    - When `depth` is specified AND user has geographic restrictions (`hasGeographicRestrictions === true`)
+    - After calling `findWithDepth`, filter the returned areas to only include those in `effectiveAreaIds`
+    - Apply the same filtering logic used in the non-depth code path
+    - Ensure ancestors are still included when `geographicAreaId` is provided (for hierarchy context)
+    - When no explicit `geographicAreaId` is provided, filter results to `effectiveAreaIds` union `readOnlyAreaIds`
+    - Added `flattenGeographicAreas` helper method to flatten nested structures returned by `findWithDepth`
+    - Fixed off-by-one issue with `findWithDepth` depth parameter (depth=N fetches N+1 levels)
+    - _Requirements: 24.18, 24.23, 24.14_
+
+  - [x] 46.2 Fix getAllGeographicAreasPaginatedFlexible to apply authorization when depth is specified
+    - Apply the same authorization filtering fix to the paginated version
+    - When `depth` is specified, call `getAllGeographicAreasFlexible` which now has the fix
+    - Ensure pagination metadata reflects the filtered count, not the unfiltered count
+    - _Requirements: 24.18, 24.23, 24.14_
+
+  - [x] 46.3 Fix getAllGeographicAreas (legacy method) to apply authorization when depth is specified
+    - Apply the same authorization filtering fix to the legacy non-flexible method
+    - When `depth` is specified AND user has geographic restrictions
+    - Filter results from `findWithDepth` to only include authorized areas
+    - Maintain backward compatibility with existing callers
+    - _Requirements: 24.18, 24.23, 24.14_
+
+  - [x] 46.4 Fix getAllGeographicAreasPaginated (legacy method) to apply authorization when depth is specified
+    - Apply the same authorization filtering fix to the legacy paginated method
+    - When `depth` is specified, call `getAllGeographicAreas` which now has the fix
+    - Ensure pagination metadata reflects the filtered count
+    - _Requirements: 24.18, 24.23, 24.14_
+
+  - [x]* 46.5 Write integration test for geographic authorization with depth parameter
+    - Create test user with geographic restrictions (ALLOW rule for specific area)
+    - Make unfiltered request to GET /api/v1/geographic-areas?depth=1
+    - Verify response only includes authorized areas (not all areas)
+    - Verify top-level areas outside authorization scope are excluded
+    - Test with depth=0, depth=1, depth=2 to ensure filtering works at all depth levels
+    - Test with explicit geographicAreaId + depth to ensure ancestors are still included
+    - **Validates: Requirements 24.18, 24.23, 24.14, 24.13**
+
+- [x] 47. Checkpoint - Verify geographic authorization depth filtering fix
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test unfiltered requests with depth parameter return only authorized areas
+  - Test explicit geographicAreaId + depth still includes ancestors for context
+  - Verify no regression in non-depth queries
+  - **Result:** All 8 new integration tests passing, all 50 geographic area tests passing

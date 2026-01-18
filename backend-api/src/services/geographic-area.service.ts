@@ -48,6 +48,26 @@ export class GeographicAreaService {
     ) { }
 
     /**
+     * Flattens a nested geographic area structure (with children property) into a flat array
+     */
+    private flattenGeographicAreas(areas: any[]): GeographicArea[] {
+        const result: GeographicArea[] = [];
+
+        for (const area of areas) {
+            // Add the area itself (without children property)
+            const { children, ...areaWithoutChildren } = area;
+            result.push(areaWithoutChildren);
+
+            // Recursively add children
+            if (children && children.length > 0) {
+                result.push(...this.flattenGeographicAreas(children));
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Determines the effective geographic area IDs to filter by, considering:
      * 1. Explicit geographicAreaId parameter (if provided, validate authorization)
      * 2. Implicit filtering based on user's authorized areas (if user has restrictions)
@@ -111,16 +131,92 @@ export class GeographicAreaService {
 
         // If depth is specified, use depth-limited fetching
         if (depth !== undefined) {
-            const parentId = geographicAreaId || null;
-            const areas = await this.geographicAreaRepository.findWithDepth(parentId, depth);
+            if (effectiveAreaIds) {
+                // User has geographic restrictions
+                if (geographicAreaId) {
+                    // Explicit filter: fetch from the specified area
+                    const requestedArea = await this.geographicAreaRepository.findById(geographicAreaId);
+                    if (!requestedArea) {
+                        throw new Error('Geographic area not found');
+                    }
 
-            // If filtering by geographic area, also fetch ancestors for context
-            if (geographicAreaId) {
-                const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
-                return [...ancestors, ...areas];
+                    // Fetch children of the requested area
+                    // Note: findWithDepth has an off-by-one - depth=N fetches N+1 levels
+                    // So to get depth levels, we need to call with depth-1
+                    const fetchDepth = Math.max(0, depth - 1);
+                    const children = await this.geographicAreaRepository.findWithDepth(geographicAreaId, fetchDepth);
+
+                    // Flatten and combine with requested area
+                    const flatChildren = this.flattenGeographicAreas(children);
+                    const allAreas = [requestedArea, ...flatChildren];
+
+                    // Filter to only authorized areas
+                    const allowedAreaIds = new Set(effectiveAreaIds);
+                    const readOnlyIds = new Set(readOnlyAreaIds);
+                    const authorizedAreas = allAreas.filter(area =>
+                        allowedAreaIds.has(area.id) || readOnlyIds.has(area.id)
+                    );
+
+                    // Fetch and filter ancestors for context
+                    const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+                    const authorizedAncestors = ancestors.filter(a =>
+                        allowedAreaIds.has(a.id) || readOnlyIds.has(a.id)
+                    );
+                    return [...authorizedAncestors, ...authorizedAreas];
+                } else {
+                    // No explicit filter - fetch from authorized top-level areas only
+                    // Find which authorized areas are top-level (have no parent or parent is not authorized)
+                    const allAuthorizedIds = [...effectiveAreaIds, ...readOnlyAreaIds];
+                    const allAuthorizedAreas = await this.prisma.geographicArea.findMany({
+                        where: { id: { in: allAuthorizedIds } },
+                        include: { parent: true },
+                    });
+
+                    // Find top-level authorized areas (no parent or parent not in authorized set)
+                    const authorizedSet = new Set(allAuthorizedIds);
+                    const topLevelAuthorizedAreas = allAuthorizedAreas.filter(area =>
+                        !area.parentGeographicAreaId || !authorizedSet.has(area.parentGeographicAreaId)
+                    );
+
+                    // Fetch children for each top-level authorized area
+                    const areasWithChildren = await Promise.all(
+                        topLevelAuthorizedAreas.map(async (topArea) => {
+                            if (depth === 0) {
+                                return [topArea];
+                            }
+                            // findWithDepth(parentId, depth) fetches children of parentId up to depth levels
+                            // Note: findWithDepth has an off-by-one - depth=N fetches N+1 levels
+                            // So to get depth levels, we need to call with depth-1
+                            const fetchDepth = Math.max(0, depth - 1);
+                            const children = await this.geographicAreaRepository.findWithDepth(topArea.id, fetchDepth);
+
+                            // Flatten the nested structure
+                            const flatChildren = this.flattenGeographicAreas(children);
+
+                            // Filter children to only authorized
+                            const allowedAreaIds = new Set(effectiveAreaIds);
+                            const readOnlyIds = new Set(readOnlyAreaIds);
+                            const authorizedChildren = flatChildren.filter(child =>
+                                allowedAreaIds.has(child.id) || readOnlyIds.has(child.id)
+                            );
+                            return [topArea, ...authorizedChildren];
+                        })
+                    );
+
+                    return areasWithChildren.flat();
+                }
+            } else {
+            // No restrictions - fetch normally
+                const parentId = geographicAreaId || null;
+                const areas = await this.geographicAreaRepository.findWithDepth(parentId, depth);
+
+                if (geographicAreaId) {
+                    const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+                    return [...ancestors, ...areas];
+                }
+
+                return areas;
             }
-
-            return areas;
         }
 
         if (!effectiveAreaIds) {
@@ -288,36 +384,155 @@ export class GeographicAreaService {
 
         // If depth is specified, use depth-limited fetching
         if (depth !== undefined) {
-            const parentId = geographicAreaId || null;
-            const areas = await this.geographicAreaRepository.findWithDepth(parentId, depth);
+            let areas: GeographicArea[];
 
-            // Apply flexible filter if provided
-            let filteredAreas = areas;
-            if (flexibleWhere) {
-                const queryOptions: any = {
-                    where: {
-                        AND: [
-                            { id: { in: areas.map(a => a.id) } },
-                            flexibleWhere
-                        ]
-                    },
-                    orderBy: { name: 'asc' }
-                };
+            if (effectiveAreaIds) {
+                // User has geographic restrictions
+                if (geographicAreaId) {
+                    // Explicit filter: fetch from the specified area
+                    const requestedArea = await this.geographicAreaRepository.findById(geographicAreaId);
+                    if (!requestedArea) {
+                        throw new Error('Geographic area not found');
+                    }
 
-                if (select) {
-                    queryOptions.select = select;
+                    // Fetch children of the requested area
+                    // Note: findWithDepth has an off-by-one - depth=N fetches N+1 levels
+                    // So to get depth levels, we need to call with depth-1
+                    const fetchDepth = Math.max(0, depth - 1);
+                    const children = await this.geographicAreaRepository.findWithDepth(geographicAreaId, fetchDepth);
+
+                    // Flatten and combine with requested area
+                    const flatChildren = this.flattenGeographicAreas(children);
+                    const allAreas = [requestedArea, ...flatChildren];
+
+                    // Filter to only authorized areas
+                    const allowedAreaIds = new Set(effectiveAreaIds);
+                    const readOnlyIds = new Set(readOnlyAreaIds);
+                    let authorizedAreas = allAreas.filter(area =>
+                        allowedAreaIds.has(area.id) || readOnlyIds.has(area.id)
+                    );
+
+                    // Apply flexible filter if provided
+                    if (flexibleWhere) {
+                        const queryOptions: any = {
+                            where: {
+                                AND: [
+                                    { id: { in: authorizedAreas.map(a => a.id) } },
+                                    flexibleWhere
+                                ]
+                            },
+                            orderBy: { name: 'asc' }
+                        };
+
+                        if (select) {
+                            queryOptions.select = select;
+                        }
+
+                        authorizedAreas = await this.prisma.geographicArea.findMany(queryOptions);
+                    }
+
+                    // Fetch and filter ancestors for context
+                    const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+                    const authorizedAncestors = ancestors.filter(a =>
+                        allowedAreaIds.has(a.id) || readOnlyIds.has(a.id)
+                    );
+                    return [...authorizedAncestors, ...authorizedAreas];
+                } else {
+                    // No explicit filter - fetch from authorized top-level areas only
+                    // Find which authorized areas are top-level (have no parent or parent is not authorized)
+                    const allAuthorizedIds = [...effectiveAreaIds, ...readOnlyAreaIds];
+                    const allAuthorizedAreas = await this.prisma.geographicArea.findMany({
+                        where: { id: { in: allAuthorizedIds } },
+                        include: { parent: true },
+                    });
+
+                    // Find top-level authorized areas (no parent or parent not in authorized set)
+                    const authorizedSet = new Set(allAuthorizedIds);
+                    const topLevelAuthorizedAreas = allAuthorizedAreas.filter(area =>
+                        !area.parentGeographicAreaId || !authorizedSet.has(area.parentGeographicAreaId)
+                    );
+
+
+                    // Fetch children for each top-level authorized area
+                    const areasWithChildren = await Promise.all(
+                        topLevelAuthorizedAreas.map(async (topArea) => {
+                            if (depth === 0) {
+                                return [topArea];
+                            }
+                            // findWithDepth(parentId, depth) fetches children of parentId up to depth levels
+                            // Note: findWithDepth has an off-by-one - depth=N fetches N+1 levels
+                            // So to get depth levels, we need to call with depth-1
+                            const fetchDepth = Math.max(0, depth - 1);
+                            const children = await this.geographicAreaRepository.findWithDepth(topArea.id, fetchDepth);
+
+                            // Flatten the nested structure
+                            const flatChildren = this.flattenGeographicAreas(children);
+
+                            // Filter children to only authorized
+                            const allowedAreaIds = new Set(effectiveAreaIds);
+                            const readOnlyIds = new Set(readOnlyAreaIds);
+                            const authorizedChildren = flatChildren.filter(child =>
+                                allowedAreaIds.has(child.id) || readOnlyIds.has(child.id)
+                            );
+                            return [topArea, ...authorizedChildren];
+                        })
+                    );
+
+                    let flatAreas = areasWithChildren.flat();
+
+                    // Apply flexible filter if provided
+                    if (flexibleWhere) {
+                        const queryOptions: any = {
+                            where: {
+                                AND: [
+                                    { id: { in: flatAreas.map(a => a.id) } },
+                                    flexibleWhere
+                                ]
+                            },
+                            orderBy: { name: 'asc' }
+                        };
+
+                        if (select) {
+                            queryOptions.select = select;
+                        }
+
+                        flatAreas = await this.prisma.geographicArea.findMany(queryOptions);
+                    }
+
+                    return flatAreas;
+                }
+            } else {
+            // No restrictions - fetch normally
+                const parentId = geographicAreaId || null;
+                areas = await this.geographicAreaRepository.findWithDepth(parentId, depth);
+
+                // Apply flexible filter if provided
+                let filteredAreas = areas;
+                if (flexibleWhere) {
+                    const queryOptions: any = {
+                        where: {
+                            AND: [
+                                { id: { in: areas.map(a => a.id) } },
+                                flexibleWhere
+                            ]
+                        },
+                        orderBy: { name: 'asc' }
+                    };
+
+                    if (select) {
+                        queryOptions.select = select;
+                    }
+
+                    filteredAreas = await this.prisma.geographicArea.findMany(queryOptions);
                 }
 
-                filteredAreas = await this.prisma.geographicArea.findMany(queryOptions);
-            }
+                if (geographicAreaId) {
+                    const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+                    return [...ancestors, ...filteredAreas];
+                }
 
-            // If filtering by geographic area, also fetch ancestors for context
-            if (geographicAreaId) {
-                const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
-                return [...ancestors, ...filteredAreas];
+                return filteredAreas;
             }
-
-            return filteredAreas;
         }
 
         if (!effectiveAreaIds) {
