@@ -41,8 +41,28 @@ export class AuthService {
     }
 
     static logout(): void {
+        // Clear tokens from localStorage
         localStorage.removeItem(this.TOKEN_KEY);
         localStorage.removeItem(this.USER_KEY);
+
+        // Clear any other user-specific localStorage items
+        // Check for and remove any keys that might contain user-specific data
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+                key.includes('user') ||
+                key.includes('auth') ||
+                key.includes('profile') ||
+                key === 'globalGeographicAreaFilter' // Clear user's filter preference
+            )) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        // Clear React Query cache (will be called from AuthContext with queryClient reference)
+        // This is handled in AuthContext.logout() which calls this method
     }
 
     static async refreshToken(): Promise<AuthTokens> {

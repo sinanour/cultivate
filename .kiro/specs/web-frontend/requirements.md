@@ -1009,8 +1009,9 @@ The Web Frontend package provides a responsive React-based web application that 
 4. THE Web_App SHALL redirect to the main application after successful login
 5. THE Web_App SHALL store authentication tokens securely
 6. THE Web_App SHALL provide a logout button
-7. THE Web_App SHALL redirect to login when tokens expire
-8. WHEN a user is redirected to the login page due to being unauthenticated, THE Web_App SHALL capture the original URL
+7. WHEN a user logs out, THE Web_App SHALL purge all local authentication state including tokens, user profile data, and any cached user-specific information
+8. THE Web_App SHALL redirect to login when tokens expire
+9. WHEN a user is redirected to the login page due to being unauthenticated, THE Web_App SHALL capture the original URL
 9. WHEN a user successfully authenticates after being redirected from a protected route, THE Web_App SHALL redirect the user back to the original URL they were attempting to access
 10. WHEN a user successfully authenticates, THE Web_App SHALL display an animated transition sequence before navigation
 11. THE animated transition SHALL fade out the login form container over 1000 milliseconds until it disappears

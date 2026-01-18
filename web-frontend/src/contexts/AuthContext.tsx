@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { createContext, useState, useEffect } from 'react';
 import type { User, AuthTokens } from '../types';
 import { AuthService } from '../services/auth/auth.service';
+import { queryClient } from '../queryClient';
 
 interface AuthContextType {
   user: User | null;
@@ -73,7 +74,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = () => {
+    // Clear localStorage and tokens
     AuthService.logout();
+    
+    // Clear React Query cache to remove all user-specific cached data
+    queryClient.clear();
+    
+    // Clear component state
     setUser(null);
     setTokens(null);
   };

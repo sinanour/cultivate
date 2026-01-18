@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, renderHook, act } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../AuthContext';
 import { AuthService } from '../../services/auth/auth.service';
 import { useAuth } from '../../hooks/useAuth';
+import { queryClient } from '../../queryClient';
 
 vi.mock('../../services/auth/auth.service');
 
@@ -20,6 +22,8 @@ describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    // Clear the shared queryClient before each test
+    queryClient.clear();
   });
 
   it('should provide initial unauthenticated state', async () => {
@@ -27,9 +31,11 @@ describe('AuthContext', () => {
     vi.spyOn(AuthService, 'getCurrentUser').mockReturnValue(null);
 
     render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {
@@ -56,9 +62,11 @@ describe('AuthContext', () => {
     vi.spyOn(AuthService, 'isTokenExpired').mockReturnValue(false);
 
     render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {
@@ -94,9 +102,11 @@ describe('AuthContext', () => {
     vi.spyOn(AuthService, 'fetchCurrentUser').mockResolvedValue(mockUser);
 
     render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {
@@ -126,9 +136,11 @@ describe('AuthContext', () => {
     vi.spyOn(AuthService, 'logout').mockImplementation(() => {});
 
     render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {
@@ -136,5 +148,109 @@ describe('AuthContext', () => {
     });
 
     expect(AuthService.logout).toHaveBeenCalled();
+  });
+
+  describe('logout', () => {
+    it('should clear all authentication state and React Query cache', async () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@example.com',
+        name: 'Test User',
+        role: 'EDITOR' as const,
+      };
+      const mockTokens = {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      };
+
+      vi.spyOn(AuthService, 'getStoredTokens').mockReturnValue(mockTokens);
+      vi.spyOn(AuthService, 'getCurrentUser').mockReturnValue(mockUser);
+      vi.spyOn(AuthService, 'isTokenExpired').mockReturnValue(false);
+      vi.spyOn(AuthService, 'logout').mockImplementation(() => {
+        localStorage.clear();
+      });
+
+      // Add some data to React Query cache
+      queryClient.setQueryData(['user-profile'], mockUser);
+      queryClient.setQueryData(['participants'], [{ id: '1', name: 'Participant 1' }]);
+      
+      expect(queryClient.getQueryData(['user-profile'])).toBeDefined();
+      expect(queryClient.getQueryData(['participants'])).toBeDefined();
+
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryClientProvider>
+        ),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isAuthenticated).toBe(true);
+      });
+
+      // Perform logout
+      act(() => {
+        result.current.logout();
+      });
+
+      // Verify AuthService.logout was called
+      expect(AuthService.logout).toHaveBeenCalled();
+
+      // Verify state is cleared
+      expect(result.current.user).toBeNull();
+      expect(result.current.tokens).toBeNull();
+      expect(result.current.isAuthenticated).toBe(false);
+
+      // Verify React Query cache is cleared
+      expect(queryClient.getQueryData(['user-profile'])).toBeUndefined();
+      expect(queryClient.getQueryData(['participants'])).toBeUndefined();
+    });
+
+    it('should clear localStorage items on logout', async () => {
+      // Set up localStorage with various items
+      localStorage.setItem('authTokens', JSON.stringify({ accessToken: 'token' }));
+      localStorage.setItem('authUser', JSON.stringify({ id: '1' }));
+      localStorage.setItem('globalGeographicAreaFilter', 'area-123');
+      localStorage.setItem('someOtherKey', 'should-remain');
+
+      vi.spyOn(AuthService, 'logout').mockImplementation(() => {
+        // Simulate the actual logout implementation
+        localStorage.removeItem('authTokens');
+        localStorage.removeItem('authUser');
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes('user') || key.includes('auth') || key === 'globalGeographicAreaFilter')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+      });
+
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryClientProvider>
+        ),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      act(() => {
+        result.current.logout();
+      });
+
+      // Verify auth-related items are cleared
+      expect(localStorage.getItem('authTokens')).toBeNull();
+      expect(localStorage.getItem('authUser')).toBeNull();
+      expect(localStorage.getItem('globalGeographicAreaFilter')).toBeNull();
+      
+      // Verify non-auth items remain
+      expect(localStorage.getItem('someOtherKey')).toBe('should-remain');
+    });
   });
 });

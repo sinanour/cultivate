@@ -1499,7 +1499,12 @@ interface PropertyFilterOption {
 
 **AuthService**
 - `login(email, password)`: Authenticates user and returns JWT tokens (access token expires in 15 minutes, refresh token in 7 days)
-- `logout()`: Clears tokens and redirects to login
+- `logout()`: Purges all local authentication state including:
+  - Clears access token and refresh token from localStorage
+  - Clears user profile data from AuthContext state
+  - Clears React Query cache for user-specific data
+  - Clears any other cached user-specific information
+  - Redirects to login page
 - `refreshToken(refreshToken)`: Refreshes expired access token using refresh token
 - `getCurrentUser()`: Fetches current user info from `/auth/me` endpoint
 - `decodeToken(token)`: Decodes JWT to extract user information (userId, email, role)
@@ -4553,7 +4558,12 @@ Accessibility tests ensure WCAG 2.1 AA compliance using axe-core.
 **Token Storage:**
 - Store access tokens in memory only (expires in 15 minutes)
 - Store refresh tokens in localStorage or httpOnly cookies (expires in 7 days)
-- Clear tokens on logout
+- Clear tokens on logout along with all user-specific state:
+  - Remove access token and refresh token from localStorage
+  - Clear user profile data from AuthContext
+  - Clear React Query cache to remove user-specific cached data
+  - Clear any localStorage items containing user-specific information
+  - Reset application state to unauthenticated baseline
 - Decode JWT access token to extract user information (userId, email, role)
 
 **XSS Prevention:**

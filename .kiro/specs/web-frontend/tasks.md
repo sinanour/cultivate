@@ -69,7 +69,12 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 3. Implement authentication system
   - [x] 3.1 Create authentication service
     - Implement login API call (returns access token with 15 min expiry, refresh token with 7 day expiry)
-    - Implement logout functionality
+    - Implement logout functionality with complete state purging:
+      - Clear access token and refresh token from localStorage
+      - Clear user profile data from AuthContext state
+      - Clear React Query cache for user-specific data
+      - Clear any other cached user-specific information
+      - Redirect to login page
     - Implement token refresh using refresh token
     - Implement JWT token decoding to extract user info (userId, email, role)
     - Implement getCurrentUser() to fetch from /auth/me endpoint

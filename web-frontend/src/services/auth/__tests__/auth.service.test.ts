@@ -106,6 +106,30 @@ describe('AuthService', () => {
             expect(localStorage.getItem('authTokens')).toBeNull();
             expect(localStorage.getItem('authUser')).toBeNull();
         });
+
+        it('should clear all user-specific localStorage items', () => {
+            // Set up various user-specific items
+            localStorage.setItem('authTokens', JSON.stringify({ accessToken: 'token', refreshToken: 'refresh' }));
+            localStorage.setItem('authUser', JSON.stringify({ id: '1', name: 'Test' }));
+            localStorage.setItem('userPreferences', JSON.stringify({ theme: 'dark' }));
+            localStorage.setItem('globalGeographicAreaFilter', 'area-123');
+            localStorage.setItem('someOtherKey', 'should-remain');
+
+            AuthService.logout();
+
+            // Auth-related items should be cleared
+            expect(localStorage.getItem('authTokens')).toBeNull();
+            expect(localStorage.getItem('authUser')).toBeNull();
+            expect(localStorage.getItem('userPreferences')).toBeNull();
+            expect(localStorage.getItem('globalGeographicAreaFilter')).toBeNull();
+
+            // Non-auth items should remain
+            expect(localStorage.getItem('someOtherKey')).toBe('should-remain');
+        });
+
+        it('should handle empty localStorage gracefully', () => {
+            expect(() => AuthService.logout()).not.toThrow();
+        });
     });
 
     describe('refreshToken', () => {
