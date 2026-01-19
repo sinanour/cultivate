@@ -665,11 +665,18 @@ src/
 - Caches popup content locally to avoid refetching when same marker is clicked multiple times
 - Displays error message with retry button when popup content fails to load
 
-**MapView with FilterGroupingPanel**
+**MapViewPage Layout**
+- Displays page title "Map View" and description at the top of the page (outside any container)
+- Uses the same header layout pattern as Engagement and Growth dashboards
+- Does NOT wrap title and description in a Container component
+- Positions title and description directly in the page content area
+- Displays FilterGroupingPanel component below the title/description with "Filters and Grouping" as its header
+- Does NOT include a "Run Report" button (map view is not a report-based interface)
 - Uses FilterGroupingPanel component for unified filtering and map mode selection
 - Configures FilterGroupingPanel with:
   - Exclusive grouping mode supporting map modes: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
   - Filter properties: activity category, activity type, status, date range, population
+  - hideUpdateButton={false} to display the "Update" button (unlike analytics dashboards)
   - Disables population filter when map mode is "Venues"
   - Enables population filter when map mode is "Activities by Type", "Activities by Category", or "Participant Homes"
 - When "Update" button clicked on FilterGroupingPanel: fetches new marker data with selected filters and map mode
@@ -683,7 +690,7 @@ src/
   - Passes absolute startDate and endDate strings to MapView component
   - MapView passes dates to MapDataService for API requests
   - Triggers marker refetch when date range changes
-- Renders interactive map using Leaflet or Mapbox GL JS
+- Renders interactive map using Leaflet or Mapbox GL JS below the FilterGroupingPanel
 
 #### 13. Analytics Dashboards
 
@@ -1232,7 +1239,7 @@ src/
 **FilterGroupingPanel**
 - Reusable component for consistent filtering and grouping interface across data visualization pages and list pages
 - Combines date range selection, property-based filtering, and optional grouping controls in a unified panel
-- Provides explicit "Update" button to apply selected filters and grouping options
+- Provides explicit "Update" button to apply selected filters and grouping options (can be hidden via hideUpdateButton prop)
 - Supports both additive grouping (multi-select) and exclusive grouping (SegmentedControl) modes
 - Supports filtering-only mode without grouping controls for list pages
 - Uses vertical stacked layout where each filtering component renders on its own row:
@@ -1241,7 +1248,7 @@ src/
   3. **Third row** (if grouping controls are included): Grouping controls (multi-select dropdown or SegmentedControl based on mode) spanning full width
 - Action buttons (Update and Clear All) are positioned on the first row, beside the first filtering component with appropriate spacing
 - Each filtering component (DateRangePicker, PropertyFilter, grouping controls) occupies its own horizontal row
-- Does NOT automatically apply filters as user makes selections
+- Does NOT automatically apply filters as user makes selections (unless hideUpdateButton is true)
 - Allows users to adjust multiple filters and grouping options before applying
 - Invokes callback with complete filter and grouping state when "Update" button is clicked
 - Maintains internal state for user selections until "Update" is clicked
@@ -1256,6 +1263,12 @@ src/
 - Uses consistent styling and layout across all pages
 - Responsive design adapts to different screen sizes
 - Provides clear labels for all controls
+
+**hideUpdateButton Behavior:**
+- When hideUpdateButton prop is true: hides the "Update" button, displays only "Clear All" button
+- When hideUpdateButton is true: automatically invokes onUpdate callback whenever filter or grouping selections change
+- Used on Engagement and Growth dashboards with Run Report pattern (hideUpdateButton=true)
+- Used on Map View and list pages with explicit Update button (hideUpdateButton=false or omitted)
 
 **Lazy Loading Support for High-Cardinality Properties:**
 - Accepts lazy loading callback functions for each filter property to support high-cardinality dimensions

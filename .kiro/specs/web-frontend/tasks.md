@@ -991,9 +991,15 @@ This implementation plan covers the React-based web application built with TypeS
     - Enable population filter when mode is "Activities by Type", "Activities by Category", or "Participant Homes"
     - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56_
 
-  - [ ] 13.4a Integrate FilterGroupingPanel into MapView
+  - [x] 13.4a Integrate FilterGroupingPanel into MapView and update page header layout
+    - Update MapViewPage component to match analytics dashboard header pattern
+    - Display page title "Map View" at the top of the page (outside any container)
+    - Display page description below the title explaining the map visualization
+    - Do NOT wrap title and description in a Container component
+    - Position title and description directly in the page content area
     - Import FilterGroupingPanel component
     - Remove existing MapFilters component or refactor it to use FilterGroupingPanel
+    - Display FilterGroupingPanel below the title/description with "Filters and Grouping" as its header
     - Configure FilterGroupingPanel with exclusive grouping mode
     - Set groupingDimensions to: ['Activities by Type', 'Activities by Category', 'Participant Homes', 'Venues']
     - Set filterProperties with lazy loading callbacks for each property:
@@ -1001,6 +1007,7 @@ This implementation plan covers the React-based web application built with TypeS
       - Activity Type: loadItems callback fetches from ActivityTypeService
       - Status: loadItems callback provides predefined status options (PLANNED, ACTIVE, COMPLETED, CANCELLED)
       - Population: loadItems callback fetches from PopulationService
+    - Pass hideUpdateButton={false} to display the "Update" button (unlike analytics dashboards)
     - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
     - Extract dateRange, filterTokens, and map mode (grouping string) from FilterGroupingState
     - Convert filter tokens to API query parameters for marker endpoints
@@ -1008,7 +1015,9 @@ This implementation plan covers the React-based web application built with TypeS
     - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during marker fetching
     - Pass disablePopulationFilter prop based on selected map mode (true when mode is "Venues")
-    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56, 6C.57, 6C.58, 6C.59, 6C.60, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.51, 7C.54_
+    - Do NOT include a "Run Report" button (map view is not a report-based interface)
+    - Render the interactive map component below the FilterGroupingPanel
+    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56, 6C.57, 6C.58, 6C.59, 6C.60, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.51, 7C.54, 7C.61, 7C.62, 7C.63, 7C.64, 7C.65, 7C.66_
 
   - [x] 13.5 Update global geographic filter integration
     - Apply global filter to all map modes
@@ -1048,6 +1057,45 @@ This implementation plan covers the React-based web application built with TypeS
       - When hideUpdateButton is false: display both "Update" and "Clear All" buttons
     - Second row (if DateRangePicker is on first row): PropertyFilter component spanning full width
     - Third row (if grouping controls included): Grouping controls spanning full width
+    - Implement internal state management for pending changes (dateRange, filterTokens, grouping)
+    - Track whether current state differs from last applied state (isDirty flag)
+    - Render CloudScape DateRangePicker component for date range selection (when includeDateRange=true)
+    - Render CloudScape PropertyFilter component with provided filterProperties
+    - Configure PropertyFilter to use loadItems callbacks from filterProperties prop for lazy loading
+    - When user types in PropertyFilter input: invoke corresponding property's loadItems callback with user's input text
+    - Implement 300ms debouncing for loadItems callback invocations
+    - Display loading indicator in PropertyFilter while waiting for loadItems results
+    - Handle loadItems callback errors gracefully with error messages
+    - When groupingMode is 'additive': render CloudScape Multiselect for grouping dimensions
+    - When groupingMode is 'exclusive': render CloudScape SegmentedControl for grouping options
+    - When groupingMode is 'none': omit grouping controls entirely
+    - Render "Update" button using CloudScape Button with variant="primary" (only when hideUpdateButton is false)
+    - When hideUpdateButton is true: automatically invoke onUpdate callback whenever filter or grouping selections change
+    - When hideUpdateButton is false: require explicit "Update" button click to invoke onUpdate callback
+    - Disable "Update" button when isDirty is false (no changes made)
+    - Enable "Update" button when isDirty is true (changes pending)
+    - When "Update" button clicked: invoke onUpdate callback with current FilterGroupingState
+    - When "Update" button clicked: synchronize state to URL query parameters
+    - When "Update" button clicked: mark current state as applied (set isDirty to false)
+    - Render "Clear All" button using CloudScape Button
+    - When "Clear All" clicked: reset dateRange to null, clear filterTokens array, reset grouping to default
+    - When "Clear All" clicked: remove all filter-related URL query parameters while preserving other page parameters
+    - When isLoading prop is true: display loading indicator on "Update" button (if visible)
+    - When isLoading prop is true: disable all controls (DateRangePicker, PropertyFilter, grouping controls)
+    - When disablePopulationFilter prop is true: disable or hide population property in PropertyFilter
+    - Implement URL synchronization using React Router's useSearchParams hook:
+      - Read URL query parameters on component mount to initialize filter state
+      - Use consistent naming pattern with urlParamPrefix (e.g., "filter_activityCategory", "filter_venue")
+      - Map property filters to URL: `filter_<propertyKey>=value1,value2` (comma-separated for multiple values)
+      - Map date range to URL: `filter_startDate=YYYY-MM-DD&filter_endDate=YYYY-MM-DD`
+      - Map grouping (additive) to URL: `filter_groupBy=dim1,dim2,dim3`
+      - Map grouping (exclusive) to URL: `filter_groupBy=selectedOption`
+      - When updating URL, preserve all existing query parameters that don't use the filter prefix
+      - When clearing filters, remove only parameters with the filter prefix
+      - Use setSearchParams with replace: false to support browser back/forward navigation
+    - Provide accessible keyboard navigation for all controls
+    - Include appropriate ARIA labels for screen readers
+    - _Requirements: 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.15a, 7C.15b, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36, 7C.37, 7C.38, 7C.39, 7C.40, 7C.41, 7C.42, 7C.43, 7C.44, 7C.45, 7C.46, 7C.47, 7C.48, 7C.49, 7C.50, 7C.51, 7C.52_
     - Implement internal state management for pending changes (dateRange, filterTokens, grouping)
     - Track whether current state differs from last applied state (isDirty flag)
     - Render CloudScape DateRangePicker component for date range selection (when includeDateRange=true)
@@ -1136,6 +1184,8 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 196a: FilterGroupingPanel First Row Layout with Action Buttons**
     - **Property 196b: FilterGroupingPanel Action Button Positioning**
     - **Property 197: FilterGroupingPanel Update Button Behavior**
+    - **Property 197a: FilterGroupingPanel hideUpdateButton Behavior**
+    - **Property 197b: FilterGroupingPanel Automatic Update on Change When hideUpdateButton is True**
     - **Property 198: FilterGroupingPanel Additive Grouping Mode**
     - **Property 199: FilterGroupingPanel Exclusive Grouping Mode**
     - **Property 200: FilterGroupingPanel Clear All Functionality**
@@ -1148,7 +1198,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 216: FilterGroupingPanel URL Parameter Namespace Isolation**
     - **Property 217: FilterGroupingPanel URL Initialization from Parameters**
     - **Property 218: FilterGroupingPanel Browser Navigation Support**
-    - **Validates: Requirements 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36, 7C.37, 7C.38, 7C.39, 7C.40, 7C.41, 7C.42, 7C.43, 7C.44, 7C.45, 7C.46, 7C.47, 7C.48, 7C.49, 7C.50, 7C.51, 7C.52**
+    - **Validates: Requirements 7C.1, 7C.2, 7C.3, 7C.4, 7C.5, 7C.6, 7C.7, 7C.8, 7C.9, 7C.10, 7C.11, 7C.12, 7C.13, 7C.14, 7C.15, 7C.15a, 7C.15b, 7C.16, 7C.17, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.31, 7C.32, 7C.33, 7C.34, 7C.35, 7C.36, 7C.37, 7C.38, 7C.39, 7C.40, 7C.41, 7C.42, 7C.43, 7C.44, 7C.45, 7C.46, 7C.47, 7C.48, 7C.49, 7C.50, 7C.51, 7C.52**
 
 - [x] 14. Implement analytics dashboards
   - [x] 14.0 Integrate FilterGroupingPanel into EngagementDashboard with Run Report pattern

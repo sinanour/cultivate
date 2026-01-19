@@ -935,6 +935,8 @@ The Web Frontend package provides a responsive React-based web application that 
 13. THE FilterGroupingPanel SHALL allow users to adjust multiple filters and grouping options before applying them all at once
 14. WHEN the grouping mode is additive, THE FilterGroupingPanel SHALL display a multi-select dropdown component for grouping dimension selection
 15. WHEN the grouping mode is exclusive, THE FilterGroupingPanel SHALL display a CloudScape SegmentedControl component for grouping dimension selection
+15a. THE FilterGroupingPanel SHALL support a hideUpdateButton prop that when set to true, hides the "Update" button while keeping the "Clear All" button visible
+15b. WHEN hideUpdateButton is true, THE FilterGroupingPanel SHALL automatically invoke the onUpdate callback whenever filter or grouping selections change (without requiring an explicit "Update" button click)
 
 **Configuration and Props:**
 
@@ -996,6 +998,14 @@ The Web Frontend package provides a responsive React-based web application that 
 56. WHEN used on the Engagement Dashboard, THE FilterGroupingPanel SHALL support additive grouping with dimensions: activity category, activity type, venue, geographic area
 57. WHEN used on the Growth Dashboard, THE FilterGroupingPanel SHALL support exclusive grouping with options: "All", "Activity Type", "Activity Category"
 58. WHEN used on the Map View, THE FilterGroupingPanel SHALL support exclusive grouping with options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
+59. WHEN used on the Engagement Dashboard, THE FilterGroupingPanel SHALL hide the "Update" button (hideUpdateButton=true) and use the Run Report pattern
+60. WHEN used on the Growth Dashboard, THE FilterGroupingPanel SHALL hide the "Update" button (hideUpdateButton=true) and use the Run Report pattern
+61. WHEN used on the Map View, THE FilterGroupingPanel SHALL display the "Update" button (hideUpdateButton=false) and automatically apply filters when the button is clicked
+62. THE Map View page SHALL display a page title and description at the top of the page (outside any container), matching the header style of the Engagement and Growth dashboards
+63. THE Map View page SHALL display the FilterGroupingPanel component with "Filters and Grouping" as its title, matching the layout of the Engagement and Growth dashboards
+64. THE Map View page SHALL NOT use a Container component to wrap the page title and description
+65. THE Map View page SHALL use the same header layout pattern as the Engagement and Growth dashboards: title and description at the top, followed by the FilterGroupingPanel
+66. THE Map View page SHALL NOT include a "Run Report" button, as the map view is not a report-based interface
 
 ### Requirement 8: Authentication UI
 
