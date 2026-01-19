@@ -153,7 +153,7 @@ export default function MapViewPage() {
         }));
       },
     },
-  ], [addToCache]);
+  ], [addToCache]); // Depend on addToCache which is stable
 
   const groupingDimensionsConfig: FilterGroupingDimension[] = [
     { value: 'activitiesByType', label: 'Activities by Type' },
@@ -256,62 +256,65 @@ export default function MapViewPage() {
   };
 
   return (
-    <ContentLayout
-      header={
-        <Header
-          variant="h1"
-          description="Visualize activities, participant locations, and venues across your community on an interactive map."
-        >
-          Map View
-        </Header>
-      }
-    >
+    <ContentLayout>
       <SpaceBetween size="l">
-        {/* Filters and Grouping Panel */}
-        <Container
-          header={<Header variant="h3">Filters and Grouping</Header>}
+        <Container 
+          header={
+            <Header variant="h2">
+              <Box display="inline" fontSize="heading-l" fontWeight="bold">
+                <SpaceBetween direction="horizontal" size="xs">
+                  <Box display="inline-block" variant="h1">
+                    <SpaceBetween direction="horizontal" size="xs">
+                      <span>Map View</span>
+                      {mapLoadingState.loadedCount >= mapLoadingState.totalCount && mapLoadingState.totalCount > 0 && (
+                        <Box display="inline" color="text-status-inactive" variant="h1" fontWeight="normal">
+                          ({mapLoadingState.loadedCount})
+                        </Box>
+                      )}
+                    </SpaceBetween>
+                  </Box>
+                  <ProgressIndicator
+                    loadedCount={mapLoadingState.loadedCount}
+                    totalCount={mapLoadingState.totalCount}
+                    entityName={getEntityName()}
+                    onCancel={handlePauseLoading}
+                    onResume={handleResumeLoading}
+                    isCancelled={mapLoadingState.isCancelled}
+                  />
+                </SpaceBetween>
+              </Box>
+            </Header>
+          }
         >
-          <FilterGroupingPanel
-            filterProperties={filteringProperties}
-            groupingMode="exclusive"
-            groupingDimensions={groupingDimensionsConfig}
-            initialDateRange={dateRange}
-            initialFilterTokens={propertyFilterQuery}
-            initialGrouping={mapMode}
-            onUpdate={handleFilterUpdate}
-            onInitialResolutionComplete={handleInitialResolutionComplete}
-            isLoading={false}
-            disablePopulationFilter={mapMode === 'venues'}
-            hideUpdateButton={false}
-          />
-        </Container>
-
-        {/* Progress Indicator */}
-        {mapLoadingState.totalCount > 0 && (
-          <Box textAlign="center">
-            <ProgressIndicator
-              loadedCount={mapLoadingState.loadedCount}
-              totalCount={mapLoadingState.totalCount}
-              entityName={getEntityName()}
-              onCancel={handlePauseLoading}
-              onResume={handleResumeLoading}
-              isCancelled={mapLoadingState.isCancelled}
+          <SpaceBetween size="m">
+            {/* FilterGroupingPanel */}
+            <FilterGroupingPanel
+              filterProperties={filteringProperties}
+              groupingMode="exclusive"
+              groupingDimensions={groupingDimensionsConfig}
+              initialDateRange={dateRange}
+              initialFilterTokens={propertyFilterQuery}
+              initialGrouping={mapMode}
+              onUpdate={handleFilterUpdate}
+              onInitialResolutionComplete={handleInitialResolutionComplete}
+              isLoading={false}
+              disablePopulationFilter={mapMode === 'venues'}
             />
-          </Box>
-        )}
 
-        {/* Map */}
-        <div style={{ height: 'calc(100vh - 450px)', minHeight: '500px' }}>
-          <MapView 
-            mode={mapMode}
-            populationIds={selectedPopulationIds}
-            startDate={absoluteDates.startDate}
-            endDate={absoluteDates.endDate}
-            onLoadingStateChange={setMapLoadingState}
-            externalIsCancelled={mapLoadingState.isCancelled}
-            readyToFetch={filtersReady}
-          />
-        </div>
+            {/* Map */}
+            <div style={{ height: 'calc(100vh - 400px)', minHeight: '500px' }}>
+              <MapView 
+                mode={mapMode}
+                populationIds={selectedPopulationIds}
+                startDate={absoluteDates.startDate}
+                endDate={absoluteDates.endDate}
+                onLoadingStateChange={setMapLoadingState}
+                externalIsCancelled={mapLoadingState.isCancelled}
+                readyToFetch={filtersReady}
+              />
+            </div>
+          </SpaceBetween>
+        </Container>
       </SpaceBetween>
     </ContentLayout>
   );
