@@ -226,13 +226,13 @@ describe('GeographicAreaService', () => {
             ];
 
             mockRepository.findById = jest.fn().mockResolvedValue(mockArea);
-            mockRepository.findDescendants = jest.fn().mockResolvedValue(['child-area-1', 'child-area-2']);
+            mockRepository.findBatchDescendants = jest.fn().mockResolvedValue(['child-area-1', 'child-area-2']);
             (mockPrisma.venue.findMany as jest.Mock).mockResolvedValue(mockVenues);
 
             const result = await service.getVenues(areaId);
 
             expect(result).toEqual(mockVenues);
-            expect(mockRepository.findDescendants).toHaveBeenCalledWith(areaId);
+            expect(mockRepository.findBatchDescendants).toHaveBeenCalledWith([areaId]);
             expect(mockPrisma.venue.findMany).toHaveBeenCalledWith({
                 where: { geographicAreaId: { in: [areaId, 'child-area-1', 'child-area-2'] } },
                 orderBy: { name: 'asc' },
@@ -244,7 +244,7 @@ describe('GeographicAreaService', () => {
             const mockArea = { id: areaId, name: 'Empty Area', areaType: 'NEIGHBOURHOOD' as AreaType, parentGeographicAreaId: null, createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
             mockRepository.findById = jest.fn().mockResolvedValue(mockArea);
-            mockRepository.findDescendants = jest.fn().mockResolvedValue([]);
+            mockRepository.findBatchDescendants = jest.fn().mockResolvedValue([]);
             (mockPrisma.venue.findMany as jest.Mock).mockResolvedValue([]);
 
             const result = await service.getVenues(areaId);
@@ -266,7 +266,7 @@ describe('GeographicAreaService', () => {
             const mockDescendants = ['child-1', 'child-2'];
 
             mockRepository.findById = jest.fn().mockResolvedValue(mockArea);
-            mockRepository.findDescendants = jest.fn().mockResolvedValue(mockDescendants);
+            mockRepository.findBatchDescendants = jest.fn().mockResolvedValue(mockDescendants);
             mockPrisma.venue.findMany = jest.fn().mockResolvedValue([
                 { id: 'v1' }, { id: 'v2' }, { id: 'v3' }, { id: 'v4' }, { id: 'v5' }
             ]);
@@ -284,7 +284,7 @@ describe('GeographicAreaService', () => {
             expect(result).toHaveProperty('totalVenues', 5);
             expect(result).toHaveProperty('totalActivities', 10);
             expect(result).toHaveProperty('totalParticipants', 3);
-            expect(mockRepository.findDescendants).toHaveBeenCalledWith(areaId);
+            expect(mockRepository.findBatchDescendants).toHaveBeenCalledWith([areaId]);
         });
     });
 });

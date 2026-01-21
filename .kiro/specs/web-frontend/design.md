@@ -624,6 +624,14 @@ src/
 - Renders map immediately at world zoom level upon page navigation (before fetching any marker data)
 - Displays loading indicator ("Loading markers..." text or spinner overlay) while fetching marker data
 - Keeps map interactive (zoomable and pannable) during marker loading
+- **Coordinate-Based Filtering (Always Active):**
+  - Calculates current viewport bounding box (southwest and northeast corners) whenever map is moved or zoomed
+  - Automatically sends bounding box parameters (minLat, maxLat, minLon, maxLon) with every marker fetch request
+  - Fetches only markers within the current viewport bounds
+  - Debounces viewport change events (500ms delay) to avoid excessive API requests
+  - When user pans or zooms during marker loading, immediately cancels in-progress fetch and starts fetching for new viewport
+  - Handles international date line crossing (longitude wrapping) by detecting when minLon > maxLon
+  - Combines coordinate filtering with other filters (geographic area, activity type, population, date range) using AND logic
 - Fetches markers in batches of 100 items using paginated API requests
 - Renders markers incrementally as each batch is fetched, without waiting for all batches
 - Displays subtle loading indicator showing loaded/total marker count (Spinner + "Loading: X / Y" text + Cancel button)
@@ -640,8 +648,15 @@ src/
 - Handles pagination metadata to determine if more batches are available
 - Removes loading indicator when all batches are fetched
 - Handles batch fetching errors gracefully with retry option
-- Automatically zooms to fit bounds of all visible markers once marker data is loaded
+- Automatically zooms to fit bounds of all visible markers ONLY when coordinate-based filtering was not active and all batches have been completely loaded
+- Does NOT auto-zoom when viewport bounds were sent with the request (coordinate filtering active)
+- Does NOT auto-zoom during incremental batch rendering to prevent map from jumping around
+- Waits until all marker batches are loaded before performing auto-zoom (if applicable)
 - Keeps map at world zoom level when no markers are visible
+- When no markers are visible in viewport, displays non-intrusive empty state message using floating CloudScape Alert component
+- Empty state Alert uses type="info" and is dismissible, allowing users to close it and view the full map
+- Empty state Alert does NOT obscure the majority of the map view
+- Map component remains mounted and interactive even when no markers are displayed
 - Provides mode selector control to switch between four map modes: "Activities by Type", "Activities by Category", "Participant Homes", and "Venues"
 - In "Activities by Type" mode: fetches lightweight marker data from `/api/v1/map/activities` in batches of 100, displays activity markers at current venue locations, color-codes markers by activity type using activityTypeId
 - In "Activities by Category" mode: fetches lightweight marker data from `/api/v1/map/activities` in batches of 100, displays activity markers at current venue locations, color-codes markers by activity category using activityCategoryId

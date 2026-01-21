@@ -89,7 +89,7 @@ export class GeographicAreaService {
             }
 
             // Expand to include descendants
-            const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
+            const descendantIds = await this.geographicAreaRepository.findBatchDescendants([explicitGeographicAreaId]);
             const allAreaIds = [explicitGeographicAreaId, ...descendantIds];
 
             // If user has geographic restrictions, filter descendants to only include authorized areas
@@ -1159,7 +1159,7 @@ export class GeographicAreaService {
         await this.getGeographicAreaById(id, userId, userRole);
 
         // Get all descendant IDs including the area itself
-        const descendantIds = await this.geographicAreaRepository.findDescendants(id);
+        const descendantIds = await this.geographicAreaRepository.findBatchDescendants([id]);
         let areaIds = [id, ...descendantIds];
 
         // Filter out denied areas if user has geographic restrictions
@@ -1184,7 +1184,7 @@ export class GeographicAreaService {
         await this.getGeographicAreaById(id, userId, userRole);
 
         // Get all descendant IDs including the area itself
-        const descendantIds = await this.geographicAreaRepository.findDescendants(id);
+        const descendantIds = await this.geographicAreaRepository.findBatchDescendants([id]);
         let areaIds = [id, ...descendantIds];
 
         // Filter out denied areas if user has geographic restrictions

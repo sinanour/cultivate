@@ -1017,6 +1017,74 @@ This implementation plan covers the React-based web application built with TypeS
     - Restart batched loading when global filter changes
     - _Requirements: 6C.57, 6C.58, 6C.59, 6C.60, 6C.61, 6C.62, 6C.63, 6C.64, 6C.65, 6C.66, 6C.67_
 
+  - [x] 13.5a Implement coordinate-based viewport filtering
+    - [x] 13.5a.1 Add viewport bounds tracking to MapView component
+      - Listen to map moveend and zoomend events using Leaflet/Mapbox event handlers
+      - Calculate current viewport bounding box (southwest and northeast corners) using map.getBounds()
+      - Extract minLat, maxLat, minLon, maxLon from bounds object
+      - Store bounds in component state
+      - Debounce viewport change events with 500ms delay to avoid excessive API requests
+      - _Requirements: 6D.2, 6D.6_
+
+    - [x] 13.5a.2 Update MapDataService to accept bounding box parameters
+      - Add optional boundingBox parameter to getActivityMarkers(filters, boundingBox?, page?, limit?)
+      - Add optional boundingBox parameter to getParticipantHomeMarkers(filters, boundingBox?, page?, limit?)
+      - Add optional boundingBox parameter to getVenueMarkers(filters, boundingBox?, page?, limit?)
+      - Include minLat, maxLat, minLon, maxLon in API request query parameters when boundingBox provided
+      - Validate bounding box parameters before sending to API
+      - _Requirements: 6D.1, 6D.3, 6D.4_
+
+    - [x] 13.5a.3 Implement viewport change handling in MapView
+      - When viewport changes (pan or zoom), cancel any in-progress marker fetching
+      - Clear currently displayed markers when viewport changes significantly
+      - Immediately start fetching markers for new viewport bounds
+      - Pass current viewport bounding box to MapDataService with every marker fetch
+      - Combine bounding box with other active filters (geographic area, activity type, date range)
+      - _Requirements: 6D.5, 6D.13, 6D.14, 6D.15_
+
+    - [x] 13.5a.4 Handle international date line crossing
+      - Detect when viewport crosses international date line (minLon > maxLon)
+      - When crossing detected, send bounding box parameters as-is to backend
+      - Backend will handle the special OR logic for longitude wrapping
+      - Test with viewport spanning longitude 170 to -170
+      - _Requirements: 6D.9_
+
+    - [x] 13.5a.5 Update empty state handling for viewport filtering
+      - When no markers are returned for current viewport, keep map mounted and interactive
+      - Display non-intrusive empty state message using floating CloudScape Alert component
+      - Position Alert as overlay on map (not replacing map)
+      - Use Alert type="info" for informational styling
+      - Make Alert dismissible so users can close it
+      - Ensure Alert doesn't obscure majority of map view
+      - Display message like "No markers found in current viewport. Try zooming out or adjusting filters."
+      - _Requirements: 6D.11, 6D.11a, 6D.11b, 6D.11c, 6D.11d_
+
+    - [x] 13.5a.6 Optimize marker fetching for viewport changes
+      - Ensure smooth visual feedback during viewport-triggered refetching
+      - Display loading indicator while fetching markers for new viewport
+      - Maintain map interactivity during refetch
+      - Clear stale markers before rendering new markers
+      - Handle rapid viewport changes gracefully (debouncing prevents excessive requests)
+      - _Requirements: 6D.17, 6D.18_
+
+    - [ ]* 13.5a.7 Write property tests for coordinate-based filtering
+      - **Property 243: Viewport Bounds Calculation**
+      - **Property 244: Bounding Box Parameter Inclusion**
+      - **Property 245: Viewport Change Debouncing**
+      - **Property 246: In-Progress Fetch Cancellation on Viewport Change**
+      - **Property 247: Coordinate and Filter Combination**
+      - **Property 248: International Date Line Handling**
+      - **Property 249: Empty Viewport Non-Intrusive Message**
+      - **Property 250: Map Remains Mounted with No Markers**
+      - **Validates: Requirements 6D.1, 6D.2, 6D.3, 6D.4, 6D.5, 6D.6, 6D.7, 6D.8, 6D.9, 6D.10, 6D.11, 6D.11a, 6D.11b, 6D.11c, 6D.11d, 6D.13, 6D.14, 6D.15, 6D.16, 6D.17, 6D.18**
+
+  - [x] 13.5 Update global geographic filter integration
+    - Apply global filter to all map modes
+    - Pass selectedGeographicAreaId to marker fetch calls
+    - Filter activities, participant homes, and venues by authorized geographic areas
+    - Restart batched loading when global filter changes
+    - _Requirements: 6C.57, 6C.58, 6C.59, 6C.60, 6C.61, 6C.62, 6C.63, 6C.64, 6C.65, 6C.66, 6C.67_
+
   - [ ]* 13.6 Write property tests for optimized map loading with batched rendering
     - **Property 60: Map Immediate Rendering**
     - **Property 61: Map Loading Indicator Display**

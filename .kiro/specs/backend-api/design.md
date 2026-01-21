@@ -1192,6 +1192,10 @@ Returns lightweight activity marker data for map rendering with pagination suppo
 **Query Parameters:**
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 100, max: 100)
+- `minLat` (optional): Minimum latitude for bounding box filter (range: -90 to 90)
+- `maxLat` (optional): Maximum latitude for bounding box filter (range: -90 to 90)
+- `minLon` (optional): Minimum longitude for bounding box filter (range: -180 to 180)
+- `maxLon` (optional): Maximum longitude for bounding box filter (range: -180 to 180)
 - `geographicAreaIds` (optional): Array of geographic area UUIDs
 - `activityCategoryIds` (optional): Array of activity category UUIDs
 - `activityTypeIds` (optional): Array of activity type UUIDs
@@ -1224,6 +1228,9 @@ Returns lightweight activity marker data for map rendering with pagination suppo
 **Business Logic:**
 - Returns only activities with current venue that has non-null coordinates
 - Determines current venue from most recent venue history (handles null effectiveFrom as activity startDate)
+- **Coordinate Filtering:** When bounding box parameters (minLat, maxLat, minLon, maxLon) are provided, filters to include only markers within the viewport bounds
+- Handles international date line crossing: when minLon > maxLon, uses OR logic for longitude (longitude >= minLon OR longitude <= maxLon)
+- Combines coordinate filtering with other filters using AND logic
 - Applies all filters using same logic as analytics endpoints
 - **Temporal Filtering:** When startDate and/or endDate filters are provided, returns only activities that were active at any point during the query period using overlap logic:
   - Activity overlaps with query period if: `(activity.startDate <= queryEndDate) AND (activity.endDate >= queryStartDate OR activity.endDate IS NULL)`
@@ -1263,6 +1270,10 @@ Returns lightweight participant home marker data grouped by venue with paginatio
 **Query Parameters:**
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 100, max: 100)
+- `minLat` (optional): Minimum latitude for bounding box filter (range: -90 to 90)
+- `maxLat` (optional): Maximum latitude for bounding box filter (range: -90 to 90)
+- `minLon` (optional): Minimum longitude for bounding box filter (range: -180 to 180)
+- `maxLon` (optional): Maximum longitude for bounding box filter (range: -180 to 180)
 - `geographicAreaIds` (optional): Array of geographic area UUIDs
 - `populationIds` (optional): Array of population UUIDs
 - `startDate` (optional): ISO 8601 datetime string - start of query period
@@ -1289,6 +1300,9 @@ Returns lightweight participant home marker data grouped by venue with paginatio
 
 **Business Logic:**
 - Groups participants by their home venues that were active during the query period
+- **Coordinate Filtering:** When bounding box parameters (minLat, maxLat, minLon, maxLon) are provided, filters to include only markers within the viewport bounds
+- Handles international date line crossing: when minLon > maxLon, uses OR logic for longitude (longitude >= minLon OR longitude <= maxLon)
+- Combines coordinate filtering with other filters using AND logic
 - **Temporal Filtering:** When startDate and/or endDate filters are provided, returns all addresses that were active at any point during the query period:
   - For each participant, examines all address history records
   - An address is active during the query period if:
@@ -1326,6 +1340,10 @@ Returns lightweight venue marker data for map rendering with pagination support.
 **Query Parameters:**
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 100, max: 100)
+- `minLat` (optional): Minimum latitude for bounding box filter (range: -90 to 90)
+- `maxLat` (optional): Maximum latitude for bounding box filter (range: -90 to 90)
+- `minLon` (optional): Minimum longitude for bounding box filter (range: -180 to 180)
+- `maxLon` (optional): Maximum longitude for bounding box filter (range: -180 to 180)
 - `geographicAreaIds` (optional): Array of geographic area UUIDs
 
 **Response:**
@@ -1348,6 +1366,9 @@ Returns lightweight venue marker data for map rendering with pagination support.
 
 **Business Logic:**
 - Returns all venues with non-null coordinates
+- **Coordinate Filtering:** When bounding box parameters (minLat, maxLat, minLon, maxLon) are provided, filters to include only markers within the viewport bounds
+- Handles international date line crossing: when minLon > maxLon, uses OR logic for longitude (longitude >= minLon OR longitude <= maxLon)
+- Combines coordinate filtering with geographic area filtering using AND logic
 - Applies geographic authorization filtering
 - No activity or participant filtering (shows all venues)
 - Returns pagination metadata including total count on every request

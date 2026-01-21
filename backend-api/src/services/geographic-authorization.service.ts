@@ -124,15 +124,20 @@ export class GeographicAuthorizationService {
         const allowRules = rules.filter((r) => r.ruleType === 'ALLOW');
         let highestAccessLevel = AccessLevel.NONE;
 
+        // Build a map of each rule area to its descendants
+        const descendantsMap = new Map<string, string[]>();
+        for (const rule of allowRules) {
+            const descendants = await this.geographicAreaRepository.findBatchDescendants([rule.geographicAreaId]);
+            descendantsMap.set(rule.geographicAreaId, descendants);
+        }
+
         for (const rule of allowRules) {
             // Full access to allowed area and descendants
             if (rule.geographicAreaId === geographicAreaId) {
                 return AccessLevel.FULL; // Immediate return for exact match
             }
 
-            const descendants = await this.geographicAreaRepository.findDescendants(
-                rule.geographicAreaId
-            );
+            const descendants = descendantsMap.get(rule.geographicAreaId) || [];
             if (descendants.includes(geographicAreaId)) {
                 return AccessLevel.FULL; // Immediate return for descendant
             }
@@ -166,14 +171,13 @@ export class GeographicAuthorizationService {
 
         // Process ALLOW rules
         const allowRules = rules.filter((r) => r.ruleType === 'ALLOW');
+
         for (const rule of allowRules) {
             // Add the allowed area
             authorizedAreaIds.add(rule.geographicAreaId);
 
             // Add all descendants
-            const descendants = await this.geographicAreaRepository.findDescendants(
-                rule.geographicAreaId
-            );
+            const descendants = await this.geographicAreaRepository.findBatchDescendants([rule.geographicAreaId]);
             descendants.forEach((id) => authorizedAreaIds.add(id));
 
             // Add ancestors as read-only
@@ -185,14 +189,13 @@ export class GeographicAuthorizationService {
 
         // Remove any areas that have DENY rules
         const denyRules = rules.filter((r) => r.ruleType === 'DENY');
+
         for (const rule of denyRules) {
             authorizedAreaIds.delete(rule.geographicAreaId);
             readOnlyAreaIds.delete(rule.geographicAreaId);
 
             // Remove descendants of denied areas
-            const descendants = await this.geographicAreaRepository.findDescendants(
-                rule.geographicAreaId
-            );
+            const descendants = await this.geographicAreaRepository.findBatchDescendants([rule.geographicAreaId]);
             descendants.forEach((id) => {
                 authorizedAreaIds.delete(id);
                 readOnlyAreaIds.delete(id);
@@ -223,8 +226,9 @@ export class GeographicAuthorizationService {
         const authorizedAreas = new Map<string, AuthorizedArea>();
         const ancestorAreaIds = new Set<string>(); // Track which areas are ancestors
 
-        // Process ALLOW rules
+        // Process ALLOW rules - batch fetch all descendants
         const allowRules = rules.filter((r) => r.ruleType === 'ALLOW');
+
         for (const rule of allowRules) {
             const area = await this.geographicAreaRepository.findById(
                 rule.geographicAreaId
@@ -240,9 +244,7 @@ export class GeographicAuthorizationService {
             });
 
             // Add descendants with FULL access
-            const descendants = await this.geographicAreaRepository.findDescendants(
-                rule.geographicAreaId
-            );
+            const descendants = await this.geographicAreaRepository.findBatchDescendants([rule.geographicAreaId]);
             for (const descendantId of descendants) {
                 const descendantArea = await this.geographicAreaRepository.findById(
                     descendantId
@@ -293,6 +295,7 @@ export class GeographicAuthorizationService {
 
         // Process DENY rules - remove denied areas and their descendants
         const denyRules = rules.filter((r) => r.ruleType === 'DENY');
+
         for (const rule of denyRules) {
             const area = await this.geographicAreaRepository.findById(
                 rule.geographicAreaId
@@ -308,9 +311,7 @@ export class GeographicAuthorizationService {
             });
 
             // Mark descendants as denied
-            const descendants = await this.geographicAreaRepository.findDescendants(
-                rule.geographicAreaId
-            );
+            const descendants = await this.geographicAreaRepository.findBatchDescendants([rule.geographicAreaId]);
             for (const descendantId of descendants) {
                 const descendantArea = await this.geographicAreaRepository.findById(
                     descendantId

@@ -67,6 +67,13 @@ export interface MapFilters {
     status?: string;
 }
 
+export interface BoundingBox {
+    minLat: number;
+    maxLat: number;
+    minLon: number;
+    maxLon: number;
+}
+
 export class MapDataService {
     private static readonly BASE_PATH = '/map';
 
@@ -75,6 +82,7 @@ export class MapDataService {
      */
     static async getActivityMarkers(
         filters: MapFilters = {},
+        boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
     ): Promise<PaginatedResponse<ActivityMarker>> {
@@ -83,6 +91,14 @@ export class MapDataService {
         // Add pagination parameters
         params.append('page', page.toString());
         params.append('limit', limit.toString());
+
+        // Add bounding box parameters
+        if (boundingBox) {
+            params.append('minLat', boundingBox.minLat.toString());
+            params.append('maxLat', boundingBox.maxLat.toString());
+            params.append('minLon', boundingBox.minLon.toString());
+            params.append('maxLon', boundingBox.maxLon.toString());
+        }
 
         // Add array filters
         if (filters.geographicAreaIds) {
@@ -114,39 +130,16 @@ export class MapDataService {
             params.append('status', filters.status);
         }
 
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/activities?${params.toString()}`;
-
-        const response = await fetch(url, {
-            headers: ApiClient.getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch activity markers: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        return {
-            data: result.data,
-            pagination: result.pagination,
-        };
+        const endpoint = `${this.BASE_PATH}/activities?${params.toString()}`;
+        return ApiClient.get<PaginatedResponse<ActivityMarker>>(endpoint);
     }
 
     /**
      * Get detailed popup content for an activity marker
      */
     static async getActivityPopupContent(activityId: string): Promise<ActivityPopupContent> {
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/activities/${activityId}/popup`;
-
-        const response = await fetch(url, {
-            headers: ApiClient.getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch activity popup content: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        return result.data;
+        const endpoint = `${this.BASE_PATH}/activities/${activityId}/popup`;
+        return ApiClient.get<ActivityPopupContent>(endpoint);
     }
 
     /**
@@ -154,6 +147,7 @@ export class MapDataService {
      */
     static async getParticipantHomeMarkers(
         filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds' | 'startDate' | 'endDate'> = {},
+        boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
     ): Promise<PaginatedResponse<ParticipantHomeMarker>> {
@@ -162,6 +156,14 @@ export class MapDataService {
         // Add pagination parameters
         params.append('page', page.toString());
         params.append('limit', limit.toString());
+
+        // Add bounding box parameters
+        if (boundingBox) {
+            params.append('minLat', boundingBox.minLat.toString());
+            params.append('maxLat', boundingBox.maxLat.toString());
+            params.append('minLon', boundingBox.minLon.toString());
+            params.append('maxLon', boundingBox.maxLon.toString());
+        }
 
         if (filters.geographicAreaIds) {
             filters.geographicAreaIds.forEach(id => params.append('geographicAreaIds', id));
@@ -178,39 +180,16 @@ export class MapDataService {
             params.append('endDate', filters.endDate);
         }
 
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/participant-homes?${params.toString()}`;
-
-        const response = await fetch(url, {
-            headers: ApiClient.getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch participant home markers: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        return {
-            data: result.data,
-            pagination: result.pagination,
-        };
+        const endpoint = `${this.BASE_PATH}/participant-homes?${params.toString()}`;
+        return ApiClient.get<PaginatedResponse<ParticipantHomeMarker>>(endpoint);
     }
 
     /**
      * Get detailed popup content for a participant home marker
      */
     static async getParticipantHomePopupContent(venueId: string): Promise<ParticipantHomePopupContent> {
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/participant-homes/${venueId}/popup`;
-
-        const response = await fetch(url, {
-            headers: ApiClient.getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch participant home popup content: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        return result.data;
+        const endpoint = `${this.BASE_PATH}/participant-homes/${venueId}/popup`;
+        return ApiClient.get<ParticipantHomePopupContent>(endpoint);
     }
 
     /**
@@ -218,6 +197,7 @@ export class MapDataService {
      */
     static async getVenueMarkers(
         filters: Pick<MapFilters, 'geographicAreaIds'> = {},
+        boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
     ): Promise<PaginatedResponse<VenueMarker>> {
@@ -227,42 +207,27 @@ export class MapDataService {
         params.append('page', page.toString());
         params.append('limit', limit.toString());
 
+        // Add bounding box parameters
+        if (boundingBox) {
+            params.append('minLat', boundingBox.minLat.toString());
+            params.append('maxLat', boundingBox.maxLat.toString());
+            params.append('minLon', boundingBox.minLon.toString());
+            params.append('maxLon', boundingBox.maxLon.toString());
+        }
+
         if (filters.geographicAreaIds) {
             filters.geographicAreaIds.forEach(id => params.append('geographicAreaIds', id));
         }
 
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/venues?${params.toString()}`;
-
-        const response = await fetch(url, {
-            headers: ApiClient.getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch venue markers: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        return {
-            data: result.data,
-            pagination: result.pagination,
-        };
+        const endpoint = `${this.BASE_PATH}/venues?${params.toString()}`;
+        return ApiClient.get<PaginatedResponse<VenueMarker>>(endpoint);
     }
 
     /**
      * Get detailed popup content for a venue marker
      */
     static async getVenuePopupContent(venueId: string): Promise<VenuePopupContent> {
-        const url = `${ApiClient.getBaseURL()}${this.BASE_PATH}/venues/${venueId}/popup`;
-
-        const response = await fetch(url, {
-            headers: ApiClient.getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch venue popup content: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        return result.data;
+        const endpoint = `${this.BASE_PATH}/venues/${venueId}/popup`;
+        return ApiClient.get<VenuePopupContent>(endpoint);
     }
 }

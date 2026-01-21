@@ -80,7 +80,7 @@ export class ActivityService {
       }
 
       // Expand to include descendants
-      const descendantIds = await this.geographicAreaRepository.findDescendants(explicitGeographicAreaId);
+      const descendantIds = await this.geographicAreaRepository.findBatchDescendants([explicitGeographicAreaId]);
       const allAreaIds = [explicitGeographicAreaId, ...descendantIds];
 
       // If user has geographic restrictions, filter descendants to only include authorized areas

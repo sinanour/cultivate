@@ -518,8 +518,12 @@ The Web Frontend package provides a responsive React-based web application that 
 3. THE Web_App SHALL display a loading indicator (e.g., "Loading markers..." text or spinner overlay) while fetching marker data from the backend
 4. THE Web_App SHALL keep the map interactive (zoomable and pannable) during the marker loading process
 5. WHEN marker data is successfully fetched, THE Web_App SHALL remove the loading indicator
-6. WHEN marker data is successfully fetched and markers are rendered, THE Web_App SHALL automatically zoom the map to fit the bounds of all visible markers
-7. WHEN no markers are visible after applying filters, THE Web_App SHALL keep the map at world zoom level and display an appropriate message
+6. WHEN marker data is successfully fetched and markers are rendered, THE Web_App SHALL automatically zoom the map to fit the bounds of all visible markers ONLY if coordinate-based filtering was not active during the fetch
+6a. WHEN coordinate-based filtering is active (viewport bounds were sent with the request), THE Web_App SHALL NOT automatically zoom the map to fit marker bounds
+6b. WHEN fetching markers in multiple batches, THE Web_App SHALL NOT automatically zoom the map until all batches have been completely loaded
+6c. WHEN all marker batches have been loaded and coordinate-based filtering was not active, THE Web_App SHALL automatically zoom the map once to fit the bounds of all loaded markers
+6d. THE Web_App SHALL NOT adjust zoom during incremental batch rendering to prevent the map from jumping around as markers progressively load
+7. WHEN no markers are visible after applying filters, THE Web_App SHALL keep the map at world zoom level, keep the map mounted and interactive, and display a non-intrusive empty state message using a floating CloudScape Alert component
 
 **Batched Incremental Marker Loading:**
 
@@ -610,6 +614,35 @@ The Web Frontend package provides a responsive React-based web application that 
 83. THE Web_App SHALL display only participant home addresses that were active during the selected date range on the map
 84. WHEN no date range is selected, THE Web_App SHALL display all activities and participant homes regardless of temporal status
 85. WHEN the date range changes (either absolute or relative), THE Web_App SHALL trigger a refetch of marker data from the backend
+
+### Requirement 6D: Coordinate-Based Map Filtering
+
+**User Story:** As a community organizer viewing the map, I want markers to be automatically filtered by the current viewport coordinates, so that I can improve map performance by loading only visible markers and can interrupt large loads by zooming in to a specific region of interest.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL always filter map markers by the current viewport bounding box coordinates
+2. THE Web_App SHALL calculate the current map viewport bounding box (southwest and northeast corners) when the map is moved or zoomed
+3. THE Web_App SHALL send bounding box parameters (minLat, maxLat, minLon, maxLon) to the map marker endpoints with every marker fetch request
+4. THE Web_App SHALL fetch only markers within the current viewport bounding box
+5. WHEN the user pans or zooms the map, THE Web_App SHALL automatically refetch markers for the new viewport bounds
+6. THE Web_App SHALL debounce viewport change events to avoid excessive API requests (minimum 500ms delay after user stops panning/zooming)
+7. THE Web_App SHALL combine coordinate-based filtering with other filters (geographic area, activity type, population, date range) using AND logic
+8. WHEN both coordinate-based filtering and named geographic area filtering are active, THE Web_App SHALL apply both filters (markers must be within the bounding box AND within the selected geographic area)
+9. THE Web_App SHALL handle edge cases where the viewport bounding box crosses the international date line (longitude wrapping)
+10. THE Web_App SHALL apply coordinate-based filtering to all map modes (Activities by Type, Activities by Category, Participant Homes, Venues)
+11. WHEN the viewport contains no markers matching the current filters, THE Web_App SHALL keep the map mounted and interactive
+11a. WHEN the viewport contains no markers, THE Web_App SHALL display a non-intrusive empty state message using a CloudScape Alert component positioned as a floating overlay on top of the map
+11b. THE empty state Alert SHALL use type="info" and SHALL NOT obscure the majority of the map view
+11c. THE empty state Alert SHALL be dismissible, allowing users to close it and view the full map
+11d. THE Web_App SHALL NOT unmount or hide the map component when no markers are available to display
+12. THE Web_App SHALL maintain batched incremental loading behavior with coordinate-based filtering
+13. WHEN a user is viewing a large geographic area with many markers being loaded in batches, THE user SHALL be able to interrupt the loading by zooming in or panning to a different area
+14. WHEN the viewport changes during batched loading, THE Web_App SHALL immediately cancel any in-progress marker fetching
+15. WHEN the viewport changes during batched loading, THE Web_App SHALL start fetching markers for the new viewport bounds
+16. THE Web_App SHALL clear currently displayed markers when the viewport changes significantly (e.g., zoom level change or pan beyond current bounds)
+17. THE Web_App SHALL provide smooth visual feedback during viewport-triggered marker refetching
+18. WHEN the initial map loads at world zoom level, THE Web_App SHALL fetch markers for the entire world viewport (or apply other active filters if present)
 
 
 ### Requirement 7: Analytics Dashboard

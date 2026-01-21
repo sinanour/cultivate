@@ -11,7 +11,7 @@ describe('AnalyticsService - Population Filter', () => {
     beforeEach(() => {
         mockPrisma = createMockPrismaClient();
         mockGeographicAreaRepository = {
-            findDescendants: jest.fn().mockResolvedValue([]),
+            findBatchDescendants: jest.fn().mockResolvedValue([]),
             findAncestors: jest.fn().mockResolvedValue([]),
             findAll: jest.fn().mockResolvedValue([]),
         } as any;

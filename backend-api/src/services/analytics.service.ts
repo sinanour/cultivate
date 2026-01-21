@@ -182,13 +182,9 @@ export class AnalyticsService {
                 }
             }
 
-            // Expand each area to include descendants
-            const allExpandedIds = new Set<string>();
-            for (const areaId of areaIdsArray) {
-                const descendantIds = await this.geographicAreaRepository.findDescendants(areaId);
-                allExpandedIds.add(areaId);
-                descendantIds.forEach(id => allExpandedIds.add(id));
-            }
+            // Expand each area to include descendants using batch processing
+            const descendantIds = await this.geographicAreaRepository.findBatchDescendants(areaIdsArray);
+            const allExpandedIds = new Set<string>([...areaIdsArray, ...descendantIds]);
 
             const allPotentialIds = Array.from(allExpandedIds);
 
@@ -757,7 +753,7 @@ export class AnalyticsService {
         const firstGeographicAreaId = geographicAreaIds && geographicAreaIds.length > 0 ? geographicAreaIds[0] : undefined;
         if (firstGeographicAreaId) {
             // When filtered by geographic area, show breakdown of that area and its descendants
-            const descendantIds = await this.geographicAreaRepository.findDescendants(firstGeographicAreaId);
+            const descendantIds = await this.geographicAreaRepository.findBatchDescendants([firstGeographicAreaId]);
             const parentArea = await this.geographicAreaRepository.findById(firstGeographicAreaId);
 
             // Fetch all descendant areas
@@ -1428,9 +1424,46 @@ export class AnalyticsService {
         // For each area, calculate metrics by aggregating from the area and all its descendants
         const breakdown: GeographicBreakdown[] = [];
 
+        // Batch fetch all descendants for all areas at once
+        const allAreaIds = areasToReturn.map(a => a.id);
+        const allDescendantsMap = new Map<string, string[]>();
+
+        // Get descendants for all areas in one query
+        const allDescendants = await this.geographicAreaRepository.findBatchDescendants(allAreaIds);
+
+        // Build a map of parent -> descendants by checking parentGeographicAreaId
+        // We need to query the areas to know their parents
+        if (allDescendants.length > 0) {
+            const descendantAreas = await this.prisma.geographicArea.findMany({
+                where: { id: { in: allDescendants } },
+                select: { id: true, parentGeographicAreaId: true }
+            });
+
+            // Build parent-child relationships
+            for (const area of areasToReturn) {
+                const descendants: string[] = [];
+                const toCheck = [area.id];
+                const checked = new Set<string>();
+
+                while (toCheck.length > 0) {
+                    const currentId = toCheck.pop()!;
+                    if (checked.has(currentId)) continue;
+                    checked.add(currentId);
+
+                    const children = descendantAreas.filter(d => d.parentGeographicAreaId === currentId);
+                    for (const child of children) {
+                        descendants.push(child.id);
+                        toCheck.push(child.id);
+                    }
+                }
+
+                allDescendantsMap.set(area.id, descendants);
+            }
+        }
+
         for (const area of areasToReturn) {
             // Get all descendant IDs for this area
-            const allDescendantIds = await this.geographicAreaRepository.findDescendants(area.id);
+            const allDescendantIds = allDescendantsMap.get(area.id) || [];
 
             // Filter descendants to only include authorized areas
             let authorizedDescendantIds = allDescendantIds;
@@ -1788,7 +1821,7 @@ export class AnalyticsService {
     }
 
     private async getVenueIdsForArea(geographicAreaId: string): Promise<string[]> {
-        const descendants = await this.geographicAreaRepository.findDescendants(geographicAreaId);
+        const descendants = await this.geographicAreaRepository.findBatchDescendants([geographicAreaId]);
         const areaIds = [geographicAreaId, ...descendants];
 
         const venues = await this.prisma.venue.findMany({

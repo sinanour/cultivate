@@ -263,18 +263,31 @@ export class GeographicAreaRepository {
   }
 
   /**
-   * Optimized descendant fetching using WITH RECURSIVE CTE.
-   * Returns array of descendant IDs (not including the parent area itself).
+   * Optimized batch descendant fetching using WITH RECURSIVE CTE.
+   * Returns array of descendant IDs for multiple parent areas (not including the parent areas themselves).
    * 
    * Uses PostgreSQL's WITH RECURSIVE common table expression to fetch all descendants
-   * in a single database query, regardless of hierarchy depth.
+   * for multiple parent areas in a single database query, regardless of hierarchy depth.
+   * This eliminates the N+1 query problem when processing multiple geographic areas.
    * 
-   * @param id - Geographic area ID to fetch descendants for
-   * @returns Array of descendant area IDs
+   * Algorithm:
+   * 1. Use WITH RECURSIVE CTE to traverse down the hierarchy from requested parent areas
+   * 2. Base case: SELECT requested parent area IDs
+   * 3. Recursive case: JOIN to fetch children until no more children exist
+   * 4. Return flat array of all descendant IDs (excluding the parent areas themselves)
+   * 
+   * @param areaIds - Array of geographic area IDs to fetch descendants for
+   * @returns Array of descendant area IDs (flat list, deduplicated)
    */
-  async findDescendants(id: string): Promise<string[]> {
+  async findBatchDescendants(areaIds: string[]): Promise<string[]> {
+    if (areaIds.length === 0) {
+      return [];
+    }
+
     // Use WITH RECURSIVE CTE for optimal performance
-    // Inline UUID directly in SQL (safe since validated by service layer)
+    // Build IN clause with all parent area IDs
+    const uuidList = areaIds.map(id => `'${id}'`).join(', ');
+
     const result = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
       `WITH RECURSIVE descendant_tree AS (
         SELECT
@@ -282,7 +295,7 @@ export class GeographicAreaRepository {
           "parentGeographicAreaId" as parent_id,
           0 as depth
         FROM geographic_areas
-        WHERE id::text = '${id}'
+        WHERE id::text IN (${uuidList})
 
         UNION ALL
 
@@ -293,7 +306,7 @@ export class GeographicAreaRepository {
         FROM geographic_areas ga
         INNER JOIN descendant_tree dt ON ga."parentGeographicAreaId" = dt.id
       )
-      SELECT id::text as id FROM descendant_tree WHERE id::text != '${id}';`
+      SELECT DISTINCT id::text as id FROM descendant_tree WHERE id::text NOT IN (${uuidList});`
     );
 
     return result.map(row => row.id);

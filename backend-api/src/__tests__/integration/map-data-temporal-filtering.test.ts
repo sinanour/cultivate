@@ -219,8 +219,10 @@ describe('Map Data Temporal Filtering', () => {
                 {
                     startDate: new Date('2024-06-01'),
                     endDate: new Date('2024-08-31'),
+                    geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -249,6 +251,7 @@ describe('Map Data Temporal Filtering', () => {
                     endDate: new Date('2024-08-31'),
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -264,6 +267,7 @@ describe('Map Data Temporal Filtering', () => {
                     endDate: new Date('2024-08-31'),
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -279,6 +283,7 @@ describe('Map Data Temporal Filtering', () => {
                     endDate: new Date('2024-08-31'),
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -294,6 +299,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -319,6 +325,7 @@ describe('Map Data Temporal Filtering', () => {
                     endDate: new Date('2024-08-31'),
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -344,6 +351,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -487,6 +495,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -511,6 +520,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -539,6 +549,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -557,6 +568,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -574,6 +586,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -595,6 +608,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );
@@ -617,6 +631,7 @@ describe('Map Data Temporal Filtering', () => {
                     geographicAreaIds: [geographicAreaId], // Filter to our test area only
                 },
                 userId,
+                undefined, // boundingBox
                 1,
                 100
             );

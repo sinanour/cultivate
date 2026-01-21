@@ -260,7 +260,7 @@ describe('AnalyticsService', () => {
 
             mockPrisma.geographicArea.findMany = jest.fn().mockResolvedValue(mockAreas);
             mockPrisma.geographicArea.count = jest.fn().mockResolvedValue(0);
-            mockGeoRepo.findDescendants = jest.fn().mockResolvedValue([]);
+            mockGeoRepo.findBatchDescendants = jest.fn().mockResolvedValue([]);
             mockPrisma.venue.findMany = jest.fn().mockResolvedValue([]);
             mockPrisma.activity.findMany = jest.fn().mockResolvedValue([]);
 
@@ -284,7 +284,7 @@ describe('AnalyticsService', () => {
 
             mockPrisma.geographicArea.findMany = jest.fn().mockResolvedValue(mockChildren);
             mockPrisma.geographicArea.count = jest.fn().mockResolvedValue(0);
-            mockGeoRepo.findDescendants = jest.fn().mockResolvedValue([]);
+            mockGeoRepo.findBatchDescendants = jest.fn().mockResolvedValue([]);
             mockPrisma.venue.findMany = jest.fn().mockResolvedValue([]);
             mockPrisma.activity.findMany = jest.fn().mockResolvedValue([]);
 

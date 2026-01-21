@@ -432,6 +432,10 @@ const arrayPreprocessor = (val: any) => {
 export const MapActivityMarkersQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(100),
+  minLat: z.coerce.number().min(-90).max(90).optional(),
+  maxLat: z.coerce.number().min(-90).max(90).optional(),
+  minLon: z.coerce.number().min(-180).max(180).optional(),
+  maxLon: z.coerce.number().min(-180).max(180).optional(),
   geographicAreaIds: z.preprocess(
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid geographic area ID format')).optional()
@@ -461,11 +465,36 @@ export const MapActivityMarkersQuerySchema = z.object({
     { message: 'Invalid end date format. Use YYYY-MM-DD or ISO-8601 datetime' }
   ).optional(),
   status: z.nativeEnum(ActivityStatus).optional(),
-});
+}).refine(
+  (data) => {
+    // All four bounding box parameters must be provided together or none at all
+    const boundingBoxParams = [data.minLat, data.maxLat, data.minLon, data.maxLon];
+    const providedCount = boundingBoxParams.filter(p => p !== undefined).length;
+    return providedCount === 0 || providedCount === 4;
+  },
+  {
+    message: 'All four bounding box parameters (minLat, maxLat, minLon, maxLon) must be provided together',
+  }
+).refine(
+  (data) => {
+    // Validate minLat <= maxLat
+    if (data.minLat !== undefined && data.maxLat !== undefined) {
+      return data.minLat <= data.maxLat;
+    }
+    return true;
+  },
+  {
+    message: 'minLat must be less than or equal to maxLat',
+  }
+);
 
 export const MapParticipantHomeMarkersQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(100),
+  minLat: z.coerce.number().min(-90).max(90).optional(),
+  maxLat: z.coerce.number().min(-90).max(90).optional(),
+  minLon: z.coerce.number().min(-180).max(180).optional(),
+  maxLon: z.coerce.number().min(-180).max(180).optional(),
   geographicAreaIds: z.preprocess(
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid geographic area ID format')).optional()
@@ -482,16 +511,62 @@ export const MapParticipantHomeMarkersQuerySchema = z.object({
     (val) => !val || /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(val),
     { message: 'Invalid end date format. Use YYYY-MM-DD or ISO-8601 datetime' }
   ).optional(),
-});
+}).refine(
+  (data) => {
+    // All four bounding box parameters must be provided together or none at all
+    const boundingBoxParams = [data.minLat, data.maxLat, data.minLon, data.maxLon];
+    const providedCount = boundingBoxParams.filter(p => p !== undefined).length;
+    return providedCount === 0 || providedCount === 4;
+  },
+  {
+    message: 'All four bounding box parameters (minLat, maxLat, minLon, maxLon) must be provided together',
+  }
+).refine(
+  (data) => {
+    // Validate minLat <= maxLat
+    if (data.minLat !== undefined && data.maxLat !== undefined) {
+      return data.minLat <= data.maxLat;
+    }
+    return true;
+  },
+  {
+    message: 'minLat must be less than or equal to maxLat',
+  }
+);
 
 export const MapVenueMarkersQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(100),
+  minLat: z.coerce.number().min(-90).max(90).optional(),
+  maxLat: z.coerce.number().min(-90).max(90).optional(),
+  minLon: z.coerce.number().min(-180).max(180).optional(),
+  maxLon: z.coerce.number().min(-180).max(180).optional(),
   geographicAreaIds: z.preprocess(
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid geographic area ID format')).optional()
   ),
-});
+}).refine(
+  (data) => {
+    // All four bounding box parameters must be provided together or none at all
+    const boundingBoxParams = [data.minLat, data.maxLat, data.minLon, data.maxLon];
+    const providedCount = boundingBoxParams.filter(p => p !== undefined).length;
+    return providedCount === 0 || providedCount === 4;
+  },
+  {
+    message: 'All four bounding box parameters (minLat, maxLat, minLon, maxLon) must be provided together',
+  }
+).refine(
+  (data) => {
+    // Validate minLat <= maxLat
+    if (data.minLat !== undefined && data.maxLat !== undefined) {
+      return data.minLat <= data.maxLat;
+    }
+    return true;
+  },
+  {
+    message: 'minLat must be less than or equal to maxLat',
+  }
+);
 
 // Sync schemas
 export const SyncOperationSchema = z.object({

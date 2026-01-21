@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
 import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
 import { ActivityStatus } from '../utils/constants';
+import { ActivityMarkerQueryBuilder } from '../utils/activity-marker-query-builder';
 
 export interface PaginationMetadata {
     page: number;
@@ -59,6 +60,18 @@ export interface VenuePopupContent {
     geographicAreaName: string;
 }
 
+/**
+ * Raw SQL query result row for activity markers
+ */
+interface ActivityMarkerRow {
+    id: string;
+    latitude: any; // Prisma Decimal type
+    longitude: any; // Prisma Decimal type
+    activityTypeId: string;
+    activityCategoryId: string;
+    total_count: bigint; // PostgreSQL COUNT returns bigint
+}
+
 export interface MapFilters {
     geographicAreaIds?: string[];
     activityCategoryIds?: string[];
@@ -70,6 +83,13 @@ export interface MapFilters {
     status?: ActivityStatus;
 }
 
+export interface BoundingBox {
+    minLat: number;
+    maxLat: number;
+    minLon: number;
+    maxLon: number;
+}
+
 export class MapDataService {
     constructor(
         private prisma: PrismaClient,
@@ -79,10 +99,12 @@ export class MapDataService {
 
     /**
      * Get lightweight activity marker data for map rendering with pagination
+     * Uses optimized raw SQL with conditional joins for best performance
      */
     async getActivityMarkers(
         filters: MapFilters,
         userId: string,
+        boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
     ): Promise<PaginatedResponse<ActivityMarker>> {
@@ -126,140 +148,52 @@ export class MapDataService {
             }
         }
 
-        // Build activity where clause
-        const activityWhere: any = {
-            // Exclude activities without venue history
-            activityVenueHistory: {
-                some: {},
-            },
-        };
+        // Build optimized query
+        const queryBuilder = new ActivityMarkerQueryBuilder(
+            filters,
+            effectiveVenueIds,
+            boundingBox,
+            effectiveLimit,
+            skip
+        );
 
-        // Apply venue filter (geographic or explicit)
-        if (effectiveVenueIds) {
-            activityWhere.activityVenueHistory = {
-                some: {
-                    venueId: { in: effectiveVenueIds },
+        const startTime = Date.now();
+        const variant = queryBuilder.getVariant();
+
+        // Execute raw SQL query
+        const sql = queryBuilder.build();
+
+        const results = await this.prisma.$queryRawUnsafe<ActivityMarkerRow[]>(sql);
+
+        const executionTime = Date.now() - startTime;
+
+        // Log performance in development
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[MapData] Activity markers query completed:`, {
+                variant,
+                executionTime: `${executionTime}ms`,
+                rowsReturned: results.length,
+                totalCount: results.length > 0 ? Number(results[0].total_count) : 0,
+                filters: {
+                    hasPopulation: !!filters.populationIds,
+                    hasGeographic: !!effectiveVenueIds,
+                    hasBoundingBox: !!boundingBox,
+                    hasDateRange: !!(filters.startDate || filters.endDate),
                 },
-            };
-        } else if (filters.venueIds) {
-            activityWhere.activityVenueHistory = {
-                some: {
-                    venueId: { in: filters.venueIds },
-                },
-            };
-        }
-
-        // Apply activity category filter
-        if (filters.activityCategoryIds) {
-            activityWhere.activityType = {
-                activityCategoryId: { in: filters.activityCategoryIds },
-            };
-        }
-
-        // Apply activity type filter
-        if (filters.activityTypeIds) {
-            activityWhere.activityTypeId = { in: filters.activityTypeIds };
-        }
-
-        // Apply date filters - temporal overlap logic
-        // Activity is included if it was active at any point during the query period
-        if (filters.startDate && filters.endDate) {
-            // Both dates provided: activity overlaps if it started before/during period AND ended after/during period (or ongoing)
-            activityWhere.AND = [
-                { startDate: { lte: filters.endDate } },
-                {
-                    OR: [
-                        { endDate: { gte: filters.startDate } },
-                        { endDate: null }, // Ongoing activities
-                    ],
-                },
-            ];
-        } else if (filters.startDate) {
-            // Only startDate: activity must end after/during start (or be ongoing)
-            activityWhere.OR = [
-                { endDate: { gte: filters.startDate } },
-                { endDate: null }, // Ongoing activities
-            ];
-        } else if (filters.endDate) {
-        // Only endDate: activity must start before/during end
-            activityWhere.startDate = { lte: filters.endDate };
-        }
-
-        // Apply status filter
-        if (filters.status) {
-            activityWhere.status = filters.status;
-        }
-
-        // Apply population filter
-        if (filters.populationIds && filters.populationIds.length > 0) {
-            activityWhere.assignments = {
-                some: {
-                    participant: {
-                        participantPopulations: {
-                            some: {
-                                populationId: { in: filters.populationIds },
-                            },
-                        },
-                    },
-                },
-            };
-        }
-
-        // Get total count
-        const total = await this.prisma.activity.count({
-            where: activityWhere,
-        });
-
-        // Fetch activities with venue history (paginated)
-        const activities = await this.prisma.activity.findMany({
-            where: activityWhere,
-            skip,
-            take: effectiveLimit,
-            include: {
-                activityType: {
-                    select: {
-                        activityCategoryId: true,
-                    },
-                },
-                activityVenueHistory: {
-                    include: {
-                        venue: {
-                            select: {
-                                latitude: true,
-                                longitude: true,
-                            },
-                        },
-                    },
-                    orderBy: {
-                        effectiveFrom: 'desc',
-                    },
-                },
-            },
-        });
-
-        // Transform to markers
-        const markers: ActivityMarker[] = [];
-        for (const activity of activities) {
-            // Get current venue (most recent in history)
-            const currentVenue = activity.activityVenueHistory[0];
-            if (!currentVenue) continue;
-
-            // Skip if venue has no coordinates
-            if (
-                currentVenue.venue.latitude === null ||
-                currentVenue.venue.longitude === null
-            ) {
-                continue;
-            }
-
-            markers.push({
-                id: activity.id,
-                latitude: currentVenue.venue.latitude.toNumber(),
-                longitude: currentVenue.venue.longitude.toNumber(),
-                activityTypeId: activity.activityTypeId,
-                activityCategoryId: activity.activityType.activityCategoryId,
             });
         }
+
+        // Extract total count from window function
+        const total = results.length > 0 ? Number(results[0].total_count) : 0;
+
+        // Transform to markers
+        const markers: ActivityMarker[] = results.map(row => ({
+            id: row.id,
+            latitude: Number(row.latitude),
+            longitude: Number(row.longitude),
+            activityTypeId: row.activityTypeId,
+            activityCategoryId: row.activityCategoryId,
+        }));
 
         return {
             data: markers,
@@ -340,6 +274,7 @@ export class MapDataService {
     async getParticipantHomeMarkers(
         filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds' | 'startDate' | 'endDate'>,
         userId: string,
+        boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
     ): Promise<PaginatedResponse<ParticipantHomeMarker>> {
@@ -407,7 +342,9 @@ export class MapDataService {
             where: participantWhere,
             include: {
                 addressHistory: {
-                    where: {
+                    where: boundingBox ? {
+                        venue: this.buildCoordinateFilter(boundingBox),
+                    } : {
                         venue: {}, // Only include address history with valid venues (venue exists)
                     },
                     include: {
@@ -610,6 +547,7 @@ export class MapDataService {
     async getVenueMarkers(
         filters: Pick<MapFilters, 'geographicAreaIds'>,
         userId: string,
+        boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
     ): Promise<PaginatedResponse<VenueMarker>> {
@@ -642,6 +580,11 @@ export class MapDataService {
             latitude: { not: null },
             longitude: { not: null },
         };
+
+        // Apply bounding box filter
+        if (boundingBox) {
+            Object.assign(venueWhere, this.buildCoordinateFilter(boundingBox));
+        }
 
         // Apply geographic filter
         if (effectiveAreaIds) {
@@ -734,13 +677,9 @@ export class MapDataService {
 
         // If explicit filter provided
         if (filterAreaIds && filterAreaIds.length > 0) {
-            // Expand to include descendants
-            const expandedIds = new Set<string>();
-            for (const areaId of filterAreaIds) {
-                expandedIds.add(areaId);
-                const descendants = await this.geographicAreaRepository.findDescendants(areaId);
-                descendants.forEach(d => expandedIds.add(d));
-            }
+            // Expand to include descendants using batch processing
+            const descendants = await this.geographicAreaRepository.findBatchDescendants(filterAreaIds);
+            const expandedIds = new Set<string>([...filterAreaIds, ...descendants]);
 
             // If user has restrictions, intersect with authorized areas
             if (authInfo.hasGeographicRestrictions) {
@@ -772,5 +711,42 @@ export class MapDataService {
             },
         });
         return venues.map(v => v.id);
+    }
+
+    /**
+     * Build coordinate filter for bounding box
+     * Handles international date line crossing
+     */
+    private buildCoordinateFilter(boundingBox: BoundingBox): any {
+        const { minLat, maxLat, minLon, maxLon } = boundingBox;
+
+        // Check if bounding box crosses international date line
+        const crossesDateLine = minLon > maxLon;
+
+        if (crossesDateLine) {
+            // Crossing date line: longitude >= minLon OR longitude <= maxLon
+            return {
+                latitude: {
+                    gte: minLat,
+                    lte: maxLat,
+                },
+                OR: [
+                    { longitude: { gte: minLon } },
+                    { longitude: { lte: maxLon } },
+                ],
+            };
+        } else {
+            // Normal case: longitude between minLon and maxLon
+            return {
+                latitude: {
+                    gte: minLat,
+                    lte: maxLat,
+                },
+                longitude: {
+                    gte: minLon,
+                    lte: maxLon,
+                },
+            };
+        }
     }
 }

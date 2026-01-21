@@ -19,7 +19,7 @@ describe('AnalyticsService - Growth Metrics Edge Cases', () => {
         } as any;
 
         mockGeoRepo = {
-            findDescendants: jest.fn().mockResolvedValue([]),
+            findBatchDescendants: jest.fn().mockResolvedValue([]),
         } as any;
 
         service = new AnalyticsService(mockPrisma, mockGeoRepo);

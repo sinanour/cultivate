@@ -1057,3 +1057,35 @@ The Backend API package provides the RESTful API service that implements all bus
 13. THE API SHALL apply the same population inclusion logic to all participant list endpoints consistently
 14. THE API SHALL use a single optimized database query with JOIN operations to fetch participants and their populations together
 15. WHEN using the fields parameter for attribute selection, THE API SHALL support requesting populations via fields=populations or fields=populations.id,populations.name
+
+### Requirement 30: Coordinate-Based Map Marker Filtering
+
+**User Story:** As a frontend developer, I want map marker endpoints to support filtering by geographic coordinate bounding box, so that the map can load only markers visible in the current viewport, improving performance and enabling users to interrupt large loads by zooming in to a specific region.
+
+#### Acceptance Criteria
+
+1. THE API SHALL accept optional bounding box query parameters on GET /api/v1/map/activities endpoint: minLat, maxLat, minLon, maxLon
+2. THE API SHALL accept optional bounding box query parameters on GET /api/v1/map/participant-homes endpoint: minLat, maxLat, minLon, maxLon
+3. THE API SHALL accept optional bounding box query parameters on GET /api/v1/map/venues endpoint: minLat, maxLat, minLon, maxLon
+4. WHEN bounding box parameters are provided, THE API SHALL validate that minLat <= maxLat and minLon <= maxLon
+5. WHEN bounding box parameters are provided, THE API SHALL validate that latitude values are between -90 and 90
+6. WHEN bounding box parameters are provided, THE API SHALL validate that longitude values are between -180 and 180
+7. WHEN invalid bounding box parameters are provided, THE API SHALL return 400 Bad Request with a descriptive validation error
+8. WHEN bounding box parameters are provided, THE API SHALL filter markers to include only those with coordinates within the bounding box
+9. THE API SHALL use the following bounding box filter logic: latitude >= minLat AND latitude <= maxLat AND longitude >= minLon AND longitude <= maxLon
+10. WHEN bounding box parameters are provided, THE API SHALL combine coordinate filtering with other filters (geographic area, activity type, population, date range) using AND logic
+11. WHEN both bounding box and geographicAreaIds filters are provided, THE API SHALL return only markers that satisfy both conditions (within bounding box AND within specified geographic areas)
+12. WHEN bounding box parameters are omitted, THE API SHALL return all markers matching other filters without coordinate restrictions
+13. THE API SHALL optimize bounding box queries using database indexes on latitude and longitude fields
+14. THE API SHALL handle edge cases where the bounding box crosses the international date line (longitude wrapping from 180 to -180)
+15. WHEN the bounding box crosses the international date line (minLon > maxLon), THE API SHALL use the logic: latitude >= minLat AND latitude <= maxLat AND (longitude >= minLon OR longitude <= maxLon)
+16. THE API SHALL apply bounding box filtering to all map marker endpoints (activities, participant homes, venues)
+17. THE API SHALL include the total count of markers within the bounding box in the pagination metadata
+18. WHEN the bounding box contains no markers matching the filters, THE API SHALL return an empty data array with total count of 0
+19. THE API SHALL maintain batched pagination behavior (100 items per page) when bounding box filtering is active
+20. THE API SHALL apply geographic authorization filtering before applying bounding box filtering
+21. WHEN a user has geographic restrictions, THE API SHALL first filter to authorized areas, then apply bounding box filtering to the authorized subset
+22. THE API SHALL document bounding box parameters in the OpenAPI specification for all map marker endpoints
+23. THE API SHALL provide example requests showing bounding box usage in the API documentation
+24. WHEN bounding box parameters are provided with partial values (e.g., only minLat and maxLat), THE API SHALL return 400 Bad Request indicating all four parameters are required
+25. THE API SHALL treat bounding box parameters as an all-or-nothing set (either all four provided or none)

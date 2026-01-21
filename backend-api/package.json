@@ -16,7 +16,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:setup": "bash scripts/setup-local-db.sh",
-    "generate-fake-data": "ts-node scripts/generate-fake-data.ts"
+    "generate-fake-data": "ts-node scripts/generate-fake-data.ts",
+    "benchmark:map-queries": "ts-node scripts/benchmark-map-queries.ts"
   },
   "keywords": [
     "api",

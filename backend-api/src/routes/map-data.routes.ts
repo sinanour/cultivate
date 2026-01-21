@@ -78,6 +78,15 @@ export class MapDataRoutes {
             const page = query.page ? parseInt(query.page as string, 10) : 1;
             const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
 
+            // Extract bounding box if provided
+            const boundingBox = (query.minLat !== undefined && query.maxLat !== undefined &&
+                query.minLon !== undefined && query.maxLon !== undefined) ? {
+                minLat: parseFloat(query.minLat as string),
+                maxLat: parseFloat(query.maxLat as string),
+                minLon: parseFloat(query.minLon as string),
+                maxLon: parseFloat(query.maxLon as string),
+            } : undefined;
+
             // Convert query to filters
             const filters = {
                 geographicAreaIds: query.geographicAreaIds,
@@ -93,6 +102,7 @@ export class MapDataRoutes {
             const result = await this.mapDataService.getActivityMarkers(
                 filters,
                 req.user!.userId,
+                boundingBox,
                 page,
                 limit
             );
@@ -143,6 +153,15 @@ export class MapDataRoutes {
             const page = query.page ? parseInt(query.page as string, 10) : 1;
             const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
 
+            // Extract bounding box if provided
+            const boundingBox = (query.minLat !== undefined && query.maxLat !== undefined &&
+                query.minLon !== undefined && query.maxLon !== undefined) ? {
+                minLat: parseFloat(query.minLat as string),
+                maxLat: parseFloat(query.maxLat as string),
+                minLon: parseFloat(query.minLon as string),
+                maxLon: parseFloat(query.maxLon as string),
+            } : undefined;
+
             const filters = {
                 geographicAreaIds: query.geographicAreaIds,
                 populationIds: query.populationIds,
@@ -153,6 +172,7 @@ export class MapDataRoutes {
             const result = await this.mapDataService.getParticipantHomeMarkers(
                 filters,
                 req.user!.userId,
+                boundingBox,
                 page,
                 limit
             );
@@ -203,6 +223,15 @@ export class MapDataRoutes {
             const page = query.page ? parseInt(query.page as string, 10) : 1;
             const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
 
+            // Extract bounding box if provided
+            const boundingBox = (query.minLat !== undefined && query.maxLat !== undefined &&
+                query.minLon !== undefined && query.maxLon !== undefined) ? {
+                minLat: parseFloat(query.minLat as string),
+                maxLat: parseFloat(query.maxLat as string),
+                minLon: parseFloat(query.minLon as string),
+                maxLon: parseFloat(query.maxLon as string),
+            } : undefined;
+
             const filters = {
                 geographicAreaIds: query.geographicAreaIds,
             };
@@ -210,6 +239,7 @@ export class MapDataRoutes {
             const result = await this.mapDataService.getVenueMarkers(
                 filters,
                 req.user!.userId,
+                boundingBox,
                 page,
                 limit
             );

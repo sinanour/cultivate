@@ -10,7 +10,7 @@ import Spinner from '@cloudscape-design/components/spinner';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Alert from '@cloudscape-design/components/alert';
-import { MapDataService, type MapFilters, type ActivityMarker, type ParticipantHomeMarker, type VenueMarker } from '../../services/api/map-data.service';
+import { MapDataService, type MapFilters, type ActivityMarker, type ParticipantHomeMarker, type VenueMarker, type BoundingBox } from '../../services/api/map-data.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
@@ -109,18 +109,104 @@ interface MapViewProps {
 }
 
 // Component to handle map bounds adjustment and auto-zoom
-function MapBoundsAdjuster({ markers, isLoading }: { markers: Array<{ position: [number, number] }>; isLoading: boolean }) {
+function MapBoundsAdjuster({ 
+  markers, 
+  allBatchesLoaded,
+  hasViewportFilter 
+}: { 
+  markers: Array<{ position: [number, number] }>; 
+  allBatchesLoaded: boolean;
+  hasViewportFilter: boolean;
+}) {
   const map = useMap();
   const hasAdjustedRef = useRef(false);
 
   useEffect(() => {
-    // Only auto-zoom once when markers first load
-    if (!isLoading && markers.length > 0 && !hasAdjustedRef.current) {
+    // Only auto-zoom once when:
+    // 1. All batches are loaded (not just first batch)
+    // 2. Markers exist
+    // 3. Haven't adjusted yet
+    // 4. Viewport filtering was NOT active (no explicit viewport bounds)
+    if (allBatchesLoaded && markers.length > 0 && !hasAdjustedRef.current && !hasViewportFilter) {
       hasAdjustedRef.current = true;
       const bounds: LatLngBoundsExpression = markers.map(m => m.position);
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     }
-  }, [markers, isLoading, map]);
+  }, [markers, allBatchesLoaded, hasViewportFilter, map]);
+
+  return null;
+}
+
+// Component to track viewport changes and update bounding box
+function ViewportTracker({ onBoundsChange }: { onBoundsChange: (bounds: BoundingBox | undefined) => void }) {
+  const map = useMap();
+  const timeoutRef = useRef<number | null>(null);
+
+  // Normalize longitude to -180 to 180 range
+  const normalizeLongitude = (lon: number): number => {
+    // Wrap longitude to -180 to 180 range
+    while (lon > 180) lon -= 360;
+    while (lon < -180) lon += 360;
+    return lon;
+  };
+
+  useEffect(() => {
+    const handleViewportChange = () => {
+      // Debounce viewport changes (500ms)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = window.setTimeout(() => {
+        const bounds = map.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+
+        // Calculate the longitude span BEFORE normalization
+        // This tells us how much of the world is visible
+        let lonSpan = ne.lng - sw.lng;
+        
+        // If span is negative, we've wrapped around (shouldn't happen with Leaflet, but handle it)
+        if (lonSpan < 0) {
+          lonSpan += 360;
+        }
+
+        // If viewport spans more than 180 degrees, it covers most/all of the world
+        // In this case, omit the bounding box filter entirely to avoid edge cases
+        if (lonSpan > 180) {
+          onBoundsChange(undefined); // Signal to fetch without coordinate filtering
+          return;
+        }
+
+        // Normal case: viewport spans ≤ 180 degrees
+        // Normalize longitude values to -180 to 180 range
+        const minLon = normalizeLongitude(sw.lng);
+        const maxLon = normalizeLongitude(ne.lng);
+
+        onBoundsChange({
+          minLat: Math.max(-90, Math.min(90, sw.lat)), // Clamp latitude to valid range
+          maxLat: Math.max(-90, Math.min(90, ne.lat)),
+          minLon,
+          maxLon,
+        });
+      }, 300);
+    };
+
+    // Listen to map movement and zoom events
+    map.on('moveend', handleViewportChange);
+    map.on('zoomend', handleViewportChange);
+
+    // Trigger initial bounds calculation
+    handleViewportChange();
+
+    return () => {
+      map.off('moveend', handleViewportChange);
+      map.off('zoomend', handleViewportChange);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [map, onBoundsChange]);
 
   return null;
 }
@@ -296,6 +382,10 @@ export function MapView({
 }: MapViewProps) {
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
+  // State for viewport bounds tracking - use ref to avoid recreating fetchNextBatch
+  const viewportBoundsRef = useRef<BoundingBox | undefined>(undefined);
+  const viewportGenerationRef = useRef(0); // Track viewport version to detect stale fetches
+
   // State for batched loading
   const [allActivityMarkers, setAllActivityMarkers] = useState<ActivityMarker[]>([]);
   const [allParticipantHomeMarkers, setAllParticipantHomeMarkers] = useState<ParticipantHomeMarker[]>([]);
@@ -306,6 +396,16 @@ export function MapView({
   const [loadingError, setLoadingError] = useState<string | undefined>();
   const [hasMorePages, setHasMorePages] = useState(true);
   const isFetchingRef = useRef(false); // Track if we're currently in a fetch cycle
+  const currentFetchGenerationRef = useRef(0); // Track which viewport generation this fetch belongs to
+  
+  // Trigger state to force re-render when viewport changes
+  const [viewportChangeCounter, setViewportChangeCounter] = useState(0);
+  
+  // Track if we've completed at least one successful fetch for current generation
+  const [hasCompletedFetch, setHasCompletedFetch] = useState(false);
+  
+  // Track if user dismissed the empty state alert for current generation
+  const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
 
   const BATCH_SIZE = 100;
 
@@ -335,12 +435,44 @@ export function MapView({
     setLoadingError(undefined);
     setHasMorePages(true);
     isFetchingRef.current = false; // Reset fetch tracking
+    viewportGenerationRef.current += 1; // Invalidate any in-flight fetches
+    setHasCompletedFetch(false); // Reset fetch completion tracking
+    setEmptyStateDismissed(false); // Reset dismissal state
   }, [mode, selectedGeographicAreaId, JSON.stringify(activityCategoryIds), JSON.stringify(activityTypeIds), 
       JSON.stringify(venueIds), JSON.stringify(populationIds), startDate, endDate, status]);
+
+  // Handler for viewport bounds changes
+  const handleBoundsChange = useCallback((bounds: BoundingBox | undefined) => {
+    // Update ref instead of state to avoid recreating fetchNextBatch
+    viewportBoundsRef.current = bounds;
+    
+    // Increment generation
+    viewportGenerationRef.current += 1;
+    
+    // Cancel any in-progress fetch
+    isFetchingRef.current = false;
+    
+    // Clear state and trigger re-render
+    setAllActivityMarkers([]);
+    setAllParticipantHomeMarkers([]);
+    setAllVenueMarkers([]);
+    currentPageRef.current = 1;
+    setTotalCount(0);
+    setIsLoadingBatch(false);
+    setLoadingError(undefined);
+    setHasMorePages(true);
+    setViewportChangeCounter(c => c + 1);
+    setHasCompletedFetch(false); // Reset fetch completion tracking
+    setEmptyStateDismissed(false); // Reset dismissal state for new viewport
+  }, []);
 
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
     if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
+
+    // Capture the current viewport generation before starting fetch
+    const fetchGeneration = viewportGenerationRef.current;
+    currentFetchGenerationRef.current = fetchGeneration;
 
     isFetchingRef.current = true;
     setIsLoadingBatch(true);
@@ -351,7 +483,14 @@ export function MapView({
       const pageToFetch = currentPageRef.current;
       
       if (mode === 'activitiesByType' || mode === 'activitiesByCategory') {
-        const response = await MapDataService.getActivityMarkers(filters, pageToFetch, BATCH_SIZE);
+        const response = await MapDataService.getActivityMarkers(filters, viewportBoundsRef.current, pageToFetch, BATCH_SIZE);
+        
+        // Check if viewport changed while we were fetching (stale fetch)
+        if (fetchGeneration !== viewportGenerationRef.current) {
+          // Viewport changed - discard this result
+          return;
+        }
+        
         // If this is the first page, replace markers instead of appending
         // This ensures filter changes clear previous results
         if (pageToFetch === 1) {
@@ -362,13 +501,21 @@ export function MapView({
         setTotalCount(response.pagination.total);
         setHasMorePages(pageToFetch < response.pagination.totalPages);
         currentPageRef.current = pageToFetch + 1; // Increment page ref
+        setHasCompletedFetch(true); // Mark that we've completed at least one fetch
       } else if (mode === 'participantHomes') {
         const response = await MapDataService.getParticipantHomeMarkers({
           geographicAreaIds: filters.geographicAreaIds,
           populationIds: filters.populationIds,
           startDate: filters.startDate,
           endDate: filters.endDate,
-        }, pageToFetch, BATCH_SIZE);
+        }, viewportBoundsRef.current, pageToFetch, BATCH_SIZE);
+        
+        // Check if viewport changed while we were fetching (stale fetch)
+        if (fetchGeneration !== viewportGenerationRef.current) {
+          // Viewport changed - discard this result
+          return;
+        }
+        
         // If this is the first page, replace markers instead of appending
         if (pageToFetch === 1) {
           setAllParticipantHomeMarkers(response.data);
@@ -378,10 +525,18 @@ export function MapView({
         setTotalCount(response.pagination.total);
         setHasMorePages(pageToFetch < response.pagination.totalPages);
         currentPageRef.current = pageToFetch + 1; // Increment page ref
+        setHasCompletedFetch(true); // Mark that we've completed at least one fetch
       } else if (mode === 'venues') {
         const response = await MapDataService.getVenueMarkers({
           geographicAreaIds: filters.geographicAreaIds,
-        }, pageToFetch, BATCH_SIZE);
+        }, viewportBoundsRef.current, pageToFetch, BATCH_SIZE);
+        
+        // Check if viewport changed while we were fetching (stale fetch)
+        if (fetchGeneration !== viewportGenerationRef.current) {
+          // Viewport changed - discard this result
+          return;
+        }
+        
         // If this is the first page, replace markers instead of appending
         if (pageToFetch === 1) {
           setAllVenueMarkers(response.data);
@@ -391,13 +546,23 @@ export function MapView({
         setTotalCount(response.pagination.total);
         setHasMorePages(pageToFetch < response.pagination.totalPages);
         currentPageRef.current = pageToFetch + 1; // Increment page ref
+        setHasCompletedFetch(true); // Mark that we've completed at least one fetch
       }
     } catch (error) {
       console.error('Error fetching markers batch:', error);
-      setLoadingError(error instanceof Error ? error.message : 'Failed to load markers');
+      // Only set error if this fetch is still current
+      if (fetchGeneration === viewportGenerationRef.current) {
+        setLoadingError(error instanceof Error ? error.message : 'Failed to load markers');
+      }
     } finally {
-      setIsLoadingBatch(false);
-      isFetchingRef.current = false;
+      // Only update loading state if this fetch is still current
+      if (fetchGeneration === viewportGenerationRef.current) {
+        setIsLoadingBatch(false);
+        isFetchingRef.current = false;
+      } else {
+        // Stale fetch - just clear the fetching flag without triggering state updates
+        isFetchingRef.current = false;
+      }
     }
   }, [mode, filters, isLoadingBatch, hasMorePages, BATCH_SIZE, isCancelled]);
 
@@ -427,22 +592,49 @@ export function MapView({
   // Fetch first batch on mount or when dependencies change
   useEffect(() => {
     const hasAnyMarkers = allActivityMarkers.length > 0 || allParticipantHomeMarkers.length > 0 || allVenueMarkers.length > 0;
-    // Only fetch if readyToFetch is true (filters are resolved)
-    if (readyToFetch && currentPageRef.current === 1 && hasMorePages && !isLoadingBatch && !hasAnyMarkers && !isFetchingRef.current) {
+    // Only fetch if readyToFetch is true (filters are resolved) and viewport is initialized
+    // Skip if viewport bounds exist (viewport change callback will handle it)
+    if (readyToFetch && currentPageRef.current === 1 && hasMorePages && !isLoadingBatch && !hasAnyMarkers && !isFetchingRef.current && !viewportBoundsRef.current) {
       fetchNextBatch();
     }
   }, [readyToFetch, hasMorePages, isLoadingBatch, allActivityMarkers.length, allParticipantHomeMarkers.length, allVenueMarkers.length, fetchNextBatch]);
 
   // Auto-fetch next batch after previous batch renders
   useEffect(() => {
+    // CRITICAL: Only fetch next batch if it belongs to the current viewport generation
+    // This prevents old viewport batches from continuing after viewport changes
     if (!isLoadingBatch && hasMorePages && currentPageRef.current > 1) {
+      // Check if the last completed fetch was for the current viewport
+      if (currentFetchGenerationRef.current !== viewportGenerationRef.current) {
+        // Last fetch was for an old viewport - don't continue
+        return;
+      }
+      
       // Small delay to allow rendering of current batch
       const timer = setTimeout(() => {
-        fetchNextBatch();
-      }, 100);
+        // Double-check generation hasn't changed during the delay
+        if (currentFetchGenerationRef.current === viewportGenerationRef.current && !isFetchingRef.current) {
+          fetchNextBatch();
+        }
+      }, 50);
       return () => clearTimeout(timer);
     }
   }, [isLoadingBatch, hasMorePages, fetchNextBatch]);
+
+  // Trigger fetch when viewport changes (after state is reset)
+  useEffect(() => {
+    // Only trigger if we have viewport bounds, page is 1, and we're not already loading
+    if (viewportBoundsRef.current && currentPageRef.current === 1 && !isLoadingBatch && !isFetchingRef.current && hasMorePages && readyToFetch && !isCancelled) {
+      const hasAnyMarkers = allActivityMarkers.length > 0 || allParticipantHomeMarkers.length > 0 || allVenueMarkers.length > 0;
+      if (!hasAnyMarkers) {
+        // Small delay to ensure state is fully reset
+        const timer = setTimeout(() => {
+          fetchNextBatch();
+        }, 50);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [viewportChangeCounter, isLoadingBatch, hasMorePages, readyToFetch, isCancelled, allActivityMarkers.length, allParticipantHomeMarkers.length, allVenueMarkers.length, fetchNextBatch]);
 
   // Retry function
   const handleRetry = useCallback(() => {
@@ -532,27 +724,44 @@ export function MapView({
   );
   const visibleCategories = Array.from(uniqueCategories.values()).filter(cat => visibleCategoryIds.has(cat.id));
 
-  // Show empty state if no markers and not loading
-  if (markers.length === 0 && !isLoadingBatch && !loadingError) {
-    const emptyMessages = {
-      activitiesByType: 'Activities need venues with coordinates to display on the map.',
-      activitiesByCategory: 'Activities need venues with coordinates to display on the map.',
-      participantHomes: 'Participants need home addresses with coordinates to display on the map.',
-      venues: 'No venues with coordinates found. Add latitude and longitude to venues to display them on the map.',
-    };
+  // Determine if we should show empty state alert
+  // Only show after a successful fetch completed with zero results, and user hasn't dismissed it
+  const showEmptyState = markers.length === 0 && 
+                         !isLoadingBatch && 
+                         !loadingError && 
+                         hasCompletedFetch && 
+                         !emptyStateDismissed &&
+                         viewportBoundsRef.current !== undefined;
 
-    return (
-      <Box textAlign="center" padding="xxl">
-        <b>No markers to display</b>
-        <Box padding={{ top: 's' }} variant="p">
-          {emptyMessages[mode]}
-        </Box>
-      </Box>
-    );
-  }
+  // Handler for dismissing empty state alert
+  const handleDismissEmptyState = useCallback(() => {
+    setEmptyStateDismissed(true);
+  }, []);
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
+      {/* Show empty state alert as floating overlay */}
+      {showEmptyState && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          maxWidth: '500px',
+          width: '90%',
+        }}>
+          <Alert
+            type="info"
+            dismissible
+            onDismiss={handleDismissEmptyState}
+            header="No markers in current viewport"
+          >
+            Try zooming out or adjusting your filters to see markers. The map is still interactive.
+          </Alert>
+        </div>
+      )}
+
       {/* Show error overlay if there's an error */}
       {loadingError && (
         <div style={{
@@ -612,7 +821,12 @@ export function MapView({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <MapBoundsAdjuster markers={markers} isLoading={isLoadingBatch && currentPageRef.current === 1} />
+        <ViewportTracker onBoundsChange={handleBoundsChange} />
+        <MapBoundsAdjuster 
+          markers={markers} 
+          allBatchesLoaded={!hasMorePages && !isLoadingBatch}
+          hasViewportFilter={viewportBoundsRef.current !== undefined}
+        />
         
         <MarkerClusterGroup
           chunkedLoading

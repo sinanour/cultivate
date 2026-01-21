@@ -1846,6 +1846,83 @@ if (geographicAreaId) {
   - Verify each group's metrics are correctly filtered
   - Verify grouped results sum to match ungrouped totals
 
+- [x] 41. Refactor findDescendants to findBatchDescendants for batch processing optimization
+  - **Issue:** Multiple services iterate over geographic area IDs and call findDescendants once per ID, resulting in N database queries
+  - **Root Cause:** findDescendants accepts a single ID instead of an array, forcing callers to loop and make multiple queries
+  - **Impact:** MapDataService.getEffectiveGeographicAreaIds, AnalyticsService.getEffectiveGeographicAreaIds, and GeographicAuthorizationService methods all have N+1 query problems
+  - **Fix Required:** Rename findDescendants to findBatchDescendants, accept array of IDs, use IN clause in WITH RECURSIVE CTE, update all callers
+  - _Requirements: Performance optimization, database query efficiency_
+
+  - [x] 41.1 Refactor GeographicAreaRepository.findDescendants to findBatchDescendants
+    - Rename method from findDescendants to findBatchDescendants
+    - Change parameter from `id: string` to `areaIds: string[]`
+    - Update WITH RECURSIVE CTE to use IN clause instead of equality: `WHERE id::text IN (${uuidList})`
+    - Build uuidList from array: `const uuidList = areaIds.map(id => \`'${id}'\`).join(', ');`
+    - Return flat array of all descendant IDs (excluding the input IDs themselves)
+    - Update JSDoc comments to reflect batch processing capability
+    - _Requirements: Performance optimization_
+
+  - [x] 41.2 Update MapDataService to use batch processing
+    - Replace loop in getEffectiveGeographicAreaIds that calls findDescendants multiple times
+    - Change from: `for (const areaId of filterAreaIds) { const descendants = await findDescendants(areaId); }`
+    - Change to: `const descendants = await findBatchDescendants(filterAreaIds);`
+    - Update logic to handle flat array of all descendants
+    - Verify expandedIds Set correctly includes all area IDs and their descendants
+    - _Requirements: Performance optimization_
+
+  - [x] 41.3 Update AnalyticsService to use batch processing
+    - Update getEffectiveGeographicAreaIds method to use findBatchDescendants
+    - Replace loop: `for (const areaId of areaIdsArray) { const descendantIds = await findDescendants(areaId); }`
+    - Change to single call: `const allDescendantIds = await findBatchDescendants(areaIdsArray);`
+    - Update getGeographicBreakdown to use findBatchDescendants for multiple areas
+    - Optimize getVenueIdsForArea if it processes multiple areas
+    - _Requirements: Performance optimization_
+
+  - [x] 41.4 Update GeographicAuthorizationService to use batch processing
+    - Update evaluateAccess method to batch process ALLOW rules
+    - Collect all ALLOW rule area IDs, then call findBatchDescendants once
+    - Update getAuthorizedAreas method to batch process ALLOW rules
+    - Update evaluateAccessBatch method to batch process DENY rules
+    - Replace all loops that call findDescendants with single findBatchDescendants call
+    - _Requirements: Performance optimization_
+
+  - [x] 41.5 Update remaining services to use findBatchDescendants
+    - Update ActivityService.getActivities to use findBatchDescendants([explicitGeographicAreaId])
+    - Update ParticipantService.getParticipants to use findBatchDescendants([explicitGeographicAreaId])
+    - Update VenueService.getVenues to use findBatchDescendants([explicitGeographicAreaId])
+    - Update GeographicAreaService.getGeographicAreas to use findBatchDescendants([explicitGeographicAreaId])
+    - Update GeographicAreaService.getVenues to use findBatchDescendants([id])
+    - Update GeographicAreaService.getStatistics to use findBatchDescendants([id])
+    - Note: Single-ID calls use array with one element for consistency
+    - _Requirements: Performance optimization, API consistency_
+
+  - [x] 41.6 Update all test mocks to use findBatchDescendants
+    - Update geographic-area.service.test.ts mock: `findBatchDescendants: jest.fn()`
+    - Update analytics.service.test.ts mock: `findBatchDescendants: jest.fn()`
+    - Update analytics.service.growth.test.ts mock: `findBatchDescendants: jest.fn()`
+    - Update analytics.service.population-filter.test.ts mock: `findBatchDescendants: jest.fn()`
+    - Update all test expectations to use findBatchDescendants with array parameters
+    - Verify mock return values are flat arrays of descendant IDs
+    - _Requirements: Test coverage_
+
+  - [x] 41.7 Write integration tests for batch descendant fetching
+    - Test findBatchDescendants with single area ID returns correct descendants
+    - Test findBatchDescendants with multiple area IDs returns all descendants
+    - Test findBatchDescendants with overlapping hierarchies deduplicates correctly
+    - Test findBatchDescendants with empty array returns empty array
+    - Test findBatchDescendants with non-existent IDs returns empty array
+    - Verify performance improvement: batch call faster than N individual calls
+    - _Requirements: Test coverage, performance validation_
+
+  - [x] 41.8 Verify all builds compile and tests pass
+    - Run `npm run build` in backend-api directory
+    - Verify no TypeScript compilation errors
+    - Run `npm test` to execute all unit tests
+    - Run `npm run test:integration` to execute all integration tests
+    - Verify all 333+ tests pass successfully
+    - Check for any deprecation warnings or type errors
+    - _Requirements: Code quality, test coverage_
+
 - [x] 43. Fix participant population filtering to handle many-to-many relationship
   - **Issue:** ParticipantService naively passes populationIds filter to buildWhereClause, which doesn't understand the many-to-many relationship through ParticipantPopulation mapping entity
   - **Root Cause:** The flexible filtering system (buildWhereClause) is designed for simple field filters, but population filtering requires a nested query through the participantPopulations relation
@@ -2718,3 +2795,75 @@ if (geographicAreaId) {
   - Test explicit geographicAreaId + depth still includes ancestors for context
   - Verify no regression in non-depth queries
   - **Result:** All 8 new integration tests passing, all 50 geographic area tests passing
+
+
+- [x] 44. Implement coordinate-based filtering for map marker endpoints
+  - [x] 44.1 Update map marker validation schemas
+    - Add optional bounding box parameters to MapActivitiesQuerySchema: minLat, maxLat, minLon, maxLon
+    - Add optional bounding box parameters to MapParticipantHomesQuerySchema: minLat, maxLat, minLon, maxLon
+    - Add optional bounding box parameters to MapVenuesQuerySchema: minLat, maxLat, minLon, maxLon
+    - Validate latitude range: -90 to 90
+    - Validate longitude range: -180 to 180
+    - Validate minLat <= maxLat
+    - Validate minLon <= maxLon (except when crossing international date line)
+    - Require all four bounding box parameters together (all or none)
+    - Return 400 Bad Request when partial bounding box parameters are provided
+    - _Requirements: 30.1, 30.2, 30.3, 30.4, 30.5, 30.6, 30.7, 30.24, 30.25_
+
+  - [x] 44.2 Implement bounding box filtering in MapDataService
+    - Update getActivityMarkers() to accept bounding box parameters
+    - Update getParticipantHomeMarkers() to accept bounding box parameters
+    - Update getVenueMarkers() to accept bounding box parameters
+    - Build coordinate WHERE clause: latitude >= minLat AND latitude <= maxLat AND longitude >= minLon AND longitude <= maxLon
+    - Handle international date line crossing: when minLon > maxLon, use OR logic for longitude
+    - Combine coordinate filtering with existing filters (geographic area, activity type, etc.) using AND logic
+    - Apply coordinate filtering after geographic authorization filtering
+    - _Requirements: 30.8, 30.9, 30.10, 30.11, 30.12, 30.14, 30.15, 30.16, 30.20, 30.21_
+
+  - [x] 44.3 Update map marker repositories with coordinate filtering
+    - Update ActivityRepository to support bounding box filtering in marker queries
+    - Update VenueRepository to support bounding box filtering in marker queries
+    - Update ParticipantAddressHistoryRepository to support bounding box filtering in home marker queries
+    - Ensure database indexes on latitude and longitude are used for optimal performance
+    - _Requirements: 30.13, 30.26_
+
+  - [x] 44.4 Update map marker route handlers
+    - Update GET /api/v1/map/activities route to extract and pass bounding box parameters
+    - Update GET /api/v1/map/participant-homes route to extract and pass bounding box parameters
+    - Update GET /api/v1/map/venues route to extract and pass bounding box parameters
+    - Apply validation middleware with updated schemas
+    - _Requirements: 30.1, 30.2, 30.3_
+
+  - [x] 44.5 Update OpenAPI documentation
+    - Document minLat, maxLat, minLon, maxLon parameters for all map marker endpoints
+    - Provide examples showing bounding box usage
+    - Document international date line handling
+    - Document validation rules for bounding box parameters
+    - Include example requests with coordinate filtering
+    - _Requirements: 30.22, 30.23_
+
+  - [x] 44.6 Optimize database queries for coordinate filtering
+    - Verify existing indexes on latitude and longitude columns
+    - Add composite index on (latitude, longitude) if not present for optimal bounding box queries
+    - Test query performance with large datasets
+    - Ensure query planner uses indexes for coordinate filtering
+    - _Requirements: 30.13, 30.26_
+
+  - [ ]* 44.7 Write property tests for coordinate-based filtering
+    - **Property 235: Bounding Box Parameter Validation**
+    - **Property 236: Coordinate Range Validation**
+    - **Property 237: Bounding Box Filtering Accuracy**
+    - **Property 238: International Date Line Handling**
+    - **Property 239: Coordinate and Geographic Area Filter Combination**
+    - **Property 240: Empty Bounding Box Result Handling**
+    - **Property 241: Coordinate Filtering with Authorization**
+    - **Property 242: Partial Bounding Box Parameter Rejection**
+    - **Validates: Requirements 30.1, 30.2, 30.3, 30.4, 30.5, 30.6, 30.7, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.14, 30.15, 30.16, 30.17, 30.18, 30.19, 30.20, 30.21, 30.24, 30.25**
+
+- [x] 45. Checkpoint - Verify coordinate-based map filtering
+  - Ensure all tests pass, ask the user if questions arise.
+  - Test bounding box filtering with various viewport sizes
+  - Test international date line crossing scenarios
+  - Test combination with other filters (geographic area, activity type, date range)
+  - Verify performance with large datasets
+  - Test empty viewport scenarios

@@ -1528,3 +1528,227 @@ Some fields are computed by the server and not stored in the database:
 3. **Requests**: Include `Authorization: Bearer <token>` header
 4. **Refresh**: POST /api/v1/auth/refresh with refresh token before access token expires
 5. **Logout**: POST /api/v1/auth/logout (client-side token removal)
+
+
+## Map Data Endpoints
+
+The Map Data API provides optimized endpoints for map visualization with lightweight marker data, batched pagination, lazy-loaded popup content, and coordinate-based viewport filtering.
+
+### Get Activity Markers
+
+**Endpoint**: `GET /api/v1/map/activities`
+
+Returns lightweight activity marker data for map rendering with pagination and coordinate filtering support.
+
+**Query Parameters**:
+- `page` (optional, number): Page number (default: 1)
+- `limit` (optional, number): Items per page (default: 100, max: 100)
+- `minLat` (optional, number): Minimum latitude for bounding box filter (range: -90 to 90)
+- `maxLat` (optional, number): Maximum latitude for bounding box filter (range: -90 to 90)
+- `minLon` (optional, number): Minimum longitude for bounding box filter (range: -180 to 180)
+- `maxLon` (optional, number): Maximum longitude for bounding box filter (range: -180 to 180)
+- `geographicAreaIds` (optional, array): Geographic area UUIDs
+- `activityCategoryIds` (optional, array): Activity category UUIDs
+- `activityTypeIds` (optional, array): Activity type UUIDs
+- `venueIds` (optional, array): Venue UUIDs
+- `populationIds` (optional, array): Population UUIDs
+- `startDate` (optional, string): ISO 8601 datetime
+- `endDate` (optional, string): ISO 8601 datetime
+- `status` (optional, string): Activity status
+
+**Bounding Box Requirements**:
+- All four bounding box parameters (minLat, maxLat, minLon, maxLon) must be provided together or none at all
+- minLat must be <= maxLat
+- When minLon > maxLon, indicates international date line crossing
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (UUID)",
+      "latitude": "number",
+      "longitude": "number",
+      "activityTypeId": "string (UUID)",
+      "activityCategoryId": "string (UUID)"
+    }
+  ],
+  "pagination": {
+    "page": "number",
+    "limit": "number",
+    "total": "number",
+    "totalPages": "number"
+  }
+}
+```
+
+**Filtering Logic**:
+- Coordinate filtering: Returns only markers within viewport bounding box
+- Temporal filtering: Returns activities active during query period (overlap logic)
+- Geographic authorization: Applies user's authorized areas
+- Combines all filters with AND logic
+
+### Get Activity Popup Content
+
+**Endpoint**: `GET /api/v1/map/activities/:id/popup`
+
+Returns detailed popup content for a specific activity marker.
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (UUID)",
+    "name": "string",
+    "activityTypeName": "string",
+    "activityCategoryName": "string",
+    "startDate": "string (ISO 8601)",
+    "participantCount": "number"
+  }
+}
+```
+
+### Get Participant Home Markers
+
+**Endpoint**: `GET /api/v1/map/participant-homes`
+
+Returns lightweight participant home marker data grouped by venue with pagination and coordinate filtering support.
+
+**Query Parameters**:
+- `page` (optional, number): Page number (default: 1)
+- `limit` (optional, number): Items per page (default: 100, max: 100)
+- `minLat` (optional, number): Minimum latitude for bounding box filter (range: -90 to 90)
+- `maxLat` (optional, number): Maximum latitude for bounding box filter (range: -90 to 90)
+- `minLon` (optional, number): Minimum longitude for bounding box filter (range: -180 to 180)
+- `maxLon` (optional, number): Maximum longitude for bounding box filter (range: -180 to 180)
+- `geographicAreaIds` (optional, array): Geographic area UUIDs
+- `populationIds` (optional, array): Population UUIDs
+- `startDate` (optional, string): ISO 8601 datetime
+- `endDate` (optional, string): ISO 8601 datetime
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "venueId": "string (UUID)",
+      "latitude": "number",
+      "longitude": "number",
+      "participantCount": "number"
+    }
+  ],
+  "pagination": {
+    "page": "number",
+    "limit": "number",
+    "total": "number",
+    "totalPages": "number"
+  }
+}
+```
+
+### Get Participant Home Popup Content
+
+**Endpoint**: `GET /api/v1/map/participant-homes/:venueId/popup`
+
+Returns detailed popup content for a specific participant home marker.
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "venueId": "string (UUID)",
+    "venueName": "string",
+    "participantCount": "number",
+    "participantNames": ["string"]
+  }
+}
+```
+
+### Get Venue Markers
+
+**Endpoint**: `GET /api/v1/map/venues`
+
+Returns lightweight venue marker data for map rendering with pagination and coordinate filtering support.
+
+**Query Parameters**:
+- `page` (optional, number): Page number (default: 1)
+- `limit` (optional, number): Items per page (default: 100, max: 100)
+- `minLat` (optional, number): Minimum latitude for bounding box filter (range: -90 to 90)
+- `maxLat` (optional, number): Maximum latitude for bounding box filter (range: -90 to 90)
+- `minLon` (optional, number): Minimum longitude for bounding box filter (range: -180 to 180)
+- `maxLon` (optional, number): Maximum longitude for bounding box filter (range: -180 to 180)
+- `geographicAreaIds` (optional, array): Geographic area UUIDs
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (UUID)",
+      "latitude": "number",
+      "longitude": "number"
+    }
+  ],
+  "pagination": {
+    "page": "number",
+    "limit": "number",
+    "total": "number",
+    "totalPages": "number"
+  }
+}
+```
+
+### Get Venue Popup Content
+
+**Endpoint**: `GET /api/v1/map/venues/:id/popup`
+
+Returns detailed popup content for a specific venue marker.
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (UUID)",
+    "name": "string",
+    "address": "string",
+    "geographicAreaName": "string"
+  }
+}
+```
+
+### Coordinate-Based Filtering
+
+All map marker endpoints support coordinate-based filtering using bounding box parameters:
+
+**Bounding Box Parameters**:
+- `minLat`: Minimum latitude (southwest corner)
+- `maxLat`: Maximum latitude (northeast corner)
+- `minLon`: Minimum longitude (southwest corner)
+- `maxLon`: Maximum longitude (northeast corner)
+
+**Validation Rules**:
+- All four parameters must be provided together (all or none)
+- Latitude range: -90 to 90
+- Longitude range: -180 to 180
+- minLat must be <= maxLat
+- When minLon > maxLon, indicates international date line crossing
+
+**International Date Line Handling**:
+When the bounding box crosses the international date line (e.g., viewport from 170° to -170°), the backend uses OR logic for longitude filtering: `longitude >= minLon OR longitude <= maxLon`
+
+**Performance Benefits**:
+- Reduces data transfer by fetching only visible markers
+- Enables users to interrupt large loads by zooming in
+- Improves map responsiveness with large datasets
+- Combines with other filters (geographic area, activity type, date range) using AND logic
+
+**Example Request**:
+```
+GET /api/v1/map/activities?minLat=40.5&maxLat=40.9&minLon=-74.2&maxLon=-73.8&page=1&limit=100
+```
