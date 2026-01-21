@@ -310,6 +310,7 @@ export default function MapViewPage() {
                 endDate={absoluteDates.endDate}
                 onLoadingStateChange={setMapLoadingState}
                 externalIsCancelled={mapLoadingState.isCancelled}
+                onResumeRequest={handleResumeLoading}
                 readyToFetch={filtersReady}
               />
             </div>

@@ -630,6 +630,9 @@ src/
   - Fetches only markers within the current viewport bounds
   - Debounces viewport change events (500ms delay) to avoid excessive API requests
   - When user pans or zooms during marker loading, immediately cancels in-progress fetch and starts fetching for new viewport
+  - **When user pans or zooms while loading is paused (cancelled), treats viewport change as implicit resumption of loading**
+  - **When viewport changes during paused state, clears the paused state and hides the Resume button**
+  - **When viewport changes during paused state, starts fetching markers for new viewport bounds with normal loading progress indicator**
   - Handles international date line crossing (longitude wrapping) by detecting when minLon > maxLon
   - Combines coordinate filtering with other filters (geographic area, activity type, population, date range) using AND logic
 - Fetches markers in batches of 100 items using paginated API requests

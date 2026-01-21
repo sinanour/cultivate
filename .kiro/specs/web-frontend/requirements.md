@@ -640,6 +640,9 @@ The Web Frontend package provides a responsive React-based web application that 
 13. WHEN a user is viewing a large geographic area with many markers being loaded in batches, THE user SHALL be able to interrupt the loading by zooming in or panning to a different area
 14. WHEN the viewport changes during batched loading, THE Web_App SHALL immediately cancel any in-progress marker fetching
 15. WHEN the viewport changes during batched loading, THE Web_App SHALL start fetching markers for the new viewport bounds
+15a. WHEN the viewport changes while loading is paused (user previously cancelled loading), THE Web_App SHALL treat the viewport change as an implicit resumption of loading
+15b. WHEN the viewport changes while loading is paused, THE Web_App SHALL clear the paused state and start fetching markers for the new viewport bounds
+15c. WHEN the viewport changes while loading is paused, THE Web_App SHALL hide the Resume button and display the normal loading progress indicator
 16. THE Web_App SHALL clear currently displayed markers when the viewport changes significantly (e.g., zoom level change or pan beyond current bounds)
 17. THE Web_App SHALL provide smooth visual feedback during viewport-triggered marker refetching
 18. WHEN the initial map loads at world zoom level, THE Web_App SHALL fetch markers for the entire world viewport (or apply other active filters if present)

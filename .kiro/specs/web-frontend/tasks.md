@@ -1042,6 +1042,14 @@ This implementation plan covers the React-based web application built with TypeS
       - Combine bounding box with other active filters (geographic area, activity type, date range)
       - _Requirements: 6D.5, 6D.13, 6D.14, 6D.15_
 
+    - [x] 13.5a.3a Handle viewport changes during paused loading state
+      - When viewport changes while loading is paused (user previously cancelled loading), treat viewport change as implicit resumption
+      - Clear the paused state when viewport changes
+      - Hide the Resume button when viewport changes during paused state
+      - Start fetching markers for new viewport bounds with normal loading progress indicator
+      - Ensure smooth transition from paused state to active loading state
+      - _Requirements: 6D.15a, 6D.15b, 6D.15c_
+
     - [x] 13.5a.4 Handle international date line crossing
       - Detect when viewport crosses international date line (minLon > maxLon)
       - When crossing detected, send bounding box parameters as-is to backend
@@ -1076,7 +1084,10 @@ This implementation plan covers the React-based web application built with TypeS
       - **Property 248: International Date Line Handling**
       - **Property 249: Empty Viewport Non-Intrusive Message**
       - **Property 250: Map Remains Mounted with No Markers**
-      - **Validates: Requirements 6D.1, 6D.2, 6D.3, 6D.4, 6D.5, 6D.6, 6D.7, 6D.8, 6D.9, 6D.10, 6D.11, 6D.11a, 6D.11b, 6D.11c, 6D.11d, 6D.13, 6D.14, 6D.15, 6D.16, 6D.17, 6D.18**
+      - **Property 251: Viewport Change During Paused Loading Resumes**
+      - **Property 252: Paused State Cleared on Viewport Change**
+      - **Property 253: Resume Button Hidden on Viewport Change**
+      - **Validates: Requirements 6D.1, 6D.2, 6D.3, 6D.4, 6D.5, 6D.6, 6D.7, 6D.8, 6D.9, 6D.10, 6D.11, 6D.11a, 6D.11b, 6D.11c, 6D.11d, 6D.13, 6D.14, 6D.15, 6D.15a, 6D.15b, 6D.15c, 6D.16, 6D.17, 6D.18**
 
   - [x] 13.5 Update global geographic filter integration
     - Apply global filter to all map modes

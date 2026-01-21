@@ -378,6 +378,7 @@ export function MapView({
   status,
   onLoadingStateChange,
   externalIsCancelled = false,
+  onResumeRequest,
   readyToFetch = true, // Default to true for backward compatibility
 }: MapViewProps) {
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
@@ -443,14 +444,47 @@ export function MapView({
 
   // Handler for viewport bounds changes
   const handleBoundsChange = useCallback((bounds: BoundingBox | undefined) => {
-    // Update ref instead of state to avoid recreating fetchNextBatch
+    // Check if bounds actually changed by comparing with previous bounds
+    const prevBounds = viewportBoundsRef.current;
+    
+    // Determine if bounds changed
+    let boundsChanged = false;
+    
+    if (!prevBounds && bounds) {
+      // First time setting bounds
+      boundsChanged = true;
+    } else if (prevBounds && !bounds) {
+      // Bounds removed (world view)
+      boundsChanged = true;
+    } else if (prevBounds && bounds) {
+      // Both exist - compare values
+      boundsChanged = 
+        prevBounds.minLat !== bounds.minLat ||
+        prevBounds.maxLat !== bounds.maxLat ||
+        prevBounds.minLon !== bounds.minLon ||
+        prevBounds.maxLon !== bounds.maxLon;
+    }
+    // else: both undefined - no change
+    
+    // Update ref
     viewportBoundsRef.current = bounds;
+    
+    // Only proceed if bounds actually changed
+    if (!boundsChanged) {
+      return;
+    }
     
     // Increment generation
     viewportGenerationRef.current += 1;
     
     // Cancel any in-progress fetch
     isFetchingRef.current = false;
+    
+    // If loading was paused (cancelled), treat viewport change as implicit resumption
+    // Only call onResumeRequest if bounds actually changed (user action)
+    if (isCancelled && onResumeRequest) {
+      onResumeRequest(); // This will clear the paused state in parent component
+    }
     
     // Clear state and trigger re-render
     setAllActivityMarkers([]);
@@ -464,7 +498,7 @@ export function MapView({
     setViewportChangeCounter(c => c + 1);
     setHasCompletedFetch(false); // Reset fetch completion tracking
     setEmptyStateDismissed(false); // Reset dismissal state for new viewport
-  }, []);
+  }, [isCancelled, onResumeRequest]);
 
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
