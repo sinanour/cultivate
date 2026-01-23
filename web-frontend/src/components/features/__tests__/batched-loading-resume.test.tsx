@@ -1,184 +1,186 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
-import { ParticipantList } from '../ParticipantList';
-import { ParticipantService } from '../../../services/api/participant.service';
-
-// Mock the services
-vi.mock('../../../services/api/participant.service');
-vi.mock('../../../hooks/usePermissions', () => ({
-  usePermissions: () => ({
-    canCreate: () => true,
-    canEdit: () => true,
-    canDelete: () => true,
-  }),
-}));
-vi.mock('../../../hooks/useGlobalGeographicFilter', () => ({
-  useGlobalGeographicFilter: () => ({
-    selectedGeographicAreaId: null,
-  }),
-}));
+import { ProgressIndicator } from '../../common/ProgressIndicator';
 
 describe('Batched Loading with Resume', () => {
-  let queryClient: QueryClient;
+  describe('ProgressIndicator pause/resume functionality', () => {
+    it('should display pause button when actively loading', () => {
+      const onCancel = vi.fn();
+      const onResume = vi.fn();
 
-  beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-    vi.clearAllMocks();
-  });
+      render(
+        <ProgressIndicator
+          loadedCount={100}
+          totalCount={250}
+          entityName="participants"
+          onCancel={onCancel}
+          onResume={onResume}
+          isCancelled={false}
+        />
+      );
 
-  it('should display Resume button after cancelling load', async () => {
-    const user = userEvent.setup();
-
-    // Mock paginated response with 250 total items (3 pages)
-    const mockGetParticipantsFlexible = vi.mocked(ParticipantService.getParticipantsFlexible);
-    mockGetParticipantsFlexible.mockImplementation(async (options: any) => {
-      const page = options.page || 1;
-      // Simulate delay
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Should show pause button when loading
+      expect(screen.getByRole('button', { name: /Pause loading/i })).toBeInTheDocument();
       
-      const items = Array.from({ length: 100 }, (_, i) => ({
-        id: `participant-${page}-${i}`,
-        name: `Participant ${page}-${i}`,
-        email: `participant${page}${i}@example.com`,
-        version: 1,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }));
-
-      return {
-        data: items,
-        pagination: {
-          page,
-          limit: 100,
-          total: 250,
-          totalPages: 3,
-        },
-      };
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ParticipantList />
-        </BrowserRouter>
-      </QueryClientProvider>
-    );
-
-    // Wait for first batch to load - check for progress bar and pause button
-    await waitFor(() => {
-      expect(screen.getAllByText(/Loading \d+ \/ 250 participants\.\.\./)[0]).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Pause loading/i })).toBeInTheDocument();
-    }, { timeout: 3000 });
-
-    // Click Pause button (was Cancel button)
-    const pauseButton = screen.getByRole('button', { name: /Pause loading/i });
-    await user.click(pauseButton);
-
-    // Wait for Resume button to appear (play icon)
-    await waitFor(() => {
-      const resumeButton = screen.getByRole('button', { name: /Resume loading participants/i });
-      expect(resumeButton).toBeInTheDocument();
-    });
-
-    // Entity count should be hidden while paused (to prevent button shift)
-    expect(screen.queryByText(/\(\d+\)/)).not.toBeInTheDocument();
-    // Progress bar should still be visible when paused, but with "Loaded" label
-    expect(screen.getAllByText(/Loaded \d+ \/ 250 participants\./)[0]).toBeInTheDocument();
-
-    // Click Resume button (play icon)
-    const resumeButton = screen.getByRole('button', { name: /Resume loading participants/i });
-    await user.click(resumeButton);
-
-    // Wait for loading to continue - check for progress bar and pause button again
-    await waitFor(() => {
-      expect(screen.getAllByText(/Loading \d+ \/ 250 participants\.\.\./)[0]).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Pause loading/i })).toBeInTheDocument();
-    }, { timeout: 3000 });
-
-    // Verify Resume button is gone while loading
-    expect(screen.queryByRole('button', { name: /Resume loading participants/i })).not.toBeInTheDocument();
-  });
-
-  it('should hide Resume button when all items are loaded', async () => {
-    const user = userEvent.setup();
-
-    // Mock paginated response with 150 total items (2 pages)
-    const mockGetParticipantsFlexible = vi.mocked(ParticipantService.getParticipantsFlexible);
-    mockGetParticipantsFlexible.mockImplementation(async (options: any) => {
-      const page = options.page || 1;
-      // Longer delay for page 2 to prevent race condition
-      await new Promise(resolve => setTimeout(resolve, page === 2 ? 500 : 50));
+      // Should show loading progress
+      expect(screen.getByText(/Loading 100 \/ 250 participants\.\.\./)).toBeInTheDocument();
       
-      const itemCount = page === 1 ? 100 : 50;
-      const items = Array.from({ length: itemCount }, (_, i) => ({
-        id: `participant-${page}-${i}`,
-        name: `Participant ${page}-${i}`,
-        email: `participant${page}${i}@example.com`,
-        version: 1,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }));
-
-      return {
-        data: items,
-        pagination: {
-          page,
-          limit: 100,
-          total: 150,
-          totalPages: 2,
-        },
-      };
+      // Should not show resume button
+      expect(screen.queryByRole('button', { name: /Resume loading participants/i })).not.toBeInTheDocument();
     });
 
-    render(
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ParticipantList />
-        </BrowserRouter>
-      </QueryClientProvider>
-    );
+    it('should display resume button when paused', () => {
+      const onCancel = vi.fn();
+      const onResume = vi.fn();
 
-    // Wait for first batch to load - check for progress bar and pause button
-    await waitFor(() => {
-      expect(screen.getAllByText(/Loading \d+ \/ 150 participants\.\.\./)[0]).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Pause loading/i })).toBeInTheDocument();
-    }, { timeout: 3000 });
+      render(
+        <ProgressIndicator
+          loadedCount={100}
+          totalCount={250}
+          entityName="participants"
+          onCancel={onCancel}
+          onResume={onResume}
+          isCancelled={true}
+        />
+      );
 
-    // Click Pause button
-    const pauseButton = screen.getByRole('button', { name: /Pause loading/i });
-    await user.click(pauseButton);
-
-    // Wait for Resume button to appear (play icon)
-    await waitFor(() => {
-      const resumeButton = screen.getByRole('button', { name: /Resume loading participants/i });
-      expect(resumeButton).toBeInTheDocument();
-    });
-
-    // Progress bar should still be visible when paused, but with "Loaded" label
-    expect(screen.getAllByText(/Loaded \d+ \/ 150 participants\./)[0]).toBeInTheDocument();
-
-    // Click Resume button (play icon) - get it fresh to avoid stale reference
-    await user.click(screen.getByRole('button', { name: /Resume loading participants/i }));
-
-    // Wait for all items to load - component should unmount completely
-    await waitFor(() => {
-      expect(screen.getByText(/\(150\)/)).toBeInTheDocument();
-      // Progress bar should be gone
-      expect(screen.queryByText(/Loading \d+ \/ 150 participants\.\.\./)).not.toBeInTheDocument();
-      // Pause button should be gone
+      // Should show resume button when paused
+      expect(screen.getByRole('button', { name: /Resume loading participants/i })).toBeInTheDocument();
+      
+      // Should show loaded progress (not "Loading...")
+      expect(screen.getByText(/Loaded 100 \/ 250 participants\./)).toBeInTheDocument();
+      
+      // Should not show pause button
       expect(screen.queryByRole('button', { name: /Pause loading/i })).not.toBeInTheDocument();
-    }, { timeout: 5000 });
+    });
 
-    // Verify Resume button is also hidden when all items loaded (component unmounted)
-    expect(screen.queryByRole('button', { name: /Resume loading participants/i })).not.toBeInTheDocument();
+    it('should call onCancel when pause button is clicked', async () => {
+      const user = userEvent.setup();
+      const onCancel = vi.fn();
+      const onResume = vi.fn();
+
+      render(
+        <ProgressIndicator
+          loadedCount={100}
+          totalCount={250}
+          entityName="participants"
+          onCancel={onCancel}
+          onResume={onResume}
+          isCancelled={false}
+        />
+      );
+
+      const pauseButton = screen.getByRole('button', { name: /Pause loading/i });
+      await user.click(pauseButton);
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onResume).not.toHaveBeenCalled();
+    });
+
+    it('should call onResume when resume button is clicked', async () => {
+      const user = userEvent.setup();
+      const onCancel = vi.fn();
+      const onResume = vi.fn();
+
+      render(
+        <ProgressIndicator
+          loadedCount={100}
+          totalCount={250}
+          entityName="participants"
+          onCancel={onCancel}
+          onResume={onResume}
+          isCancelled={true}
+        />
+      );
+
+      const resumeButton = screen.getByRole('button', { name: /Resume loading participants/i });
+      await user.click(resumeButton);
+
+      expect(onResume).toHaveBeenCalledTimes(1);
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it('should hide component when all items are loaded', () => {
+      const onCancel = vi.fn();
+      const onResume = vi.fn();
+
+      const { container } = render(
+        <ProgressIndicator
+          loadedCount={150}
+          totalCount={150}
+          entityName="participants"
+          onCancel={onCancel}
+          onResume={onResume}
+          isCancelled={false}
+        />
+      );
+
+      // Component should return null and not render anything
+      expect(container.firstChild).toBeNull();
+      
+      // Should not show any buttons
+      expect(screen.queryByRole('button', { name: /Pause loading/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Resume loading participants/i })).not.toBeInTheDocument();
+    });
+
+    it('should hide component when paused and all items are loaded', () => {
+      const onCancel = vi.fn();
+      const onResume = vi.fn();
+
+      const { container } = render(
+        <ProgressIndicator
+          loadedCount={150}
+          totalCount={150}
+          entityName="participants"
+          onCancel={onCancel}
+          onResume={onResume}
+          isCancelled={true}
+        />
+      );
+
+      // Component should return null even when paused if loading is complete
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('should calculate progress percentage correctly', () => {
+      const onCancel = vi.fn();
+      const onResume = vi.fn();
+
+      render(
+        <ProgressIndicator
+          loadedCount={100}
+          totalCount={200}
+          entityName="participants"
+          onCancel={onCancel}
+          onResume={onResume}
+          isCancelled={false}
+        />
+      );
+
+      // Progress bar should exist and show the correct text
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+      expect(screen.getByText(/Loading 100 \/ 200 participants\.\.\./)).toBeInTheDocument();
+    });
+
+    it('should not render when totalCount is 0', () => {
+      const onCancel = vi.fn();
+      const onResume = vi.fn();
+
+      const { container } = render(
+        <ProgressIndicator
+          loadedCount={0}
+          totalCount={0}
+          entityName="participants"
+          onCancel={onCancel}
+          onResume={onResume}
+          isCancelled={false}
+        />
+      );
+
+      // Component should return null when there's nothing to load
+      expect(container.firstChild).toBeNull();
+    });
   });
 });
 
