@@ -445,7 +445,20 @@ export const GrowthQuerySchema = z.object({
     },
     z.array(z.string().uuid('Invalid population ID format')).optional()
   ),
-  groupBy: z.enum(['type', 'category']).optional(),
+  groupBy: z.preprocess(
+    (val) => {
+      // Transform user-friendly values to GroupingDimension enum values
+      if (val === 'type') return GroupingDimension.ACTIVITY_TYPE;
+      if (val === 'category') return GroupingDimension.ACTIVITY_CATEGORY;
+      // If already an enum value, pass through
+      if (val === GroupingDimension.ACTIVITY_TYPE || val === GroupingDimension.ACTIVITY_CATEGORY) return val;
+      // Reject anything else
+      return val;
+    },
+    z.enum([GroupingDimension.ACTIVITY_TYPE, GroupingDimension.ACTIVITY_CATEGORY] as const, {
+      errorMap: () => ({ message: 'groupBy must be "type" or "category"' })
+    }).optional()
+  ),
 });
 
 export const ActivityLifecycleQuerySchema = z.object({

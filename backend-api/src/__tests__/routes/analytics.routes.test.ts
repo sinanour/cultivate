@@ -65,8 +65,8 @@ describe('AnalyticsRoutes', () => {
         it('should return growth metrics with unique counts per period', async () => {
             const mockMetrics = {
                 timeSeries: [
-                    { date: '2024-01', uniqueParticipants: 10, uniqueActivities: 5 },
-                    { date: '2024-02', uniqueParticipants: 15, uniqueActivities: 8 },
+                    { date: '2024-01', uniqueParticipants: 10, uniqueActivities: 5, totalParticipation: 12 },
+                    { date: '2024-02', uniqueParticipants: 15, uniqueActivities: 8, totalParticipation: 18 },
                 ],
             };
             mockService.getGrowthMetrics = jest.fn().mockResolvedValue(mockMetrics);
@@ -79,6 +79,74 @@ describe('AnalyticsRoutes', () => {
             expect(response.status).toBe(200);
             expect(response.body).toHaveProperty('success', true);
             expect(response.body.data).toEqual(mockMetrics);
+        });
+
+        it('should return grouped time series when groupBy=type', async () => {
+            const mockMetrics = {
+                timeSeries: [],
+                groupedTimeSeries: {
+                    'Study Circle': [
+                        { date: '2024-01', uniqueParticipants: 5, uniqueActivities: 2, totalParticipation: 6 },
+                        { date: '2024-02', uniqueParticipants: 7, uniqueActivities: 3, totalParticipation: 8 },
+                    ],
+                    'Children\'s Class': [
+                        { date: '2024-01', uniqueParticipants: 8, uniqueActivities: 3, totalParticipation: 10 },
+                        { date: '2024-02', uniqueParticipants: 10, uniqueActivities: 4, totalParticipation: 12 },
+                    ],
+                },
+            };
+            mockService.getGrowthMetrics = jest.fn().mockResolvedValue(mockMetrics);
+
+            const response = await request(app)
+                .get('/api/analytics/growth')
+                .query({ period: 'MONTH', groupBy: 'type' })
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('success', true);
+            expect(response.body.data.timeSeries).toEqual([]);
+            expect(response.body.data.groupedTimeSeries).toBeDefined();
+            expect(Object.keys(response.body.data.groupedTimeSeries)).toContain('Study Circle');
+            expect(Object.keys(response.body.data.groupedTimeSeries)).toContain('Children\'s Class');
+        });
+
+        it('should return grouped time series when groupBy=category', async () => {
+            const mockMetrics = {
+                timeSeries: [],
+                groupedTimeSeries: {
+                    'Core Activities': [
+                        { date: '2024-01', uniqueParticipants: 12, uniqueActivities: 5, totalParticipation: 15 },
+                        { date: '2024-02', uniqueParticipants: 15, uniqueActivities: 6, totalParticipation: 18 },
+                    ],
+                    'Social Activities': [
+                        { date: '2024-01', uniqueParticipants: 8, uniqueActivities: 3, totalParticipation: 9 },
+                        { date: '2024-02', uniqueParticipants: 10, uniqueActivities: 4, totalParticipation: 11 },
+                    ],
+                },
+            };
+            mockService.getGrowthMetrics = jest.fn().mockResolvedValue(mockMetrics);
+
+            const response = await request(app)
+                .get('/api/analytics/growth')
+                .query({ period: 'MONTH', groupBy: 'category' })
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('success', true);
+            expect(response.body.data.timeSeries).toEqual([]);
+            expect(response.body.data.groupedTimeSeries).toBeDefined();
+            expect(Object.keys(response.body.data.groupedTimeSeries)).toContain('Core Activities');
+            expect(Object.keys(response.body.data.groupedTimeSeries)).toContain('Social Activities');
+        });
+
+        it('should reject invalid groupBy values', async () => {
+            const response = await request(app)
+                .get('/api/analytics/growth')
+                .query({ period: 'MONTH', groupBy: 'invalid' })
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty('code', 'VALIDATION_ERROR');
         });
     });
 

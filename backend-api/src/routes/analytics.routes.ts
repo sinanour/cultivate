@@ -8,7 +8,7 @@ import { AuthorizationMiddleware } from '../middleware/authorization.middleware'
 import { ValidationMiddleware } from '../middleware/validation.middleware';
 import { EngagementQuerySchema, EngagementQueryOptimizedSchema, GrowthQuerySchema, ActivityLifecycleQuerySchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
-import { ErrorCode, HttpStatus } from '../utils/constants';
+import { ErrorCode, HttpStatus, GroupingDimension } from '../utils/constants';
 import { PrismaClient } from '@prisma/client';
 
 export class AnalyticsRoutes {
@@ -279,7 +279,7 @@ export class AnalyticsRoutes {
                 geographicAreaIds: geographicAreaIds as string[] | undefined,
                 venueIds: venueIds as string[] | undefined,
                 populationIds: populationIds as string[] | undefined,
-                groupBy: groupBy as any,
+                groupBy: groupBy as GroupingDimension | undefined,
             };
 
             const metrics = await this.analyticsService.getGrowthMetrics(

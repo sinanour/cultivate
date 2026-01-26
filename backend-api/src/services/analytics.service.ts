@@ -150,7 +150,11 @@ export interface AnalyticsFilters {
     geographicAreaIds?: string[];
     venueIds?: string[];
     populationIds?: string[];
-    groupBy?: GroupingDimension[];
+    // groupBy can be:
+    // - Array of GroupingDimension for Engagement metrics (multi-dimensional grouping)
+    // - Single GroupingDimension value for Growth metrics (single-dimension grouping)
+    // - undefined for no grouping
+    groupBy?: GroupingDimension[] | GroupingDimension;
     dateGranularity?: DateGranularity;
     // Legacy single-value filters (deprecated, use array versions)
     geographicAreaId?: string;
@@ -839,7 +843,7 @@ export class AnalyticsService {
                 startDate: startDate?.toISOString(),
                 endDate: endDate?.toISOString(),
             },
-            groupingDimensions: groupBy,
+            groupingDimensions: Array.isArray(groupBy) ? groupBy.map(d => d.toString()) : undefined,
         };
     }
 
@@ -850,7 +854,8 @@ export class AnalyticsService {
     ): Promise<EngagementMetrics> {
         const { groupBy } = filters;
 
-        if (!groupBy || groupBy.length === 0) {
+        // Type guard: groupBy must be an array for engagement metrics
+        if (!groupBy || !Array.isArray(groupBy) || groupBy.length === 0) {
             // No grouping, return ungrouped metrics
             const ungroupedFilters = { ...filters };
             delete ungroupedFilters.groupBy;
@@ -1110,6 +1115,19 @@ export class AnalyticsService {
         return Array.from(combinationMap.values());
     }
 
+    /**
+     * Get growth metrics over time
+     * 
+     * @param timePeriod - Time period granularity (DAY, WEEK, MONTH, YEAR)
+     * @param filters - Analytics filters including optional groupBy dimension
+     * @param filters.groupBy - Optional grouping dimension:
+     *   - GroupingDimension.ACTIVITY_TYPE: Returns separate time series for each activity type
+     *   - GroupingDimension.ACTIVITY_CATEGORY: Returns separate time series for each activity category
+     *   - undefined: Returns single aggregate time series
+     * @param authorizedAreaIds - Geographic areas the user is authorized to access
+     * @param hasGeographicRestrictions - Whether the user has geographic restrictions
+     * @returns Growth metrics with time series data
+     */
     async getGrowthMetrics(
         timePeriod: TimePeriod,
         filters: AnalyticsFilters = {},
@@ -1271,9 +1289,9 @@ export class AnalyticsService {
         });
 
         // If groupBy is specified, calculate grouped time series
-        if (groupBy && (groupBy.includes(GroupingDimension.ACTIVITY_TYPE) || groupBy.includes(GroupingDimension.ACTIVITY_CATEGORY))) {
+        if (groupBy === GroupingDimension.ACTIVITY_TYPE || groupBy === GroupingDimension.ACTIVITY_CATEGORY) {
             const groupedTimeSeries: Record<string, GrowthPeriodData[]> = {};
-            const groupByType = groupBy.includes(GroupingDimension.ACTIVITY_TYPE);
+            const groupByType = groupBy === GroupingDimension.ACTIVITY_TYPE;
 
             // Group activities by type or category
             const activityGroups = new Map<string, typeof activities>();

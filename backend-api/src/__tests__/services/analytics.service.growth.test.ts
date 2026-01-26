@@ -1,6 +1,7 @@
 import { AnalyticsService, TimePeriod } from '../../services/analytics.service';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { PrismaClient, ActivityStatus } from '@prisma/client';
+import { GroupingDimension } from '../../utils/constants';
 
 jest.mock('@prisma/client');
 jest.mock('../../repositories/geographic-area.repository');
@@ -200,7 +201,7 @@ describe('AnalyticsService - Growth Metrics Edge Cases', () => {
             const result = await service.getGrowthMetrics(TimePeriod.MONTH, {
                 startDate: new Date(Date.UTC(2024, 0, 1)),
                 endDate: new Date(Date.UTC(2024, 1, 28)),
-                groupBy: ['activityType' as any],
+                groupBy: GroupingDimension.ACTIVITY_TYPE,
             });
 
             // Should return empty timeSeries and populated groupedTimeSeries
@@ -266,7 +267,7 @@ describe('AnalyticsService - Growth Metrics Edge Cases', () => {
             const result = await service.getGrowthMetrics(TimePeriod.MONTH, {
                 startDate: new Date(Date.UTC(2024, 0, 1)),
                 endDate: new Date(Date.UTC(2024, 1, 28)),
-                groupBy: ['activityCategory' as any],
+                groupBy: GroupingDimension.ACTIVITY_CATEGORY,
             });
 
             expect(result.timeSeries).toEqual([]);
@@ -283,6 +284,57 @@ describe('AnalyticsService - Growth Metrics Edge Cases', () => {
             const socialData = result.groupedTimeSeries!['Social Activities'];
             expect(socialData[0].uniqueActivities).toBe(1);
             expect(socialData[0].uniqueParticipants).toBe(1);
+        });
+
+        it('should return aggregate time series when groupBy is undefined', async () => {
+            const mockActivities = [
+                {
+                    id: 'a1',
+                    startDate: new Date(Date.UTC(2024, 0, 15)),
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Study Circle',
+                        activityCategory: { name: 'Core Activities' }
+                    },
+                    assignments: [
+                        { participantId: 'p1' },
+                        { participantId: 'p2' },
+                    ]
+                },
+                {
+                    id: 'a2',
+                    startDate: new Date(Date.UTC(2024, 0, 20)),
+                    endDate: null,
+                    status: ActivityStatus.ACTIVE,
+                    activityType: {
+                        name: 'Children\'s Class',
+                        activityCategory: { name: 'Core Activities' }
+                    },
+                    assignments: [
+                        { participantId: 'p3' },
+                    ]
+                },
+            ];
+
+            mockPrisma.activity.findMany = jest.fn().mockResolvedValue(mockActivities);
+
+            const result = await service.getGrowthMetrics(TimePeriod.MONTH, {
+                startDate: new Date(Date.UTC(2024, 0, 1)),
+                endDate: new Date(Date.UTC(2024, 1, 28)),
+                // No groupBy parameter
+            });
+
+            // Should return populated timeSeries and no groupedTimeSeries
+            expect(result.timeSeries).toBeDefined();
+            expect(result.timeSeries.length).toBe(2); // Jan, Feb
+            expect(result.groupedTimeSeries).toBeUndefined();
+
+            // Check aggregate data for January
+            expect(result.timeSeries[0].date).toBe('2024-01');
+            expect(result.timeSeries[0].uniqueActivities).toBe(2); // Both activities
+            expect(result.timeSeries[0].uniqueParticipants).toBe(3); // All 3 participants
+            expect(result.timeSeries[0].totalParticipation).toBe(3); // 2 + 1 assignments
         });
     });
 });

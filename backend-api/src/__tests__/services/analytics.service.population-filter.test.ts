@@ -447,7 +447,7 @@ describe('AnalyticsService - Population Filter', () => {
                     startDate,
                     endDate,
                     populationIds: [populationId],
-                    groupBy: [GroupingDimension.ACTIVITY_TYPE],
+                    groupBy: GroupingDimension.ACTIVITY_TYPE,
                 },
                 [],
                 false
