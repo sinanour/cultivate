@@ -1189,6 +1189,89 @@ POST /geographic-areas/batch-ancestors
 
 **Note**: Date parameters are optional, not required.
 
+### Get Engagement Metrics (Optimized)
+
+**Endpoint**: `POST /analytics/engagement-optimized`
+
+**Query Parameters**:
+- `startDate` (optional): Period start date (ISO 8601) - if provided with endDate, returns date range snapshots
+- `endDate` (optional): Period end date (ISO 8601) - if provided with startDate, returns date range snapshots
+- `activityCategoryIds` (optional): Array of activity category UUIDs to filter by (OR logic within dimension)
+- `activityTypeIds` (optional): Array of activity type UUIDs to filter by (OR logic within dimension)
+- `geographicAreaIds` (optional): Array of geographic area UUIDs to filter by (OR logic within dimension, includes descendants)
+- `venueIds` (optional): Array of venue UUIDs to filter by (OR logic within dimension)
+- `populationIds` (optional): Array of population UUIDs to filter by (OR logic within dimension)
+- `groupBy` (optional): Array of grouping dimensions - valid values: `"type"`, `"category"`, `"geographicArea"`
+
+**Response** (200 OK):
+
+**Wire Format Structure**:
+```json
+{
+  "success": true,
+  "data": {
+    "data": [
+      [0, 1, 5, 12, 45],      // Example row: typeIdx=0, catIdx=1, 5 activities, 12 participants, 45 participation
+      [0, -1, 8, 20, 67],     // Subset: typeIdx=0, all categories (-1), aggregated metrics
+      [-1, 1, 3, 8, 23],      // Subset: all types (-1), catIdx=1, aggregated metrics
+      [-1, -1, 15, 35, 120]   // Total: all types (-1), all categories (-1), total metrics
+    ],
+    "lookups": {
+      "activityTypes": [
+        { "id": "uuid-1", "name": "Workshop" },
+        { "id": "uuid-2", "name": "Training" }
+      ],
+      "activityCategories": [
+        { "id": "uuid-3", "name": "Education" },
+        { "id": "uuid-4", "name": "Recreation" }
+      ],
+      "geographicAreas": [
+        { "id": "uuid-5", "name": "Downtown" }
+      ]
+    },
+    "metadata": {
+      "columns": [
+        "activityTypeIndex",
+        "activityCategoryIndex",
+        "activeActivities",
+        "uniqueParticipants",
+        "totalParticipation"
+      ],
+      "groupingDimensions": ["activityType", "activityCategory"],
+      "hasDateRange": false
+    }
+  }
+}
+```
+
+**Wire Format Explanation**:
+
+1. **data**: List of lists where each inner list is a row
+   - First N columns: Dimension indexes (0-based integers referencing lookup arrays, or -1 for aggregated rows)
+   - Remaining columns: Metric values
+   - Without date range: 3 metrics (activeActivities, uniqueParticipants, totalParticipation)
+   - With date range: 8 metrics (activitiesAtStart, participantsAtStart, participationAtStart, activitiesAtEnd, participantsAtEnd, participationAtEnd, activitiesStarted, activitiesCompleted)
+
+2. **lookups**: Ordered arrays mapping indexes to entities
+   - Each dimension has an array of {id, name} objects
+   - Indexes in data rows reference positions in these arrays
+   - Only included for dimensions in groupBy parameter
+
+3. **metadata**: Column definitions and query context
+   - columns: Ordered list of column names matching data row structure
+   - groupingDimensions: Which dimensions are grouped (matches groupBy parameter)
+   - hasDateRange: Whether date range metrics are included
+
+**Subset Grouping**: When multiple dimensions are grouped, the response automatically includes all subset groupings using -1 for aggregated dimensions. For example, grouping by type+category returns: full detail rows, type-only rows (category=-1), category-only rows (type=-1), and total row (both=-1).
+
+**Errors**:
+- 400: Validation error (invalid filters, empty arrays, invalid date range)
+- 403: Geographic authorization denied
+- 500: Database error
+- 504: Query timeout
+
+
+
 ### Get Growth Data
 
 **Endpoint**: `GET /analytics/growth`

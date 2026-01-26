@@ -272,6 +272,15 @@ export interface GeographicAnalytics {
     hasChildren: boolean;
 }
 
+export interface PaginationMetadata {
+    page: number;
+    pageSize: number;
+    totalRecords: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+}
+
 export interface GeographicAreaStatistics {
     totalActivities: number;
     totalParticipants: number;

@@ -148,7 +148,13 @@ export const InteractiveLegend: React.FC<InteractiveLegendProps> = ({
 
 // Hook to use the interactive legend with visibility state
 export const useInteractiveLegend = (_chartId: string, series: LegendItem[]) => {
-  const [visibilityState, setVisibilityState] = useState<Record<string, boolean>>({});
+  const [visibilityState, setVisibilityState] = useState<Record<string, boolean>>(() => {
+    // Initialize with all series visible (matching InteractiveLegend component's initial state)
+    return series.reduce((acc, item) => {
+      acc[item.name] = true;
+      return acc;
+    }, {} as Record<string, boolean>);
+  });
 
   const handleVisibilityChange = useCallback((newState: Record<string, boolean>) => {
     setVisibilityState(newState);

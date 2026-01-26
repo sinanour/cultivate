@@ -33,7 +33,7 @@ describe('AnalyticsRoutes', () => {
 
         mockAuthzMiddleware.requireAuthenticated = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
 
-        const routes = new AnalyticsRoutes(mockService, mockAuthMiddleware, mockAuthzMiddleware);
+        const routes = new AnalyticsRoutes(mockService, mockAuthMiddleware, mockAuthzMiddleware, null as any);
         app.use('/api/analytics', routes.getRouter());
 
         jest.clearAllMocks();
@@ -104,7 +104,18 @@ describe('AnalyticsRoutes', () => {
                     hasChildren: false,
                 },
             ];
-            mockService.getGeographicBreakdown = jest.fn().mockResolvedValue(mockBreakdown);
+            const mockResponse = {
+                data: mockBreakdown,
+                pagination: {
+                    page: 1,
+                    pageSize: 2,
+                    totalRecords: 2,
+                    totalPages: 1,
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                },
+            };
+            mockService.getGeographicBreakdown = jest.fn().mockResolvedValue(mockResponse);
 
             const response = await request(app)
                 .get('/api/analytics/geographic')
@@ -113,12 +124,14 @@ describe('AnalyticsRoutes', () => {
             expect(response.status).toBe(200);
             expect(response.body).toHaveProperty('success', true);
             expect(response.body.data).toEqual(mockBreakdown);
+            expect(response.body.pagination).toBeDefined();
             expect(mockService.getGeographicBreakdown).toHaveBeenCalledWith(
                 undefined, // parentGeographicAreaId
                 expect.objectContaining({}), // filters
                 expect.any(Array), // authorizedAreaIds
                 expect.any(Boolean), // hasGeographicRestrictions
-                expect.any(String) // userId
+                expect.any(String), // userId
+                undefined // pagination
             );
         });
 
@@ -135,7 +148,18 @@ describe('AnalyticsRoutes', () => {
                     hasChildren: true,
                 },
             ];
-            mockService.getGeographicBreakdown = jest.fn().mockResolvedValue(mockBreakdown);
+            const mockResponse = {
+                data: mockBreakdown,
+                pagination: {
+                    page: 1,
+                    pageSize: 1,
+                    totalRecords: 1,
+                    totalPages: 1,
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                },
+            };
+            mockService.getGeographicBreakdown = jest.fn().mockResolvedValue(mockResponse);
 
             const response = await request(app)
                 .get(`/api/analytics/geographic?parentGeographicAreaId=${parentId}`)
@@ -144,6 +168,7 @@ describe('AnalyticsRoutes', () => {
             expect(response.status).toBe(200);
             expect(response.body).toHaveProperty('success', true);
             expect(response.body.data).toEqual(mockBreakdown);
+            expect(response.body.pagination).toBeDefined();
             expect(mockService.getGeographicBreakdown).toHaveBeenCalledWith(
                 parentId,
                 expect.objectContaining({
@@ -154,7 +179,8 @@ describe('AnalyticsRoutes', () => {
                 }),
                 expect.any(Array),
                 expect.any(Boolean),
-                expect.any(String) // userId
+                expect.any(String), // userId
+                undefined // pagination
             );
         });
     });

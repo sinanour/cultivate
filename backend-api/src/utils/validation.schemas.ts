@@ -292,6 +292,98 @@ export const EngagementQuerySchema = z.object({
     return Array.isArray(val) ? val : [val];
   }),
   dateGranularity: z.nativeEnum(DateGranularity).optional(),
+  page: z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().positive().max(1000).optional(),
+});
+
+// Optimized engagement query schema for the new endpoint
+export const EngagementQueryOptimizedSchema = z.object({
+  startDate: z.string().datetime('Invalid start date format').optional(),
+  endDate: z.string().datetime('Invalid end date format').optional(),
+  activityCategoryIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity category ID format')).optional()
+  ),
+  activityTypeIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid activity type ID format')).optional()
+  ),
+  geographicAreaIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid geographic area ID format')).optional()
+  ),
+  venueIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid venue ID format')).optional()
+  ),
+  populationIds: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.flatMap(v => String(v).split(',').map(s => s.trim())).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.string().uuid('Invalid population ID format')).optional()
+  ),
+  // For optimized endpoint: accept "type", "category", "geographicArea", "venue" string values
+  groupBy: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (Array.isArray(val)) {
+        return val.map(v => String(v).trim()).filter(s => s.length > 0);
+      }
+      const values = String(val).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return values.length > 0 ? values : undefined;
+    },
+    z.array(z.enum(['type', 'category', 'geographicArea', 'venue'])).optional()
+  ),
+  // Pagination parameters
+  page: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      const num = parseInt(String(val), 10);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().int().positive('Page must be a positive integer').optional()
+  ),
+  pageSize: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      const num = parseInt(String(val), 10);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().int().min(1, 'Page size must be at least 1').max(1000, 'Page size must not exceed 1000').optional()
+  ),
 });
 
 export const GrowthQuerySchema = z.object({

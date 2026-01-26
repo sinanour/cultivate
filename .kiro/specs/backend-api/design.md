@@ -6,6 +6,13 @@ The Backend API package is a RESTful API service built with Node.js, Express.js,
 
 The API follows a layered architecture with clear separation between routing, business logic, data access, and cross-cutting concerns like authentication and validation. It uses PostgreSQL as the primary data store and implements JWT-based authentication with role-based authorization.
 
+> **Performance Optimizations**: This design document covers the core API architecture. For detailed performance optimization designs using raw SQL, CTEs, and advanced PostgreSQL features, see:
+> - `.kiro/specs/analytics-optimization/design.md` - Analytics service query optimization
+> - `.kiro/specs/geographic-breakdown-optimization/design.md` - Geographic breakdown query optimization
+> - `.kiro/specs/map-data-optimization/design.md` - Map marker query optimization
+> 
+> See also: `.kiro/specs/OPTIMIZATION_SPECS.md` for an overview of all optimization specifications.
+
 ## Architecture
 
 ### Technology Stack

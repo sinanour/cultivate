@@ -35,7 +35,8 @@ describe('AnalyticsRoutes - Activity Lifecycle', () => {
         const analyticsRoutes = new AnalyticsRoutes(
             analyticsService,
             authMiddleware,
-            authorizationMiddleware
+            authorizationMiddleware,
+            prisma
         );
 
         app.use('/api/v1/analytics', analyticsRoutes.getRouter());

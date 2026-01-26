@@ -13,16 +13,19 @@ import SegmentedControl from '@cloudscape-design/components/segmented-control';
 import Popover from '@cloudscape-design/components/popover';
 import Icon from '@cloudscape-design/components/icon';
 import Spinner from '@cloudscape-design/components/spinner';
+import Pagination from '@cloudscape-design/components/pagination';
+import Select from '@cloudscape-design/components/select';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Badge from '@cloudscape-design/components/badge';
 import { AnalyticsService, type EngagementMetricsParams } from '../../services/api/analytics.service';
+import { parseEngagementWireFormat, type ParsedEngagementRow } from '../../utils/wireFormatParser';
+import { parseRoleDistributionWireFormat } from '../../utils/roleDistributionParser';
 import { activityCategoryService } from '../../services/api/activity-category.service';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { VenueService } from '../../services/api/venue.service';
 import { PopulationService } from '../../services/api/population.service';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
-import { ActivityLifecycleChart } from './ActivityLifecycleChart';
 import { 
   FilterGroupingPanel, 
   type FilterGroupingState, 
@@ -189,6 +192,29 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
   const [dateRange, setDateRange] = useState<FilterGroupingState['dateRange']>(initializeDateRange);
   const [groupByDimensions, setGroupByDimensions] = useState<string[]>(initializeGroupByDimensions);
   
+  // Pagination state for engagement summary
+  const [currentPage, setCurrentPage] = useState(() => {
+    const pageParam = searchParams.get('page');
+    return pageParam ? parseInt(pageParam, 10) : 1;
+  });
+  const [pageSize, setPageSize] = useState(() => {
+    const sizeParam = searchParams.get('pageSize');
+    return sizeParam ? parseInt(sizeParam, 10) : 100;
+  });
+  
+  // Pagination state for geographic breakdown
+  const [geoBreakdownPage, setGeoBreakdownPage] = useState(() => {
+    const pageParam = searchParams.get('geoPage');
+    return pageParam ? parseInt(pageParam, 10) : 1;
+  });
+  const [geoBreakdownPageSize, setGeoBreakdownPageSize] = useState(() => {
+    const sizeParam = searchParams.get('geoPageSize');
+    return sizeParam ? parseInt(sizeParam, 10) : 10;
+  });
+  
+  // Cache for total row (from page 1) - persists across pagination
+  const cachedTotalRowRef = useRef<ParsedEngagementRow | null>(null);
+  
   // Run Report pattern: track whether report has been executed
   const [hasRunReport, setHasRunReport] = useState(false);
   
@@ -224,16 +250,22 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
   
   // Bidirectional cache: label ↔ UUID
   const [labelToUuid, setLabelToUuid] = useState<Map<string, string>>(new Map());
+  
+  // Use ref to access current labelToUuid without causing re-renders
+  const labelToUuidRef = useRef(labelToUuid);
+  useEffect(() => {
+    labelToUuidRef.current = labelToUuid;
+  }, [labelToUuid]);
 
   // Helper to add to cache
   const addToCache = (uuid: string, label: string) => {
     setLabelToUuid(prev => new Map(prev).set(label, uuid));
   };
 
-  // Helper to get UUID from label
-  const getUuidFromLabel = (label: string): string | undefined => {
-    return labelToUuid.get(label);
-  };
+  // Helper to get UUID from label (uses ref to avoid dependency issues)
+  const getUuidFromLabel = useCallback((label: string): string | undefined => {
+    return labelToUuidRef.current.get(label);
+  }, []);
 
   // Extract individual values from consolidated tokens (split comma-separated values)
   const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
@@ -347,7 +379,29 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
     if (Array.isArray(state.grouping)) {
       setAppliedGroupByDimensions(state.grouping);
     }
+    
+    // Reset to page 1 when filters or grouping change
+    setCurrentPage(1);
+    setGeoBreakdownPage(1);
+    
+    // Clear cached total row when filters change (will be re-fetched from page 1)
+    cachedTotalRowRef.current = null;
   }, []);
+
+  // Update URL when pagination changes
+  useEffect(() => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('page', String(currentPage));
+    newParams.set('pageSize', String(pageSize));
+    newParams.set('geoPage', String(geoBreakdownPage));
+    newParams.set('geoPageSize', String(geoBreakdownPageSize));
+    navigate(`?${newParams.toString()}`, { replace: true });
+  }, [currentPage, pageSize, geoBreakdownPage, geoBreakdownPageSize, navigate, searchParams]);
+
+  // Reset geographic breakdown page to 1 when global geographic area filter changes
+  useEffect(() => {
+    setGeoBreakdownPage(1);
+  }, [selectedGeographicAreaId]);
 
   // Persist activities view mode to localStorage whenever it changes
   useEffect(() => {
@@ -358,86 +412,263 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
     }
   }, [activitiesViewMode]);
 
-  const { data: metrics, isLoading } = useQuery({
-    queryKey: ['engagementMetrics', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, appliedGroupByDimensions, runReportTrigger],
-    queryFn: () => {
-      // Convert date range to ISO datetime format for API
-      let startDate: string | undefined;
-      let endDate: string | undefined;
-      
-      if (appliedDateRange) {
-        if (appliedDateRange.type === 'absolute' && appliedDateRange.startDate && appliedDateRange.endDate) {
-          startDate = toISODateTime(appliedDateRange.startDate, false);
-          endDate = toISODateTime(appliedDateRange.endDate, true);
-        } else if (appliedDateRange.type === 'relative' && appliedDateRange.amount && appliedDateRange.unit) {
-          // Calculate absolute dates from relative range
-          const now = new Date();
-          const end = new Date(now);
-          const start = new Date(now);
-          
-          switch (appliedDateRange.unit) {
-            case 'day':
-              start.setDate(start.getDate() - appliedDateRange.amount);
-              break;
-            case 'week':
-              start.setDate(start.getDate() - (appliedDateRange.amount * 7));
-              break;
-            case 'month':
-              start.setMonth(start.getMonth() - appliedDateRange.amount);
-              break;
-            case 'year':
-              start.setFullYear(start.getFullYear() - appliedDateRange.amount);
-              break;
-          }
-          
-          startDate = start.toISOString();
-          endDate = end.toISOString();
+  // Memoize base query params to avoid infinite loops
+  const baseQueryParams = useMemo(() => {
+    // Convert date range to ISO datetime format for API
+    let startDate: string | undefined;
+    let endDate: string | undefined;
+    
+    if (appliedDateRange) {
+      if (appliedDateRange.type === 'absolute' && appliedDateRange.startDate && appliedDateRange.endDate) {
+        startDate = toISODateTime(appliedDateRange.startDate, false);
+        endDate = toISODateTime(appliedDateRange.endDate, true);
+      } else if (appliedDateRange.type === 'relative' && appliedDateRange.amount && appliedDateRange.unit) {
+        // Calculate absolute dates from relative range
+        const now = new Date();
+        const end = new Date(now);
+        const start = new Date(now);
+        
+        switch (appliedDateRange.unit) {
+          case 'day':
+            start.setDate(start.getDate() - appliedDateRange.amount);
+            break;
+          case 'week':
+            start.setDate(start.getDate() - (appliedDateRange.amount * 7));
+            break;
+          case 'month':
+            start.setMonth(start.getMonth() - appliedDateRange.amount);
+            break;
+          case 'year':
+            start.setFullYear(start.getFullYear() - appliedDateRange.amount);
+            break;
         }
+        
+        startDate = start.toISOString();
+        endDate = end.toISOString();
       }
-      
-      // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
-      // Support multiple values per property (OR logic within dimension)
-      // Tokens now contain comma-separated values, so we need to split them
-      const activityCategoryLabels = appliedFilterQuery.tokens
-        .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
-        .flatMap(t => extractValuesFromToken(t));
-      const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-      
-      const activityTypeLabels = appliedFilterQuery.tokens
-        .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
-        .flatMap(t => extractValuesFromToken(t));
-      const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-      
-      const venueLabels = appliedFilterQuery.tokens
-        .filter(t => t.propertyKey === 'venue' && t.operator === '=')
-        .flatMap(t => extractValuesFromToken(t));
-      const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-      
-      const populationLabels = appliedFilterQuery.tokens
-        .filter(t => t.propertyKey === 'population' && t.operator === '=')
-        .flatMap(t => extractValuesFromToken(t));
-      const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-      
+    }
+    
+    // Extract filters from PropertyFilter tokens
+    const activityCategoryLabels = appliedFilterQuery.tokens
+      .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+    
+    const activityTypeLabels = appliedFilterQuery.tokens
+      .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    const activityTypeIds = activityTypeLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+    
+    const venueLabels = appliedFilterQuery.tokens
+      .filter(t => t.propertyKey === 'venue' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    const venueIds = venueLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+    
+    const populationLabels = appliedFilterQuery.tokens
+      .filter(t => t.propertyKey === 'population' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    const populationIds = populationLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
+    
+    return {
+      startDate,
+      endDate,
+      geographicAreaIds: selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined,
+      activityCategoryIds: activityCategoryIds.length > 0 ? activityCategoryIds : undefined,
+      activityTypeIds: activityTypeIds.length > 0 ? activityTypeIds : undefined,
+      venueIds: venueIds.length > 0 ? venueIds : undefined,
+      populationIds: populationIds.length > 0 ? populationIds : undefined,
+    };
+  }, [appliedDateRange, appliedFilterQuery, selectedGeographicAreaId, getUuidFromLabel]);
+
+  // Fetch optimized wire format data
+  const { data: wireFormat, isLoading } = useQuery({
+    queryKey: ['engagementMetricsOptimized', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, appliedGroupByDimensions, currentPage, pageSize, runReportTrigger],
+    queryFn: () => {
       const params: EngagementMetricsParams = {
-        startDate,
-        endDate,
-        geographicAreaIds: selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined,
-        activityCategoryIds: activityCategoryIds.length > 0 ? activityCategoryIds : undefined,
-        activityTypeIds: activityTypeIds.length > 0 ? activityTypeIds : undefined,
-        venueIds: venueIds.length > 0 ? venueIds : undefined,
-        populationIds: populationIds.length > 0 ? populationIds : undefined,
+        ...baseQueryParams,
         groupBy: appliedGroupByDimensions.map(d => d as GroupingDimension),
+        page: currentPage,
+        pageSize: pageSize,
       };
       
-      return AnalyticsService.getEngagementMetrics(params);
+      return AnalyticsService.getEngagementMetricsOptimized(params);
     },
     enabled: hasRunReport, // Only fetch when report has been run
     placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
 
+  // Separate queries for activity type and category breakdowns (for charts)
+  // Always fetch these when report has run to ensure charts populate correctly
+  // Use same query key elements as main query to ensure they refetch together
+  const { data: typeBreakdownWireFormat } = useQuery({
+    queryKey: ['engagementTypeBreakdown', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, runReportTrigger],
+    queryFn: () => {
+      const params: EngagementMetricsParams = {
+        ...baseQueryParams,
+        groupBy: ['activityType' as GroupingDimension],
+      };
+      return AnalyticsService.getEngagementMetricsOptimized(params);
+    },
+    enabled: hasRunReport,  // Always fetch when report has run
+    placeholderData: (previousData) => previousData, // Prevent flicker and ensure charts have data
+  });
+
+  const { data: categoryBreakdownWireFormat } = useQuery({
+    queryKey: ['engagementCategoryBreakdown', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, runReportTrigger],
+    queryFn: () => {
+      const params: EngagementMetricsParams = {
+        ...baseQueryParams,
+        groupBy: ['activityCategory' as GroupingDimension],
+      };
+      return AnalyticsService.getEngagementMetricsOptimized(params);
+    },
+    enabled: hasRunReport,  // Always fetch when report has run
+    placeholderData: (previousData) => previousData, // Prevent flicker and ensure charts have data
+  });
+
+  // Separate query for role distribution
+  const { data: roleDistributionWireFormat } = useQuery({
+    queryKey: ['roleDistribution', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, runReportTrigger],
+    queryFn: () => {
+      return AnalyticsService.getRoleDistribution(baseQueryParams);
+    },
+    enabled: hasRunReport,  // Only fetch when report has run
+    placeholderData: (previousData) => previousData, // Prevent flicker
+  });
+
+  // Parse wire format into usable metrics
+  const metrics = useMemo(() => {
+    if (!wireFormat) return null;
+    
+    const parsed = parseEngagementWireFormat(wireFormat);
+    const { rows, totalRow, hasDateRange: parsedHasDateRange, groupingDimensions, pagination } = parsed;
+    
+    // Use cached total row if we're on page > 1 and don't have a total row in current results
+    const effectiveTotalRow = totalRow || cachedTotalRowRef.current;
+    
+    // Convert parsed data back to the format expected by the dashboard
+    // This maintains backward compatibility with existing rendering logic
+    return {
+      // Total metrics from effectiveTotalRow (cached from page 1)
+      activitiesAtStart: parsedHasDateRange ? (effectiveTotalRow?.activitiesAtStart || 0) : 0,
+      activitiesAtEnd: parsedHasDateRange ? (effectiveTotalRow?.activitiesAtEnd || 0) : (effectiveTotalRow?.activeActivities || 0),
+      activitiesStarted: parsedHasDateRange ? (effectiveTotalRow?.activitiesStarted || 0) : (effectiveTotalRow?.activitiesStarted || 0),
+      activitiesCompleted: parsedHasDateRange ? (effectiveTotalRow?.activitiesCompleted || 0) : (effectiveTotalRow?.activitiesCompleted || 0),
+      participantsAtStart: parsedHasDateRange ? (effectiveTotalRow?.participantsAtStart || 0) : 0,
+      participantsAtEnd: parsedHasDateRange ? (effectiveTotalRow?.participantsAtEnd || 0) : (effectiveTotalRow?.uniqueParticipants || 0),
+      participationAtStart: parsedHasDateRange ? (effectiveTotalRow?.participationAtStart || 0) : 0,
+      participationAtEnd: parsedHasDateRange ? (effectiveTotalRow?.participationAtEnd || 0) : (effectiveTotalRow?.totalParticipation || 0),
+      
+      // Grouped results for table
+      groupedResults: rows.map(row => ({
+        isTotal: false,
+        dimensions: {
+          activityType: row.activityType?.name,
+          activityTypeId: row.activityType?.id,
+          activityCategory: row.activityCategory?.name,
+          activityCategoryId: row.activityCategory?.id,
+          geographicArea: row.geographicArea?.name,
+          geographicAreaId: row.geographicArea?.id,
+          venue: row.venue?.name,
+          venueId: row.venue?.id,
+        },
+        metrics: {
+          activitiesAtStart: parsedHasDateRange ? (row.activitiesAtStart || 0) : 0,
+          activitiesAtEnd: parsedHasDateRange ? (row.activitiesAtEnd || 0) : (row.activeActivities || 0),
+          activitiesStarted: parsedHasDateRange ? (row.activitiesStarted || 0) : (row.activitiesStarted || 0),
+          activitiesCompleted: parsedHasDateRange ? (row.activitiesCompleted || 0) : (row.activitiesCompleted || 0),
+          participantsAtStart: parsedHasDateRange ? (row.participantsAtStart || 0) : 0,
+          participantsAtEnd: parsedHasDateRange ? (row.participantsAtEnd || 0) : (row.uniqueParticipants || 0),
+          participationAtStart: parsedHasDateRange ? (row.participationAtStart || 0) : 0,
+          participationAtEnd: parsedHasDateRange ? (row.participationAtEnd || 0) : (row.totalParticipation || 0),
+        },
+      })),
+      
+      // Breakdowns for charts
+      // Always use data from separate breakdown queries
+      activitiesByType: typeBreakdownWireFormat 
+        ? (() => {
+            const parsed = parseEngagementWireFormat(typeBreakdownWireFormat);
+            const breakdownHasDateRange = parsed.hasDateRange;
+            return parsed.rows.map(row => {
+              const result: any = {
+                activityTypeName: row.activityType?.name || 'Unknown',
+                activitiesStarted: row.activitiesStarted || 0,
+                activitiesCompleted: row.activitiesCompleted || 0,
+              };
+              
+              // Only set date range fields if breakdown actually has date range
+              if (breakdownHasDateRange) {
+                result.activitiesAtStart = row.activitiesAtStart || 0;
+                result.activitiesAtEnd = row.activitiesAtEnd || 0;
+              } else {
+                result.activitiesAtEnd = row.activeActivities || 0;
+              }
+              
+              return result;
+            });
+          })()
+        : [],
+      
+      activitiesByCategory: categoryBreakdownWireFormat
+        ? (() => {
+            const parsed = parseEngagementWireFormat(categoryBreakdownWireFormat);
+            const breakdownHasDateRange = parsed.hasDateRange;
+            return parsed.rows.map(row => {
+              const result: any = {
+                activityCategoryName: row.activityCategory?.name || 'Unknown',
+                activitiesStarted: row.activitiesStarted || 0,
+                activitiesCompleted: row.activitiesCompleted || 0,
+              };
+              
+              // Only set date range fields if breakdown actually has date range
+              if (breakdownHasDateRange) {
+                result.activitiesAtStart = row.activitiesAtStart || 0;
+                result.activitiesAtEnd = row.activitiesAtEnd || 0;
+              } else {
+                result.activitiesAtEnd = row.activeActivities || 0;
+              }
+              
+              return result;
+            });
+          })()
+        : [],
+      
+      // Role distribution - fetch from separate optimized endpoint
+      roleDistribution: roleDistributionWireFormat 
+        ? parseRoleDistributionWireFormat(roleDistributionWireFormat).map(role => ({
+            roleId: role.roleId,
+            roleName: role.roleName,
+            count: role.count,
+          }))
+        : [],
+      
+      // Grouping dimensions
+      groupingDimensions,
+      
+      // Pagination metadata
+      pagination,
+      
+      // Store parsed data for caching logic
+      _parsedData: parsed,
+    };
+  }, [wireFormat, typeBreakdownWireFormat, categoryBreakdownWireFormat, roleDistributionWireFormat]);
+
+  // Cache total row from page 1 (useEffect to avoid state update during render)
+  useEffect(() => {
+    if (metrics?._parsedData) {
+      const { totalRow, pagination } = metrics._parsedData;
+      // Cache total row from page 1 for use across all pages
+      // Total row appears first due to NULLS FIRST ordering, so it's only on page 1
+      if (pagination && pagination.page === 1 && totalRow) {
+        cachedTotalRowRef.current = totalRow;
+      }
+    }
+  }, [metrics]);
+
   // Separate query for geographic breakdown
-  const { data: geographicBreakdown } = useQuery({
-    queryKey: ['geographicBreakdown', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, runReportTrigger],
+  const { data: geographicBreakdownResponse } = useQuery({
+    queryKey: ['geographicBreakdown', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, geoBreakdownPage, geoBreakdownPageSize, runReportTrigger],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
@@ -503,12 +734,25 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
         activityCategoryIds.length > 0 ? activityCategoryIds : undefined,
         activityTypeIds.length > 0 ? activityTypeIds : undefined,
         venueIds.length > 0 ? venueIds : undefined,
-        populationIds.length > 0 ? populationIds : undefined
+        populationIds.length > 0 ? populationIds : undefined,
+        geoBreakdownPage,
+        geoBreakdownPageSize
       );
     },
     enabled: hasRunReport, // Only fetch when report has been run
     placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
+  
+  const geographicBreakdown = geographicBreakdownResponse?.data || [];
+  const geographicBreakdownPagination = geographicBreakdownResponse?.pagination;
+
+  // Sync frontend page state with backend's clamped page number
+  // If backend returns a different page (due to clamping), update frontend state
+  useEffect(() => {
+    if (geographicBreakdownPagination && geographicBreakdownPagination.page !== geoBreakdownPage) {
+      setGeoBreakdownPage(geographicBreakdownPagination.page);
+    }
+  }, [geographicBreakdownPagination, geoBreakdownPage]);
 
   // Handler for Run Report button (triggered by parent via runReportTrigger prop)
   useEffect(() => {
@@ -583,7 +827,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
       ];
 
   // Prepare legend items for Role Distribution chart (before hooks)
-  const roleDistributionChartData = (metrics?.roleDistribution || []).map(role => ({
+  const roleDistributionChartData = (metrics?.roleDistribution || []).map((role: any) => ({
     name: role.roleName,
     value: role.count,
   }));
@@ -627,11 +871,18 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
     return acc;
   }, {} as Record<string, string>);
 
+  // Prepare legend items for Activity Lifecycle chart (before hooks)
+  const lifecycleLegendItems: LegendItem[] = [
+    { name: 'Started', color: '#0088FE', dataKey: 'Started' },
+    { name: 'Completed', color: '#00C49F', dataKey: 'Completed' },
+  ];
+
   // MUST call all hooks before any conditional returns
   const activitiesLegend = useInteractiveLegend('engagement-activities', activitiesLegendItems);
   const roleDistributionLegend = useInteractiveLegend('role-distribution', roleDistributionLegendItems);
   const geographicBreakdownLegend = useInteractiveLegend('geographic-breakdown', geographicBreakdownLegendItems);
   const activityCategoryLegend = useInteractiveLegend('activity-category-pie', activityCategoryLegendItems);
+  const lifecycleLegend = useInteractiveLegend('activity-lifecycle', lifecycleLegendItems);
 
   // Export handler for Engagement Summary table
   const handleExportEngagementSummary = () => {
@@ -724,50 +975,64 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
   // }
 
   // Prepare chart data for activities by type (use empty arrays if no data yet)
-  const endLabel = hasDateRange ? 'At End' : 'Count';
-  
   const activitiesByTypeChartData = (metrics?.activitiesByType || [])
     .map(type => {
+      // Determine if we have date range data by checking what fields exist
+      const hasDateRangeData = type.activitiesAtStart !== undefined && type.activitiesAtEnd !== undefined;
+      
       // Construct object with keys in correct order for legend
       const dataPoint: any = { name: type.activityTypeName };
-      if (hasDateRange) {
-        dataPoint['At Start'] = type.activitiesAtStart;
-        dataPoint['At End'] = type.activitiesAtEnd;
+      if (hasDateRangeData) {
+        dataPoint['At Start'] = type.activitiesAtStart || 0;
+        dataPoint['At End'] = type.activitiesAtEnd || 0;
       } else {
-        dataPoint['Count'] = type.activitiesAtEnd;
+        dataPoint['Count'] = type.activitiesAtEnd || 0;
       }
       return dataPoint;
     })
     .filter(item => {
-      // Filter out items with 0 counts
-      if (hasDateRange) {
+      // Filter out items with 0 counts - check which keys actually exist
+      if (item['At Start'] !== undefined && item['At End'] !== undefined) {
         return item['At Start'] > 0 || item['At End'] > 0;
       }
-      return item['Count'] > 0;
+      return (item['Count'] || 0) > 0;
     })
-    .sort((a, b) => (b as any)[endLabel] - (a as any)[endLabel]); // Sort by count descending
+    .sort((a, b) => {
+      // Sort by the appropriate field
+      const aValue = a['At End'] !== undefined ? a['At End'] : a['Count'];
+      const bValue = b['At End'] !== undefined ? b['At End'] : b['Count'];
+      return (bValue || 0) - (aValue || 0);
+    });
 
   // Prepare chart data for activities by category
   const activitiesByCategoryChartData = (metrics?.activitiesByCategory || [])
     .map(category => {
+      // Determine if we have date range data by checking what fields exist
+      const hasDateRangeData = category.activitiesAtStart !== undefined && category.activitiesAtEnd !== undefined;
+      
       // Construct object with keys in correct order for legend
       const dataPoint: any = { name: category.activityCategoryName };
-      if (hasDateRange) {
-        dataPoint['At Start'] = category.activitiesAtStart;
-        dataPoint['At End'] = category.activitiesAtEnd;
+      if (hasDateRangeData) {
+        dataPoint['At Start'] = category.activitiesAtStart || 0;
+        dataPoint['At End'] = category.activitiesAtEnd || 0;
       } else {
-        dataPoint['Count'] = category.activitiesAtEnd;
+        dataPoint['Count'] = category.activitiesAtEnd || 0;
       }
       return dataPoint;
     })
     .filter(item => {
-      // Filter out items with 0 counts
-      if (hasDateRange) {
+      // Filter out items with 0 counts - check which keys actually exist
+      if (item['At Start'] !== undefined && item['At End'] !== undefined) {
         return item['At Start'] > 0 || item['At End'] > 0;
       }
-      return item['Count'] > 0;
+      return (item['Count'] || 0) > 0;
     })
-    .sort((a, b) => (b as any)[endLabel] - (a as any)[endLabel]); // Sort by count descending
+    .sort((a, b) => {
+      // Sort by the appropriate field
+      const aValue = a['At End'] !== undefined ? a['At End'] : a['Count'];
+      const bValue = b['At End'] !== undefined ? b['At End'] : b['Count'];
+      return (bValue || 0) - (aValue || 0);
+    });
 
   // Select chart data based on view mode
   const activitiesChartData = activitiesViewMode === 'type' 
@@ -1070,12 +1335,6 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
               cell: (item: any) => item.metrics.activitiesCompleted,
               sortingField: 'activitiesCompleted',
             },
-            {
-              id: 'activitiesCancelled',
-              header: 'Activities Cancelled',
-              cell: (item: any) => item.metrics.activitiesCancelled,
-              sortingField: 'activitiesCancelled',
-            },
           ]}
           items={[
             // First row: Total (aggregate metrics) - use 0 as fallback if no data
@@ -1087,7 +1346,6 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
                 activitiesAtEnd: metrics?.activitiesAtEnd || 0,
                 activitiesStarted: metrics?.activitiesStarted || 0,
                 activitiesCompleted: metrics?.activitiesCompleted || 0,
-                activitiesCancelled: metrics?.activitiesCancelled || 0,
                 participantsAtStart: metrics?.participantsAtStart || 0,
                 participantsAtEnd: metrics?.participantsAtEnd || 0,
                 participationAtStart: metrics?.participationAtStart || 0,
@@ -1106,6 +1364,48 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
           }
         />,
           'Click "Run Report" to view engagement summary'
+        )}
+        
+        {/* Pagination Controls */}
+        {hasRunReport && metrics && (
+          <Box margin={{ top: 's' }}>
+            <SpaceBetween size="s" direction="horizontal" alignItems="center">
+              <Box>
+                {metrics.pagination ? (
+                  <>
+                    Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, metrics.pagination.totalRecords)} of {metrics.pagination.totalRecords} records
+                  </>
+                ) : (
+                  'Showing all records'
+                )}
+              </Box>
+              
+              <Select
+                selectedOption={{ label: `${pageSize} records`, value: String(pageSize) }}
+                onChange={({ detail }) => {
+                  const newSize = parseInt(detail.selectedOption.value || '100', 10);
+                  setPageSize(newSize);
+                  setCurrentPage(1); // Reset to page 1
+                }}
+                options={[
+                  { label: '25 records', value: '25' },
+                  { label: '50 records', value: '50' },
+                  { label: '100 records', value: '100' },
+                  { label: '200 records', value: '200' },
+                ]}
+                disabled={isLoading}
+              />
+              
+              {metrics.pagination && metrics.pagination.totalPages > 1 && (
+                <Pagination
+                  currentPageIndex={currentPage}
+                  pagesCount={metrics.pagination.totalPages}
+                  onChange={({ detail }) => setCurrentPage(detail.currentPageIndex)}
+                  disabled={isLoading}
+                />
+              )}
+            </SpaceBetween>
+          </Box>
         )}
       </Container>
 
@@ -1161,20 +1461,14 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  {/* Render bars in chronological order when date range is selected */}
-                  {dateRange ? (
+                  {/* Render bars based on what data actually exists */}
+                  {activitiesChartData.length > 0 && activitiesChartData[0]['At Start'] !== undefined ? (
                     <>
-                      {activitiesLegend.isSeriesVisible('At Start') && (
-                        <Bar dataKey="At Start" fill="#0088FE" />
-                      )}
-                      {activitiesLegend.isSeriesVisible('At End') && (
-                        <Bar dataKey="At End" fill="#00C49F" />
-                      )}
+                      <Bar dataKey="At Start" fill="#0088FE" />
+                      <Bar dataKey="At End" fill="#00C49F" />
                     </>
                   ) : (
-                    activitiesLegend.isSeriesVisible('Count') && (
-                      <Bar dataKey="Count" fill="#00C49F" />
-                    )
+                    <Bar dataKey="Count" fill="#00C49F" />
                   )}
                 </BarChart>
               </ResponsiveContainer>
@@ -1189,74 +1483,69 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
       </Container>
 
       {/* Activity Lifecycle Events Chart */}
-      {hasRunReport && (
-        <ActivityLifecycleChart
-          startDate={(() => {
-            if (!dateRange) return undefined;
-            if (dateRange.type === 'absolute' && dateRange.startDate) {
-              return new Date(dateRange.startDate);
+      {hasRunReport && (() => {
+        // Use data from type or category breakdown queries for lifecycle chart
+        const lifecycleData = activitiesViewMode === 'type'
+          ? (metrics?.activitiesByType || []).map(item => ({
+              name: item.activityTypeName,
+              Started: item.activitiesStarted || 0,
+              Completed: item.activitiesCompleted || 0,
+            }))
+          : (metrics?.activitiesByCategory || []).map(item => ({
+              name: item.activityCategoryName,
+              Started: item.activitiesStarted || 0,
+              Completed: item.activitiesCompleted || 0,
+            }));
+
+        return (
+          <Container
+            header={
+              <Header
+                variant="h3"
+                actions={
+                  <SegmentedControl
+                    selectedId={activitiesViewMode}
+                    onChange={({ detail }) => setActivitiesViewMode(detail.selectedId as ActivitiesViewMode)}
+                    label="Activity lifecycle chart view mode"
+                    options={[
+                      { text: 'By Type', id: 'type' },
+                      { text: 'By Category', id: 'category' },
+                    ]}
+                  />
+                }
+              >
+                Activity Lifecycle Events
+              </Header>
             }
-            if (dateRange.type === 'relative' && dateRange.amount && dateRange.unit) {
-              const start = new Date();
-              switch (dateRange.unit) {
-                case 'day':
-                  start.setDate(start.getDate() - dateRange.amount);
-                  break;
-                case 'week':
-                  start.setDate(start.getDate() - (dateRange.amount * 7));
-                  break;
-                case 'month':
-                  start.setMonth(start.getMonth() - dateRange.amount);
-                  break;
-                case 'year':
-                  start.setFullYear(start.getFullYear() - dateRange.amount);
-                  break;
-              }
-              return start;
-            }
-            return undefined;
-          })()}
-          endDate={(() => {
-            if (!dateRange) return undefined;
-            if (dateRange.type === 'absolute' && dateRange.endDate) {
-              return new Date(dateRange.endDate);
-            }
-            if (dateRange.type === 'relative') {
-              return new Date();
-            }
-            return undefined;
-          })()}
-          geographicAreaIds={selectedGeographicAreaId ? [selectedGeographicAreaId] : undefined}
-          activityCategoryIds={(() => {
-            const labels = propertyFilterQuery.tokens
-              .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
-              .flatMap(t => extractValuesFromToken(t));
-            const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-            return uuids.length > 0 ? uuids : undefined;
-          })()}
-          activityTypeIds={(() => {
-            const labels = propertyFilterQuery.tokens
-              .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
-              .flatMap(t => extractValuesFromToken(t));
-            const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-            return uuids.length > 0 ? uuids : undefined;
-          })()}
-          venueIds={(() => {
-            const labels = propertyFilterQuery.tokens
-              .filter(t => t.propertyKey === 'venue' && t.operator === '=')
-              .flatMap(t => extractValuesFromToken(t));
-            const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-            return uuids.length > 0 ? uuids : undefined;
-          })()}
-          populationIds={(() => {
-            const labels = propertyFilterQuery.tokens
-              .filter(t => t.propertyKey === 'population' && t.operator === '=')
-              .flatMap(t => extractValuesFromToken(t));
-            const uuids = labels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
-            return uuids.length > 0 ? uuids : undefined;
-          })()}
-        />
-      )}
+          >
+            <InteractiveLegend
+              chartId="activity-lifecycle"
+              series={lifecycleLegendItems}
+              onVisibilityChange={lifecycleLegend.handleVisibilityChange}
+            />
+            {lifecycleData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={lifecycleData} barGap={BAR_CHART_GAP} barCategoryGap={BAR_CHART_CATEGORY_GAP} maxBarSize={BAR_CHART_MAX_BAR_SIZE}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  {lifecycleLegend.isSeriesVisible('Started') && (
+                    <Bar dataKey="Started" fill="#0088FE" name="Started" />
+                  )}
+                  {lifecycleLegend.isSeriesVisible('Completed') && (
+                    <Bar dataKey="Completed" fill="#00C49F" name="Completed" />
+                  )}
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box textAlign="center" padding="l">
+                <b>No activity lifecycle events for the selected {activitiesViewMode === 'type' ? 'activity types' : 'activity categories'}</b>
+              </Box>
+            )}
+          </Container>
+        );
+      })()}
 
       {/* Activity Category Pie Chart and Role Distribution - Side by Side */}
       <ColumnLayout columns={2}>
@@ -1458,6 +1747,40 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
                 )}
               </BarChart>
             </ResponsiveContainer>
+            
+            {/* Pagination controls for geographic breakdown */}
+            {geographicBreakdownPagination && geographicBreakdownPagination.totalPages > 1 && (
+              <Box margin={{ top: 's' }}>
+                <SpaceBetween size="s" direction="horizontal" alignItems="center">
+                  <Box>
+                    Showing {((geoBreakdownPage - 1) * geoBreakdownPageSize) + 1} - {Math.min(geoBreakdownPage * geoBreakdownPageSize, geographicBreakdownPagination.totalRecords)} of {geographicBreakdownPagination.totalRecords} areas
+                  </Box>
+                  
+                  <Select
+                    selectedOption={{ label: `${geoBreakdownPageSize} areas`, value: String(geoBreakdownPageSize) }}
+                    onChange={({ detail }) => {
+                      const newSize = parseInt(detail.selectedOption.value || '25', 10);
+                      setGeoBreakdownPageSize(newSize);
+                      setGeoBreakdownPage(1);
+                    }}
+                    options={[
+                      { label: '10 areas', value: '10' },
+                      { label: '25 areas', value: '25' },
+                      { label: '50 areas', value: '50' },
+                      { label: '100 areas', value: '100' },
+                    ]}
+                    disabled={isLoading}
+                  />
+                  
+                  <Pagination
+                    currentPageIndex={geoBreakdownPage}
+                    pagesCount={geographicBreakdownPagination.totalPages}
+                    onChange={({ detail }) => setGeoBreakdownPage(detail.currentPageIndex)}
+                    disabled={isLoading}
+                  />
+                </SpaceBetween>
+              </Box>
+            )}
           </>
         ) : (
           <Box textAlign="center" padding="l">

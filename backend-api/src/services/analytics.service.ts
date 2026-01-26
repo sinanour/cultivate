@@ -8,6 +8,7 @@ import {
     GroupingDimension,
     DimensionKeys,
 } from '../utils/constants';
+import { GeographicBreakdownQueryBuilder, GeographicBreakdownFilters, PaginationParams as GeoBreakdownPaginationParams } from './analytics/geographic-breakdown-query-builder';
 
 export { TimePeriod, DateGranularity, GroupingDimension };
 
@@ -53,6 +54,18 @@ export interface GeographicBreakdown {
     participantCount: number;
     participationCount: number;
     hasChildren: boolean;
+}
+
+export interface GeographicBreakdownResponse {
+    data: GeographicBreakdown[];
+    pagination: {
+        page: number;
+        pageSize: number;
+        totalRecords: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+    };
 }
 
 export interface GroupedMetrics {
@@ -147,11 +160,15 @@ export interface AnalyticsFilters {
 }
 
 export class AnalyticsService {
+    private geographicBreakdownQueryBuilder: GeographicBreakdownQueryBuilder;
+
     constructor(
         private prisma: PrismaClient,
         private geographicAreaRepository: GeographicAreaRepository,
         private geographicAuthorizationService?: GeographicAuthorizationService
-    ) { }
+    ) {
+        this.geographicBreakdownQueryBuilder = new GeographicBreakdownQueryBuilder(prisma);
+    }
 
     /**
      * Determines the effective geographic area IDs to filter by, considering:
@@ -1363,14 +1380,25 @@ export class AnalyticsService {
      * When parentGeographicAreaId is provided: returns metrics for immediate children
      * When not provided: returns metrics for all top-level areas (null parent)
      * Each area's metrics aggregate data from the area and all its descendants.
+     * 
+     * OPTIMIZED: Uses database-level aggregation with CTEs, GROUP BY, and HAVING clause.
      */
     async getGeographicBreakdown(
         parentGeographicAreaId: string | undefined,
         filters: AnalyticsFilters = {},
         authorizedAreaIds: string[] = [],
         hasGeographicRestrictions: boolean = false,
-        userId?: string
-    ): Promise<GeographicBreakdown[]> {
+        userId?: string,
+        pagination?: GeoBreakdownPaginationParams
+    ): Promise<GeographicBreakdownResponse> {
+        // Validate pagination parameters
+        if (pagination?.page !== undefined && pagination.page < 1) {
+            throw new Error('Invalid pagination: page must be a positive integer');
+        }
+        if (pagination?.pageSize !== undefined && (pagination.pageSize < 1 || pagination.pageSize > 1000)) {
+            throw new Error('Invalid pagination: pageSize must be between 1 and 1000');
+        }
+
         // Validate parent area access if provided
         if (parentGeographicAreaId && hasGeographicRestrictions) {
             const hasAccess = authorizedAreaIds.includes(parentGeographicAreaId);
@@ -1421,18 +1449,28 @@ export class AnalyticsService {
             areasToReturn = authorizedAreas;
         }
 
-        // For each area, calculate metrics by aggregating from the area and all its descendants
-        const breakdown: GeographicBreakdown[] = [];
+        // If no areas to return, return empty result
+        if (areasToReturn.length === 0) {
+            return {
+                data: [],
+                pagination: {
+                    page: pagination?.page || 1,
+                    pageSize: pagination?.pageSize || 100,
+                    totalRecords: 0,
+                    totalPages: 0,
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                },
+            };
+        }
 
         // Batch fetch all descendants for all areas at once
         const allAreaIds = areasToReturn.map(a => a.id);
-        const allDescendantsMap = new Map<string, string[]>();
-
-        // Get descendants for all areas in one query
         const allDescendants = await this.geographicAreaRepository.findBatchDescendants(allAreaIds);
 
-        // Build a map of parent -> descendants by checking parentGeographicAreaId
-        // We need to query the areas to know their parents
+        // Build area-to-descendants mapping
+        const areaToDescendantsMap = new Map<string, string[]>();
+
         if (allDescendants.length > 0) {
             const descendantAreas = await this.prisma.geographicArea.findMany({
                 where: { id: { in: allDescendants } },
@@ -1457,172 +1495,134 @@ export class AnalyticsService {
                     }
                 }
 
-                allDescendantsMap.set(area.id, descendants);
+                // Filter descendants to only authorized areas
+                let authorizedDescendantIds = descendants;
+                if (hasGeographicRestrictions && userId && this.geographicAuthorizationService) {
+                    const authorizedDescendants: string[] = [];
+
+                    for (const descendantId of descendants) {
+                        const accessLevel = await this.geographicAuthorizationService.evaluateAccess(userId, descendantId);
+                        if (accessLevel === AccessLevel.FULL) {
+                            authorizedDescendants.push(descendantId);
+                        }
+                    }
+
+                    authorizedDescendantIds = authorizedDescendants;
+                }
+
+                // Include the area itself and authorized descendants
+                areaToDescendantsMap.set(area.id, [area.id, ...authorizedDescendantIds]);
+            }
+        } else {
+            // No descendants - each area maps to itself only
+            for (const area of areasToReturn) {
+                areaToDescendantsMap.set(area.id, [area.id]);
             }
         }
 
-        for (const area of areasToReturn) {
-            // Get all descendant IDs for this area
-            const allDescendantIds = allDescendantsMap.get(area.id) || [];
+        // Build optimized query
+        const queryFilters: GeographicBreakdownFilters = {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            activityCategoryIds: filters.activityCategoryIds,
+            activityTypeIds: filters.activityTypeIds,
+            venueIds: filters.venueIds,
+            populationIds: filters.populationIds,
+        };
 
-            // Filter descendants to only include authorized areas
-            let authorizedDescendantIds = allDescendantIds;
-            if (hasGeographicRestrictions && userId && this.geographicAuthorizationService) {
-                const authorizedDescendants: string[] = [];
+        // First, execute COUNT query to determine total pages
+        const { sql: countSql, parameters: countParameters } = this.geographicBreakdownQueryBuilder.buildCountQuery(
+            allAreaIds,
+            areaToDescendantsMap,
+            queryFilters
+        );
 
-                for (const descendantId of allDescendantIds) {
-                    const accessLevel = await this.geographicAuthorizationService.evaluateAccess(userId, descendantId);
+        const countResult = await this.prisma.$queryRawUnsafe<Array<{ total: bigint }>>(countSql, ...countParameters);
+        const totalCount = Number(countResult[0]?.total || 0);
 
-                    // Only include descendants with FULL access
-                    if (accessLevel === AccessLevel.FULL) {
-                        authorizedDescendants.push(descendantId);
-                    }
-                }
+        // Calculate pagination with clamping
+        const requestedPage = pagination?.page || 1;
+        const pageSize = pagination?.pageSize || 100;
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-                authorizedDescendantIds = authorizedDescendants;
-            }
+        // Clamp page number to valid range [1, totalPages]
+        const clampedPage = Math.max(1, Math.min(requestedPage, totalPages));
 
-            // Include the area itself and only authorized descendants
-            const areaIds = [area.id, ...authorizedDescendantIds];
+        // Build main query with clamped pagination
+        const clampedPagination = pagination ? { page: clampedPage, pageSize } : undefined;
 
-            // Get all venues in this area and authorized descendants
-            const venues = await this.prisma.venue.findMany({
-                where: { geographicAreaId: { in: areaIds } },
-                select: { id: true },
+        const { sql, parameters } = this.geographicBreakdownQueryBuilder.buildGeographicBreakdownQuery(
+            allAreaIds,
+            areaToDescendantsMap,
+            queryFilters,
+            clampedPagination
+        );
+
+        // Execute main query
+        const queryResults = await this.prisma.$queryRawUnsafe<Array<{
+            geographicAreaId: string;
+            activityCount: bigint;
+            participantCount: bigint;
+            participationCount: bigint;
+        }>>(sql, ...parameters);
+
+        // Convert BigInt to number
+        const metricsMap = new Map<string, { activityCount: number; participantCount: number; participationCount: number }>();
+        for (const row of queryResults) {
+            metricsMap.set(row.geographicAreaId, {
+                activityCount: Number(row.activityCount),
+                participantCount: Number(row.participantCount),
+                participationCount: Number(row.participationCount),
             });
-            const venueIds = venues.map(v => v.id);
+        }
 
-            if (venueIds.length === 0) {
-                // No venues in this area or authorized descendants - return zero metrics
+        // Query for hasChildren flag for all areas in one query
+        const childCounts = await this.prisma.geographicArea.groupBy({
+            by: ['parentGeographicAreaId'],
+            where: {
+                parentGeographicAreaId: { in: allAreaIds },
+            },
+            _count: true,
+        });
+
+        const hasChildrenMap = new Map<string, boolean>();
+        for (const count of childCounts) {
+            if (count.parentGeographicAreaId) {
+                hasChildrenMap.set(count.parentGeographicAreaId, true);
+            }
+        }
+
+        // Build final result
+        const breakdown: GeographicBreakdown[] = [];
+        for (const area of areasToReturn) {
+            const metrics = metricsMap.get(area.id);
+
+            // Only include areas that passed the HAVING clause (have metrics or children)
+            if (metrics) {
                 breakdown.push({
                     geographicAreaId: area.id,
                     geographicAreaName: area.name,
                     areaType: area.areaType,
-                    activityCount: 0,
-                    participantCount: 0,
-                    participationCount: 0,
-                    hasChildren: (await this.prisma.geographicArea.count({ where: { parentGeographicAreaId: area.id } })) > 0,
+                    activityCount: metrics.activityCount,
+                    participantCount: metrics.participantCount,
+                    participationCount: metrics.participationCount,
+                    hasChildren: hasChildrenMap.get(area.id) || false,
                 });
-                continue;
             }
-
-            // Build activity filter
-            const activityWhere: any = {
-                activityVenueHistory: {
-                    some: {
-                        venueId: { in: venueIds },
-                    },
-                },
-            };
-
-            // Apply additional filters
-            if (filters.activityCategoryIds && filters.activityCategoryIds.length > 0) {
-                activityWhere.activityType = {
-                    activityCategoryId: { in: filters.activityCategoryIds },
-                };
-            }
-
-            if (filters.activityTypeIds && filters.activityTypeIds.length > 0) {
-                activityWhere.activityTypeId = { in: filters.activityTypeIds };
-            }
-
-            if (filters.venueIds && filters.venueIds.length > 0) {
-                activityWhere.activityVenueHistory = {
-                    some: {
-                        venueId: { in: filters.venueIds },
-                    },
-                };
-            }
-
-            // Add date range filtering
-            if (filters.startDate && filters.endDate) {
-                activityWhere.AND = [
-                    { startDate: { lte: filters.endDate } },
-                    {
-                        OR: [
-                            { endDate: null },
-                            { endDate: { gte: filters.startDate } },
-                        ],
-                    },
-                ];
-            } else if (filters.startDate) {
-                activityWhere.AND = [
-                    { startDate: { gte: filters.startDate } },
-                ];
-            } else if (filters.endDate) {
-                activityWhere.startDate = { lte: filters.endDate };
-            }
-
-            // Add population filtering
-            if (filters.populationIds && filters.populationIds.length > 0) {
-                activityWhere.assignments = {
-                    some: {
-                        participant: {
-                            participantPopulations: {
-                                some: {
-                                    populationId: { in: filters.populationIds },
-                                },
-                            },
-                        },
-                    },
-                };
-            }
-
-            // Get activities in this area
-            const activities = await this.prisma.activity.findMany({
-                where: activityWhere,
-                include: {
-                    assignments: {
-                        include: {
-                            participant: {
-                                include: {
-                                    participantPopulations: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            });
-
-            // Filter assignments by population if needed
-            const filterAssignmentsByPopulation = (assignments: any[]) => {
-                if (!filters.populationIds || filters.populationIds.length === 0) {
-                    return assignments;
-                }
-                return assignments.filter(assignment =>
-                    assignment.participant.participantPopulations.some((pp: any) =>
-                        filters.populationIds!.includes(pp.populationId)
-                    )
-                );
-            };
-
-            // Calculate metrics
-            const activityCount = activities.length;
-            const participantCount = new Set(
-                activities.flatMap(a => filterAssignmentsByPopulation(a.assignments).map(as => as.participantId))
-            ).size;
-            const participationCount = activities.reduce(
-                (sum, a) => sum + filterAssignmentsByPopulation(a.assignments).length,
-                0
-            );
-
-            // Check if this area has children
-            const hasChildren = (await this.prisma.geographicArea.count({
-                where: { parentGeographicAreaId: area.id },
-            })) > 0;
-
-            breakdown.push({
-                geographicAreaId: area.id,
-                geographicAreaName: area.name,
-                areaType: area.areaType,
-                activityCount,
-                participantCount,
-                participationCount,
-                hasChildren,
-            });
         }
 
-        return breakdown;
+        // Return with clamped pagination metadata
+        return {
+            data: breakdown,
+            pagination: {
+                page: clampedPage,
+                pageSize,
+                totalRecords: totalCount,
+                totalPages,
+                hasNextPage: clampedPage < totalPages,
+                hasPreviousPage: clampedPage > 1,
+            },
+        };
     }
 
     async getActivityLifecycleEvents(

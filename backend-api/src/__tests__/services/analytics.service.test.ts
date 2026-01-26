@@ -259,16 +259,21 @@ describe('AnalyticsService', () => {
             ];
 
             mockPrisma.geographicArea.findMany = jest.fn().mockResolvedValue(mockAreas);
-            mockPrisma.geographicArea.count = jest.fn().mockResolvedValue(0);
+            mockPrisma.geographicArea.groupBy = jest.fn().mockResolvedValue([]);
             mockGeoRepo.findBatchDescendants = jest.fn().mockResolvedValue([]);
-            mockPrisma.venue.findMany = jest.fn().mockResolvedValue([]);
-            mockPrisma.activity.findMany = jest.fn().mockResolvedValue([]);
+            mockPrisma.$queryRawUnsafe = jest.fn()
+                .mockResolvedValueOnce([{ total: BigInt(2) }])  // COUNT query first
+                .mockResolvedValueOnce([
+                    { geographicAreaId: 'area1', activityCount: BigInt(0), participantCount: BigInt(0), participationCount: BigInt(0) },
+                    { geographicAreaId: 'area2', activityCount: BigInt(0), participantCount: BigInt(0), participationCount: BigInt(0) },
+                ]);
 
             const result = await service.getGeographicBreakdown(undefined, {}, [], false);
 
-            expect(result).toHaveLength(2);
-            expect(result[0].geographicAreaName).toBe('Area 1');
-            expect(result[1].geographicAreaName).toBe('Area 2');
+            expect(result.data).toHaveLength(2);
+            expect(result.data[0].geographicAreaName).toBe('Area 1');
+            expect(result.data[1].geographicAreaName).toBe('Area 2');
+            expect(result.pagination.totalRecords).toBe(2);
             expect(mockPrisma.geographicArea.findMany).toHaveBeenCalledWith({
                 where: { parentGeographicAreaId: null },
                 orderBy: { name: 'asc' },
@@ -283,16 +288,21 @@ describe('AnalyticsService', () => {
             ];
 
             mockPrisma.geographicArea.findMany = jest.fn().mockResolvedValue(mockChildren);
-            mockPrisma.geographicArea.count = jest.fn().mockResolvedValue(0);
+            mockPrisma.geographicArea.groupBy = jest.fn().mockResolvedValue([]);
             mockGeoRepo.findBatchDescendants = jest.fn().mockResolvedValue([]);
-            mockPrisma.venue.findMany = jest.fn().mockResolvedValue([]);
-            mockPrisma.activity.findMany = jest.fn().mockResolvedValue([]);
+            mockPrisma.$queryRawUnsafe = jest.fn()
+                .mockResolvedValueOnce([{ total: BigInt(2) }])  // COUNT query first
+                .mockResolvedValueOnce([
+                    { geographicAreaId: 'child1', activityCount: BigInt(0), participantCount: BigInt(0), participationCount: BigInt(0) },
+                    { geographicAreaId: 'child2', activityCount: BigInt(0), participantCount: BigInt(0), participationCount: BigInt(0) },
+                ]);
 
             const result = await service.getGeographicBreakdown(parentId, {}, [], false);
 
-            expect(result).toHaveLength(2);
-            expect(result[0].geographicAreaName).toBe('Child 1');
-            expect(result[1].geographicAreaName).toBe('Child 2');
+            expect(result.data).toHaveLength(2);
+            expect(result.data[0].geographicAreaName).toBe('Child 1');
+            expect(result.data[1].geographicAreaName).toBe('Child 2');
+            expect(result.pagination.totalRecords).toBe(2);
             expect(mockPrisma.geographicArea.findMany).toHaveBeenCalledWith({
                 where: { parentGeographicAreaId: parentId },
                 orderBy: { name: 'asc' },

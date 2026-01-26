@@ -28,7 +28,7 @@ export default function GeographicAnalyticsDashboardPage() {
     const [dateRange, setDateRange] = useState<DateRangePickerProps.Value | null>(null);
     const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
-    const { data: geographicData, isLoading } = useQuery({
+    const { data: geographicResponse, isLoading } = useQuery({
         queryKey: ['geographic-analytics', dateRange, selectedGeographicAreaId],
         queryFn: () => {
             // Extract dates from the date range value and convert to ISO datetime
@@ -47,6 +47,8 @@ export default function GeographicAnalyticsDashboardPage() {
             );
         },
     });
+    
+    const geographicData = geographicResponse?.data || [];
 
     return (
         <SpaceBetween size="l">

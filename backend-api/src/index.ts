@@ -184,7 +184,8 @@ const assignmentRoutes = new AssignmentRoutes(
 const analyticsRoutes = new AnalyticsRoutes(
   analyticsService,
   authMiddleware,
-  authorizationMiddleware
+  authorizationMiddleware,
+  prisma
 );
 const mapDataRoutes = new MapDataRoutes(
   mapDataService,

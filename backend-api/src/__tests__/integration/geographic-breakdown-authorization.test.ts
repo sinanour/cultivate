@@ -277,7 +277,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         const authInfo = await geographicAuthorizationService.getAuthorizationInfo(userId);
 
         // Get geographic breakdown for the city (should show only allowed neighbourhood)
-        const breakdown = await analyticsService.getGeographicBreakdown(
+        const result = await analyticsService.getGeographicBreakdown(
             cityId,
             {},
             authInfo.authorizedAreaIds,
@@ -286,12 +286,13 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         );
 
         // Should only include the allowed neighbourhood, not the denied one
-        expect(breakdown).toHaveLength(1);
-        expect(breakdown[0].geographicAreaId).toBe(neighbourhood1Id);
-        expect(breakdown[0].geographicAreaName).toBe('Allowed Neighbourhood');
-        expect(breakdown[0].activityCount).toBe(1);
-        expect(breakdown[0].participantCount).toBe(1);
-        expect(breakdown[0].participationCount).toBe(1);
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].geographicAreaId).toBe(neighbourhood1Id);
+        expect(result.data[0].geographicAreaName).toBe('Allowed Neighbourhood');
+        expect(result.data[0].activityCount).toBe(1);
+        expect(result.data[0].participantCount).toBe(1);
+        expect(result.data[0].participationCount).toBe(1);
+        expect(result.pagination).toBeDefined();
     });
 
     it('should only aggregate metrics from authorized descendants', async () => {
@@ -299,7 +300,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         const authInfo = await geographicAuthorizationService.getAuthorizationInfo(userId);
 
         // Get geographic breakdown for top-level (should show city with only allowed neighbourhood metrics)
-        const breakdown = await analyticsService.getGeographicBreakdown(
+        const result = await analyticsService.getGeographicBreakdown(
             undefined,
             {},
             authInfo.authorizedAreaIds,
@@ -308,14 +309,15 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         );
 
         // Should include the city
-        expect(breakdown).toHaveLength(1);
-        expect(breakdown[0].geographicAreaId).toBe(cityId);
-        expect(breakdown[0].geographicAreaName).toBe('Test City');
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].geographicAreaId).toBe(cityId);
+        expect(result.data[0].geographicAreaName).toBe('Test City');
 
         // Metrics should only include data from allowed neighbourhood (not denied neighbourhood)
-        expect(breakdown[0].activityCount).toBe(1);  // Only activity from allowed neighbourhood
-        expect(breakdown[0].participantCount).toBe(1);  // Only participant from allowed neighbourhood
-        expect(breakdown[0].participationCount).toBe(1);  // Only participation from allowed neighbourhood
+        expect(result.data[0].activityCount).toBe(1);  // Only activity from allowed neighbourhood
+        expect(result.data[0].participantCount).toBe(1);  // Only participant from allowed neighbourhood
+        expect(result.data[0].participationCount).toBe(1);  // Only participation from allowed neighbourhood
+        expect(result.pagination).toBeDefined();
     });
 
     it('should work correctly for users without geographic restrictions', async () => {
@@ -329,7 +331,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         });
 
         // Get geographic breakdown (should show all neighbourhoods)
-        const breakdown = await analyticsService.getGeographicBreakdown(
+        const result = await analyticsService.getGeographicBreakdown(
             cityId,
             {},
             [],
@@ -338,10 +340,11 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         );
 
         // Should include both neighbourhoods
-        expect(breakdown).toHaveLength(2);
-        expect(breakdown.map(b => b.geographicAreaId).sort()).toEqual(
+        expect(result.data).toHaveLength(2);
+        expect(result.data.map(b => b.geographicAreaId).sort()).toEqual(
             [neighbourhood1Id, neighbourhood2Id].sort()
         );
+        expect(result.pagination).toBeDefined();
 
         // Clean up
         await prisma.user.delete({ where: { id: unrestrictedUser.id } });

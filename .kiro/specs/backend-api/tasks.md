@@ -4,6 +4,13 @@
 
 This implementation plan covers the RESTful API service built with Node.js, Express.js, TypeScript, and Prisma ORM. The API provides endpoints for managing activities, participants, venues, geographic areas, analytics, authentication, and offline synchronization.
 
+> **Performance Optimization Tasks**: This task list covers core API functionality. For performance optimization implementation tasks (raw SQL queries, CTEs, wire formats), see:
+> - `.kiro/specs/analytics-optimization/tasks.md` - Analytics service optimization tasks
+> - `.kiro/specs/geographic-breakdown-optimization/tasks.md` - Geographic breakdown optimization tasks
+> - `.kiro/specs/map-data-optimization/tasks.md` - Map data API optimization tasks
+> 
+> All optimization tasks have been completed. See `.kiro/specs/OPTIMIZATION_SPECS.md` for details.
+
 ## Tasks
 
 - [x] 1. Set up project structure and dependencies

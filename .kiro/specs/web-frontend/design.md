@@ -6,6 +6,13 @@ The Web Frontend package is a Progressive Web Application (PWA) built with React
 
 The frontend communicates with the Backend API package for data persistence and authentication, while maintaining local caches for offline functionality. The design prioritizes user experience through clear navigation, comprehensive form validation, and real-time feedback during operations.
 
+> **Performance Optimizations**: This design document covers the core frontend architecture. For details on how the frontend integrates with backend performance optimizations (wire format parsing, pagination, chart rendering), see:
+> - `.kiro/specs/analytics-optimization/design.md` - Wire format parsing and dashboard integration
+> - `.kiro/specs/geographic-breakdown-optimization/design.md` - Geographic breakdown pagination
+> - `.kiro/specs/map-data-optimization/design.md` - Map marker loading optimization
+> 
+> See also: `.kiro/specs/OPTIMIZATION_SPECS.md` for an overview of all optimization specifications.
+
 ## Architecture
 
 ### Technology Stack

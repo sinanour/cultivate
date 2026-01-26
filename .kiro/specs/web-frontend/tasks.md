@@ -4,6 +4,13 @@
 
 This implementation plan covers the React-based web application built with TypeScript, Vite, and CloudScape Design System. The application provides a responsive interface for managing activities, participants, venues, geographic areas, and viewing analytics with offline support.
 
+> **Performance Optimization Tasks**: This task list covers core frontend functionality. For frontend integration tasks related to backend performance optimizations (wire format parsing, pagination controls, chart updates), see:
+> - `.kiro/specs/analytics-optimization/tasks.md` - Analytics dashboard integration tasks
+> - `.kiro/specs/geographic-breakdown-optimization/tasks.md` - Geographic breakdown pagination tasks
+> - `.kiro/specs/map-data-optimization/tasks.md` - Map view optimization tasks
+> 
+> All optimization tasks have been completed. See `.kiro/specs/OPTIMIZATION_SPECS.md` for details.
+
 ## Tasks
 
 - [x] 1. Set up project structure and dependencies
