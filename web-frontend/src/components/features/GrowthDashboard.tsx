@@ -153,6 +153,14 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
 
   // Ref to trigger FilterGroupingPanel's internal update
   const triggerFilterUpdate = useRef<(() => void) | null>(null);
+  
+  // Ref to capture current period value for handleFilterUpdate
+  const periodRef = useRef(period);
+  
+  // Keep periodRef in sync with period state
+  useEffect(() => {
+    periodRef.current = period;
+  }, [period]);
 
   // Track applied state (only updated when Run Report is clicked)
   const [appliedDateRange, setAppliedDateRange] = useState<FilterGroupingState['dateRange']>(null);
@@ -290,8 +298,9 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
     if (typeof state.grouping === 'string') {
       setAppliedViewMode(state.grouping as ViewMode);
     }
-    setAppliedPeriod(period);
-  }, [period]);
+    // Use the current period value from ref (not from closure)
+    setAppliedPeriod(periodRef.current);
+  }, []); // No dependencies - stable callback
 
   // Store view mode in localStorage
   useEffect(() => {
@@ -303,7 +312,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
   }, [viewMode]);
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['growthMetrics', appliedDateRange, appliedPeriod, selectedGeographicAreaId, appliedFilterQuery, appliedViewMode, runReportTrigger],
+    queryKey: ['growthMetrics', appliedDateRange, appliedPeriod, selectedGeographicAreaId, appliedFilterQuery, appliedViewMode],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
       let startDate: string | undefined;
@@ -491,7 +500,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
       participationGrowth = timeSeriesData[timeSeriesData.length - 1].totalParticipation - timeSeriesData[0].totalParticipation;
     } else if (viewMode !== 'all' && metrics?.groupedTimeSeries) {
       // Sum up growth across all groups
-      Object.values(metrics.groupedTimeSeries).forEach(groupData => {
+      Object.values(metrics.groupedTimeSeries).forEach((groupData: any) => {
         if (groupData.length >= 2) {
           activityGrowth += groupData[groupData.length - 1].uniqueActivities - groupData[0].uniqueActivities;
           participantGrowth += groupData[groupData.length - 1].uniqueParticipants - groupData[0].uniqueParticipants;
@@ -507,8 +516,8 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
 
     // Get all unique dates across all groups
     const allDates = new Set<string>();
-    Object.values(metrics.groupedTimeSeries).forEach(series => {
-      series.forEach(item => allDates.add(item.date));
+    Object.values(metrics.groupedTimeSeries).forEach((series: any) => {
+      series.forEach((item: any) => allDates.add(item.date));
     });
 
     // Create merged data structure
@@ -517,8 +526,8 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
       
       // Add data for each group
       groupNames.forEach(groupName => {
-        const groupData = metrics.groupedTimeSeries![groupName];
-        const item = groupData.find(d => d.date === date);
+        const groupData = metrics.groupedTimeSeries![groupName] as any;
+        const item = groupData.find((d: any) => d.date === date);
         dataPoint[`uniqueParticipants_${groupName}`] = item?.uniqueParticipants || 0;
         dataPoint[`uniqueActivities_${groupName}`] = item?.uniqueActivities || 0;
         dataPoint[`totalParticipation_${groupName}`] = item?.totalParticipation || 0;
