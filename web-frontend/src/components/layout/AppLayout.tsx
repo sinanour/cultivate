@@ -33,7 +33,7 @@ export function AppLayout() {
   // CloudScape accepts React elements in text property despite TypeScript types
   const baseNavigationItems: SideNavigationProps['items'] = [
     // @ts-ignore - CloudScape handles React elements in text property
-    { type: 'link', text: createMenuItem('Home', '/src/assets/home.svg'), href: '/' },
+    { type: 'link', text: createMenuItem('Home', '/home.svg'), href: '/' },
     { type: 'divider' },
     {
       type: 'section',
