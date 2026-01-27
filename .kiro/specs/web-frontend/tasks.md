@@ -993,12 +993,10 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 13.4 Update MapFilters component
     - Update filter change handlers to refetch marker data with new filters (restart batched loading)
     - Pass filter parameters to MapDataService marker methods
-    - Update population filter enabling logic for four map modes
-    - Disable population filter when mode is "Venues"
-    - Enable population filter when mode is "Activities by Type", "Activities by Category", or "Participant Homes"
-    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56_
+    - Note: This task is superseded by task 13.4a which uses FilterGroupingPanel
+    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.53a, 6C.53b, 6C.54_
 
-  - [ ] 13.4a Integrate FilterGroupingPanel into MapView
+  - [x] 13.4a Integrate FilterGroupingPanel into MapView
     - Import FilterGroupingPanel component
     - Remove existing MapFilters component or refactor it to use FilterGroupingPanel
     - Configure FilterGroupingPanel with exclusive grouping mode
@@ -1008,21 +1006,27 @@ This implementation plan covers the React-based web application built with TypeS
       - Activity Type: loadItems callback fetches from ActivityTypeService
       - Status: loadItems callback provides predefined status options (PLANNED, ACTIVE, COMPLETED, CANCELLED)
       - Population: loadItems callback fetches from PopulationService
+    - Keep all filter properties available and enabled regardless of selected map mode
+    - Do NOT disable or hide filter properties based on map mode selection
     - Implement handleFilterUpdate callback to receive FilterGroupingState from FilterGroupingPanel
     - Extract dateRange, filterTokens, and map mode (grouping string) from FilterGroupingState
     - Convert filter tokens to API query parameters for marker endpoints
-    - Pass filters and map mode to MapDataService marker fetch methods
+    - Implement filter application logic:
+      - Apply activity category, activity type, and status filters only when map mode is "Activities by Type" or "Activities by Category"
+      - Apply population filter when map mode is "Activities by Type", "Activities by Category", or "Participant Homes"
+      - Ignore filters that don't apply to current map mode (e.g., activity category in "Venues" mode) but keep them visible in UI
+    - Pass applicable filters and map mode to MapDataService marker fetch methods
+    - Preserve all filter selections when switching between map modes
     - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during marker fetching
-    - Pass disablePopulationFilter prop based on selected map mode (true when mode is "Venues")
-    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.54, 6C.55, 6C.56, 6C.57, 6C.58, 6C.59, 6C.60, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.51, 7C.54_
+    - _Requirements: 6C.51, 6C.52, 6C.53, 6C.53a, 6C.53b, 6C.54, 6C.55, 6C.56, 6C.57, 6C.58, 6C.59, 6C.60, 6C.61, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30, 7C.51, 7C.54_
 
   - [x] 13.5 Update global geographic filter integration
     - Apply global filter to all map modes
     - Pass selectedGeographicAreaId to marker fetch calls
     - Filter activities, participant homes, and venues by authorized geographic areas
     - Restart batched loading when global filter changes
-    - _Requirements: 6C.57, 6C.58, 6C.59, 6C.60, 6C.61, 6C.62, 6C.63, 6C.64, 6C.65, 6C.66, 6C.67_
+    - _Requirements: 6C.62, 6C.63, 6C.64, 6C.65, 6C.66, 6C.67, 6C.68, 6C.69, 6C.70, 6C.71, 6C.72_
 
   - [x] 13.5a Implement coordinate-based viewport filtering
     - [x] 13.5a.1 Add viewport bounds tracking to MapView component
@@ -1101,7 +1105,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Pass selectedGeographicAreaId to marker fetch calls
     - Filter activities, participant homes, and venues by authorized geographic areas
     - Restart batched loading when global filter changes
-    - _Requirements: 6C.57, 6C.58, 6C.59, 6C.60, 6C.61, 6C.62, 6C.63, 6C.64, 6C.65, 6C.66, 6C.67_
+    - _Requirements: 6C.62, 6C.63, 6C.64, 6C.65, 6C.66, 6C.67, 6C.68, 6C.69, 6C.70, 6C.71, 6C.72_
 
   - [ ]* 13.6 Write property tests for optimized map loading with batched rendering
     - **Property 60: Map Immediate Rendering**

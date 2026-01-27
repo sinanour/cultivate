@@ -695,9 +695,14 @@ src/
 - Configures FilterGroupingPanel with:
   - Exclusive grouping mode supporting map modes: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
   - Filter properties: activity category, activity type, status, date range, population
-  - Disables population filter when map mode is "Venues"
-  - Enables population filter when map mode is "Activities by Type", "Activities by Category", or "Participant Homes"
+  - All filter properties remain available and enabled regardless of selected map mode
+  - Does NOT disable or hide filter properties based on map mode selection
 - When "Update" button clicked on FilterGroupingPanel: fetches new marker data with selected filters and map mode
+- **Filter Application Logic:**
+  - Activity category, activity type, and status filters apply only to "Activities by Type" and "Activities by Category" modes
+  - Population filter applies to "Activities by Type", "Activities by Category", and "Participant Homes" modes
+  - Filters that don't apply to the current map mode are ignored for marker fetching but remain visible and selected in the UI
+  - When switching between map modes, preserves all filter selections even if some filters don't apply to the new mode
 - **Date Range Handling:**
   - Accepts both absolute and relative date ranges from FilterGroupingPanel
   - When absolute date range selected: persists startDate and endDate as ISO-8601 strings (YYYY-MM-DD) to URL query parameters

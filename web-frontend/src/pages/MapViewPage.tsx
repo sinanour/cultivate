@@ -10,6 +10,9 @@ import type { PropertyFilterProps } from '@cloudscape-design/components/property
 import { MapView } from '../components/features/MapView.optimized';
 import { ProgressIndicator } from '../components/common/ProgressIndicator';
 import { PopulationService } from '../services/api/population.service';
+import { activityCategoryService } from '../services/api/activity-category.service';
+import { ActivityTypeService } from '../services/api/activity-type.service';
+import type { ActivityCategory, ActivityType } from '../types';
 import { 
   FilterGroupingPanel, 
   type FilterGroupingState, 
@@ -135,6 +138,68 @@ export default function MapViewPage() {
   // FilterGroupingPanel configuration with loadItems callbacks
   const filteringProperties: FilterProperty[] = useMemo(() => [
     {
+      key: 'activityCategory',
+      propertyLabel: 'Activity Category',
+      groupValuesLabel: 'Activity Category values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        const categories: ActivityCategory[] = await activityCategoryService.getActivityCategories();
+        const filtered = categories.filter((cat: ActivityCategory) => 
+          !filterText || cat.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        filtered.forEach((cat: ActivityCategory) => addToCache(cat.id, cat.name));
+        return filtered.map((cat: ActivityCategory) => ({
+          propertyKey: 'activityCategory',
+          value: cat.name,
+          label: cat.name,
+        }));
+      },
+    },
+    {
+      key: 'activityType',
+      propertyLabel: 'Activity Type',
+      groupValuesLabel: 'Activity Type values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        const types: ActivityType[] = await ActivityTypeService.getActivityTypes();
+        const filtered = types.filter((type: ActivityType) => 
+          !filterText || type.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        filtered.forEach((type: ActivityType) => addToCache(type.id, type.name));
+        return filtered.map((type: ActivityType) => ({
+          propertyKey: 'activityType',
+          value: type.name,
+          label: type.name,
+        }));
+      },
+    },
+    {
+      key: 'status',
+      propertyLabel: 'Status',
+      groupValuesLabel: 'Status values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        const statuses = [
+          { value: 'PLANNED', label: 'Planned' },
+          { value: 'ACTIVE', label: 'Active' },
+          { value: 'COMPLETED', label: 'Completed' },
+          { value: 'CANCELLED', label: 'Cancelled' },
+        ];
+        
+        const filtered = statuses.filter(status => 
+          !filterText || status.label.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        return filtered.map(status => ({
+          propertyKey: 'status',
+          value: status.label,
+          label: status.label,
+        }));
+      },
+    },
+    {
       key: 'population',
       propertyLabel: 'Population',
       groupValuesLabel: 'Population values',
@@ -189,6 +254,62 @@ export default function MapViewPage() {
     .flatMap(t => extractValuesFromToken(t))
     .map(label => getUuidFromLabel(label))
     .filter(Boolean) as string[];
+
+  // Extract activity category IDs from filter tokens
+  const selectedActivityCategoryIds = propertyFilterQuery.tokens
+    .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
+    .flatMap(t => extractValuesFromToken(t))
+    .map(label => getUuidFromLabel(label))
+    .filter(Boolean) as string[];
+
+  // Extract activity type IDs from filter tokens
+  const selectedActivityTypeIds = propertyFilterQuery.tokens
+    .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
+    .flatMap(t => extractValuesFromToken(t))
+    .map(label => getUuidFromLabel(label))
+    .filter(Boolean) as string[];
+
+  // Extract status values from filter tokens
+  const selectedStatuses = propertyFilterQuery.tokens
+    .filter(t => t.propertyKey === 'status' && t.operator === '=')
+    .flatMap(t => extractValuesFromToken(t))
+    .map(label => {
+      // Convert display label back to API value
+      const statusMap: Record<string, string> = {
+        'Planned': 'PLANNED',
+        'Active': 'ACTIVE',
+        'Completed': 'COMPLETED',
+        'Cancelled': 'CANCELLED',
+      };
+      return statusMap[label] || label;
+    })
+    .filter(Boolean) as string[];
+
+  // Determine which filters to pass based on map mode
+  const getFiltersForMode = () => {
+    const baseFilters = {
+      populationIds: selectedPopulationIds,
+      activityCategoryIds: [] as string[],
+      activityTypeIds: [] as string[],
+      status: undefined as string | undefined,
+    };
+
+    // Activity category, activity type, and status filters only apply to activity modes
+    if (mapMode === 'activitiesByType' || mapMode === 'activitiesByCategory') {
+      baseFilters.activityCategoryIds = selectedActivityCategoryIds;
+      baseFilters.activityTypeIds = selectedActivityTypeIds;
+      baseFilters.status = selectedStatuses.length > 0 ? selectedStatuses.join(',') : undefined;
+    }
+
+    // Population filter applies to activity modes and participant homes mode
+    if (mapMode === 'venues') {
+      baseFilters.populationIds = [];
+    }
+
+    return baseFilters;
+  };
+
+  const modeFilters = getFiltersForMode();
 
   // Convert date range to absolute dates for API
   const getAbsoluteDates = (): { startDate?: string; endDate?: string } => {
@@ -298,14 +419,16 @@ export default function MapViewPage() {
               onUpdate={handleFilterUpdate}
               onInitialResolutionComplete={handleInitialResolutionComplete}
               isLoading={false}
-              disablePopulationFilter={mapMode === 'venues'}
             />
 
             {/* Map */}
             <div style={{ height: 'calc(100vh - 400px)', minHeight: '500px' }}>
               <MapView 
                 mode={mapMode}
-                populationIds={selectedPopulationIds}
+                populationIds={modeFilters.populationIds}
+                activityCategoryIds={modeFilters.activityCategoryIds}
+                activityTypeIds={modeFilters.activityTypeIds}
+                status={modeFilters.status}
                 startDate={absoluteDates.startDate}
                 endDate={absoluteDates.endDate}
                 onLoadingStateChange={setMapLoadingState}
