@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
@@ -61,6 +61,13 @@ export function GeographicAreaList() {
   // Cache for fetched children to avoid redundant API calls
   const [childrenCache, setChildrenCache] = useState<Map<string, GeographicArea[]>>(new Map());
   const [batchLoadingState, setBatchLoadingState] = useState<BatchLoadingState>({});
+
+  // Clear children cache and batch loading state when global filter changes
+  useEffect(() => {
+    setChildrenCache(new Map());
+    setBatchLoadingState({});
+    setExpandedItems([]); // Also reset expanded items to start fresh
+  }, [selectedGeographicAreaId]);
 
   // Cancel loading handler for a specific node
   const handleCancelNodeLoading = useCallback((parentId: string) => {
@@ -165,13 +172,13 @@ export function GeographicAreaList() {
   // Fetch children for a specific node with batched loading support
   const fetchChildrenBatch = useCallback(async (parentId: string, page: number = 1) => {
     try {
-      const response = await GeographicAreaService.getChildrenPaginated(parentId, page, BATCH_SIZE);
+      const response = await GeographicAreaService.getChildrenPaginated(parentId, page, BATCH_SIZE, selectedGeographicAreaId);
       return response;
     } catch (error) {
       console.error('Error fetching children batch:', error);
       throw error;
     }
-  }, []);
+  }, [selectedGeographicAreaId]);
 
   // Start or continue batched loading for a node
   const loadChildrenBatched = useCallback(async (parentId: string) => {

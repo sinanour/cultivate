@@ -74,10 +74,13 @@ export class GeographicAreaService {
     return this.getGeographicAreasFlexible({ page, limit, geographicAreaId, depth });
   }
 
-  static async getChildrenPaginated(parentId: string, page: number = 1, limit: number = 100): Promise<PaginatedResponse<GeographicArea>> {
+  static async getChildrenPaginated(parentId: string, page: number = 1, limit: number = 100, geographicAreaId?: string | null): Promise<PaginatedResponse<GeographicArea>> {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('limit', limit.toString());
+    if (geographicAreaId) {
+      params.append('geographicAreaId', geographicAreaId);
+    }
     const query = params.toString();
     return ApiClient.get<PaginatedResponse<GeographicArea>>(`/geographic-areas/${parentId}/children${query ? `?${query}` : ''}`);
   }
@@ -102,8 +105,13 @@ export class GeographicAreaService {
     return ApiClient.delete<void>(`/geographic-areas/${id}`);
   }
 
-  static async getChildren(id: string): Promise<GeographicArea[]> {
-    return ApiClient.get<GeographicArea[]>(`/geographic-areas/${id}/children`);
+  static async getChildren(id: string, geographicAreaId?: string | null): Promise<GeographicArea[]> {
+    const params = new URLSearchParams();
+    if (geographicAreaId) {
+      params.append('geographicAreaId', geographicAreaId);
+    }
+    const query = params.toString();
+    return ApiClient.get<GeographicArea[]>(`/geographic-areas/${id}/children${query ? `?${query}` : ''}`);
   }
 
   /**

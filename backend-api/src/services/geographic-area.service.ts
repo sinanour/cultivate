@@ -159,9 +159,14 @@ export class GeographicAreaService {
 
                     // Fetch and filter ancestors for context
                     const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
-                    const authorizedAncestors = ancestors.filter(a =>
-                        allowedAreaIds.has(a.id) || readOnlyIds.has(a.id)
-                    );
+
+                    // Filter ancestors by authorization if user has restrictions
+                    let authorizedAncestors = ancestors;
+                    if (hasGeographicRestrictions) {
+                        const authorizedSet = new Set([...authorizedAreaIds, ...readOnlyAreaIds]);
+                        authorizedAncestors = ancestors.filter(a => authorizedSet.has(a.id));
+                    }
+
                     return [...authorizedAncestors, ...authorizedAreas];
                 } else {
                     // No explicit filter - fetch from authorized top-level areas only
@@ -234,10 +239,19 @@ export class GeographicAreaService {
 
         let allAreaIds: string[];
         if (selectedArea) {
-            // Explicit filter: Get ancestors for context
+            // Explicit filter: Get ancestors for navigation context
             const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
-            // Combine: selected area, descendants (from effectiveAreaIds), and ancestors
-            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestors.map(a => a.id)])];
+
+            // Filter ancestors by authorization if user has restrictions
+            let ancestorIds = ancestors.map(a => a.id);
+            if (hasGeographicRestrictions) {
+                const authorizedSet = new Set([...authorizedAreaIds, ...readOnlyAreaIds]);
+                ancestorIds = ancestorIds.filter(id => authorizedSet.has(id));
+            }
+
+            // Combine: selected area + descendants (from effectiveAreaIds) + direct ancestors ONLY
+            // Do NOT include siblings or descendants of ancestors
+            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestorIds])];
         } else {
             // No explicit filter, but user has restrictions
             // Include authorized areas + read-only ancestors for navigation context
@@ -311,10 +325,19 @@ export class GeographicAreaService {
 
         let allAreaIds: string[];
         if (selectedArea) {
-            // Explicit filter: Get ancestors for context
+            // Explicit filter: Get ancestors for navigation context
             const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
-            // Combine: selected area, descendants (from effectiveAreaIds), and ancestors
-            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestors.map(a => a.id)])];
+
+            // Filter ancestors by authorization if user has restrictions
+            let ancestorIds = ancestors.map(a => a.id);
+            if (hasGeographicRestrictions) {
+                const authorizedSet = new Set([...authorizedAreaIds, ...readOnlyAreaIds]);
+                ancestorIds = ancestorIds.filter(id => authorizedSet.has(id));
+            }
+
+            // Combine: selected area + descendants (from effectiveAreaIds) + direct ancestors ONLY
+            // Do NOT include siblings or descendants of ancestors
+            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestorIds])];
         } else {
             // No explicit filter, but user has restrictions
             // Include authorized areas + read-only ancestors for navigation context
@@ -433,9 +456,14 @@ export class GeographicAreaService {
 
                     // Fetch and filter ancestors for context
                     const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
-                    const authorizedAncestors = ancestors.filter(a =>
-                        allowedAreaIds.has(a.id) || readOnlyIds.has(a.id)
-                    );
+
+                    // Filter ancestors by authorization if user has restrictions
+                    let authorizedAncestors = ancestors;
+                    if (hasGeographicRestrictions) {
+                        const authorizedSet = new Set([...authorizedAreaIds, ...readOnlyAreaIds]);
+                        authorizedAncestors = ancestors.filter(a => authorizedSet.has(a.id));
+                    }
+
                     return [...authorizedAncestors, ...authorizedAreas];
                 } else {
                     // No explicit filter - fetch from authorized top-level areas only
@@ -564,10 +592,19 @@ export class GeographicAreaService {
 
         let allAreaIds: string[];
         if (selectedArea) {
-            // Explicit filter: Get ancestors for context
+            // Explicit filter: Get ancestors for navigation context
             const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
-            // Combine: selected area, descendants (from effectiveAreaIds), and ancestors
-            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestors.map(a => a.id)])];
+
+            // Filter ancestors by authorization if user has restrictions
+            let ancestorIds = ancestors.map(a => a.id);
+            if (hasGeographicRestrictions) {
+                const authorizedSet = new Set([...authorizedAreaIds, ...readOnlyAreaIds]);
+                ancestorIds = ancestorIds.filter(id => authorizedSet.has(id));
+            }
+
+            // Combine: selected area + descendants (from effectiveAreaIds) + direct ancestors ONLY
+            // Do NOT include siblings or descendants of ancestors
+            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestorIds])];
         } else {
             // No explicit filter, but user has restrictions
             // Include authorized areas + read-only ancestors for navigation context
@@ -695,10 +732,19 @@ export class GeographicAreaService {
 
         let allAreaIds: string[];
         if (selectedArea) {
-            // Explicit filter: Get ancestors for context
+            // Explicit filter: Get ancestors for navigation context
             const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
-            // Combine: selected area, descendants (from effectiveAreaIds), and ancestors
-            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestors.map(a => a.id)])];
+
+            // Filter ancestors by authorization if user has restrictions
+            let ancestorIds = ancestors.map(a => a.id);
+            if (hasGeographicRestrictions) {
+                const authorizedSet = new Set([...authorizedAreaIds, ...readOnlyAreaIds]);
+                ancestorIds = ancestorIds.filter(id => authorizedSet.has(id));
+            }
+
+            // Combine: selected area + descendants (from effectiveAreaIds) + direct ancestors ONLY
+            // Do NOT include siblings or descendants of ancestors
+            allAreaIds = [...new Set([...effectiveAreaIds, ...ancestorIds])];
         } else {
             // No explicit filter, but user has restrictions
             // Include authorized areas + read-only ancestors for navigation context
@@ -977,23 +1023,43 @@ export class GeographicAreaService {
         await this.geographicAreaRepository.delete(id);
     }
 
-    async getChildren(id: string, userId?: string, userRole?: string): Promise<GeographicArea[]> {
+    async getChildren(id: string, userId?: string, userRole?: string, geographicAreaId?: string): Promise<GeographicArea[]> {
         // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
         await this.getGeographicAreaById(id, userId, userRole);
 
         const children = await this.geographicAreaRepository.findChildren(id);
 
         // Filter out denied children if user has geographic restrictions
+        let filteredChildren = children;
         if (userId && userRole !== 'ADMINISTRATOR') {
             const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
 
             if (authInfo.hasGeographicRestrictions) {
                 // Only include children that are in the authorized list
-                return children.filter(child => authInfo.authorizedAreaIds.includes(child.id));
+                filteredChildren = children.filter(child => authInfo.authorizedAreaIds.includes(child.id));
             }
         }
 
-        return children;
+        // If a geographic area filter is active, determine the relationship between
+        // the filter and the parent being expanded
+        if (geographicAreaId && geographicAreaId !== id) {
+            // Check if the parent being expanded is an ancestor of the filtered area
+            const filterAncestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+            const filterAncestorIds = new Set(filterAncestors.map(a => a.id));
+
+            if (filterAncestorIds.has(id)) {
+            // Parent is an ancestor of the filter (filter is below parent)
+            // Only show children in the filtered area's lineage
+                const ancestorIds = new Set(filterAncestors.map(a => a.id));
+                ancestorIds.add(geographicAreaId); // Include the filtered area itself
+
+                filteredChildren = filteredChildren.filter(child => ancestorIds.has(child.id));
+            }
+            // else: Parent is NOT an ancestor of the filter (filter is above parent or unrelated)
+            // Return all children (they are all descendants of the filter)
+        }
+
+        return filteredChildren;
     }
 
     async getChildrenPaginated(
@@ -1001,7 +1067,8 @@ export class GeographicAreaService {
         page?: number,
         limit?: number,
         userId?: string,
-        userRole?: string
+        userRole?: string,
+        geographicAreaId?: string
     ): Promise<PaginatedResponse<GeographicArea>> {
         // Validate authorization by calling getGeographicAreaById (which enforces geographic authorization)
         await this.getGeographicAreaById(id, userId, userRole);
@@ -1020,6 +1087,25 @@ export class GeographicAreaService {
                 // Only include children that are in the authorized list
                 filteredChildren = allChildren.filter(child => authInfo.authorizedAreaIds.includes(child.id));
             }
+        }
+
+        // If a geographic area filter is active, determine the relationship between
+        // the filter and the parent being expanded
+        if (geographicAreaId && geographicAreaId !== id) {
+            // Check if the parent being expanded is an ancestor of the filtered area
+            const filterAncestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+            const filterAncestorIds = new Set(filterAncestors.map(a => a.id));
+
+            if (filterAncestorIds.has(id)) {
+            // Parent is an ancestor of the filter (filter is below parent)
+            // Only show children in the filtered area's lineage
+                const ancestorIds = new Set(filterAncestors.map(a => a.id));
+                ancestorIds.add(geographicAreaId); // Include the filtered area itself
+
+                filteredChildren = filteredChildren.filter(child => ancestorIds.has(child.id));
+            }
+            // else: Parent is NOT an ancestor of the filter (filter is above parent or unrelated)
+            // Return all children (they are all descendants of the filter)
         }
 
         // Apply pagination

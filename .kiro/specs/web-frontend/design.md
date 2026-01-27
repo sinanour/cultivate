@@ -560,6 +560,8 @@ src/
 - Initially fetches only top-level areas and their immediate children using depth=1 parameter
 - When global filter active: fetches filtered area's immediate children using depth=1
 - Implements lazy loading with batched fetching: fetches children in batches of 100 items on-demand when user expands a node
+- When fetching children and a global geographic area filter is active, passes the filter as a geographicAreaId query parameter to ensure only children in the filtered area's ancestral lineage are returned
+- When expanding a top-level area with a leaf node filter active, receives only the child that is the direct ancestor of the filtered leaf node
 - When expanding nodes with many children (>100), renders children incrementally as batches arrive
 - Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
 - Loading indicator positioned next to entity count in header
@@ -591,6 +593,8 @@ src/
 - Visually indicates ancestor areas as read-only when displayed due to filtering (e.g., with a badge, icon, or muted styling)
 - Never suppresses or hides ancestor areas from the tree view, as they provide essential navigational context
 - Supports progressive disclosure through user-initiated node expansion
+- Clears children cache, batch loading state, and expanded items when global geographic area filter changes to prevent stale data display
+- Automatically refetches tree data when filter changes through React Query's queryKey dependency on selectedGeographicAreaId
 
 **GeographicAreaFormPage**
 - Dedicated full-page form for creating/editing geographic areas (not a modal)

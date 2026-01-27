@@ -248,7 +248,7 @@ export class GeographicAreaRoutes {
     private async getChildren(req: AuthenticatedRequest, res: Response) {
         try {
             const { id } = req.params;
-            const { page, limit } = req.query;
+            const { page, limit, geographicAreaId } = req.query;
             const userId = req.user?.userId;
             const userRole = req.user?.role;
 
@@ -259,11 +259,17 @@ export class GeographicAreaRoutes {
                     page ? parseInt(page as string) : undefined,
                     limit ? parseInt(limit as string) : undefined,
                     userId,
-                    userRole
+                    userRole,
+                    geographicAreaId as string | undefined
                 );
                 res.status(200).json({ success: true, ...result });
             } else {
-                const children = await this.geographicAreaService.getChildren(id, userId, userRole);
+                const children = await this.geographicAreaService.getChildren(
+                    id,
+                    userId,
+                    userRole,
+                    geographicAreaId as string | undefined
+                );
                 res.status(200).json({ success: true, data: children });
             }
         } catch (error) {

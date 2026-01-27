@@ -160,7 +160,7 @@ GET    /api/v1/geographic-areas/:id    -> Get geographic area by ID (includes ch
 POST   /api/v1/geographic-areas        -> Create geographic area
 PUT    /api/v1/geographic-areas/:id    -> Update geographic area
 DELETE /api/v1/geographic-areas/:id    -> Delete geographic area
-GET    /api/v1/geographic-areas/:id/children   -> List child geographic areas (includes childCount for each child)
+GET    /api/v1/geographic-areas/:id/children   -> List child geographic areas (includes childCount for each child, supports optional geographicAreaId query parameter to filter children to only those in the filtered area's ancestral lineage)
 POST   /api/v1/geographic-areas/batch-ancestors -> Get ancestors for multiple areas in a single request
 POST   /api/v1/geographic-areas/batch-details  -> Get full entity details for multiple areas in a single request
 GET    /api/v1/geographic-areas/:id/venues     -> List venues in geographic area
@@ -1179,6 +1179,149 @@ async findDescendantsOptimized(areaId: string): Promise<string[]> {
 4. Single-area operations SHOULD be deprecated in favor of batch operations with array size 1
 5. All geographic area queries MUST be optimized for sub-20ms database latency
 6. Repository layer MUST handle raw SQL result mapping to TypeScript types
+
+### Children Endpoint with Filter Context
+
+**GET /api/v1/geographic-areas/:id/children**
+
+Returns immediate children of a specific geographic area, with optional filtering to support global geographic area filter context in tree views.
+
+**Query Parameters:**
+- `page` (optional): Page number for pagination
+- `limit` (optional): Items per page
+- `geographicAreaId` (optional): Global filter context - when provided, returns only children that are in the direct ancestral lineage of the filtered area
+
+**Response:**
+```typescript
+{
+  success: true,
+  data: Array<GeographicArea> // or paginated response with pagination metadata
+}
+```
+
+**Business Logic:**
+
+**Without Filter (geographicAreaId not provided):**
+- Returns ALL immediate children of the parent area
+- Applies authorization filtering (excludes denied children)
+- Standard behavior for detail views and unfiltered tree navigation
+
+**With Filter (geographicAreaId provided):**
+- Determines the relationship between the filter and the parent being expanded
+- **If parent is an ancestor of the filter** (filter is below parent):
+  - Fetches ancestors of the filtered area
+  - Adds the filtered area itself to the ancestor set
+  - Returns only children that are in the ancestor set
+  - This shows only the path leading to the filtered area
+- **If parent is NOT an ancestor of the filter** (filter is above parent):
+  - Returns ALL children of the parent
+  - This allows full exploration of descendants when filter is at a higher level
+- Enables filtered tree view to show only the relevant branch when navigating upward, but full descendants when navigating downward
+
+**Example Scenarios:**
+
+**Scenario 1: Filter by leaf node, expand root**
+```
+Hierarchy: World → North America, Europe, Asia → Canada → BC → Vancouver → Downtown
+Filter: Downtown (leaf node)
+Expand: World (root)
+Returns: ONLY North America (ancestor of Downtown)
+Does NOT return: Europe, Asia (not in Downtown's lineage)
+```
+
+**Scenario 2: Filter by intermediate node, expand ancestor**
+```
+Filter: Vancouver (city)
+Expand: North America (continent)
+Returns: ONLY Canada (ancestor of Vancouver)
+Does NOT return: USA (not in Vancouver's lineage)
+```
+
+**Scenario 3: Filter by child, expand parent**
+```
+Filter: Vancouver (city)
+Expand: BC (province, parent of Vancouver)
+Returns: Vancouver (the filtered area itself, which is a child of BC)
+Does NOT return: Other cities in BC
+```
+
+**Scenario 4: Filter by high-level area, expand descendant**
+```
+Filter: Canada (country)
+Expand: BC (province, child of Canada)
+Returns: Vancouver (all children of BC, since BC is a descendant of the filter)
+```
+
+**Scenario 5: Filter by top-level, expand any descendant**
+```
+Filter: World
+Expand: North America
+Returns: Canada, USA (all children, since they are descendants of the filter)
+```
+
+**Scenario 6: No filter**
+```
+Filter: None
+Expand: World
+Returns: North America, Europe, Asia (all children)
+```
+
+**Scenario 5: Filter equals parent**
+```
+Filter: Canada
+Expand: Canada
+Returns: BC, Ontario (all children of Canada)
+```
+
+**Implementation:**
+
+```typescript
+async getChildren(id: string, userId?: string, userRole?: string, geographicAreaId?: string): Promise<GeographicArea[]> {
+    // Validate authorization
+    await this.getGeographicAreaById(id, userId, userRole);
+
+    // Fetch all children
+    const children = await this.geographicAreaRepository.findChildren(id);
+
+    // Apply authorization filtering
+    let filteredChildren = children;
+    if (userId && userRole !== 'ADMINISTRATOR') {
+        const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
+        if (authInfo.hasGeographicRestrictions) {
+            filteredChildren = children.filter(child => authInfo.authorizedAreaIds.includes(child.id));
+        }
+    }
+
+    // Apply global filter context (if provided and different from parent)
+    if (geographicAreaId && geographicAreaId !== id) {
+        const filterAncestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
+        const filterAncestorIds = new Set(filterAncestors.map(a => a.id));
+        
+        if (filterAncestorIds.has(id)) {
+            // Parent is an ancestor of the filter (filter is below parent)
+            // Only show children in the filtered area's lineage
+            const ancestorIds = new Set(filterAncestors.map(a => a.id));
+            ancestorIds.add(geographicAreaId); // Include the filtered area itself
+            
+            filteredChildren = filteredChildren.filter(child => ancestorIds.has(child.id));
+        }
+        // else: Parent is NOT an ancestor of the filter (filter is above parent)
+        // Return all children (they are all descendants of the filter)
+    }
+
+    return filteredChildren;
+}
+```
+
+**Design Rationale:**
+- Enables filtered tree views to show only the relevant branch of the hierarchy when navigating upward
+- Allows full exploration of descendants when filter is at a higher level
+- Includes the filtered area itself when it's a direct child of the parent being expanded
+- Prevents confusion from seeing unrelated sibling branches when filter is below the parent
+- Shows all descendants when filter is above the parent (natural drill-down behavior)
+- Maintains performance by filtering in-memory (children count is typically small)
+- Backward compatible - filter parameter is optional
+- Works seamlessly with authorization filtering
 
 ### Map Data API Endpoints
 
@@ -2200,6 +2343,101 @@ Users with ADMINISTRATOR role bypass geographic authorization checks for adminis
 - Read-only ancestor access enables navigation context without granting full access
 - Consistent authorization across all access patterns (lists, details, updates, deletes, nested resources)
 - Administrator bypass enables system management without geographic restrictions
+
+### Geographic Area Filter Scope Limitation (Bug Fix)
+
+**Issue:** When filtering geographic areas by an explicit `geographicAreaId` parameter, the API was incorrectly including areas outside the selected area's tree structure.
+
+**Problem:** The original implementation would return:
+- The selected area ✓
+- All descendants of the selected area ✓
+- All ancestors of the selected area ✓
+- **All descendants of the ancestors** ✗ (siblings and their descendants)
+
+**Example:** When filtering by "Vancouver" (a City), the API would incorrectly return:
+- Vancouver, Downtown, Kitsilano ✓
+- British Columbia, Canada, North America, World ✓
+- **Victoria, James Bay, Ontario, Toronto, USA, Seattle** ✗ (siblings and their descendants)
+
+**Root Cause:** The `getEffectiveGeographicAreaIds()` method was not properly isolating the selected area's tree when combining with ancestors. When authorization filtering was applied, it would include any authorized area, not just those in the selected area's direct lineage.
+
+**Fix:** Updated `getEffectiveGeographicAreaIds()` to ensure that when an explicit filter is provided:
+1. Fetch ONLY the selected area and its descendants
+2. Filter descendants by authorization (if user has restrictions)
+3. Fetch ONLY the direct ancestors of the selected area
+4. Filter ancestors by authorization (if user has restrictions)
+5. Combine selected + descendants + direct ancestors ONLY
+
+**Corrected Logic:**
+
+```typescript
+private async getEffectiveGeographicAreaIds(
+    explicitGeographicAreaId: string | undefined,
+    authorizedAreaIds: string[],
+    hasGeographicRestrictions: boolean
+): Promise<string[] | undefined> {
+    if (explicitGeographicAreaId) {
+        // Validate user has access to this area
+        if (hasGeographicRestrictions && !authorizedAreaIds.includes(explicitGeographicAreaId)) {
+            throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED');
+        }
+
+        // Get descendants of the explicit area ONLY
+        const descendantIds = await this.geographicAreaRepository.findBatchDescendants([explicitGeographicAreaId]);
+        
+        // Start with selected area + its descendants
+        let treeAreaIds = [explicitGeographicAreaId, ...descendantIds];
+
+        // If user has restrictions, filter to only authorized areas within this tree
+        if (hasGeographicRestrictions) {
+            treeAreaIds = treeAreaIds.filter(id => authorizedAreaIds.includes(id));
+        }
+
+        // Return ONLY the selected area and its descendants
+        // Ancestors will be added separately in the calling method
+        return treeAreaIds;
+    }
+
+    // No explicit filter - apply implicit filtering if user has restrictions
+    if (hasGeographicRestrictions) {
+        return authorizedAreaIds;
+    }
+
+    return undefined;
+}
+```
+
+**Updated Combination Logic:**
+
+```typescript
+if (selectedArea) {
+    // Get ancestors for navigation context
+    const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
+    
+    // Filter ancestors to only authorized ones if user has restrictions
+    let ancestorIds = ancestors.map(a => a.id);
+    if (hasGeographicRestrictions) {
+        ancestorIds = ancestorIds.filter(id => 
+            authorizedAreaIds.includes(id) || readOnlyAreaIds.includes(id)
+        );
+    }
+
+    // Combine: selected area + descendants (from effectiveAreaIds) + direct ancestors ONLY
+    allAreaIds = [...new Set([...effectiveAreaIds, ...ancestorIds])];
+}
+```
+
+**Key Changes:**
+- `getEffectiveGeographicAreaIds()` now returns ONLY the selected area and its descendants
+- Ancestors are fetched and added separately in the calling methods
+- Ancestor filtering is applied independently from descendant filtering
+- This ensures we never include siblings or descendants of ancestors
+
+**Impact:** This fix applies to all geographic area list endpoints:
+- `GET /api/v1/geographic-areas`
+- `GET /api/v1/geographic-areas` (with depth parameter)
+- `GET /api/v1/geographic-areas` (with filter[] parameters)
+- All paginated variants
 
 ### Referential Integrity
 

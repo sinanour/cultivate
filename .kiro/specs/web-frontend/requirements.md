@@ -426,6 +426,9 @@ The Web Frontend package provides a responsive React-based web application that 
 5. THE Web_App SHALL use the depth query parameter when fetching geographic areas to limit recursive fetching
 6. WHEN initially loading the tree view, THE Web_App SHALL request depth=1 to fetch only one level of children
 7. WHEN a tree node is expanded by the user, THE Web_App SHALL fetch the children of that node on demand using GET /api/geographic-areas/:id/children
+7a. WHEN a tree node is expanded and a global geographic area filter is active, THE Web_App SHALL pass the filter as a geographicAreaId query parameter to the children endpoint
+7b. WHEN the children endpoint receives a geographicAreaId filter parameter, THE Web_App SHALL expect to receive only children that are in the direct ancestral lineage of the filtered area
+7c. WHEN a global filter is set to a leaf node and the user expands a top-level area, THE Web_App SHALL receive only the child that is the direct ancestor of the filtered leaf node
 8. THE Web_App SHALL use the childCount field from the API response to determine if a node has children
 9. WHEN childCount is 0, THE Web_App SHALL render the node as a leaf node without expansion affordance
 10. WHEN childCount is greater than 0, THE Web_App SHALL render the node with expansion affordance (arrow icon or similar)
@@ -449,6 +452,10 @@ The Web Frontend package provides a responsive React-based web application that 
 25. THE Web_App SHALL NOT suppress or hide ancestor geographic areas from the tree view when a filter is active, as ancestors provide essential navigational context
 26. THE Web_App SHALL support progressive disclosure of the hierarchy through user-initiated node expansion
 27. THE Web_App SHALL maintain expansion state when navigating away and returning to the geographic areas view
+28. WHEN the global geographic area filter changes, THE Web_App SHALL clear the children cache to prevent displaying stale data
+29. WHEN the global geographic area filter changes, THE Web_App SHALL clear the batch loading state to reset any in-progress loading
+30. WHEN the global geographic area filter changes, THE Web_App SHALL reset the expanded items to start with a fresh tree view
+31. WHEN the global geographic area filter changes, THE Web_App SHALL automatically refetch the tree data through React Query's dependency tracking
 
 ### Requirement 6B1: Reusable Geographic Area Selector Component
 

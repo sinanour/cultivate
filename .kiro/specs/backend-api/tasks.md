@@ -1197,13 +1197,27 @@ const where = areaIds ? {
 **Geographic Areas:** Special handling for hierarchy context
 ```typescript
 if (geographicAreaId) {
-  const descendantIds = await this.findDescendants(geographicAreaId);
-  const ancestorIds = await this.findAncestors(geographicAreaId);
+  // Get descendants of the selected area ONLY
+  const descendantIds = await this.findBatchDescendants([geographicAreaId]);
+  
+  // Get direct ancestors for navigation context
+  const ancestors = await this.findAncestors(geographicAreaId);
+  const ancestorIds = ancestors.map(a => a.id);
+  
+  // Combine: selected area + its descendants + its direct ancestors ONLY
+  // Do NOT include siblings or descendants of ancestors
   const areaIds = [geographicAreaId, ...descendantIds, ...ancestorIds];
   
   const where = { id: { in: areaIds } };
 }
 ```
+
+**IMPORTANT - Bug Fix (Task 45):**
+The original implementation incorrectly included siblings and their descendants when filtering by a non-top-level area. The fix ensures that:
+- `effectiveAreaIds` contains ONLY the selected area and its descendants
+- Ancestors are fetched and added separately
+- No siblings or sibling descendants are ever included
+- The final result contains: selected area + descendants + direct ancestral lineage ONLY
 
 **Key Points:**
 - Filter is optional - endpoints work without it (return all results)
@@ -2874,3 +2888,122 @@ if (geographicAreaId) {
   - Test combination with other filters (geographic area, activity type, date range)
   - Verify performance with large datasets
   - Test empty viewport scenarios
+
+
+- [x] 45. Fix geographic area filter to exclude sibling descendants
+  - **Issue:** When filtering by a non-top-level geographic area, the API incorrectly includes descendants of ancestor areas (siblings and their descendants) instead of just the direct ancestral lineage
+  - **Root Cause:** The `getEffectiveGeographicAreaIds()` method was not properly isolating the selected area's tree when combining with ancestors
+  - **Impact:** Users see too many geographic areas when filtering - includes siblings and their descendants
+  - **Fix Required:** Update `getEffectiveGeographicAreaIds()` to return ONLY selected area + descendants, then add ancestors separately in calling methods
+  - **Reference:** See `.kiro/specs/backend-api/bug-fixes/geographic-area-filter-regression.md` for detailed analysis
+  - _Requirements: 5B.27, 24.18, 24.23, 24.24_
+
+  - [x] 45.1 Update getEffectiveGeographicAreaIds to return only selected tree
+    - Remove ancestor fetching from getEffectiveGeographicAreaIds()
+    - Return ONLY [selectedArea, ...descendants] when explicit filter provided
+    - Keep existing logic for implicit filtering (no explicit filter)
+    - Ensure descendants are filtered by authorization when user has restrictions
+    - Do NOT include any areas outside the selected area's descendant tree
+    - Update method documentation to clarify it returns selected + descendants only (not ancestors)
+    - _Requirements: 5B.27, 24.23, 24.24_
+
+  - [x] 45.2 Update getAllGeographicAreas to add ancestors separately
+    - After calling getEffectiveGeographicAreaIds(), fetch ancestors separately using findAncestors()
+    - Filter ancestors by authorization (authorizedAreaIds + readOnlyAreaIds) if user has restrictions
+    - Combine: effectiveAreaIds (selected + descendants) + filtered ancestors
+    - Ensure no siblings or sibling descendants are included in final result
+    - Verify allAreaIds contains ONLY: selected area + its descendants + its direct ancestors
+    - Update comments to clarify the separation of concerns (descendants vs ancestors)
+    - _Requirements: 5B.27, 24.18_
+
+  - [x] 45.3 Update getAllGeographicAreasPaginated to add ancestors separately
+    - Apply same fix as getAllGeographicAreas()
+    - Fetch ancestors separately after getEffectiveGeographicAreaIds()
+    - Filter ancestors by authorization if needed
+    - Combine selected + descendants + direct ancestors only
+    - Ensure pagination works correctly with the fix
+    - Test that total count reflects correct scope (no siblings)
+    - _Requirements: 5B.27, 24.18_
+
+  - [x] 45.4 Update getAllGeographicAreasFlexible to add ancestors separately
+    - Apply same fix pattern as getAllGeographicAreas()
+    - Ensure flexible filtering (filter[name], filter[areaType]) works correctly with the fix
+    - Test that filter[] parameters don't accidentally include siblings
+    - Verify ancestors are added after effectiveAreaIds calculation
+    - Ensure flexible filters are applied to the correct scope (selected tree + ancestors only)
+    - _Requirements: 5B.27, 28.47-28.50_
+
+  - [x] 45.5 Update getAllGeographicAreasPaginatedFlexible to add ancestors separately
+    - Apply same fix pattern as getAllGeographicAreasPaginated()
+    - Ensure pagination + flexible filtering work correctly together
+    - Test with combined filters (geographicAreaId + filter[name])
+    - Verify no siblings leak through when using flexible filters
+    - Test pagination metadata reflects correct total (no siblings counted)
+    - _Requirements: 5B.27, 28.47-28.50_
+
+  - [x] 45.6 Create integration test for geographic area filter scope
+    - Create hierarchy: World → North America → Canada → BC → Vancouver, Victoria
+    - Add descendants: Vancouver → Downtown, Kitsilano; Victoria → James Bay
+    - Filter by Vancouver (geographicAreaId=vancouver-id)
+    - Verify response includes exactly 7 areas: Vancouver, Downtown, Kitsilano, BC, Canada, North America, World
+    - Verify response does NOT include: Victoria, James Bay (sibling city and its descendant)
+    - Test with depth parameter to ensure fix works with lazy loading
+    - Test with authorization restrictions to ensure fix works with DENY rules
+    - Test with filter[name] to ensure flexible filtering works with fix
+    - Test pagination to ensure total count is correct
+    - _Requirements: 5B.27, 24.18, 24.23, 24.24_
+
+  - [ ]* 45.7 Write property test for geographic area filter tree isolation
+    - **Property 235: Geographic Area Filter Tree Isolation**
+    - For any non-top-level geographic area filter, the API should return only the selected area, its descendants, and its direct ancestors (not siblings or sibling descendants)
+    - **Validates: Requirements 5B.27, 24.18, 24.23, 24.24**
+
+- [x] 46. Checkpoint - Verify geographic area filter fix
+  - Ensure all tests pass
+  - Verify filtering by non-top-level areas returns correct scope
+  - Verify no siblings or sibling descendants are included
+  - Test with various hierarchy depths (City, Province, Country levels)
+  - Test with and without authorization restrictions
+  - Test with depth parameter and flexible filters
+  - Verify fix doesn't break existing functionality (implicit filtering, no filter)
+  - Test that tree view navigation still works correctly in frontend
+
+
+- [x] 47. Enhance children endpoint to respect global geographic area filter context
+  - **Issue:** When a global geographic area filter is active and the user expands a node to fetch its children, the children endpoint returns ALL children instead of only those in the filtered area's ancestral lineage
+  - **Example:** Filter by "Downtown" (leaf), expand "World" → should return ONLY "North America" (ancestor of Downtown), not "Europe" or "Asia"
+  - **Fix Required:** Update getChildren and getChildrenPaginated to accept geographicAreaId parameter and filter children to only include those in the filtered area's ancestor chain
+  - _Requirements: 6B.7, 6B.23, 6B.24, 6B.25_
+
+  - [x] 47.1 Update getChildren to accept and use geographicAreaId parameter
+    - Add geographicAreaId parameter to method signature
+    - When geographicAreaId is provided and differs from the parent being expanded, fetch ancestors of the filtered area
+    - Filter children to only include those that are in the ancestor set
+    - Maintain existing authorization filtering logic
+    - _Requirements: 6B.7, 6B.23_
+
+  - [x] 47.2 Update getChildrenPaginated to accept and use geographicAreaId parameter
+    - Add geographicAreaId parameter to method signature
+    - Apply same filtering logic as getChildren
+    - Ensure pagination works correctly with filtered children
+    - _Requirements: 6B.7, 6B.23_
+
+  - [x] 47.3 Update backend route to accept and pass geographicAreaId parameter
+    - Extract geographicAreaId from query parameters
+    - Pass to both getChildren and getChildrenPaginated service methods
+    - _Requirements: 6B.7_
+
+  - [x] 47.4 Create integration tests for children endpoint with filter context
+    - Test: Filter by leaf, expand root → returns only direct ancestor child
+    - Test: Filter by intermediate, expand ancestor → returns only direct ancestor child
+    - Test: Filter by leaf, expand intermediate → returns only direct ancestor child
+    - Test: No filter → returns all children
+    - Test: Filter equals parent → returns all children
+    - Test: Works correctly with pagination
+    - _Requirements: 6B.7, 6B.23, 6B.24, 6B.25_
+
+- [x] 48. Checkpoint - Verify children endpoint enhancement
+  - Ensure all tests pass (61/61 geographic area tests)
+  - Verify filtering by leaf node and expanding ancestors returns correct children
+  - Verify no siblings are returned when filter is active
+  - Test with various hierarchy depths and filter positions

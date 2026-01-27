@@ -263,6 +263,18 @@ The Backend API package provides the RESTful API service that implements all bus
 51. THE API SHALL use WITH RECURSIVE common table expressions (CTEs) in PostgreSQL for all descendant fetching operations to minimize database round trips
 52. WHEN Prisma ORM cannot efficiently support WITH RECURSIVE CTEs for descendant queries, THE API SHALL use raw SQL queries for descendant fetching to ensure optimal database performance
 53. THE API SHALL optimize all descendant fetching operations for both low API latency and low database latency
+54. THE API SHALL accept an optional geographicAreaId query parameter on GET /api/v1/geographic-areas/:id/children endpoint
+55. WHEN geographicAreaId parameter is provided to the children endpoint and differs from the parent ID being expanded, THE API SHALL filter children to only include those that are in the direct ancestral lineage of the filtered area
+56. WHEN geographicAreaId parameter is provided to the children endpoint, THE API SHALL fetch ancestors of the filtered area
+57. WHEN geographicAreaId parameter is provided to the children endpoint, THE API SHALL return only children that exist in the ancestor set of the filtered area
+58. WHEN geographicAreaId parameter is not provided to the children endpoint, THE API SHALL return all children of the parent area (subject to authorization filtering)
+59. WHEN geographicAreaId parameter equals the parent ID being expanded, THE API SHALL return all children of that parent (no ancestral lineage filtering needed)
+60. THE children endpoint filtering SHALL enable filtered tree views to show only the relevant branch of the hierarchy when a global filter is active
+61. WHEN a user has a global filter set to a leaf node and expands a top-level area, THE API SHALL return only the child that is the direct ancestor of the filtered leaf node
+62. WHEN a user has a global filter set to an area and expands the parent of that area, THE API SHALL return the filtered area itself (since it is a direct child of the parent being expanded)
+63. THE children endpoint SHALL include both ancestors of the filtered area AND the filtered area itself in the result set when the parent being expanded is an ancestor of the filter
+64. WHEN a user has a global filter set to a high-level area and expands a descendant of that area, THE API SHALL return ALL children of the descendant (since all children are within the filtered scope)
+65. THE children endpoint SHALL determine the relationship between the filter and the parent being expanded to decide whether to apply ancestral lineage filtering or return all children
 
 ### Requirement 6: Analyze Community Engagement
 

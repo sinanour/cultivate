@@ -765,6 +765,31 @@ This implementation plan covers the React-based web application built with TypeS
     - When "Apply Filter" button clicked, navigate to geographic areas list page (/geographic-areas) where filter is applied
     - _Requirements: 6B.8, 6B.11, 6B.19, 6B.19a, 6B.19b, 6B.19c, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
+  - [x] 9.3a Update GeographicAreaService to pass global filter to children endpoint
+    - Update getChildren(id) method to accept optional geographicAreaId parameter
+    - Update getChildrenPaginated(parentId, page, limit) method to accept optional geographicAreaId parameter
+    - When geographicAreaId is provided, append it as a query parameter to the API request
+    - Enables filtered tree views to show only the relevant branch when a global filter is active
+    - _Requirements: 6B.7a, 6B.7b, 6B.7c_
+
+  - [x] 9.3b Update GeographicAreaList to pass global filter when fetching children
+    - Update fetchChildrenBatch callback to pass selectedGeographicAreaId to getChildrenPaginated
+    - Add selectedGeographicAreaId to the callback's dependency array
+    - Ensures that when a global filter is active and a node is expanded, only children in the filtered area's ancestral lineage are fetched
+    - Example: Filter by "Downtown", expand "World" → returns only "North America" (ancestor of Downtown)
+    - _Requirements: 6B.7a, 6B.7b, 6B.7c_
+
+  - [x] 9.3c Add useEffect to clear cache when global filter changes
+    - Import useEffect from React
+    - Add useEffect that watches selectedGeographicAreaId
+    - When filter changes, clear childrenCache (set to new Map())
+    - When filter changes, clear batchLoadingState (set to empty object)
+    - When filter changes, reset expandedItems (set to empty array)
+    - Ensures tree view shows fresh data when filter changes
+    - Prevents stale children from being displayed
+    - React Query automatically refetches tree data due to queryKey dependency
+    - _Requirements: 6B.28, 6B.29, 6B.30, 6B.31_
+
   - [ ]* 9.4 Write property test for hierarchy path display
     - **Property 54: Geographic Area Hierarchy Path Display**
     - **Validates: Requirements 6B.11**
