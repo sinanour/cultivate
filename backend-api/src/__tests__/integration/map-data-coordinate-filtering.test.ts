@@ -484,7 +484,9 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         it('should return all venues when no bounding box provided', async () => {
             const result = await mapDataService.getVenueMarkers(
-                {},
+                {
+                    geographicAreaIds: [geographicAreaId], // Filter to our test area only
+                },
                 userId,
                 undefined,
                 1,
@@ -493,12 +495,15 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
             const venueIds = result.data.map(m => m.id);
 
-            // Should include all venues
+            // Should include all test venues
             expect(venueIds).toContain(nwVenueId);
             expect(venueIds).toContain(neVenueId);
             expect(venueIds).toContain(swVenueId);
             expect(venueIds).toContain(seVenueId);
             expect(venueIds).toContain(centerVenueId);
+
+            // Should have exactly 5 venues from our test area
+            expect(result.data.length).toBe(5);
         });
     });
 

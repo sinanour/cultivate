@@ -4157,6 +4157,28 @@ Integration tests verify end-to-end API behavior:
 - Test authentication and authorization flows
 - Test multi-step operations (create activity, assign participants, calculate analytics)
 
+**Integration Test Best Practices:**
+
+1. **Proper Cleanup Order**: Always delete records in order that respects foreign key constraints:
+   - Delete child records before parent records
+   - Example order: assignments → activityVenueHistory → activities → participantAddressHistory → participants → venues → geographic areas → users
+   - Delete geographic areas from leaf to root (children before parents)
+
+2. **Test Data Scoping**: Use filters to scope queries to test data only:
+   - Add geographic area filters to prevent tests from seeing data from other tests
+   - Use unique identifiers in test data names for easy cleanup
+   - Example: `geographicAreaIds: [testGeographicAreaId]` to scope venue queries
+
+3. **Cleanup in Both Hooks**: Clean up existing test data in `beforeAll` (for reruns) and `afterAll` (for cleanup):
+   - `beforeAll`: Delete any leftover data from previous failed runs
+   - `afterAll`: Delete all data created during the test
+   - Use the same deletion order in both hooks
+
+4. **Test Isolation**: Ensure tests don't depend on database state:
+   - Each test should create its own test data
+   - Don't assume specific IDs or counts from other tests
+   - Use assertions like `toContain()` with scoped queries rather than exact counts
+
 ### Test Database
 
 - Use separate PostgreSQL database for testing

@@ -3007,3 +3007,35 @@ The original implementation incorrectly included siblings and their descendants 
   - Verify filtering by leaf node and expanding ancestors returns correct children
   - Verify no siblings are returned when filter is active
   - Test with various hierarchy depths and filter positions
+
+
+- [x] 40. Fix integration test isolation issues
+  - [x] 40.1 Fix map-data-coordinate-filtering.test.ts venue query scope
+    - Updated "should return all venues when no bounding box provided" test
+    - Added geographicAreaIds filter to scope query to test geographic area only
+    - Changed assertion to expect exactly 5 venues (the test venues)
+    - Prevents test from seeing venues from other tests or seed data
+    - **Result:** Test now passes consistently
+    - _Requirements: Testing best practices, test isolation_
+
+  - [x] 40.2 Fix map-data-large-hierarchy.test.ts cleanup order
+    - Fixed foreign key constraint violations in both beforeAll and afterAll hooks
+    - Reordered cleanup to delete venues BEFORE geographic areas
+    - Added comments explaining the correct deletion order
+    - Cleanup order now: participantAddressHistory → participants → venues → geographic areas → users
+    - **Result:** All tests in suite now pass, no foreign key violations
+    - _Requirements: Testing best practices, foreign key constraint handling_
+
+  - [ ]* 40.3 Document test cleanup best practices
+    - Create documentation for proper integration test cleanup patterns
+    - Explain foreign key constraint ordering requirements
+    - Provide examples of correct cleanup code
+    - Add guidelines for test data scoping (using filters to isolate test data)
+    - _Requirements: Testing best practices, documentation_
+
+- [x] 41. Checkpoint - Verify integration test fixes
+  - map-data-coordinate-filtering.test.ts: All 9 tests passing ✅
+  - map-data-large-hierarchy.test.ts: All 5 tests passing ✅
+  - Fixed foreign key constraint violations during cleanup
+  - Tests properly scoped to avoid interference from other test data
+  - Note: Some other integration tests may still have isolation issues requiring sequential execution
