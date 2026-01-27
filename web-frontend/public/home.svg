@@ -2,7 +2,7 @@
   <!-- Roof as triangle with transparent interior -->
   <path d="M1 8L8 1L15 8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- House body -->
-  <path d="M2 8V15H14V8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+  <rect x="2" y="8" width="12" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- Door -->
-  <path d="M6 15V10.5H10V15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+  <rect x="6" y="10.5" width="4" height="4.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
 </svg>
