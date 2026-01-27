@@ -2852,22 +2852,44 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 151: CSV Export Geographic Filtering**
     - **Validates: Requirements 29.1, 29.2, 29.3, 29.4, 29.5, 29.6, 29.7, 29.8, 29.9, 29.10, 29.11, 29.12, 29.14, 29.15, 29.16, 29.17, 29.18, 29.19, 29.20, 29.22, 29.23, 29.24, 29.25**
 
-- [x] 30A. Implement Engagement Summary Table CSV Export
+- [x] 30A. Implement Engagement Summary Table CSV Export with Smart Caching
   - [x] 30A.1 Create generateEngagementSummaryCSV utility function
     - Create utility function that accepts EngagementMetrics and groupingDimensions
     - Build header row with grouping dimension names and metric column names
     - Add Total row with aggregate metrics (blank cells for dimension columns except first)
     - Add dimensional breakdown rows when grouping is active
     - Use human-friendly labels from dimensions object (not UUIDs)
+    - Exclude Activities Cancelled column from export
     - Escape CSV special characters (quotes, commas, newlines)
     - Return Blob with CSV content
     - Add to utils directory
-    - _Requirements: 30.2, 30.3, 30.4, 30.5, 30.6, 30.7_
+    - _Requirements: 30.14, 30.15, 30.16, 30.17, 30.18, 30.19, 30.20, 30.21, 30.22, 30.23_
 
-  - [x] 30A.2 Add Export CSV button to EngagementDashboard
+  - [x] 30A.2 Extract transformation helper function
+    - Create `transformParsedDataToMetrics` helper function in EngagementDashboard
+    - Extract transformation logic from existing `metrics` useMemo
+    - Accept parsed wire format data and effective total row as parameters
+    - Return metrics object compatible with CSV generator
+    - Handle both date range and no date range scenarios
+    - Map parsed rows to groupedResults format with dimensions and metrics
+    - Reusable for both dashboard display and CSV export
+    - _Requirements: 30.13, 30.44_
+
+  - [x] 30A.3 Implement smart export logic in handleExportEngagementSummary
+    - Check pagination metadata to determine if all data is cached
+    - When `totalPages === 1` and `page === 1`: use cached metrics directly (instant export)
+    - When `totalPages > 1` or `page !== 1` or pagination missing: fetch all data
+    - Call `getEngagementMetricsOptimized` WITHOUT `page` and `pageSize` parameters to get all results
+    - Pass same filters, grouping, date range, and geographic area as paginated query
+    - Parse wire format response using `parseEngagementWireFormat`
+    - Transform parsed data using `transformParsedDataToMetrics` helper
+    - Generate CSV from transformed data
+    - _Requirements: 30.2, 30.3, 30.4, 30.5, 30.6, 30.7, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.45, 30.46, 30.47, 30.48_
+
+  - [x] 30A.4 Add Export CSV button to EngagementDashboard with loading states
     - Add CloudScape Button with iconName="download" near Engagement Summary table header
-    - Implement handleExportEngagementSummary handler
-    - Call generateEngagementSummaryCSV with current metrics and grouping dimensions
+    - Pass `loading={isExportingEngagementSummary}` prop to show spinner during fetch
+    - Pass `disabled={isExportingEngagementSummary}` prop to prevent duplicate clicks
     - Generate dynamic filename reflecting active filters:
       - Base: "engagement-summary"
       - When global geographic area filter active: append "{name}-{type}" (e.g., "Vancouver-City", "Downtown-Neighbourhood")
@@ -2880,15 +2902,13 @@ This implementation plan covers the React-based web application built with TypeS
       - Append current date in ISO-8601 format (YYYY-MM-DD)
       - Example: "engagement-summary_Vancouver-City_Study-Circles_2025-01-01_2025-12-31_2026-01-06.csv"
     - Call downloadBlob to trigger browser download
-    - Show loading indicator during export
-    - Disable button during export
     - Display success notification after export
-    - Display error notification on failure
+    - Display error notification on failure with try-catch-finally
     - Hide button from READ_ONLY users
     - Show button to EDITOR and ADMINISTRATOR users
-    - _Requirements: 30.1, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.14, 30.15, 30.16, 30.17, 30.18, 30.19, 30.20, 30.21, 30.22_
+    - _Requirements: 30.1, 30.24, 30.25, 30.26, 30.27, 30.28, 30.29, 30.30, 30.31, 30.32, 30.33, 30.34, 30.35, 30.36, 30.37, 30.38, 30.39, 30.40_
 
-  - [x] 30A.3 Handle filtered and grouped data in CSV export
+  - [x] 30A.5 Handle filtered and grouped data in CSV export
     - Ensure CSV export uses the same filtered metrics displayed in the table
     - Preserve grouping structure in CSV output
     - Export only data matching current filter state (PropertyFilter tokens, date range, geographic area)
@@ -2897,9 +2917,9 @@ This implementation plan covers the React-based web application built with TypeS
       - Date range start and end dates (if filter active)
       - Activity category, type, venue, population names (if filters active)
     - Handle empty table case (export header row only)
-    - _Requirements: 30.15, 30.16, 30.23, 30.24, 30.25_
+    - _Requirements: 30.41, 30.42, 30.43, 30.44_
 
-  - [ ]* 30A.4 Write property tests for Engagement Summary CSV export
+  - [ ]* 30A.6 Write property tests for Engagement Summary CSV export
     - **Property 152: Engagement Summary CSV Export Button Presence**
     - **Property 153: Engagement Summary CSV Content Completeness**
     - **Property 154: Engagement Summary CSV Human-Friendly Labels**
@@ -2911,7 +2931,11 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 156: Engagement Summary CSV Export Loading State**
     - **Property 157: Engagement Summary CSV Export Filtered Data**
     - **Property 158: Engagement Summary CSV Empty Table Handling**
-    - **Validates: Requirements 30.1, 30.2, 30.3, 30.4, 30.5, 30.6, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.14, 30.15, 30.16, 30.17, 30.18, 30.19, 30.20, 30.21, 30.22, 30.23, 30.24, 30.25**
+    - **Property 159: Smart Export Single-Page Detection**
+    - **Property 160: Smart Export Multi-Page Fetch**
+    - **Property 161: Smart Export API Parameter Consistency**
+    - **Property 162: Smart Export Performance for Single-Page**
+    - **Validates: Requirements 30.1, 30.2, 30.3, 30.4, 30.5, 30.6, 30.7, 30.8, 30.9, 30.10, 30.11, 30.12, 30.13, 30.14, 30.15, 30.16, 30.17, 30.18, 30.19, 30.20, 30.21, 30.22, 30.23, 30.24, 30.25, 30.26, 30.27, 30.28, 30.29, 30.30, 30.31, 30.32, 30.33, 30.34, 30.35, 30.36, 30.37, 30.38, 30.39, 30.40, 30.41, 30.42, 30.43, 30.44, 30.45, 30.46, 30.47, 30.48**
 
 - [ ] 31. Checkpoint - Verify CSV import/export functionality
   - Ensure all tests pass, ask the user if questions arise.

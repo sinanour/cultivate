@@ -826,35 +826,56 @@ src/
   - Avoids component unmounting/remounting that causes screen flicker
   - Maintains smooth visual transitions between different data states
 - **CSV Export for Engagement Summary Table:**
-  - Provides "Export CSV" button positioned near the Engagement Summary table header
-  - Button uses CloudScape Button component with iconName="download"
-  - Generates CSV file containing all rows from the Engagement Summary table
-  - Exports human-friendly labels (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
-  - Includes Total row as first data row in CSV
-  - Includes all dimensional breakdown rows when grouping dimensions are selected
-  - When date range is specified: includes all temporal metric columns (activities at start, at end, started, completed, cancelled, participants at start, at end, participation at start, participation at end)
-  - When no date range is specified: includes only current state and temporal event columns (Participants, Participation, Activities, Activities Started, Activities Completed, Activities Cancelled)
-  - Uses descriptive column headers matching table headers
-  - Generates filename that reflects active filters with format: "engagement-summary" + filter segments + current date
-  - When global geographic area filter is active: includes area name and type in format "{name}-{type}" (e.g., "Vancouver-City", "Downtown-Neighbourhood")
-  - Formats geographic area type in title case with hyphens for multi-word types
-  - When date range filter is active: includes start and end dates in ISO-8601 format (YYYY-MM-DD)
-  - When activity category, type, venue, or population filters are active: includes their sanitized names
-  - Sanitizes filter values by replacing spaces with hyphens and removing invalid filename characters (colons, slashes, backslashes, asterisks, question marks, quotes, angle brackets, pipes)
-  - Omits inactive filters from filename to keep it concise
-  - Separates filename components with underscores
-  - Example filenames:
-    - No filters: "engagement-summary_2026-01-06.csv"
-    - With geographic area: "engagement-summary_Vancouver-City_2026-01-06.csv"
-    - With date range: "engagement-summary_2025-01-01_2025-12-31_2026-01-06.csv"
-    - Multiple filters: "engagement-summary_Vancouver-City_Study-Circles_2025-01-01_2025-12-31_2026-01-06.csv"
-  - Displays loading indicator during export operation
-  - Disables button during export to prevent duplicate requests
-  - Shows success notification after download completes
-  - Displays error message if export fails
-  - Respects role-based access control (hidden from READ_ONLY users)
-  - Exports only filtered and grouped data matching current dashboard state
-  - Handles empty tables by exporting CSV with only header row
+  - **Smart Export Logic:**
+    - Determines whether dataset fits in a single page before exporting
+    - When `totalPages === 1` and `page === 1`: uses cached results for instant export (< 500ms)
+    - When `totalPages > 1` or `page !== 1`: fetches all data from backend before exporting
+    - When pagination metadata is missing: fetches all data from backend
+  - **Optimized API Integration:**
+    - Calls `getEngagementMetricsOptimized` without `page` and `pageSize` parameters to fetch all results
+    - Backend returns complete dataset when pagination params are omitted
+    - Parses wire format response using `parseEngagementWireFormat` utility
+    - Transforms parsed data using `transformParsedDataToMetrics` helper function
+    - Reuses same filter parameters, grouping dimensions, date range, and geographic area filter
+  - **Export Button and UI:**
+    - Provides "Export CSV" button positioned near the Engagement Summary table header
+    - Button uses CloudScape Button component with iconName="download"
+    - Displays loading spinner on button while fetching all data
+    - Disables button during export to prevent duplicate requests
+    - Shows success notification after download completes
+    - Displays error message if export fails
+    - Respects role-based access control (hidden from READ_ONLY users)
+  - **CSV Content:**
+    - Generates CSV file containing all rows from the Engagement Summary table
+    - Exports human-friendly labels (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
+    - Includes Total row as first data row in CSV
+    - Includes all dimensional breakdown rows when grouping dimensions are selected
+    - When date range is specified: includes temporal metric columns (activities at start, at end, started, completed, participants at start, at end, participation at start, participation at end)
+    - When no date range is specified: includes only current state and temporal event columns (Participants, Participation, Activities, Activities Started, Activities Completed)
+    - Does NOT include Activities Cancelled column
+    - Uses descriptive column headers matching table headers
+    - Properly escapes CSV special characters
+    - Handles empty tables by exporting CSV with only header row
+  - **Filename Generation:**
+    - Generates filename that reflects active filters with format: "engagement-summary" + filter segments + current date
+    - When global geographic area filter is active: includes area name and type in format "{name}-{type}" (e.g., "Vancouver-City", "Downtown-Neighbourhood")
+    - Formats geographic area type in title case with hyphens for multi-word types
+    - When date range filter is active: includes start and end dates in ISO-8601 format (YYYY-MM-DD)
+    - When activity category, type, venue, or population filters are active: includes their sanitized names
+    - Sanitizes filter values by replacing spaces with hyphens and removing invalid filename characters (colons, slashes, backslashes, asterisks, question marks, quotes, angle brackets, pipes)
+    - Omits inactive filters from filename to keep it concise
+    - Separates filename components with underscores
+    - Example filenames:
+      - No filters: "engagement-summary_2026-01-06.csv"
+      - With geographic area: "engagement-summary_Vancouver-City_2026-01-06.csv"
+      - With date range: "engagement-summary_2025-01-01_2025-12-31_2026-01-06.csv"
+      - Multiple filters: "engagement-summary_Vancouver-City_Study-Circles_2025-01-01_2025-12-31_2026-01-06.csv"
+  - **Performance:**
+    - Instant export (< 500ms) for single-page datasets using cached data
+    - No additional API requests for single-page datasets
+    - Loading feedback within 100ms for multi-page datasets
+    - Uses optimized wire format API for 60-80% smaller payloads
+    - Generates CSV in-memory without persisting intermediate data
 
 **ActivityLifecycleChart**
 - Displays activity lifecycle events (started and completed activities) within a selected time period or all time

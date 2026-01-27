@@ -74,8 +74,7 @@ export function generateEngagementSummaryCSV(
         'Activities at Start',
         'Activities at End',
         'Activities Started',
-        'Activities Completed',
-        'Activities Cancelled'
+        'Activities Completed'
     );
     rows.push(headers);
 
@@ -97,8 +96,7 @@ export function generateEngagementSummaryCSV(
         String(metrics.activitiesAtStart),
         String(metrics.activitiesAtEnd),
         String(metrics.activitiesStarted),
-        String(metrics.activitiesCompleted),
-        String(metrics.activitiesCancelled)
+        String(metrics.activitiesCompleted)
     );
     rows.push(totalRow);
 
@@ -121,8 +119,7 @@ export function generateEngagementSummaryCSV(
                 String(group.metrics.activitiesAtStart),
                 String(group.metrics.activitiesAtEnd),
                 String(group.metrics.activitiesStarted),
-                String(group.metrics.activitiesCompleted),
-                String(group.metrics.activitiesCancelled)
+                String(group.metrics.activitiesCompleted)
             );
 
             rows.push(row);

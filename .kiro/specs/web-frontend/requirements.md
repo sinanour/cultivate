@@ -1696,38 +1696,80 @@ The Web Frontend package provides a responsive React-based web application that 
 24. WHEN exporting data with the global geographic area filter active, THE Web_App SHALL include the filter in the export request to export only filtered records
 25. WHEN exporting filtered data, THE Web_App SHALL indicate in the success message that only filtered records were exported
 
-### Requirement 30: Engagement Summary Table CSV Export
+### Requirement 30: Engagement Summary Table CSV Export with Smart Caching
 
-**User Story:** As a community organizer, I want to export the Engagement Summary table to CSV format, so that I can analyze engagement metrics in spreadsheet applications and share reports with stakeholders.
+**User Story:** As a community organizer, I want to export the complete Engagement Summary table to CSV format with intelligent data fetching, so that I can analyze all engagement metrics in spreadsheet applications regardless of dataset size while experiencing instant exports for small datasets.
 
 #### Acceptance Criteria
 
+**Smart Export Logic:**
+
 1. THE Web_App SHALL provide an "Export CSV" button on the Engagement Dashboard near the Engagement Summary table
-2. WHEN the Export CSV button is clicked, THE Web_App SHALL generate a CSV file containing all rows from the Engagement Summary table
-3. THE Web_App SHALL include the Total row as the first data row in the CSV export
-4. WHEN grouping dimensions are selected, THE Web_App SHALL include all dimensional breakdown rows in the CSV export
-5. THE Web_App SHALL export human-friendly labels for all dimension columns (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
-6. THE Web_App SHALL include all metric columns in the CSV export: activities at start, activities at end, activities started, activities completed, activities cancelled, participants at start, participants at end
-7. THE Web_App SHALL use descriptive column headers in the CSV file that match the table column headers
-8. WHEN the Export CSV button is clicked, THE Web_App SHALL trigger a browser download of the CSV file with a filename that reflects the active filters
-9. THE Web_App SHALL construct the CSV filename with the following components in order: "engagement-summary", active filter segments, and current date
-10. WHEN the global geographic area filter is active, THE Web_App SHALL include both the geographic area name and type in the filename in the format "{name}-{type}" (sanitized to remove invalid filename characters)
-11. THE Web_App SHALL format the geographic area type in the filename using title case with hyphens for multi-word types (e.g., "Neighbourhood", "City", "Province")
-12. WHEN a date range filter is active, THE Web_App SHALL include the start and end dates in the filename using ISO-8601 format (YYYY-MM-DD)
-13. WHEN activity category, activity type, venue, or population filters are active, THE Web_App SHALL include their names in the filename (sanitized to remove invalid filename characters)
-14. THE Web_App SHALL sanitize all filter values in the filename by replacing spaces with hyphens and removing or replacing invalid filename characters (colons, slashes, backslashes, asterisks, question marks, quotes, angle brackets, pipes)
-15. WHEN a filter is not active, THE Web_App SHALL omit that filter segment from the filename to keep the filename concise
-16. THE Web_App SHALL separate filename components with underscores for readability
-17. THE Web_App SHALL format the current date in the filename using ISO-8601 format (YYYY-MM-DD)
-17. THE Web_App SHALL display a loading indicator while generating the CSV export
-18. THE Web_App SHALL disable the Export CSV button during the export operation to prevent duplicate requests
-19. THE Web_App SHALL display a success notification after the CSV file is downloaded
-20. WHEN the CSV export fails, THE Web_App SHALL display an error message explaining the failure
-21. THE Web_App SHALL hide the Export CSV button from users with READ_ONLY role
-22. THE Web_App SHALL show the Export CSV button to users with EDITOR or ADMINISTRATOR role
-23. WHEN exporting the Engagement Summary table with filters applied, THE Web_App SHALL include only the filtered data in the CSV export
-24. WHEN exporting the Engagement Summary table with grouping dimensions selected, THE Web_App SHALL preserve the grouping structure in the CSV export
-25. THE Web_App SHALL handle empty Engagement Summary tables by exporting a CSV file with only the header row
+2. THE Web_App SHALL determine whether the current dataset fits in a single page before exporting
+3. WHEN pagination metadata indicates `totalPages === 1` and `page === 1`, THE Web_App SHALL use cached results for instant CSV export
+4. WHEN pagination metadata indicates `totalPages > 1` or `page !== 1`, THE Web_App SHALL fetch all data from the backend before exporting
+5. WHEN pagination metadata is missing, THE Web_App SHALL fetch all data from the backend before exporting
+
+**Optimized API Integration:**
+
+6. WHEN fetching all data for CSV export, THE Web_App SHALL call `getEngagementMetricsOptimized` without `page` and `pageSize` parameters
+7. WHEN the `page` and `pageSize` parameters are omitted, THE backend SHALL return all matching results in a single response
+8. THE Web_App SHALL pass the same filter parameters to the unpaginated request as were used for the paginated query
+9. THE Web_App SHALL pass the same grouping dimensions to the unpaginated request as were used for the paginated query
+10. THE Web_App SHALL pass the same date range to the unpaginated request as was used for the paginated query
+11. THE Web_App SHALL pass the same geographic area filter to the unpaginated request as was used for the paginated query
+12. THE Web_App SHALL parse the wire format response using `parseEngagementWireFormat` utility
+13. THE Web_App SHALL transform the parsed data into the format expected by the CSV generator
+
+**CSV Content and Structure:**
+
+14. WHEN the Export CSV button is clicked, THE Web_App SHALL generate a CSV file containing all rows from the Engagement Summary table
+15. THE Web_App SHALL include the Total row as the first data row in the CSV export
+16. WHEN grouping dimensions are selected, THE Web_App SHALL include all dimensional breakdown rows in the CSV export
+17. THE Web_App SHALL export human-friendly labels for all dimension columns (activity category names, activity type names, venue names, geographic area names) instead of UUIDs
+18. THE Web_App SHALL include the following metric columns in the CSV export: Participants at Start, Participants at End, Participation at Start, Participation at End, Activities at Start, Activities at End, Activities Started, Activities Completed
+19. THE Web_App SHALL NOT include Activities Cancelled in the CSV export
+20. WHEN no date range is specified, THE Web_App SHALL omit "at start" columns from the CSV export
+21. WHEN a date range is specified, THE Web_App SHALL include all temporal metric columns in the CSV export
+22. THE Web_App SHALL use descriptive column headers in the CSV file that match the table column headers
+23. THE Web_App SHALL properly escape CSV special characters in all exported data
+
+**Filename Generation:**
+
+24. WHEN the Export CSV button is clicked, THE Web_App SHALL trigger a browser download of the CSV file with a filename that reflects the active filters
+25. THE Web_App SHALL construct the CSV filename with the following components in order: "engagement-summary", active filter segments, and current date
+26. WHEN the global geographic area filter is active, THE Web_App SHALL include both the geographic area name and type in the filename in the format "{name}-{type}" (sanitized to remove invalid filename characters)
+27. THE Web_App SHALL format the geographic area type in the filename using title case with hyphens for multi-word types (e.g., "Neighbourhood", "City", "Province")
+28. WHEN a date range filter is active, THE Web_App SHALL include the start and end dates in the filename using ISO-8601 format (YYYY-MM-DD)
+29. WHEN activity category, activity type, venue, or population filters are active, THE Web_App SHALL include their names in the filename (sanitized to remove invalid filename characters)
+30. THE Web_App SHALL sanitize all filter values in the filename by replacing spaces with hyphens and removing or replacing invalid filename characters (colons, slashes, backslashes, asterisks, question marks, quotes, angle brackets, pipes)
+31. WHEN a filter is not active, THE Web_App SHALL omit that filter segment from the filename to keep the filename concise
+32. THE Web_App SHALL separate filename components with underscores for readability
+33. THE Web_App SHALL format the current date in the filename using ISO-8601 format (YYYY-MM-DD)
+
+**User Experience:**
+
+34. THE Web_App SHALL display a loading indicator on the Export CSV button while fetching all data
+35. THE Web_App SHALL disable the Export CSV button during the export operation to prevent duplicate requests
+36. THE Web_App SHALL display a success notification with the message "Engagement Summary exported successfully" after successful export
+37. WHEN the CSV export fails, THE Web_App SHALL display an error notification with details explaining the failure
+38. THE Web_App SHALL not block user interaction with other dashboard elements during export
+39. THE Web_App SHALL hide the Export CSV button from users with READ_ONLY role
+40. THE Web_App SHALL show the Export CSV button to users with EDITOR or ADMINISTRATOR role
+
+**Data Consistency:**
+
+41. WHEN exporting the Engagement Summary table with filters applied, THE Web_App SHALL include only the filtered data in the CSV export
+42. WHEN exporting the Engagement Summary table with grouping dimensions selected, THE Web_App SHALL preserve the grouping structure in the CSV export
+43. THE Web_App SHALL handle empty Engagement Summary tables by exporting a CSV file with only the header row
+44. THE Web_App SHALL generate CSV files with identical structure whether using cached or freshly fetched data
+
+**Performance:**
+
+45. THE Web_App SHALL export CSV immediately (< 500ms) when all data fits in a single page
+46. THE Web_App SHALL not make additional API requests when exporting single-page datasets
+47. THE Web_App SHALL provide loading feedback within 100ms when fetching all data for multi-page datasets
+48. THE Web_App SHALL use the optimized wire format API for better performance (60-80% smaller payloads)
 
 ### Requirement 31: Geographic Authorization Management UI
 

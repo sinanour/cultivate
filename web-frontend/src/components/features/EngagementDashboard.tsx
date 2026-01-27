@@ -536,20 +536,16 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
     placeholderData: (previousData) => previousData, // Prevent flicker
   });
 
-  // Parse wire format into usable metrics
-  const metrics = useMemo(() => {
-    if (!wireFormat) return null;
+  // Helper function to transform parsed wire format data into metrics format
+  // This is extracted for reuse in both dashboard display and CSV export
+  const transformParsedDataToMetrics = useCallback((
+    parsed: ReturnType<typeof parseEngagementWireFormat>,
+    effectiveTotalRow: ParsedEngagementRow | null
+  ) => {
+    const { rows, hasDateRange: parsedHasDateRange, groupingDimensions, pagination } = parsed;
     
-    const parsed = parseEngagementWireFormat(wireFormat);
-    const { rows, totalRow, hasDateRange: parsedHasDateRange, groupingDimensions, pagination } = parsed;
-    
-    // Use cached total row if we're on page > 1 and don't have a total row in current results
-    const effectiveTotalRow = totalRow || cachedTotalRowRef.current;
-    
-    // Convert parsed data back to the format expected by the dashboard
-    // This maintains backward compatibility with existing rendering logic
     return {
-      // Total metrics from effectiveTotalRow (cached from page 1)
+      // Total metrics from effectiveTotalRow
       activitiesAtStart: parsedHasDateRange ? (effectiveTotalRow?.activitiesAtStart || 0) : 0,
       activitiesAtEnd: parsedHasDateRange ? (effectiveTotalRow?.activitiesAtEnd || 0) : (effectiveTotalRow?.activeActivities || 0),
       activitiesStarted: parsedHasDateRange ? (effectiveTotalRow?.activitiesStarted || 0) : (effectiveTotalRow?.activitiesStarted || 0),
@@ -583,6 +579,31 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
           participationAtEnd: parsedHasDateRange ? (row.participationAtEnd || 0) : (row.totalParticipation || 0),
         },
       })),
+      
+      // Grouping dimensions
+      groupingDimensions,
+      
+      // Pagination metadata
+      pagination,
+    };
+  }, []);
+
+  // Parse wire format into usable metrics
+  const metrics = useMemo(() => {
+    if (!wireFormat) return null;
+    
+    const parsed = parseEngagementWireFormat(wireFormat);
+    const { totalRow } = parsed;
+    
+    // Use cached total row if we're on page > 1 and don't have a total row in current results
+    const effectiveTotalRow = totalRow || cachedTotalRowRef.current;
+    
+    // Transform using helper function
+    const transformed = transformParsedDataToMetrics(parsed, effectiveTotalRow);
+    
+    // Add chart breakdowns (not needed for CSV export)
+    return {
+      ...transformed,
       
       // Breakdowns for charts
       // Always use data from separate breakdown queries
@@ -643,16 +664,10 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
           }))
         : [],
       
-      // Grouping dimensions
-      groupingDimensions,
-      
-      // Pagination metadata
-      pagination,
-      
       // Store parsed data for caching logic
       _parsedData: parsed,
     };
-  }, [wireFormat, typeBreakdownWireFormat, categoryBreakdownWireFormat, roleDistributionWireFormat]);
+  }, [wireFormat, typeBreakdownWireFormat, categoryBreakdownWireFormat, roleDistributionWireFormat, transformParsedDataToMetrics]);
 
   // Cache total row from page 1 (useEffect to avoid state update during render)
   useEffect(() => {
@@ -884,17 +899,50 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
   const activityCategoryLegend = useInteractiveLegend('activity-category-pie', activityCategoryLegendItems);
   const lifecycleLegend = useInteractiveLegend('activity-lifecycle', lifecycleLegendItems);
 
-  // Export handler for Engagement Summary table
-  const handleExportEngagementSummary = () => {
+  // Export handler for Engagement Summary table with smart caching logic
+  const handleExportEngagementSummary = async () => {
     if (!metrics) return;
     
     setIsExportingEngagementSummary(true);
     
     try {
-      // Generate CSV from current metrics and grouping dimensions
+      let dataToExport: ReturnType<typeof transformParsedDataToMetrics> = {
+        activitiesAtStart: metrics.activitiesAtStart,
+        activitiesAtEnd: metrics.activitiesAtEnd,
+        activitiesStarted: metrics.activitiesStarted,
+        activitiesCompleted: metrics.activitiesCompleted,
+        participantsAtStart: metrics.participantsAtStart,
+        participantsAtEnd: metrics.participantsAtEnd,
+        participationAtStart: metrics.participationAtStart,
+        participationAtEnd: metrics.participationAtEnd,
+        groupedResults: metrics.groupedResults,
+        groupingDimensions: metrics.groupingDimensions,
+        pagination: metrics.pagination,
+      };
+      
+      // Check if we need to fetch all data
+      const pagination = metrics.pagination;
+      const needsFullFetch = !pagination || pagination.totalPages > 1 || pagination.page !== 1;
+      
+      if (needsFullFetch) {
+        // Fetch all data without pagination parameters
+        const wireFormat = await AnalyticsService.getEngagementMetricsOptimized({
+          ...baseQueryParams,
+          groupBy: appliedGroupByDimensions.map(d => d as GroupingDimension),
+          // Omit page and pageSize to get all results
+        });
+        
+        // Parse wire format
+        const parsed = parseEngagementWireFormat(wireFormat);
+        
+        // Transform to metrics format using helper function
+        dataToExport = transformParsedDataToMetrics(parsed, parsed.totalRow || null);
+      }
+      
+      // Generate CSV from dataToExport
       const csvBlob = generateEngagementSummaryCSV(
-        metrics,
-        metrics.groupingDimensions || []
+        dataToExport,
+        dataToExport.groupingDimensions || []
       );
       
       // Extract filter values for filename (support multiple values per property)
