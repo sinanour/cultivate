@@ -2340,6 +2340,13 @@ The original implementation incorrectly included siblings and their descendants 
     - Apply geographic authorization filtering
     - _Requirements: 27.8, 27.9, 27.22_
 
+  - [x] 45.2a Fix activity popup content to include additionalParticipantCount
+    - Update getActivityPopupContent() to include additionalParticipantCount field in the query
+    - Calculate total participantCount as: assignments.length + (activity.additionalParticipantCount || 0)
+    - Ensure the returned participantCount reflects the total of both individually assigned participants and additional participants
+    - This fixes a bug where additionalParticipantCount was not being included in the popup content
+    - _Requirements: 27.9, 27.9a, 5C.9, 5C.12_
+
   - [x] 45.3 Implement participant home marker methods with pagination
     - Implement getParticipantHomeMarkers() method with pagination support
     - Accept page and limit parameters (default limit: 100, max: 100)

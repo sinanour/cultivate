@@ -1047,6 +1047,7 @@ The Backend API package provides the RESTful API service that implements all bus
 7. WHEN returning paginated map marker results, THE API SHALL include pagination metadata with page, limit, total, and totalPages
 8. THE API SHALL provide a GET /api/v1/map/activities/:id/popup endpoint that returns detailed popup content for a specific activity marker
 9. WHEN fetching activity popup content, THE API SHALL return: id, name, activityTypeName, activityCategoryName, startDate, participantCount
+9a. WHEN calculating participantCount for activity popup content, THE API SHALL include both individually assigned participants AND additionalParticipantCount (total = assignments.length + (additionalParticipantCount || 0))
 10. THE API SHALL provide a GET /api/v1/map/participant-homes endpoint that returns lightweight participant home marker data with pagination support
 11. WHEN fetching participant home markers, THE API SHALL return only the minimal fields needed for map rendering: venueId, latitude, longitude, participantCount (count of participants at that venue)
 12. THE API SHALL group participant homes by venue to avoid duplicate markers for the same address

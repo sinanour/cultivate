@@ -219,14 +219,23 @@ export class MapDataService {
     ): Promise<ActivityPopupContent | null> {
         const activity = await this.prisma.activity.findUnique({
             where: { id: activityId },
-            include: {
+            select: {
+                id: true,
+                name: true,
+                startDate: true,
+                additionalParticipantCount: true,
                 activityType: {
-                    include: {
-                        activityCategory: true,
+                    select: {
+                        name: true,
+                        activityCategory: {
+                            select: {
+                                name: true,
+                            },
+                        },
                     },
                 },
                 activityVenueHistory: {
-                    include: {
+                    select: {
                         venue: {
                             select: {
                                 geographicAreaId: true,
@@ -262,13 +271,18 @@ export class MapDataService {
             }
         }
 
+        // Calculate total participant count: individually assigned + additional
+        const individualCount = activity.assignments.length;
+        const additionalCount = activity.additionalParticipantCount || 0;
+        const totalParticipantCount = individualCount + additionalCount;
+
         return {
             id: activity.id,
             name: activity.name,
             activityTypeName: activity.activityType.name,
             activityCategoryName: activity.activityType.activityCategory.name,
             startDate: activity.startDate.toISOString(),
-            participantCount: activity.assignments.length,
+            participantCount: totalParticipantCount,
         };
     }
 
