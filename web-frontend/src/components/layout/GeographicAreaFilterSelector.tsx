@@ -12,7 +12,6 @@ export function GeographicAreaFilterSelector() {
     setGeographicAreaFilter,
     clearFilter,
     isLoading,
-    isAuthorizedArea,
     setSearchQuery,
     isSearching,
   } = useGlobalGeographicFilter();
@@ -70,13 +69,9 @@ export function GeographicAreaFilterSelector() {
     
     if (!areaId) return;
     
-    // If clicking on an authorized area, set filter to that area
-    // If clicking on an unauthorized ancestor, clear the filter (go to "Global")
-    if (isAuthorizedArea(areaId)) {
-      setGeographicAreaFilter(areaId);
-    } else {
-      clearFilter();
-    }
+    // Backend handles authorization - just set the filter
+    // If unauthorized, backend will return 403 and filter will be cleared via error event
+    setGeographicAreaFilter(areaId);
   };
 
   return (

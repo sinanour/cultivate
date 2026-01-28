@@ -48,7 +48,7 @@ export function GeographicAreaList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
-  const { selectedGeographicAreaId, authorizedAreaIds } = useGlobalGeographicFilter();
+  const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
@@ -418,32 +418,10 @@ export function GeographicAreaList() {
   const treeData = buildTree(geographicAreas);
 
   // Helper function to check if an area is a read-only ancestor
-  const isReadOnlyAncestor = (areaId: string): boolean => {
-    if (authorizedAreaIds.size === 0) {
-      return false;
-    }
-    
-    if (authorizedAreaIds.has(areaId)) {
-      return false;
-    }
-    
-    if (selectedGeographicAreaId) {
-      const area = geographicAreas.find(a => a.id === areaId);
-      if (!area) return false;
-      
-      if (areaId === selectedGeographicAreaId) {
-        return false;
-      }
-      
-      const isAncestor = geographicAreas.some(a => 
-        a.id === selectedGeographicAreaId && 
-        isDescendantOf(a, areaId, geographicAreas)
-      );
-      
-      return isAncestor;
-    }
-    
-    return true;
+  // With backend authorization, we no longer need frontend checks
+  // All areas returned by backend are accessible
+  const isReadOnlyAncestor = (_areaId: string): boolean => {
+    return false; // Backend handles authorization - no frontend read-only checks needed
   };
 
   const isDescendantOf = (area: GeographicArea, potentialAncestorId: string, areas: GeographicArea[]): boolean => {

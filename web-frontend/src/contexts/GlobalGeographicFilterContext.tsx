@@ -2,7 +2,6 @@ import React, { createContext, useState, useEffect, useCallback, useRef, type Re
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { GeographicArea, GeographicAreaWithHierarchy } from '../types';
 import { GeographicAreaService } from '../services/api/geographic-area.service';
-import { geographicAuthorizationService } from '../services/api/geographic-authorization.service';
 import { useAuth } from '../hooks/useAuth';
 import { geographicFilterEvents } from '../utils/geographic-filter-events';
 
@@ -10,11 +9,9 @@ interface GlobalGeographicFilterContextType {
   selectedGeographicAreaId: string | null;
   selectedGeographicArea: GeographicArea | null;
   availableAreas: GeographicAreaWithHierarchy[];
-  authorizedAreaIds: Set<string>;
   setGeographicAreaFilter: (id: string | null) => void;
   clearFilter: () => void;
   isLoading: boolean;
-  isAuthorizedArea: (areaId: string) => boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   isSearching: boolean;
@@ -34,8 +31,6 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
   const [selectedGeographicAreaId, setSelectedGeographicAreaId] = useState<string | null>(null);
   const [selectedGeographicArea, setSelectedGeographicArea] = useState<GeographicArea | null>(null);
   const [availableAreas, setAvailableAreas] = useState<GeographicAreaWithHierarchy[]>([]);
-  const [authorizedAreaIds, setAuthorizedAreaIds] = useState<Set<string>>(new Set());
-  const [hasAuthorizationRules, setHasAuthorizationRules] = useState<boolean | null>(null); // null = not loaded yet
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -46,6 +41,7 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
   const { user } = useAuth();
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isClearingRef = useRef(false); // Track intentional clearing to prevent re-sync
   
   // Persistent ancestor cache across all batches (used ONLY for hierarchy paths, NOT for dropdown options)
   const ancestorCacheRef = useRef<Map<string, GeographicArea>>(new Map());
@@ -170,71 +166,9 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     return result;
   }, []);
 
-  // Fetch user's authorized areas
-  useEffect(() => {
-    if (!user) {
-      setAuthorizedAreaIds(new Set());
-      setHasAuthorizationRules(false); // No user = no rules
-      return;
-    }
-
-    const fetchAuthorizedAreas = async () => {
-      try {
-        const authorizedAreas = await geographicAuthorizationService.getAuthorizedAreas(user.id);
-        
-        // Check if user has any authorization rules
-        // If the response is empty, user has unrestricted access
-        const hasRules = authorizedAreas.length > 0;
-        setHasAuthorizationRules(hasRules);
-        
-        if (!hasRules) {
-          // No authorization rules = unrestricted access
-          setAuthorizedAreaIds(new Set());
-          return;
-        }
-        
-        // Extract directly authorized area IDs where user can apply filters
-        // Only include areas with FULL access that are not descendants or ancestors
-        // - FULL access: User has write permissions
-        // - !isDescendant: Not inherited from parent ALLOW rule
-        // - !isAncestor: Not a read-only ancestor (ancestors have READ_ONLY access)
-        const directlyAuthorizedIds = authorizedAreas
-          .filter(area => 
-            area.accessLevel === 'FULL' && 
-            !area.isDescendant && 
-            !area.isAncestor
-          )
-          .map(area => area.geographicAreaId);
-        
-        setAuthorizedAreaIds(new Set(directlyAuthorizedIds));
-      } catch (error) {
-        console.error('Failed to fetch authorized areas:', error);
-        // On error, assume unrestricted access to avoid blocking user
-        setHasAuthorizationRules(false);
-        setAuthorizedAreaIds(new Set());
-      }
-    };
-
-    fetchAuthorizedAreas();
-  }, [user]);
-
-  const isAuthorizedArea = (areaId: string): boolean => {
-    // If we haven't loaded authorization rules yet, deny access (safe default)
-    if (hasAuthorizationRules === null) {
-      return false;
-    }
-    
-    // If user has no authorization rules, they have unrestricted access
-    if (hasAuthorizationRules === false) {
-      return true;
-    }
-    
-    // User has authorization rules - check if this specific area is authorized
-    return authorizedAreaIds.has(areaId);
-  };
-
   // Helper to clear filter state and update URL/localStorage
   const clearFilterState = () => {
+    isClearingRef.current = true; // Mark that we're intentionally clearing
     setSelectedGeographicAreaId(null);
     localStorage.removeItem(STORAGE_KEY);
     
@@ -243,17 +177,22 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     searchParams.delete('geographicArea');
     const newSearch = searchParams.toString();
     navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
+    
+    // Reset clearing flag after a short delay to allow state to propagate
+    setTimeout(() => {
+      isClearingRef.current = false;
+    }, 100);
   };
 
-  // Validate and sync filter from URL whenever URL changes
+  // Sync filter with URL and localStorage
+  // Backend handles authorization - we trust that any area we can fetch is authorized
   useEffect(() => {
-    // Skip if we haven't loaded user yet
     if (!user) {
       return;
     }
-    
-    // Skip if we haven't loaded authorization rules yet
-    if (hasAuthorizationRules === null) {
+
+    // Skip if we're in the middle of intentionally clearing
+    if (isClearingRef.current) {
       return;
     }
 
@@ -261,47 +200,29 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
     const urlGeographicAreaId = searchParams.get('geographicArea');
 
     if (urlGeographicAreaId) {
-      // URL has a geographic area parameter
-      // Validate authorization before applying
-      const isAuthorized = isAuthorizedArea(urlGeographicAreaId);
-      
-      if (isAuthorized) {
-        // Authorized - apply the filter
-        if (selectedGeographicAreaId !== urlGeographicAreaId) {
-          setSelectedGeographicAreaId(urlGeographicAreaId);
-          localStorage.setItem(STORAGE_KEY, urlGeographicAreaId);
-        }
-      } else {
-        // Unauthorized area - clear from URL and revert to Global
-        console.warn(`User not authorized for area ${urlGeographicAreaId}, clearing filter from URL`);
-        clearFilterState();
+      // URL has a geographic area parameter - apply it
+      if (selectedGeographicAreaId !== urlGeographicAreaId) {
+        setSelectedGeographicAreaId(urlGeographicAreaId);
+        localStorage.setItem(STORAGE_KEY, urlGeographicAreaId);
       }
     } else if (selectedGeographicAreaId === null) {
-      // No URL parameter and no selected area - check localStorage only on initial load
+      // No URL parameter and no selected area - check localStorage
       const storedId = localStorage.getItem(STORAGE_KEY);
       if (storedId) {
-        // Validate authorization before applying
-        if (isAuthorizedArea(storedId)) {
-          setSelectedGeographicAreaId(storedId);
-          // Sync to URL
-          const newSearchParams = new URLSearchParams(location.search);
-          newSearchParams.set('geographicArea', storedId);
-          navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
-        } else {
-          // Unauthorized area - clear from localStorage
-          console.warn(`User not authorized for stored area ${storedId}, clearing from localStorage`);
-          localStorage.removeItem(STORAGE_KEY);
-        }
+        setSelectedGeographicAreaId(storedId);
+        // Sync to URL
+        const newSearchParams = new URLSearchParams(location.search);
+        newSearchParams.set('geographicArea', storedId);
+        navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
       }
     } else if (selectedGeographicAreaId !== null && !urlGeographicAreaId) {
       // We have a selected area but URL doesn't have the parameter
-      // This happens when navigating to a new page
       // Re-add the parameter to the URL to maintain the filter
       const newSearchParams = new URLSearchParams(location.search);
       newSearchParams.set('geographicArea', selectedGeographicAreaId);
       navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
     }
-  }, [location.search, location.pathname, hasAuthorizationRules, user]); // Added location.pathname to dependencies
+  }, [location.search, location.pathname, user]);
 
   // Fetch geographic area details when ID changes
   useEffect(() => {
@@ -446,13 +367,7 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
   }, [hasMorePages, isSearching, currentPage, selectedGeographicAreaId, searchQuery, buildHierarchyPathsWithBatching]);
 
   const setGeographicAreaFilter = (id: string | null) => {
-    // Validate authorization before setting filter
-    if (id && !isAuthorizedArea(id)) {
-      console.warn(`User not authorized for area ${id}, clearing filter`);
-      clearFilterState();
-      return;
-    }
-
+    // Backend handles authorization - trust that returned areas are authorized
     setSelectedGeographicAreaId(id);
 
     if (id) {
@@ -495,11 +410,9 @@ export const GlobalGeographicFilterProvider: React.FC<GlobalGeographicFilterProv
         selectedGeographicAreaId,
         selectedGeographicArea,
         availableAreas,
-        authorizedAreaIds,
         setGeographicAreaFilter,
         clearFilter,
         isLoading,
-        isAuthorizedArea,
         searchQuery,
         setSearchQuery,
         isSearching,

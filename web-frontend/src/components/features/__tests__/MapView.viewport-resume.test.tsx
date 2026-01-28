@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { MapView } from '../MapView.optimized';
 import { MapDataService } from '../../../services/api/map-data.service';
 import { ActivityTypeService } from '../../../services/api/activity-type.service';
@@ -186,13 +186,13 @@ describe('MapView - Viewport Change During Paused Loading', () => {
    */
   it('should not immediately resume when user pauses loading', async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <BrowserRouter>
+      <MemoryRouter initialEntries={['/']}>
         <QueryClientProvider client={queryClient}>
           <GlobalGeographicFilterProvider>
             {children}
           </GlobalGeographicFilterProvider>
         </QueryClientProvider>
-      </BrowserRouter>
+      </MemoryRouter>
     );
 
     const { rerender } = render(
@@ -210,6 +210,9 @@ describe('MapView - Viewport Change During Paused Loading', () => {
     await waitFor(() => {
       expect(screen.getByTestId('map-container')).toBeInTheDocument();
     });
+
+    // Wait for initial viewport calculation to complete (300ms debounce + buffer)
+    await new Promise(resolve => setTimeout(resolve, 400));
 
     // Clear mock to track calls after pause
     mockOnResumeRequest.mockClear();

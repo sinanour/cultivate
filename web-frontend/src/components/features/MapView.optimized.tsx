@@ -412,6 +412,14 @@ export function MapView({
 
   // Use external cancelled state
   const isCancelled = externalIsCancelled;
+  const isCancelledRef = useRef(isCancelled);
+  const onResumeRequestRef = useRef(onResumeRequest);
+  
+  // Update refs when props change
+  useEffect(() => {
+    isCancelledRef.current = isCancelled;
+    onResumeRequestRef.current = onResumeRequest;
+  }, [isCancelled, onResumeRequest]);
 
   // Build filters
   const filters: MapFilters = {
@@ -481,9 +489,10 @@ export function MapView({
     isFetchingRef.current = false;
     
     // If loading was paused (cancelled), treat viewport change as implicit resumption
-    // Only call onResumeRequest if bounds actually changed (user action)
-    if (isCancelled && onResumeRequest) {
-      onResumeRequest(); // This will clear the paused state in parent component
+    // Only call onResumeRequest if bounds actually changed AND this is not the initial bounds calculation
+    // (prevBounds must exist for this to be a user-initiated change)
+    if (isCancelledRef.current && onResumeRequestRef.current && prevBounds) {
+      onResumeRequestRef.current(); // This will clear the paused state in parent component
     }
     
     // Clear state and trigger re-render
@@ -498,7 +507,7 @@ export function MapView({
     setViewportChangeCounter(c => c + 1);
     setHasCompletedFetch(false); // Reset fetch completion tracking
     setEmptyStateDismissed(false); // Reset dismissal state for new viewport
-  }, [isCancelled, onResumeRequest]);
+  }, []); // No dependencies - use refs for all values
 
   // Function to fetch next batch
   const fetchNextBatch = useCallback(async () => {
