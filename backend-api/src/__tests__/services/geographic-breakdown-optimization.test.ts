@@ -186,7 +186,8 @@ describe('GeographicBreakdownQueryBuilder', () => {
             expect(sql).toContain('area_metrics AS');
             expect(sql).toContain('COUNT(DISTINCT fa.id) as "activityCount"');
             expect(sql).toContain('COUNT(DISTINCT asn."participantId") as "participantCount"');
-            expect(sql).toContain('COUNT(asn.id) as "participationCount"');
+            // Updated to include additionalParticipantCount in participation formula
+            expect(sql).toContain('(COUNT(asn.id) + COALESCE(SUM(fa."additionalParticipantCount"), 0)) as "participationCount"');
             expect(sql).toContain('GROUP BY ad.area_id');
         });
 

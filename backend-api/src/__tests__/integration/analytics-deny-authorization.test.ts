@@ -4,6 +4,7 @@ import { GeographicAreaRepository } from '../../repositories/geographic-area.rep
 import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { TestHelpers } from '../utils';
 
 describe('Analytics with DENY Authorization Rules', () => {
     let prisma: PrismaClient;
@@ -249,12 +250,14 @@ describe('Analytics with DENY Authorization Rules', () => {
         await prisma.userGeographicAuthorization.deleteMany({
             where: { userId },
         });
-        await prisma.user.delete({ where: { id: userId } });
+        await TestHelpers.safeDelete(() =>
+            prisma.user.delete({ where: { id: userId } })
+        );
         await prisma.geographicArea.deleteMany({
             where: { id: { in: [allowedNeighbourhoodId, deniedNeighbourhoodId, cityId] } },
         });
         await prisma.$disconnect();
-    });
+    }, 30000); // 30 second timeout
 
     it('should exclude denied neighbourhood from engagement metrics', async () => {
         // Get authorization info

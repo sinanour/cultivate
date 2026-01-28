@@ -54,7 +54,7 @@ export class QueryBuilder {
                 },
                 {
                     name: 'participationAtStart',
-                    expression: 'COUNT(asn.id) FILTER (WHERE DATE(fa."startDate") <= DATE(@startDate) AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= DATE(@startDate)))'
+                    expression: '(COUNT(asn.id) FILTER (WHERE DATE(fa."startDate") <= DATE(@startDate) AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= DATE(@startDate))) + COALESCE(SUM(fa."additionalParticipantCount") FILTER (WHERE DATE(fa."startDate") <= DATE(@startDate) AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= DATE(@startDate))), 0))'
                 },
                 {
                     name: 'activitiesAtEnd',
@@ -66,7 +66,7 @@ export class QueryBuilder {
                 },
                 {
                     name: 'participationAtEnd',
-                    expression: 'COUNT(asn.id) FILTER (WHERE DATE(fa."startDate") <= DATE(@endDate) AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= DATE(@endDate)))'
+                    expression: '(COUNT(asn.id) FILTER (WHERE DATE(fa."startDate") <= DATE(@endDate) AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= DATE(@endDate))) + COALESCE(SUM(fa."additionalParticipantCount") FILTER (WHERE DATE(fa."startDate") <= DATE(@endDate) AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= DATE(@endDate))), 0))'
                 },
                 {
                     name: 'activitiesStarted',
@@ -90,7 +90,7 @@ export class QueryBuilder {
                 },
                 {
                     name: 'totalParticipation',
-                    expression: 'COUNT(asn.id) FILTER (WHERE DATE(fa."startDate") <= CURRENT_DATE AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= CURRENT_DATE))'
+                    expression: '(COUNT(asn.id) FILTER (WHERE DATE(fa."startDate") <= CURRENT_DATE AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= CURRENT_DATE)) + COALESCE(SUM(fa."additionalParticipantCount") FILTER (WHERE DATE(fa."startDate") <= CURRENT_DATE AND (fa."endDate" IS NULL OR DATE(fa."endDate") >= CURRENT_DATE)), 0))'
                 },
                 {
                     name: 'activitiesStarted',
@@ -320,7 +320,8 @@ LIMIT ${effectivePageSize} OFFSET ${offset}`;
           a."startDate",
           a."endDate",
           a."activityTypeId",
-          at."activityCategoryId"`;
+          at."activityCategoryId",
+          a."additionalParticipantCount"`;
 
         // Add venue ID if needed
         if (requiredJoins.includes('venue') || requiredJoins.includes('geographicArea') || groupBy.includes(GroupingDimension.VENUE)) {

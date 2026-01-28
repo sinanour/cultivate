@@ -174,4 +174,8 @@ describe('Role Distribution Optimization', () => {
             });
         });
     });
+
+    afterAll(async () => {
+        await prisma.$disconnect();
+    });
 });

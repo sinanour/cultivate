@@ -376,6 +376,15 @@ src/
 - When end date clear button is clicked, sets endDate to null and sends null to API on save
 - Validates name, type, and start date
 - Provides date pickers using CloudScape DatePicker
+- Displays optional "Additional Participant Count" field in activity details section
+- Positions "Additional Participant Count" field separate from participant assignments table
+- Validates additionalParticipantCount is a positive integer when provided
+- Allows additionalParticipantCount field to be empty (null)
+- Provides clear button (X icon) next to additionalParticipantCount field to remove previously entered value
+- When additionalParticipantCount clear button is clicked, sets field to null and sends null to API on save
+- Displays validation errors when additionalParticipantCount is not a positive integer
+- Rejects decimal values for additionalParticipantCount (only accepts whole numbers)
+- Displays help text explaining that additional participant count represents approximate attendance beyond tracked individuals
 - Includes embedded venue history management section within the form
 - Allows adding new venue associations with effective start dates
 - Allows editing existing venue associations (edit mode only)
@@ -400,6 +409,11 @@ src/
 
 **ActivityDetail**
 - Shows activity information in detail view
+- Displays additionalParticipantCount value when present
+- Calculates and displays total participant count as sum of individually assigned participants plus additionalParticipantCount
+- Clearly distinguishes between individually tracked participants and additional participant count
+- When additionalParticipantCount is null or 0, displays only count of individually assigned participants
+- When additionalParticipantCount is greater than 0, displays individual count, additional count, and total
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
 - Displays delete button in header section next to edit button
 - Positions edit button as right-most action in header (before Back button)

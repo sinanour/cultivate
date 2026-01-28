@@ -140,7 +140,8 @@ ${values.join(',\n')}
         let cte = `filtered_activities AS (
     SELECT 
       a.id,
-      v."geographicAreaId"
+      v."geographicAreaId",
+      a."additionalParticipantCount"
     FROM activities a
     JOIN activity_venue_history avh ON a.id = avh."activityId"
       AND NOT EXISTS (
@@ -229,7 +230,7 @@ ${values.join(',\n')}
       ad.area_id as "geographicAreaId",
       COUNT(DISTINCT fa.id) as "activityCount",
       COUNT(DISTINCT asn."participantId") as "participantCount",
-      COUNT(asn.id) as "participationCount"
+      (COUNT(asn.id) + COALESCE(SUM(fa."additionalParticipantCount"), 0)) as "participationCount"
     FROM area_descendants ad
     LEFT JOIN filtered_activities fa 
       ON fa."geographicAreaId" = ANY(ad.descendant_ids)
@@ -239,6 +240,7 @@ ${values.join(',\n')}
       COUNT(DISTINCT fa.id) > 0 
       OR COUNT(DISTINCT asn."participantId") > 0 
       OR COUNT(asn.id) > 0
+      OR COALESCE(SUM(fa."additionalParticipantCount"), 0) > 0
   )`;
     }
 

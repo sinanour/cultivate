@@ -1,9 +1,10 @@
-import { PrismaClient, AuthorizationRuleType, UserRole } from '@prisma/client';
+import { PrismaClient, AuthorizationRuleType } from '@prisma/client';
 import { GeographicAuthorizationService, AccessLevel } from '../../services/geographic-authorization.service';
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { getPrismaClient } from '../../utils/prisma.client';
+import { TestHelpers } from '../utils';
 
 /**
  * Comprehensive Geographic Authorization Tests
@@ -37,38 +38,32 @@ describe('Geographic Authorization - Comprehensive Edge Cases', () => {
         service = new GeographicAuthorizationService(authRepo, areaRepo, userRepo);
 
         // Create test user
-        const user = await prisma.user.create({
-            data: {
-                email: 'test-comprehensive@example.com',
-                passwordHash: 'hash',
-                role: UserRole.EDITOR,
-            },
-        });
+        const user = await TestHelpers.createTestUser(prisma, 'EDITOR');
         testUserId = user.id;
 
-        // Create 5-level hierarchy
+        // Create 5-level hierarchy with unique names
         const country = await prisma.geographicArea.create({
-            data: { name: 'Test Country', areaType: 'COUNTRY' },
+            data: { name: `Comprehensive Test Country ${Date.now()}`, areaType: 'COUNTRY' },
         });
         countryId = country.id;
 
         const province = await prisma.geographicArea.create({
-            data: { name: 'Test Province', areaType: 'PROVINCE', parentGeographicAreaId: countryId },
+            data: { name: `Comprehensive Test Province ${Date.now()}`, areaType: 'PROVINCE', parentGeographicAreaId: countryId },
         });
         provinceId = province.id;
 
         const city = await prisma.geographicArea.create({
-            data: { name: 'Test City', areaType: 'CITY', parentGeographicAreaId: provinceId },
+            data: { name: `Comprehensive Test City ${Date.now()}`, areaType: 'CITY', parentGeographicAreaId: provinceId },
         });
         cityId = city.id;
 
         const neighbourhood = await prisma.geographicArea.create({
-            data: { name: 'Test Neighbourhood', areaType: 'NEIGHBOURHOOD', parentGeographicAreaId: cityId },
+            data: { name: `Comprehensive Test Neighbourhood ${Date.now()}`, areaType: 'NEIGHBOURHOOD', parentGeographicAreaId: cityId },
         });
         neighbourhoodId = neighbourhood.id;
 
         const block = await prisma.geographicArea.create({
-            data: { name: 'Test Block', areaType: 'COMMUNITY', parentGeographicAreaId: neighbourhoodId },
+            data: { name: `Comprehensive Test Block ${Date.now()}`, areaType: 'COMMUNITY', parentGeographicAreaId: neighbourhoodId },
         });
         blockId = block.id;
     });
@@ -78,9 +73,11 @@ describe('Geographic Authorization - Comprehensive Edge Cases', () => {
         await prisma.geographicArea.deleteMany({
             where: { id: { in: [blockId, neighbourhoodId, cityId, provinceId, countryId] } },
         });
-        await prisma.user.delete({ where: { id: testUserId } });
+        await TestHelpers.safeDelete(() =>
+            prisma.user.delete({ where: { id: testUserId } })
+        );
         await prisma.$disconnect();
-    });
+    }, 30000); // 30 second timeout
 
     afterEach(async () => {
         await prisma.userGeographicAuthorization.deleteMany({ where: { userId: testUserId } });

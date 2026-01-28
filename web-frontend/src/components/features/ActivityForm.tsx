@@ -56,11 +56,13 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isOngoing, setIsOngoing] = useState(false);
+  const [additionalParticipantCount, setAdditionalParticipantCount] = useState<number | null>(null);
   
   const [nameError, setNameError] = useState('');
   const [activityTypeError, setActivityTypeError] = useState('');
   const [startDateError, setStartDateError] = useState('');
   const [endDateError, setEndDateError] = useState('');
+  const [additionalParticipantCountError, setAdditionalParticipantCountError] = useState('');
   const [error, setError] = useState('');
 
   // Venue history state
@@ -135,6 +137,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     startDate: string;
     endDate: string;
     isOngoing: boolean;
+    additionalParticipantCount: number | null;
   } | null>(null);
 
   // Track if we should bypass navigation guard (set when submitting)
@@ -178,9 +181,10 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       status !== initialFormState.status ||
       startDate !== initialFormState.startDate ||
       endDate !== initialFormState.endDate ||
-      isOngoing !== initialFormState.isOngoing
+      isOngoing !== initialFormState.isOngoing ||
+      additionalParticipantCount !== initialFormState.additionalParticipantCount
     );
-  }, [name, activityTypeId, status, startDate, endDate, isOngoing, initialFormState, bypassNavigationGuard]);
+  }, [name, activityTypeId, status, startDate, endDate, isOngoing, additionalParticipantCount, initialFormState, bypassNavigationGuard]);
 
   // Navigation blocker
   const blocker = useBlocker(
@@ -231,6 +235,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         startDate: activity.startDate?.split('T')[0] || '',
         endDate: activity.endDate?.split('T')[0] || '',
         isOngoing: activity.isOngoing || false,
+        additionalParticipantCount: (activity as any).additionalParticipantCount ?? null,
       };
       setName(values.name);
       setActivityTypeId(values.activityTypeId);
@@ -238,6 +243,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       setStartDate(values.startDate);
       setEndDate(values.endDate);
       setIsOngoing(values.isOngoing);
+      setAdditionalParticipantCount(values.additionalParticipantCount);
       setInitialFormState(values);
     } else {
       // Reset to defaults for create mode
@@ -248,6 +254,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         startDate: '',
         endDate: '',
         isOngoing: false,
+        additionalParticipantCount: null,
       };
       setName(emptyValues.name);
       setActivityTypeId(emptyValues.activityTypeId);
@@ -255,6 +262,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       setStartDate(emptyValues.startDate);
       setEndDate(emptyValues.endDate);
       setIsOngoing(emptyValues.isOngoing);
+      setAdditionalParticipantCount(emptyValues.additionalParticipantCount);
       setVenueHistory([]);
       setAssignments([]);
       setInitialFormState(emptyValues);
@@ -264,6 +272,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     setActivityTypeError('');
     setStartDateError('');
     setEndDateError('');
+    setAdditionalParticipantCountError('');
     setError('');
     setShowVenueForm(false);
     setShowAssignmentForm(false);
@@ -642,6 +651,14 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       startDate: new Date(startDate).toISOString(),
     };
 
+    // Handle additionalParticipantCount - send null if cleared, omit if never set
+    if (additionalParticipantCount !== null) {
+      data.additionalParticipantCount = additionalParticipantCount;
+    } else if (activity && (activity as any).additionalParticipantCount !== null) {
+      // Was set before, now cleared - send null explicitly
+      data.additionalParticipantCount = null;
+    }
+
     // Handle endDate based on ongoing checkbox and field value
     // CRITICAL: When ongoing checkbox is checked, we MUST send null to clear endDate
     if (isOngoing) {
@@ -818,6 +835,38 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                 />
               </FormField>
             )}
+
+            <FormField 
+              label="Additional Participant Count" 
+              errorText={additionalParticipantCountError}
+              description="Optional: Approximate attendance beyond individually tracked participants"
+            >
+              <Input
+                type="number"
+                value={additionalParticipantCount?.toString() || ''}
+                onChange={({ detail }) => {
+                  const value = detail.value.trim();
+                  if (value === '') {
+                    setAdditionalParticipantCount(null);
+                    setAdditionalParticipantCountError('');
+                  } else {
+                    const num = parseInt(value, 10);
+                    if (isNaN(num)) {
+                      setAdditionalParticipantCountError('Must be a positive integer');
+                    } else if (num <= 0) {
+                      setAdditionalParticipantCountError('Must be a positive integer');
+                    } else if (!Number.isInteger(parseFloat(value))) {
+                      setAdditionalParticipantCountError('Must be a whole number (no decimals)');
+                    } else {
+                      setAdditionalParticipantCount(num);
+                      setAdditionalParticipantCountError('');
+                    }
+                  }
+                }}
+                placeholder="Enter number of additional participants"
+                disabled={isSubmitting}
+              />
+            </FormField>
 
             {/* Embedded Venue History Management */}
             <SpaceBetween size="m">

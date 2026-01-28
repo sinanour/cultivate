@@ -6,6 +6,9 @@ import { GroupingDimension } from '../../utils/constants';
 const prisma = new PrismaClient();
 
 describe('Grouped Engagement Metrics', () => {
+    // Increase timeout for slow queries with large datasets
+    jest.setTimeout(60000);
+
     let analyticsService: AnalyticsService;
     let geographicAreaRepository: GeographicAreaRepository;
 
@@ -244,6 +247,7 @@ describe('Grouped Engagement Metrics', () => {
             const metrics = await analyticsService.getEngagementMetrics(
                 {
                     groupBy: [GroupingDimension.ACTIVITY_CATEGORY],
+                    geographicAreaIds: [cityId], // Filter to only this test's data
                 },
                 [],
                 false
@@ -279,6 +283,7 @@ describe('Grouped Engagement Metrics', () => {
             const metrics = await analyticsService.getEngagementMetrics(
                 {
                     groupBy: [GroupingDimension.ACTIVITY_CATEGORY],
+                    geographicAreaIds: [cityId], // Filter to only this test's data
                 },
                 [],
                 false
@@ -313,6 +318,7 @@ describe('Grouped Engagement Metrics', () => {
             const metrics = await analyticsService.getEngagementMetrics(
                 {
                     groupBy: [GroupingDimension.ACTIVITY_TYPE],
+                    geographicAreaIds: [cityId], // Filter to only this test's data
                 },
                 [],
                 false
@@ -348,6 +354,7 @@ describe('Grouped Engagement Metrics', () => {
             const metrics = await analyticsService.getEngagementMetrics(
                 {
                     groupBy: [GroupingDimension.ACTIVITY_CATEGORY, GroupingDimension.ACTIVITY_TYPE],
+                    geographicAreaIds: [cityId], // Filter to only this test's data
                 },
                 [],
                 false

@@ -53,6 +53,7 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Additive_Grouping**: A grouping mode where multiple dimensions can be selected simultaneously (e.g., group by activity type AND venue AND geographic area)
 - **Exclusive_Grouping**: A grouping mode where only one dimension can be selected at a time (e.g., group by activity type OR activity category OR no grouping)
 - **Population_Badge**: A visual indicator displayed beside a participant's name showing which populations they belong to, enabling quick identification of participant demographics
+- **Additional_Participant_Count**: An optional positive integer field on activities that represents approximate attendance beyond individually tracked participants, used for high-level participation tracking in large gatherings
 - **Run_Report_Pattern**: A user interface pattern where data visualization pages render in an empty state by default and require explicit user action (clicking a "Run Report" button) to fetch and display data based on selected filters and grouping criteria
 
 ## Requirements
@@ -228,6 +229,30 @@ The Web Frontend package provides a responsive React-based web application that 
 39. WHEN a participant is selected for a new assignment, THE Web_App SHALL retrieve the participant details from the backend and store them for display purposes
 40. THE Web_App SHALL display the venue associations table and participant assignments table stacked vertically within the activity form page, with venue associations appearing above participant assignments
 41. THE Web_App SHALL provide an atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
+
+### Requirement 5C: Track Additional Participant Count
+
+**User Story:** As a community organizer, I want to record approximate attendance for activities beyond individually tracked participants, so that I can capture high-level participation in large gatherings without the overhead of tracking every individual.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display an optional "Additional Participant Count" field on the activity form page (both create and edit modes)
+2. THE Web_App SHALL position the "Additional Participant Count" field in the activity details section, separate from the participant assignments table
+3. THE Web_App SHALL validate that additionalParticipantCount is a positive integer when provided
+4. THE Web_App SHALL allow the additionalParticipantCount field to be empty (null)
+5. THE Web_App SHALL provide a clear button (X icon) next to the additionalParticipantCount field to remove a previously entered value
+6. WHEN the clear button is clicked, THE Web_App SHALL set additionalParticipantCount to null and send null to the API on save
+7. THE Web_App SHALL display validation errors when additionalParticipantCount is not a positive integer
+8. THE Web_App SHALL reject decimal values for additionalParticipantCount (only accept whole numbers)
+9. THE Web_App SHALL display the additionalParticipantCount value on the activity detail view
+10. WHEN displaying total participant count on the activity detail view, THE Web_App SHALL show the sum of individually assigned participants plus additionalParticipantCount
+11. THE Web_App SHALL clearly distinguish between individually tracked participants and additional participant count in the UI
+12. THE Web_App SHALL display a label or help text explaining that additional participant count represents approximate attendance beyond tracked individuals
+13. WHEN additionalParticipantCount is null or 0, THE Web_App SHALL display only the count of individually assigned participants
+14. WHEN additionalParticipantCount is greater than 0, THE Web_App SHALL display both the individual count and the additional count, along with the total
+15. THE Web_App SHALL include additionalParticipantCount in activity list displays where participant counts are shown
+16. THE Web_App SHALL send additionalParticipantCount to the backend API when creating or updating activities
+17. THE Web_App SHALL handle additionalParticipantCount in CSV import/export operations for activities
 
 ### Requirement 5A: Activity List Filtering UX with PropertyFilter
 

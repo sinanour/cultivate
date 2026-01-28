@@ -44,6 +44,7 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Attribute_Selection**: A query optimization technique where clients specify which entity attributes to return in the response, reducing payload size and database query overhead
 - **Dot_Notation**: A syntax for requesting nested relation fields in the fields parameter (e.g., activityType.name, activityType.activityCategory.name)
 - **Population_Badge**: A visual indicator displayed beside a participant's name showing which populations they belong to, enabling quick identification of participant demographics
+- **Additional_Participant_Count**: An optional positive integer field on activities that represents approximate attendance beyond individually tracked participants, used for high-level participation tracking in large gatherings
 
 ## Requirements
 
@@ -203,6 +204,33 @@ The Backend API package provides the RESTful API service that implements all bus
 12. THE API SHALL provide a GET /api/venues/:id/participants endpoint that returns all participants with this venue as their current home address
 13. WHEN retrieving venue participants, THE API SHALL only include participants whose most recent address history record is at this venue
 14. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only venues in the specified geographic area or its descendants
+
+### Requirement 5C: Track Additional Participant Count
+
+**User Story:** As a community organizer, I want to track high-level participation in activities without individually tracking specific individuals, so that I can record approximate attendance for large gatherings while maintaining detailed tracking for core participants.
+
+#### Acceptance Criteria
+
+1. THE API SHALL add an optional additionalParticipantCount field to the Activity model
+2. THE additionalParticipantCount field SHALL be nullable and default to null
+3. WHEN additionalParticipantCount is provided, THE API SHALL validate that it is a positive integer (greater than 0)
+4. WHEN additionalParticipantCount is null or 0, THE API SHALL treat it as having no additional participants
+5. THE API SHALL accept additionalParticipantCount in POST /api/v1/activities endpoint (create)
+6. THE API SHALL accept additionalParticipantCount in PUT /api/v1/activities/:id endpoint (update)
+7. THE API SHALL return additionalParticipantCount in GET /api/v1/activities/:id endpoint responses
+8. THE API SHALL return additionalParticipantCount in GET /api/v1/activities endpoint responses (list)
+9. WHEN calculating total participant count for an activity, THE API SHALL add additionalParticipantCount to the count of individually assigned participants
+10. WHEN calculating total participation for analytics, THE API SHALL include additionalParticipantCount in the participation totals
+11. WHEN calculating role distribution for analytics, THE API SHALL attribute all additional participants to the "Participant" role
+12. WHEN an activity has 5 individually assigned participants and additionalParticipantCount of 20, THE API SHALL report total participant count as 25
+13. WHEN calculating engagement metrics, THE API SHALL include additionalParticipantCount in participation counts but NOT in unique participant counts
+14. WHEN calculating growth metrics, THE API SHALL include additionalParticipantCount in participation counts but NOT in unique participant counts
+15. WHEN calculating activity lifecycle metrics, THE API SHALL include activities with additionalParticipantCount in activity counts
+16. WHEN exporting activities to CSV, THE API SHALL include the additionalParticipantCount field
+17. WHEN importing activities from CSV, THE API SHALL accept and validate the additionalParticipantCount field
+18. THE API SHALL allow clearing additionalParticipantCount by setting it to null in update requests
+19. WHEN additionalParticipantCount is set to null, THE API SHALL store null in the database (not 0)
+20. THE API SHALL validate that additionalParticipantCount is an integer when provided (reject decimal values)
 
 ### Requirement 5B: Manage Geographic Areas
 
@@ -725,7 +753,7 @@ The Backend API package provides the RESTful API service that implements all bus
 4. THE API SHALL provide a GET /api/v1/geographic-areas/export endpoint that exports all geographic areas to CSV format
 5. WHEN exporting participants, THE API SHALL include columns for: id, name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname, createdAt, updatedAt
 6. WHEN exporting venues, THE API SHALL include columns for: id, name, address, geographicAreaId, geographicAreaName, latitude, longitude, venueType, createdAt, updatedAt
-7. WHEN exporting activities, THE API SHALL include columns for: id, name, activityTypeId, activityTypeName, activityCategoryId, activityCategoryName, startDate, endDate, status, createdAt, updatedAt
+7. WHEN exporting activities, THE API SHALL include columns for: id, name, activityTypeId, activityTypeName, activityCategoryId, activityCategoryName, startDate, endDate, status, additionalParticipantCount, createdAt, updatedAt
 8. WHEN exporting geographic areas, THE API SHALL include columns for: id, name, areaType, parentGeographicAreaId, parentGeographicAreaName, createdAt, updatedAt
 9. WHEN no records exist for export, THE API SHALL return an empty CSV with only the header row containing column names
 10. THE API SHALL set the Content-Type header to text/csv for all export responses
@@ -736,7 +764,7 @@ The Backend API package provides the RESTful API service that implements all bus
 15. THE API SHALL provide a POST /api/v1/geographic-areas/import endpoint that accepts CSV file uploads
 16. WHEN importing participants, THE API SHALL accept CSV files with columns: name, email, phone, notes, dateOfBirth, dateOfRegistration, nickname
 17. WHEN importing venues, THE API SHALL accept CSV files with columns: name, address, geographicAreaId, latitude, longitude, venueType
-18. WHEN importing activities, THE API SHALL accept CSV files with columns: name, activityTypeId, startDate, endDate, status
+18. WHEN importing activities, THE API SHALL accept CSV files with columns: name, activityTypeId, startDate, endDate, status, additionalParticipantCount
 19. WHEN importing geographic areas, THE API SHALL accept CSV files with columns: name, areaType, parentGeographicAreaId
 20. WHEN importing CSV data, THE API SHALL validate each row according to the same validation rules as the create endpoints
 21. WHEN importing CSV data, THE API SHALL skip rows with validation errors and continue processing remaining rows

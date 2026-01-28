@@ -930,6 +930,59 @@ This implementation plan covers the React-based web application built with TypeS
     - Use /activities/:id/venues endpoints
     - _Requirements: 5.26, 5.27_
 
+- [x] 11A. Implement additional participant count for activities
+  - [x] 11A.1 Add additionalParticipantCount field to ActivityFormPage
+    - Add optional "Additional Participant Count" input field using CloudScape Input component
+    - Position field in activity details section, separate from participant assignments table
+    - Configure input to accept only positive integers (type="number", min="1")
+    - Provide clear button (X icon) next to field using CloudScape Button with variant="icon"
+    - When clear button clicked, set additionalParticipantCount to null
+    - Display help text explaining field represents approximate attendance beyond tracked individuals
+    - Implement validation for positive integers only (reject zero, negative, decimals)
+    - Display validation error messages using CloudScape FormField error prop
+    - Include additionalParticipantCount in form state
+    - Send additionalParticipantCount to API when creating or updating activities
+    - _Requirements: 5C.1, 5C.2, 5C.3, 5C.4, 5C.5, 5C.6, 5C.7, 5C.8, 5C.12, 5C.16_
+
+  - [x] 11A.2 Update ActivityDetail to display additionalParticipantCount
+    - Display additionalParticipantCount value when present
+    - Calculate total participant count as: individually assigned count + additionalParticipantCount
+    - Display individual count, additional count, and total count separately
+    - When additionalParticipantCount is null or 0, display only individually assigned count
+    - When additionalParticipantCount > 0, display breakdown: "X individually tracked + Y additional = Z total"
+    - Use CloudScape Box or Container components for clear visual distinction
+    - _Requirements: 5C.9, 5C.10, 5C.11, 5C.13, 5C.14_
+
+  - [ ] 11A.3 Update ActivityList to display total participant counts
+    - Add participant count column to activity list table
+    - Calculate total as: individually assigned + additionalParticipantCount
+    - Display total participant count for each activity
+    - Handle null additionalParticipantCount (treat as 0)
+    - _Requirements: 5C.15_
+
+  - [ ] 11A.4 Update ActivityService to handle additionalParticipantCount
+    - Update createActivity() method to accept additionalParticipantCount in request body
+    - Update updateActivity() method to accept additionalParticipantCount in request body
+    - Include additionalParticipantCount in API request payloads
+    - Handle null values for field clearing
+    - _Requirements: 5C.16_
+
+  - [ ] 11A.5 Update CSV import/export for activities
+    - Update activity CSV export to include additionalParticipantCount column
+    - Update activity CSV import to accept additionalParticipantCount column
+    - Handle null values in CSV (export as empty string, import empty string as null)
+    - Validate positive integer during import
+    - _Requirements: 5C.17_
+
+  - [ ]* 11A.6 Write property tests for additional participant count UI
+    - **Property 264: Additional Participant Count Field Display**
+    - **Property 265: Additional Participant Count Validation**
+    - **Property 266: Additional Participant Count Clear Button**
+    - **Property 267: Additional Participant Count Total Calculation Display**
+    - **Property 268: Additional Participant Count List Display**
+    - **Property 269: Additional Participant Count CSV Handling**
+    - **Validates: Requirements 5C.1, 5C.2, 5C.3, 5C.4, 5C.5, 5C.6, 5C.7, 5C.8, 5C.9, 5C.10, 5C.11, 5C.12, 5C.13, 5C.14, 5C.15, 5C.16, 5C.17**
+
 - [x] 12. Implement assignment management UI
   - [x] 12.1 Create AssignmentForm component (embedded in ActivityForm)
     - Note: This component is now embedded within ActivityForm for both create and edit modes

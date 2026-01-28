@@ -479,7 +479,11 @@ export class AnalyticsService {
         const totalParticipants = new Set(
             allActivities.flatMap(a => filterAssignmentsByPopulation(a.assignments).map(as => as.participantId))
         ).size;
-        const totalParticipation = allActivities.reduce((sum, a) => sum + filterAssignmentsByPopulation(a.assignments).length, 0);
+        const totalParticipation = allActivities.reduce((sum, a) => {
+            const assignmentCount = filterAssignmentsByPopulation(a.assignments).length;
+            const additionalCount = (a as any).additionalParticipantCount ?? 0;
+            return sum + assignmentCount + additionalCount;
+        }, 0);
 
         // Calculate breakdown by activity type
         const activitiesByTypeMap = new Map<string, ActivityTypeBreakdown>();
@@ -572,8 +576,10 @@ export class AnalyticsService {
                     (!activity.endDate || activity.endDate >= startDate);
 
                 if (wasActiveAtStart) {
-                    // Participation: count filtered assignments (non-unique)
-                    breakdown.participationAtStart += filterAssignmentsByPopulation(activity.assignments).length;
+                    // Participation: count filtered assignments (non-unique) + additionalParticipantCount
+                    const assignmentCount = filterAssignmentsByPopulation(activity.assignments).length;
+                    const additionalCount = (activity as any).additionalParticipantCount ?? 0;
+                    breakdown.participationAtStart += assignmentCount + additionalCount;
                 }
             }
 
@@ -584,8 +590,10 @@ export class AnalyticsService {
                     (!activity.endDate || activity.endDate >= endDate);
 
                 if (wasActiveAtEnd) {
-                    // Participation: count filtered assignments (non-unique)
-                    breakdown.participationAtEnd += filterAssignmentsByPopulation(activity.assignments).length;
+                    // Participation: count filtered assignments (non-unique) + additionalParticipantCount
+                    const assignmentCount = filterAssignmentsByPopulation(activity.assignments).length;
+                    const additionalCount = (activity as any).additionalParticipantCount ?? 0;
+                    breakdown.participationAtEnd += assignmentCount + additionalCount;
                 }
             }
         }
@@ -697,14 +705,16 @@ export class AnalyticsService {
                 breakdown.activitiesCancelled++;
             }
 
-            // Count participation by category (non-unique, filtered assignments)
+            // Count participation by category (non-unique, filtered assignments + additionalParticipantCount)
             // When population filter is active, only count assignments where participant belongs to specified populations
             if (startDate) {
                 const wasActiveAtStart = activity.startDate <= startDate &&
                     (!activity.endDate || activity.endDate >= startDate);
 
                 if (wasActiveAtStart) {
-                    breakdown.participationAtStart += filterAssignmentsByPopulation(activity.assignments).length;
+                    const assignmentCount = filterAssignmentsByPopulation(activity.assignments).length;
+                    const additionalCount = (activity as any).additionalParticipantCount ?? 0;
+                    breakdown.participationAtStart += assignmentCount + additionalCount;
                 }
             }
 
@@ -713,7 +723,9 @@ export class AnalyticsService {
                     (!activity.endDate || activity.endDate >= endDate);
 
                 if (wasActiveAtEnd) {
-                    breakdown.participationAtEnd += filterAssignmentsByPopulation(activity.assignments).length;
+                    const assignmentCount = filterAssignmentsByPopulation(activity.assignments).length;
+                    const additionalCount = (activity as any).additionalParticipantCount ?? 0;
+                    breakdown.participationAtEnd += assignmentCount + additionalCount;
                 }
             }
         }
@@ -1378,8 +1390,11 @@ export class AnalyticsService {
 
             // Total participation: sum of filtered assignments for activities active during this period (non-unique)
             // When population filter is active, only count assignments where participant belongs to specified populations
+            // PLUS additionalParticipantCount from each activity
             const totalParticipation = activeActivities.reduce((sum, activity) => {
-                return sum + filterAssignmentsByPopulation(activity.assignments).length;
+                const assignmentCount = filterAssignmentsByPopulation(activity.assignments).length;
+                const additionalCount = (activity as any).additionalParticipantCount ?? 0;
+                return sum + assignmentCount + additionalCount;
             }, 0);
 
             timeSeries.push({

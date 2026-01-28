@@ -185,6 +185,7 @@ export const ActivityCreateSchema = z.object({
   startDate: z.string().datetime('Invalid start date format'),
   endDate: z.string().datetime('Invalid end date format').optional(),
   status: z.nativeEnum(ActivityStatus).optional(),
+  additionalParticipantCount: z.number().int().positive('Additional participant count must be a positive integer').nullable().optional(),
   venueIds: z.array(z.string().uuid('Invalid venue ID format')).optional(),
 });
 
@@ -194,6 +195,7 @@ export const ActivityUpdateSchema = z.object({
   startDate: z.string().datetime('Invalid start date format').optional(),
   endDate: z.union([z.string().datetime('Invalid end date format'), z.null()]).optional(),
   status: z.nativeEnum(ActivityStatus).optional(),
+  additionalParticipantCount: z.number().int().positive('Additional participant count must be a positive integer').nullable().optional(),
   version: z.number().int().positive().optional(),
 });
 
@@ -768,6 +770,14 @@ export const ActivityImportSchema = z.object({
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
   status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED']).optional(),
+  additionalParticipantCount: z.preprocess(
+    (val) => {
+      if (val === '' || val === null || val === undefined) return null;
+      const num = Number(val);
+      return isNaN(num) ? val : num;
+    },
+    z.number().int().positive('Additional participant count must be a positive integer').nullable().optional()
+  ),
 });
 
 export const GeographicAreaImportSchema = z.object({

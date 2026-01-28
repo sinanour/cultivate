@@ -293,6 +293,28 @@ export function ActivityDetail() {
             </div>
           )}
           <div>
+            <Box variant="awsui-key-label">Participants</Box>
+            <div>
+              {(() => {
+                const individualCount = assignments.length;
+                const additionalCount = (activity as any).additionalParticipantCount ?? 0;
+                const totalCount = individualCount + additionalCount;
+                
+                if (additionalCount > 0) {
+                  return (
+                    <SpaceBetween direction="vertical" size="xxs">
+                      <div>{individualCount} individually tracked</div>
+                      <div>{additionalCount} additional</div>
+                      <div><strong>{totalCount} total</strong></div>
+                    </SpaceBetween>
+                  );
+                } else {
+                  return <div>{individualCount}</div>;
+                }
+              })()}
+            </div>
+          </div>
+          <div>
             <Box variant="awsui-key-label">Created</Box>
             <div>{formatDate(activity.createdAt)}</div>
           </div>

@@ -216,4 +216,8 @@ describe('ParticipantService - Address History', () => {
             ).rejects.toThrow('Address history record does not belong to this participant');
         });
     });
+
+    afterEach(async () => {
+        await prisma.$disconnect();
+    });
 });

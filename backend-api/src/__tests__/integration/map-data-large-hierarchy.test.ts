@@ -4,8 +4,11 @@ import { GeographicAreaRepository } from '../../repositories/geographic-area.rep
 import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { UserRepository } from '../../repositories/user.repository';
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
+import { TestHelpers } from '../utils';
 
 describe('Map Data Large Geographic Hierarchy', () => {
+    // Increase timeout for entire suite due to large data volumes
+    jest.setTimeout(60000);
     let prisma: PrismaClient;
     let mapDataService: MapDataService;
     let geoAuthService: GeographicAuthorizationService;
@@ -31,6 +34,8 @@ describe('Map Data Large Geographic Hierarchy', () => {
 
         // Clean up any existing test data from previous runs
         // Must delete in correct order to respect foreign key constraints
+        
+        // 1. Delete participant address history
         await prisma.participantAddressHistory.deleteMany({
             where: {
                 participant: {
@@ -38,38 +43,76 @@ describe('Map Data Large Geographic Hierarchy', () => {
                 },
             },
         });
+        
+        // 2. Delete participants
         await prisma.participant.deleteMany({
             where: {
                 email: { contains: 'large-hierarchy-participant' },
             },
         });
-        // Delete venues BEFORE geographic areas (venues reference areas)
-        await prisma.venue.deleteMany({
+        
+        // 3. Delete ALL venues that might be from this test (must be before areas)
+        // First, find all test areas (only match this test's specific patterns)
+        const testAreas = await prisma.geographicArea.findMany({
             where: {
-                name: { contains: 'Test Venue Test Neighbourhood' },
+                OR: [
+                    { name: { startsWith: 'Test Neighbourhood Test' } }, // Only match "Test Neighbourhood Test City..."
+                    { name: { startsWith: 'Test City Test' } }, // Only match "Test City Test Province..."
+                    { name: { startsWith: 'Test Province ' } }, // Match "Test Province 0", "Test Province 1", etc.
+                    { name: 'Test Root Country' }, // Exact match
+                ],
             },
+            select: { id: true },
         });
-        // Now safe to delete geographic areas
-        await prisma.geographicArea.deleteMany({
-            where: {
-                name: { contains: 'Test Neighbourhood' },
-            },
-        });
-        await prisma.geographicArea.deleteMany({
-            where: {
-                name: { contains: 'Test City' },
-            },
-        });
-        await prisma.geographicArea.deleteMany({
-            where: {
-                name: { contains: 'Test Province' },
-            },
-        });
-        await prisma.geographicArea.deleteMany({
-            where: {
-                name: { contains: 'Test Root Country' },
-            },
-        });
+        const testAreaIds = testAreas.map(a => a.id);
+        
+        // Delete any authorization rules referencing these areas
+        if (testAreaIds.length > 0) {
+            await prisma.userGeographicAuthorization.deleteMany({
+                where: {
+                    geographicAreaId: { in: testAreaIds },
+                },
+            });
+        }
+        
+        // Delete activity venue history for venues in these areas
+        if (testAreaIds.length > 0) {
+            // First delete activity venue history referencing these venues
+            await prisma.activityVenueHistory.deleteMany({
+                where: {
+                    venue: {
+                        geographicAreaId: { in: testAreaIds },
+                    },
+                },
+            });
+            
+            // Now safe to delete venues
+            await prisma.venue.deleteMany({
+                where: {
+                    geographicAreaId: { in: testAreaIds },
+                },
+            });
+        }
+        
+        // 4. Delete ALL authorization rules for these areas (again, in case other tests created them)
+        if (testAreaIds.length > 0) {
+            await prisma.userGeographicAuthorization.deleteMany({
+                where: {
+                    geographicAreaId: { in: testAreaIds },
+                },
+            });
+        }
+        
+        // 5. Now safe to delete geographic areas using the IDs we found
+        if (testAreaIds.length > 0) {
+            await prisma.geographicArea.deleteMany({
+                where: {
+                    id: { in: testAreaIds },
+                },
+            });
+        }
+        
+        // 6. Delete test user
         await prisma.user.deleteMany({
             where: {
                 email: 'large-hierarchy-test@example.com',
@@ -77,13 +120,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
         });
 
         // Create test user
-        const user = await prisma.user.create({
-            data: {
-                email: 'large-hierarchy-test@example.com',
-                passwordHash: 'hash',
-                role: 'ADMINISTRATOR',
-            },
-        });
+        const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR');
         userId = user.id;
 
         // Create a large geographic hierarchy to test bind variable limits
@@ -103,7 +140,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
         createdIds.areas.push(rootArea.id);
 
         // Create level 1 areas (10 provinces)
-        const level1Areas = [];
+        const level1Areas: any[] = [];
         for (let i = 0; i < 10; i++) {
             const area = await prisma.geographicArea.create({
                 data: {
@@ -117,7 +154,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
         }
 
         // Create level 2 areas (10 cities per province = 100 cities)
-        const level2Areas = [];
+        const level2Areas: any[] = [];
         for (const province of level1Areas) {
             for (let i = 0; i < 10; i++) {
                 const area = await prisma.geographicArea.create({
@@ -133,7 +170,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
         }
 
         // Create level 3 areas (10 neighbourhoods per city = 1000 neighbourhoods)
-        const level3Areas = [];
+        const level3Areas: any[] = [];
         for (const city of level2Areas) {
             for (let i = 0; i < 10; i++) {
                 const area = await prisma.geographicArea.create({
@@ -174,8 +211,8 @@ describe('Map Data Large Geographic Hierarchy', () => {
             });
             createdIds.participants.push(participant.id);
 
-            // Assign to a venue
-            const venueIndex = i * 300; // Spread across venues
+            // Assign to a venue - ensure index stays within bounds (0-2999)
+            const venueIndex = Math.min(i * 300, createdIds.venues.length - 1);
             await prisma.participantAddressHistory.create({
                 data: {
                     participantId: participant.id,
@@ -184,7 +221,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
                 },
             });
         }
-    });
+    }, 60000); // 60 second timeout for large data creation
 
     afterAll(async () => {
         // Clean up test data in correct order to respect foreign key constraints
@@ -208,13 +245,15 @@ describe('Map Data Large Geographic Hierarchy', () => {
             where: { id: { in: createdIds.areas } },
         });
 
-        // 5. Delete user
-        await prisma.user.deleteMany({
-            where: { id: userId },
-        });
+        // 5. Delete user (if it was created)
+        if (userId) {
+            await TestHelpers.safeDelete(() =>
+                prisma.user.delete({ where: { id: userId } })
+            );
+        }
 
         await prisma.$disconnect();
-    });
+    }, 60000); // 60 second timeout for cleanup
 
     describe('Large Hierarchy Filtering', () => {
         it('should handle filtering by root area with 1000+ descendant areas and 3000+ venues without bind variable errors', async () => {

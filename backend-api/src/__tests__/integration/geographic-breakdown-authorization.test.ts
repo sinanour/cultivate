@@ -4,6 +4,7 @@ import { GeographicAreaRepository } from '../../repositories/geographic-area.rep
 import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { TestHelpers } from '../utils';
 
 describe('Geographic Breakdown Authorization Integration Tests', () => {
     let prisma: PrismaClient;
@@ -17,15 +18,18 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
     let neighbourhood1Id: string;
     let neighbourhood2Id: string;
     let userId: string;
-    let venue1Id: string;
-    let venue2Id: string;
-    let activity1Id: string;
-    let activity2Id: string;
-    let participant1Id: string;
-    let participant2Id: string;
-    let roleId: string;
-    let activityTypeId: string;
-    let categoryId: string;
+
+    // Track created IDs for cleanup
+    const createdIds = {
+        users: [] as string[],
+        activities: [] as string[],
+        participants: [] as string[],
+        venues: [] as string[],
+        areas: [] as string[],
+        roles: [] as string[],
+        activityTypes: [] as string[],
+        categories: [] as string[],
+    };
 
     beforeAll(async () => {
         prisma = new PrismaClient();
@@ -44,76 +48,82 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         );
 
         // Create test data
-        // City with two neighbourhoods
+        // City with two neighbourhoods (use unique names to avoid conflicts)
+        const timestamp = Date.now();
         const city = await prisma.geographicArea.create({
             data: {
-                name: 'Test City',
+                name: `GeoBreakdown Test City ${timestamp}`,
                 areaType: 'CITY',
             },
         });
         cityId = city.id;
+        createdIds.areas.push(city.id);
 
         const neighbourhood1 = await prisma.geographicArea.create({
             data: {
-                name: 'Allowed Neighbourhood',
+                name: `GeoBreakdown Allowed Neighbourhood ${timestamp}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
         });
         neighbourhood1Id = neighbourhood1.id;
+        createdIds.areas.push(neighbourhood1.id);
 
         const neighbourhood2 = await prisma.geographicArea.create({
             data: {
-                name: 'Denied Neighbourhood',
+                name: `GeoBreakdown Denied Neighbourhood ${timestamp}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
         });
         neighbourhood2Id = neighbourhood2.id;
+        createdIds.areas.push(neighbourhood2.id);
 
         // Create venues in each neighbourhood
         const venue1 = await prisma.venue.create({
             data: {
-                name: 'Venue in Allowed Area',
+                name: `GeoBreakdown Venue in Allowed Area ${timestamp}`,
                 address: '123 Allowed St',
                 geographicAreaId: neighbourhood1Id,
             },
         });
-        venue1Id = venue1.id;
+        createdIds.venues.push(venue1.id);
 
         const venue2 = await prisma.venue.create({
             data: {
-                name: 'Venue in Denied Area',
+                name: `GeoBreakdown Venue in Denied Area ${timestamp}`,
                 address: '456 Denied St',
                 geographicAreaId: neighbourhood2Id,
             },
         });
-        venue2Id = venue2.id;
+        createdIds.venues.push(venue2.id);
 
         // Create activity type
+        const categoryName = `Test Category ${Date.now()}-${Math.random().toString(36).substring(7)}`;
         const category = await prisma.activityCategory.create({
-            data: { name: 'Test Category' },
+            data: { name: categoryName },
         });
-        categoryId = category.id;
+        createdIds.categories.push(category.id);
 
+        const typeName = `Test Type ${Date.now()}-${Math.random().toString(36).substring(7)}`;
         const activityType = await prisma.activityType.create({
             data: {
-                name: 'Test Type',
+                name: typeName,
                 activityCategoryId: category.id,
             },
         });
-        activityTypeId = activityType.id;
+        createdIds.activityTypes.push(activityType.id);
 
         // Create activities in each venue
         const activity1 = await prisma.activity.create({
             data: {
-                name: 'Activity in Allowed Area',
+                name: `GeoBreakdown Activity in Allowed Area ${timestamp}`,
                 activityTypeId: activityType.id,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
             },
         });
-        activity1Id = activity1.id;
+        createdIds.activities.push(activity1.id);
 
         await prisma.activityVenueHistory.create({
             data: {
@@ -125,13 +135,13 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         const activity2 = await prisma.activity.create({
             data: {
-                name: 'Activity in Denied Area',
+                name: `GeoBreakdown Activity in Denied Area ${timestamp}`,
                 activityTypeId: activityType.id,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
             },
         });
-        activity2Id = activity2.id;
+        createdIds.activities.push(activity2.id);
 
         await prisma.activityVenueHistory.create({
             data: {
@@ -143,9 +153,9 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         // Create participants
         const participant1 = await prisma.participant.create({
-            data: { name: 'Participant in Allowed Area' },
+            data: { name: `GeoBreakdown Participant in Allowed Area ${timestamp}` },
         });
-        participant1Id = participant1.id;
+        createdIds.participants.push(participant1.id);
 
         await prisma.participantAddressHistory.create({
             data: {
@@ -156,9 +166,9 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         });
 
         const participant2 = await prisma.participant.create({
-            data: { name: 'Participant in Denied Area' },
+            data: { name: `GeoBreakdown Participant in Denied Area ${timestamp}` },
         });
-        participant2Id = participant2.id;
+        createdIds.participants.push(participant2.id);
 
         await prisma.participantAddressHistory.create({
             data: {
@@ -172,7 +182,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         const role = await prisma.role.create({
             data: { name: `Test Role ${Date.now()}` },
         });
-        roleId = role.id;
+        createdIds.roles.push(role.id);
 
         // Create assignments
         await prisma.assignment.create({
@@ -192,14 +202,9 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         });
 
         // Create test user with authorization rules
-        const user = await prisma.user.create({
-            data: {
-                email: 'test@example.com',
-                passwordHash: 'hashed',
-                role: 'EDITOR',
-            },
-        });
+        const user = await TestHelpers.createTestUser(prisma, 'EDITOR');
         userId = user.id;
+        createdIds.users.push(user.id);
 
         // ALLOW access to the city
         await prisma.userGeographicAuthorization.create({
@@ -223,54 +228,34 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
     });
 
     afterAll(async () => {
-        // Clean up test data - ONLY delete records created by this test
-        await prisma.assignment.deleteMany({
-            where: {
-                OR: [
-                    { activityId: activity1Id },
-                    { activityId: activity2Id },
-                ],
-            },
+        // Clean up test data using TestHelpers
+        await TestHelpers.cleanupTestData(prisma, {
+            userIds: createdIds.users,
+            activityIds: createdIds.activities,
+            participantIds: createdIds.participants,
+            venueIds: createdIds.venues,
+            areaIds: createdIds.areas,
         });
-        await prisma.activityVenueHistory.deleteMany({
-            where: {
-                activityId: { in: [activity1Id, activity2Id] },
-            },
-        });
-        await prisma.activity.deleteMany({
-            where: { id: { in: [activity1Id, activity2Id] } },
-        });
-        await prisma.activityType.deleteMany({
-            where: { id: activityTypeId },
-        });
-        await prisma.activityCategory.deleteMany({
-            where: { id: categoryId },
-        });
-        await prisma.participantAddressHistory.deleteMany({
-            where: {
-                participantId: { in: [participant1Id, participant2Id] },
-            },
-        });
-        await prisma.participant.deleteMany({
-            where: { id: { in: [participant1Id, participant2Id] } },
-        });
-        await prisma.role.deleteMany({
-            where: { id: roleId },
-        });
-        await prisma.venue.deleteMany({
-            where: { id: { in: [venue1Id, venue2Id] } },
-        });
-        await prisma.userGeographicAuthorization.deleteMany({
-            where: { userId },
-        });
-        await prisma.user.deleteMany({
-            where: { id: userId },
-        });
-        await prisma.geographicArea.deleteMany({
-            where: { id: { in: [neighbourhood1Id, neighbourhood2Id, cityId] } },
-        });
+
+        // Clean up roles, activity types, and categories separately
+        if (createdIds.roles.length > 0) {
+            await prisma.role.deleteMany({
+                where: { id: { in: createdIds.roles } },
+            });
+        }
+        if (createdIds.activityTypes.length > 0) {
+            await prisma.activityType.deleteMany({
+                where: { id: { in: createdIds.activityTypes } },
+            });
+        }
+        if (createdIds.categories.length > 0) {
+            await prisma.activityCategory.deleteMany({
+                where: { id: { in: createdIds.categories } },
+            });
+        }
+
         await prisma.$disconnect();
-    });
+    }, 30000); // 30 second timeout for cleanup
 
     it('should exclude denied neighbourhoods from geographic breakdown', async () => {
         // Get authorization info for the user
@@ -288,7 +273,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         // Should only include the allowed neighbourhood, not the denied one
         expect(result.data).toHaveLength(1);
         expect(result.data[0].geographicAreaId).toBe(neighbourhood1Id);
-        expect(result.data[0].geographicAreaName).toBe('Allowed Neighbourhood');
+        expect(result.data[0].geographicAreaName).toContain('Allowed Neighbourhood');
         expect(result.data[0].activityCount).toBe(1);
         expect(result.data[0].participantCount).toBe(1);
         expect(result.data[0].participationCount).toBe(1);
@@ -311,7 +296,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         // Should include the city
         expect(result.data).toHaveLength(1);
         expect(result.data[0].geographicAreaId).toBe(cityId);
-        expect(result.data[0].geographicAreaName).toBe('Test City');
+        expect(result.data[0].geographicAreaName).toContain('Test City');
 
         // Metrics should only include data from allowed neighbourhood (not denied neighbourhood)
         expect(result.data[0].activityCount).toBe(1);  // Only activity from allowed neighbourhood
@@ -322,13 +307,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
     it('should work correctly for users without geographic restrictions', async () => {
         // Create unrestricted user
-        const unrestrictedUser = await prisma.user.create({
-            data: {
-                email: 'unrestricted@example.com',
-                passwordHash: 'hashed',
-                role: 'EDITOR',
-            },
-        });
+        const unrestrictedUser = await TestHelpers.createTestUser(prisma, 'EDITOR');
 
         // Get geographic breakdown (should show all neighbourhoods)
         const result = await analyticsService.getGeographicBreakdown(
@@ -347,6 +326,8 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         expect(result.pagination).toBeDefined();
 
         // Clean up
-        await prisma.user.delete({ where: { id: unrestrictedUser.id } });
+        await TestHelpers.safeDelete(() =>
+            prisma.user.delete({ where: { id: unrestrictedUser.id } })
+        );
     });
 });

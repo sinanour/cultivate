@@ -18,6 +18,7 @@ export interface CreateActivityInput {
   startDate: Date;
   endDate?: Date;
   status?: ActivityStatus;
+  additionalParticipantCount?: number | null;
   venueIds?: string[];
   createdBy?: string;
 }
@@ -28,6 +29,7 @@ export interface UpdateActivityInput {
   startDate?: Date;
   endDate?: Date | null;
   status?: ActivityStatus;
+  additionalParticipantCount?: number | null;
   version?: number;
 }
 
@@ -415,6 +417,16 @@ export class ActivityService {
       }
     }
 
+    // Validate additionalParticipantCount if provided
+    if (data.additionalParticipantCount !== undefined && data.additionalParticipantCount !== null) {
+      if (data.additionalParticipantCount <= 0) {
+        throw new Error('Additional participant count must be a positive integer');
+      }
+      if (!Number.isInteger(data.additionalParticipantCount)) {
+        throw new Error('Additional participant count must be an integer');
+      }
+    }
+
     // Validate venues if provided
     if (data.venueIds && data.venueIds.length > 0) {
       for (const venueId of data.venueIds) {
@@ -434,6 +446,7 @@ export class ActivityService {
           startDate: data.startDate,
           endDate: data.endDate,
           status: data.status || ActivityStatus.PLANNED,
+          additionalParticipantCount: data.additionalParticipantCount,
           createdBy: data.createdBy,
         },
         include: {
@@ -486,6 +499,16 @@ export class ActivityService {
       const startDate = data.startDate || existing.startDate;
       if (data.endDate < startDate) {
         throw new Error('End date must be on or after start date');
+      }
+    }
+
+    // Validate additionalParticipantCount if provided
+    if (data.additionalParticipantCount !== undefined && data.additionalParticipantCount !== null) {
+      if (data.additionalParticipantCount <= 0) {
+        throw new Error('Additional participant count must be a positive integer');
+      }
+      if (!Number.isInteger(data.additionalParticipantCount)) {
+        throw new Error('Additional participant count must be an integer');
       }
     }
 
@@ -609,6 +632,7 @@ export class ActivityService {
       'startDate',
       'endDate',
       'status',
+      'additionalParticipantCount',
       'createdAt',
       'updatedAt'
     ];
@@ -624,6 +648,7 @@ export class ActivityService {
       startDate: formatDateForCSV(a!.startDate),
       endDate: formatDateForCSV(a!.endDate),
       status: a!.status,
+      additionalParticipantCount: (a as any).additionalParticipantCount ?? '',
       createdAt: formatDateForCSV(a!.createdAt),
       updatedAt: formatDateForCSV(a!.updatedAt)
     }));

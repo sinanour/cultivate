@@ -68,7 +68,7 @@ ORDER BY rc.assignment_count DESC`;
         const needsCategoryJoin = activityCategoryIds && activityCategoryIds.length > 0;
 
         let cte = `filtered_activities AS (
-    SELECT DISTINCT a.id, a."startDate", a."endDate"
+    SELECT DISTINCT a.id, a."startDate", a."endDate", a."additionalParticipantCount"
     FROM activities a`;
 
         // Add category join if needed
@@ -117,10 +117,7 @@ ORDER BY rc.assignment_count DESC`;
         }
 
         // Date filtering
-        // When date range is specified: filter to activities active during the range
-        // When no date range: filter to activities active on current date
         if (startDate && endDate) {
-            // Date range specified: activity was active during the range
             parameters.push(startDate);
             const startDateIndex = currentIndex++;
             parameters.push(endDate);
@@ -130,7 +127,6 @@ ORDER BY rc.assignment_count DESC`;
       AND (a."endDate" IS NULL OR DATE(a."endDate") >= DATE($${startDateIndex}))
     )`);
         } else {
-            // No date range: filter to activities active on current date
             conditions.push(`(
       DATE(a."startDate") <= CURRENT_DATE
       AND (a."endDate" IS NULL OR DATE(a."endDate") >= CURRENT_DATE)
@@ -149,7 +145,7 @@ ORDER BY rc.assignment_count DESC`;
     }
 
     /**
-     * Builds the role_counts CTE with population filtering
+     * Builds the role_counts CTE with population filtering and additional participant count
      */
     private buildRoleCountsCTE(
         filters: RoleDistributionFilters,
@@ -158,14 +154,13 @@ ORDER BY rc.assignment_count DESC`;
     ): string {
         const { populationIds } = filters;
 
-        let cte = `role_counts AS (
+        let cte = `role_counts_individual AS (
     SELECT 
       asn."roleId",
       COUNT(asn.id) as assignment_count
     FROM filtered_activities fa
     JOIN assignments asn ON fa.id = asn."activityId"`;
 
-        // Add population filter if specified
         if (populationIds && populationIds.length > 0) {
             parameters.push(populationIds);
             cte += `
@@ -175,6 +170,28 @@ ORDER BY rc.assignment_count DESC`;
 
         cte += `
     GROUP BY asn."roleId"
+  ),
+  role_counts_additional AS (
+    SELECT
+      r.id as "roleId",
+      COALESCE(SUM(fa."additionalParticipantCount"), 0)::bigint as assignment_count
+    FROM filtered_activities fa
+    CROSS JOIN roles r
+    WHERE r.name = 'Participant'
+      AND fa."additionalParticipantCount" IS NOT NULL
+      AND fa."additionalParticipantCount" > 0
+    GROUP BY r.id
+  ),
+  role_counts AS (
+    SELECT
+      "roleId",
+      SUM(assignment_count) as assignment_count
+    FROM (
+      SELECT "roleId", assignment_count FROM role_counts_individual
+      UNION ALL
+      SELECT "roleId", assignment_count FROM role_counts_additional
+    ) combined
+    GROUP BY "roleId"
   )`;
 
         return cte;

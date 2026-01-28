@@ -224,19 +224,20 @@ model ParticipantAddressHistory {
 
 // Activity model
 model Activity {
-  id                   String                 @id @default(uuid())
-  name                 String
-  activityTypeId       String
-  startDate            DateTime
-  endDate              DateTime?
-  status               ActivityStatus         @default(PLANNED)
-  createdBy            String?
-  version              Int                    @default(1)
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  activityType         ActivityType           @relation(fields: [activityTypeId], references: [id])
-  assignments          Assignment[]
-  activityVenueHistory ActivityVenueHistory[]
+  id                        String                 @id @default(uuid())
+  name                      String
+  activityTypeId            String
+  startDate                 DateTime
+  endDate                   DateTime?
+  status                    ActivityStatus         @default(PLANNED)
+  additionalParticipantCount Int?
+  createdBy                 String?
+  version                   Int                    @default(1)
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+  activityType              ActivityType           @relation(fields: [activityTypeId], references: [id])
+  assignments               Assignment[]
+  activityVenueHistory      ActivityVenueHistory[]
 
   @@index([activityTypeId])
   @@index([status])

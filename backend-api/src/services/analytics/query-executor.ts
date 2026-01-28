@@ -50,8 +50,9 @@ export class QueryExecutor {
                 }
 
                 // Execute raw query with timeout
+                let timeoutId: NodeJS.Timeout;
                 const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Query timeout')), 30000);
+                    timeoutId = setTimeout(() => reject(new Error('Query timeout')), 30000);
                 });
 
                 const queryPromise = this.prisma.$queryRawUnsafe<RawQueryResult[]>(
@@ -60,6 +61,9 @@ export class QueryExecutor {
                 );
 
                 const results = await Promise.race([queryPromise, timeoutPromise]) as RawQueryResult[];
+
+                // Clear the timeout to prevent it from keeping Jest open
+                clearTimeout(timeoutId!);
 
                 // Convert BigInt values to numbers for JSON serialization
                 const convertedResults = results.map(row => {

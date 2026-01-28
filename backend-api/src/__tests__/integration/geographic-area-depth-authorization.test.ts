@@ -5,6 +5,7 @@ import { GeographicAuthorizationService } from '../../services/geographic-author
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { AuditLogRepository } from '../../repositories/audit-log.repository';
+import { TestHelpers } from '../utils';
 
 describe('Geographic Area Authorization with Depth Parameter', () => {
     let prisma: PrismaClient;
@@ -350,20 +351,14 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
 
         beforeEach(async () => {
             // Create user with no authorization rules (unrestricted)
-            const user = await prisma.user.create({
-                data: {
-                    email: 'unrestricted@example.com',
-                    passwordHash: 'hashed',
-                    role: 'EDITOR',
-                },
-            });
+            const user = await TestHelpers.createTestUser(prisma, 'EDITOR');
             unrestrictedUserId = user.id;
         });
 
         afterEach(async () => {
-            await prisma.user.deleteMany({
-                where: { id: unrestrictedUserId },
-            });
+            await TestHelpers.safeDelete(() =>
+                prisma.user.delete({ where: { id: unrestrictedUserId } })
+            );
         });
 
         it('should return all areas for unrestricted users with depth parameter', async () => {

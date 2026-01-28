@@ -693,6 +693,81 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - DELETE /api/activities/:id/participants/:participantId
     - _Requirements: 5.1, 5.2, 5.3_
 
+- [x] 12A. Implement additional participant count for activities
+  - [x] 12A.1 Create Prisma migration for additionalParticipantCount field
+    - Add additionalParticipantCount Int field to Activity model (optional, nullable)
+    - Validate field accepts null and positive integers only
+    - _Requirements: 5C.1, 5C.2_
+
+  - [x] 12A.2 Update validation schemas
+    - Update ActivityCreateSchema to accept optional additionalParticipantCount (nullable, positive integer if provided)
+    - Update ActivityUpdateSchema to accept optional additionalParticipantCount (nullable, positive integer if provided)
+    - Add validation to reject zero, negative values, and decimal values
+    - Use Zod's .int() and .positive() validators
+    - _Requirements: 5C.3, 5C.4, 5C.20_
+
+  - [x] 12A.3 Update ActivityService to handle additionalParticipantCount
+    - Update createActivity() to accept and store additionalParticipantCount
+    - Update updateActivity() to accept and store additionalParticipantCount
+    - Support clearing field by setting to null (distinguish from omitting field)
+    - Validate positive integer when provided
+    - _Requirements: 5C.5, 5C.6, 5C.18, 5C.19_
+
+  - [x] 12A.4 Update activity responses to include additionalParticipantCount
+    - Include additionalParticipantCount in GET /api/v1/activities/:id responses
+    - Include additionalParticipantCount in GET /api/v1/activities list responses
+    - Return null when field is not set (not 0)
+    - _Requirements: 5C.7, 5C.8_
+
+  - [x] 12A.5 Update participant count calculations
+    - Update getActivityById() to calculate total participant count as: individually assigned count + additionalParticipantCount
+    - Update activity list responses to include total participant count
+    - Handle null additionalParticipantCount (treat as 0 for calculations)
+    - _Requirements: 5C.9, 5C.12_
+
+  - [x] 12A.6 Update AnalyticsService to include additionalParticipantCount
+    - Update engagement metrics calculation to include additionalParticipantCount in participation totals
+    - Do NOT include additionalParticipantCount in unique participant counts
+    - Update role distribution calculation to attribute additional participants to "Participant" role
+    - Update growth metrics calculation to include additionalParticipantCount in participation totals
+    - Do NOT include additionalParticipantCount in unique participant counts for growth metrics
+    - Update activity lifecycle metrics to include activities with additionalParticipantCount
+    - _Requirements: 5C.10, 5C.11, 5C.13, 5C.14, 5C.15_
+
+  - [x] 12A.7 Update CSV export for activities
+    - Add additionalParticipantCount column to activity CSV export
+    - Position column after status column
+    - Export null values as empty string
+    - _Requirements: 5C.16_
+
+  - [x] 12A.8 Update CSV import for activities
+    - Accept additionalParticipantCount column in activity CSV import
+    - Validate positive integer when provided
+    - Accept empty string as null
+    - Apply same validation rules as create endpoint
+    - _Requirements: 5C.17_
+
+  - [ ] 12A.9 Update OpenAPI documentation
+    - Document additionalParticipantCount field in Activity schema
+    - Document validation rules (nullable, positive integer)
+    - Add examples showing field usage
+    - Document how it affects participant count calculations
+    - Document role distribution behavior
+    - _Requirements: 5C.1, 5C.2, 5C.3, 5C.11_
+
+  - [x]* 12A.10 Write property tests for additional participant count
+    - **Property 254: Additional Participant Count Optional Acceptance**
+    - **Property 255: Additional Participant Count Positive Integer Validation**
+    - **Property 256: Additional Participant Count Null Default**
+    - **Property 257: Additional Participant Count in Total Calculation**
+    - **Property 258: Additional Participant Count in Participation Metrics**
+    - **Property 259: Additional Participant Count Excluded from Unique Counts**
+    - **Property 260: Additional Participant Count Role Distribution**
+    - **Property 261: Additional Participant Count Field Clearing**
+    - **Property 262: Additional Participant Count CSV Export**
+    - **Property 263: Additional Participant Count CSV Import**
+    - **Validates: Requirements 5C.1, 5C.2, 5C.3, 5C.4, 5C.5, 5C.6, 5C.7, 5C.8, 5C.9, 5C.10, 5C.11, 5C.12, 5C.13, 5C.14, 5C.15, 5C.16, 5C.17, 5C.18, 5C.19, 5C.20**
+
 - [x] 13. Implement analytics engine
   - [x] 13.1 Create analytics service
     - Implement comprehensive engagement metrics calculation with temporal analysis

@@ -28,4 +28,8 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
   verbose: true,
+  // Allow parallel test execution for better performance
+  // maxWorkers: '50%', // Use 50% of available CPU cores
+  // Default test timeout: 10 seconds (can be overridden per test)
+  testTimeout: 10000,
 };
