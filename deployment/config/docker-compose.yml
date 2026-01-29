@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # Database service with PostgreSQL and peer authentication
+  database:
+    build:
+      context: ../..
+      dockerfile: deployment/dockerfiles/Dockerfile.database
+    container_name: cat_database
+    volumes:
+      # Data volume for PostgreSQL persistence
+      - db_data:/var/lib/postgresql/data
+      # Socket volume for Unix domain socket communication
+      - db_socket:/var/run/postgresql
+    environment:
+      # PostgreSQL user for peer authentication
+      - POSTGRES_USER=${POSTGRES_USER:-apiuser}
+      # Database name
+      - POSTGRES_DB=${POSTGRES_DB:-community_tracker}
+    networks:
+      - backend
+    healthcheck:
+      # Health check to verify database is ready
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-apiuser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Backend API service with Node.js/Express/Prisma
+  backend:
+    build:
+      context: ../..
+      dockerfile: deployment/dockerfiles/Dockerfile.backend
+    container_name: cat_backend
+    depends_on:
+      database:
+        # Wait for database to be healthy before starting backend
+        condition: service_healthy
+    volumes:
+      # Socket volume for database connection via Unix socket
+      - db_socket:/var/run/postgresql:rw
+    environment:
+      # Database connection URL using Unix socket for peer authentication
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-apiuser}@/community_tracker?host=/var/run/postgresql
+      # Node environment
+      - NODE_ENV=${NODE_ENV:-production}
+      # Backend API port
+      - PORT=${BACKEND_PORT:-3000}
+    networks:
+      - backend
+    healthcheck:
+      # Health check to verify backend API is responding
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Web frontend service with Nginx serving static assets
+  frontend:
+    build:
+      context: ../..
+      dockerfile: deployment/dockerfiles/Dockerfile.frontend
+    container_name: cat_frontend
+    depends_on:
+      backend:
+        # Wait for backend to be healthy before starting frontend
+        condition: service_healthy
+    ports:
+      # Expose HTTP and HTTPS ports to the host
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      # Optional certificate mount for HTTPS (only if CERT_PATH is set)
+      # Uncomment the line below and set CERT_PATH in .env to enable HTTPS
+      # - ${CERT_PATH}:/etc/nginx/certs:ro
+    environment:
+      # Backend API URL for frontend to connect to
+      - BACKEND_URL=http://backend:${BACKEND_PORT:-3000}
+    networks:
+      - backend
+    healthcheck:
+      # Health check to verify frontend is serving content
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+# Private network for inter-container communication
+networks:
+  backend:
+    driver: bridge
+    # Internal network - not exposed to external networks
+    internal: false
+
+# Persistent volumes for data and socket sharing
+volumes:
+  # Data volume for PostgreSQL persistence
+  # This volume persists database data across container restarts
+  db_data:
+    driver: local
+  
+  # Socket volume for Unix domain socket sharing
+  # This volume enables peer authentication between backend and database
+  db_socket:
+    driver: local

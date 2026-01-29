@@ -1,0 +1,32 @@
+# Multi-stage build for Web Frontend
+# Stage 1: Build the React/Vite application
+FROM node:lts-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY web-frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy application source code
+COPY web-frontend/ ./
+
+# Build the production-optimized static assets
+RUN npm run build
+
+# Stage 2: Serve static assets with Nginx
+FROM nginx:alpine
+
+# Copy built static assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom Nginx configuration
+COPY deployment/dockerfiles/nginx.conf /etc/nginx/nginx.conf
+
+# Expose HTTP and HTTPS ports
+EXPOSE 80 443
+
+# Start Nginx in foreground mode
+CMD ["nginx", "-g", "daemon off;"]

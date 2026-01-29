@@ -1,0 +1,44 @@
+# Backend API Dockerfile with peer authentication setup
+# This Dockerfile creates a container that runs the Node.js/Express/Prisma backend API
+# with a dedicated apiuser (UID/GID 1001) for PostgreSQL peer authentication
+
+FROM node:lts-alpine
+
+# Create apiuser with specific UID/GID (1001) for peer authentication
+# This UID/GID must match the database container's apiuser for peer auth to work
+RUN addgroup -g 1001 apiuser && \
+    adduser -D -u 1001 -G apiuser apiuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY backend-api/package*.json ./
+
+# Install all dependencies (including devDependencies for building)
+RUN npm ci
+
+# Copy application source code
+COPY backend-api/ ./
+
+# Build the TypeScript application
+RUN npm run build
+
+# Generate Prisma client
+# This must be done after copying the schema to ensure the client matches the schema
+RUN npx prisma generate
+
+# Remove devDependencies to reduce image size
+RUN npm prune --production
+
+# Change ownership of application files to apiuser
+RUN chown -R apiuser:apiuser /app
+
+# Switch to apiuser for running the application (security best practice)
+USER apiuser
+
+# Expose the backend API port
+EXPOSE 3000
+
+# Start the application
+CMD ["node", "dist/index.js"]
