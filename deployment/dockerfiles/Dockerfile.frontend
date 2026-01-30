@@ -13,6 +13,10 @@ RUN npm ci
 # Copy application source code
 COPY web-frontend/ ./
 
+# Accept build argument for API base URL
+ARG BACKEND_URL=/api/v1
+ENV BACKEND_URL=$BACKEND_URL
+
 # Build the production-optimized static assets
 RUN npm run build
 

@@ -478,11 +478,16 @@ export async function buildAllImages(
     onProgress('Building frontend image...');
   }
 
+  // For production, the API is accessed via the same host (reverse proxy or same domain)
+  // Use relative path /api or the backend service URL
   const frontendImage = await builder.buildImage({
     dockerfile: path.join(dockerfilesPath, 'Dockerfile.frontend'),
     context: contextPath,
     imageName: 'cat_frontend',
     tag: version,
+    buildArgs: {
+      BACKEND_URL: process.env.BACKEND_URL || '/api/v1'
+    },
     verbose: true
   }, onProgress);
 

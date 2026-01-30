@@ -79,7 +79,7 @@ services:
       # - ${CERT_PATH}:/etc/nginx/certs:ro
     environment:
       # Backend API URL for frontend to connect to
-      - BACKEND_URL=http://backend:${BACKEND_PORT:-3000}
+      - BACKEND_URL=${BACKEND_URL}
     networks:
       - backend
     healthcheck:
@@ -101,11 +101,4 @@ networks:
 # Persistent volumes for data and socket sharing
 volumes:
   # Data volume for PostgreSQL persistence
-  # This volume persists database data across container restarts
-  db_data:
-    driver: local
-  
-  # Socket volume for Unix domain socket sharing
-  # This volume enables peer authentication between backend and database
-  db_socket:
-    driver: local
+  # This volume persists database d

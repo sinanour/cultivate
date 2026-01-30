@@ -137,10 +137,7 @@ HTTPS_PORT=443
 ENABLE_HTTPS=false
 
 # Backend API endpoint
-BACKEND_URL=http://backend:3000
-
-# Cloud: Load balancer or service mesh URLs
-BACKEND_URL=https://api.example.com
+BACKEND_URL=/api/v1
 ```
 
 #### 3. Application Configuration
@@ -685,7 +682,7 @@ DATABASE_URL=postgresql://apiuser@db.example.com:5432/community_tracker?sslmode=
 const backendUrl = 'http://backend:3000';
 
 // Cloud: Service mesh or load balancer
-const backendUrl = process.env.BACKEND_URL || 'http://backend:3000';
+const backendUrl = process.env.BACKEND_URL || '/api/v1';
 // Set BACKEND_URL to load balancer DNS or service mesh endpoint
 ```
 

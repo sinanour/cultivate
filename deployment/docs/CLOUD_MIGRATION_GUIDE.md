@@ -301,7 +301,7 @@ aws ecs create-cluster --cluster-name cat-cluster --capacity-providers FARGATE F
       "environment": [
         {
           "name": "BACKEND_URL",
-          "value": "http://cat-backend.local:3000"
+          "value": "/api/v1"
         }
       ],
       "logConfiguration": {
@@ -1130,7 +1130,7 @@ az container create \
   --vnet cat-vnet \
   --subnet cat-subnet \
   --environment-variables \
-    BACKEND_URL=http://<backend-private-ip>:3000 \
+    BACKEND_URL=/api/v1 \
   --restart-policy Always
 
 # Get frontend private IP

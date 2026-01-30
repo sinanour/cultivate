@@ -433,6 +433,12 @@ services:
       - DATABASE_URL=postgresql://apiuser@localhost/community_tracker?host=/var/run/postgresql
       - NODE_ENV=production
       - PORT=3000
+      - CORS_ORIGIN=\${CORS_ORIGIN:-*}
+      - SRP_ROOT_ADMIN_EMAIL=\${SRP_ROOT_ADMIN_EMAIL:-admin@example.com}
+      - SRP_ROOT_ADMIN_PASSWORD=\${SRP_ROOT_ADMIN_PASSWORD:-changeme}
+      - JWT_SECRET=\${JWT_SECRET:-change-this-in-production}
+      - JWT_ACCESS_TOKEN_EXPIRY=\${JWT_ACCESS_TOKEN_EXPIRY:-15m}
+      - JWT_REFRESH_TOKEN_EXPIRY=\${JWT_REFRESH_TOKEN_EXPIRY:-7d}
     networks:
       - backend
     healthcheck:
@@ -451,7 +457,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - BACKEND_URL=http://backend:3000
+      - BACKEND_URL=/api/v1
     networks:
       - backend
     healthcheck:

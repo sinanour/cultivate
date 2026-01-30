@@ -44,6 +44,9 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'echo "Running database migrations as $(whoami)..."' >> /app/start.sh && \
     echo 'npx prisma migrate deploy || { echo "Migration failed"; exit 1; }' >> /app/start.sh && \
     echo 'echo "Migrations completed successfully"' >> /app/start.sh && \
+    echo 'echo "Seeding database..."' >> /app/start.sh && \
+    echo 'npx prisma db seed || echo "Seeding skipped or failed (non-fatal)"' >> /app/start.sh && \
+    echo 'echo "Database setup completed"' >> /app/start.sh && \
     echo 'echo "Starting application..."' >> /app/start.sh && \
     echo 'exec node dist/index.js' >> /app/start.sh && \
     chmod +x /app/start.sh

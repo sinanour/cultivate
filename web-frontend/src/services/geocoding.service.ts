@@ -23,7 +23,7 @@ export interface GeocodingResult {
 }
 
 export class GeocodingService {
-    private static readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+    private static readonly API_BASE_URL = import.meta.env.BACKEND_URL || '/api/v1';
     private static cache = new Map<string, GeocodingResult[]>();
 
     /**

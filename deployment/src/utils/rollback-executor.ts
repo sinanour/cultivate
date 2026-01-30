@@ -331,7 +331,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - BACKEND_URL=http://backend:3000
+      - BACKEND_URL=/api/v1
     networks:
       - backend
     healthcheck:

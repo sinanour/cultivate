@@ -222,7 +222,7 @@ services:
     volumes:
       - ${CERT_PATH}:/etc/nginx/certs:ro
     environment:
-      - BACKEND_URL=http://backend:3000
+      - BACKEND_URL=/api/v1
     networks:
       - backend
     healthcheck:
