@@ -134,7 +134,6 @@ export const EntitySelectorWithActions: React.FC<EntitySelectorWithActionsProps>
         </div>
         <Button
           iconName="refresh"
-          variant="icon"
           onClick={onRefresh}
           loading={isRefreshing}
           ariaLabel={`Refresh ${entityTypeName} list`}
@@ -142,7 +141,6 @@ export const EntitySelectorWithActions: React.FC<EntitySelectorWithActionsProps>
         />
         <Button
           iconName="add-plus"
-          variant="icon"
           onClick={handleAddClick}
           disabled={!canAdd}
           ariaLabel={`Add new ${entityTypeName}`}
