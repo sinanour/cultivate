@@ -78,8 +78,8 @@ services:
       # Uncomment the line below and set CERT_PATH in .env to enable HTTPS
       # - ${CERT_PATH}:/etc/nginx/certs:ro
     environment:
-      # Backend API URL for frontend to connect to
-      - BACKEND_URL=${BACKEND_URL}
+      # Backend API URL for frontend to connect to (Vite requires VITE_ prefix)
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL}
     networks:
       - backend
     healthcheck:

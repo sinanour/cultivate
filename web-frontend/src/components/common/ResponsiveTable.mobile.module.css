@@ -1,0 +1,88 @@
+/* Mobile card-based table layout */
+
+@media (max-width: 767px) {
+  .mobileCardList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0;
+  }
+  
+  .mobileCard {
+    background: white;
+    border: 1px solid #e9ebed;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 1px 0 rgba(0, 28, 36, 0.1);
+    cursor: pointer;
+    min-height: 44px;
+    transition: background-color 0.15s ease;
+  }
+  
+  .mobileCard:hover {
+    background: #fafafa;
+  }
+  
+  .mobileCard:active {
+    background: #f0f0f0;
+  }
+  
+  .mobileCard:focus {
+    outline: 2px solid #0972d3;
+    outline-offset: 2px;
+  }
+  
+  .cardHeader {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    color: #0972d3;
+  }
+  
+  .cardDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #5f6b7a;
+  }
+  
+  .cardDetail {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .cardDetailLabel {
+    font-weight: 500;
+    color: #414d5c;
+    min-width: 80px;
+  }
+  
+  .cardDetailValue {
+    flex: 1;
+    word-break: break-word;
+  }
+  
+  .cardActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e9ebed;
+  }
+  
+  .cardAction {
+    flex: 1;
+    min-height: 44px;
+  }
+  
+  .cardBadges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+}

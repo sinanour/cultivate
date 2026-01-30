@@ -15,6 +15,9 @@ import type {
   MultiselectProps,
   SegmentedControlProps,
 } from '@cloudscape-design/components';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { BREAKPOINTS } from '../../utils/responsive';
+import styles from './FilterGroupingPanel.mobile.module.css';
 
 export interface FilterGroupingState {
   dateRange: { 
@@ -84,6 +87,7 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
   onRegisterTrigger,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useMediaQuery(BREAKPOINTS.mobile);
   
   // State for lazy loading
   const [filteringOptions, setFilteringOptions] = useState<PropertyFilterProps.FilteringOption[]>([]);
@@ -479,17 +483,18 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
   );
 
   return (
-    <SpaceBetween size="m" direction="vertical">
-      {isResolvingInitialFilters && (
-        <Alert type="info">
-          Loading filters...
-        </Alert>
-      )}
-      
-      {/* First Row: First filtering component with action buttons beside it */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-        {/* First filtering component (DateRangePicker if included, otherwise PropertyFilter) */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+    <div className={isMobile ? styles.mobileLayout : styles.desktopLayout}>
+      <SpaceBetween size="m" direction="vertical">
+        {isResolvingInitialFilters && (
+          <Alert type="info">
+            Loading filters...
+          </Alert>
+        )}
+        
+        {/* First Row: First filtering component with action buttons beside it */}
+        <div className={styles.firstRow}>
+          {/* First filtering component (DateRangePicker if included, otherwise PropertyFilter) */}
+          <div className={styles.filterComponent}>
           {includeDateRange ? (
             <DateRangePicker
               value={dateRange}
@@ -597,21 +602,23 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
         </div>
 
         {/* Action buttons beside the first filtering component */}
-        <SpaceBetween direction="horizontal" size="xs">
-          <Button onClick={handleClearAll} disabled={isLoading}>
-            Clear All
-          </Button>
-          {!hideUpdateButton && (
-            <Button
-              variant="primary"
-              onClick={handleUpdate}
-              disabled={!isDirty || isLoading}
-              loading={isLoading}
-            >
-              Update
+        <div className={styles.actionButtons}>
+          <SpaceBetween direction={isMobile ? 'vertical' : 'horizontal'} size="xs">
+            <Button onClick={handleClearAll} disabled={isLoading}>
+              Clear All
             </Button>
-          )}
-        </SpaceBetween>
+            {!hideUpdateButton && (
+              <Button
+                variant="primary"
+                onClick={handleUpdate}
+                disabled={!isDirty || isLoading}
+                loading={isLoading}
+              >
+                Update
+              </Button>
+            )}
+          </SpaceBetween>
+        </div>
       </div>
 
       {/* Second Row: PropertyFilter (only if DateRangePicker is on first row) */}
@@ -697,6 +704,7 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
           )}
         </div>
       )}
-    </SpaceBetween>
+      </SpaceBetween>
+    </div>
   );
 };

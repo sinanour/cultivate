@@ -10,7 +10,6 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
 import Modal from '@cloudscape-design/components/modal';
 import Box from '@cloudscape-design/components/box';
-import Grid from '@cloudscape-design/components/grid';
 import Container from '@cloudscape-design/components/container';
 import type { Venue, GeocodingResult } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
@@ -23,6 +22,7 @@ import { GeographicAreaSelector } from '../common/GeographicAreaSelector';
 import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { useAuth } from '../../hooks/useAuth';
 import { useGeographicAreaOptions } from '../../hooks/useGeographicAreaOptions';
+import styles from './VenueForm.mobile.module.css';
 
 interface VenueFormProps {
   venue: Venue | null;
@@ -466,88 +466,89 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
               </Alert>
             )}
             
-            <Grid gridDefinition={[{ colspan: 6 }, { colspan: 6 }]}>
-              {/* Left column: Form fields */}
-              <SpaceBetween size="l">
-                <FormField label="Name" errorText={nameError} constraintText="Required">
-                  <Input
-                    value={name}
-                    onChange={({ detail }) => {
-                      setName(detail.value);
-                      if (nameError) validateName(detail.value);
-                    }}
-                    onBlur={() => validateName(name)}
-                    placeholder="Enter venue name"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-                <FormField label="Address" errorText={addressError} constraintText="Required">
-                  <Input
-                    value={address}
-                    onChange={({ detail }) => {
-                      setAddress(detail.value);
-                      if (addressError) validateAddress(detail.value);
-                    }}
-                    onBlur={() => validateAddress(address)}
-                    placeholder="Enter venue address"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-                <FormField label="Geographic Area" errorText={geographicAreaError} constraintText="Required">
-                  <EntitySelectorWithActions
-                    onRefresh={handleRefreshAreas}
-                    addEntityUrl="/geographic-areas/new"
-                    canAdd={canAddGeographicArea}
-                    isRefreshing={isRefreshingAreas}
-                    entityTypeName="geographic area"
-                  >
-                    <GeographicAreaSelector
-                      value={geographicAreaId}
-                      onChange={(value) => {
-                        setGeographicAreaId(value || '');
-                        if (geographicAreaError) validateGeographicArea(value || '');
+            <div className={styles.venueFormLayout}>
+              {/* Form fields */}
+              <div className={styles.venueFormFields}>
+                <SpaceBetween size="l">
+                  <FormField label="Name" errorText={nameError} constraintText="Required">
+                    <Input
+                      value={name}
+                      onChange={({ detail }) => {
+                        setName(detail.value);
+                        if (nameError) validateName(detail.value);
                       }}
-                      options={geographicAreas}
-                      loading={isLoadingAreas}
+                      onBlur={() => validateName(name)}
+                      placeholder="Enter venue name"
                       disabled={isSubmitting}
-                      error={geographicAreaError}
-                      placeholder="Select a geographic area"
-                      onLoadItems={handleGeographicAreaSearch}
-                      filteringType="manual"
                     />
-                  </EntitySelectorWithActions>
-                </FormField>
-                <FormField 
-                  label="Coordinates" 
-                  description="Optional - can be geocoded from address or adjusted on map"
-                  info={!isOnline ? 'Geocoding requires internet connection' : undefined}
-                >
-                  <SpaceBetween direction="vertical" size="xs">
-                    <SpaceBetween direction="horizontal" size="s">
-                      <Input
-                        value={latitude}
-                        onChange={({ detail }) => {
-                          setLatitude(detail.value);
-                          if (latitudeError) validateLatitude(detail.value);
+                  </FormField>
+                  <FormField label="Address" errorText={addressError} constraintText="Required">
+                    <Input
+                      value={address}
+                      onChange={({ detail }) => {
+                        setAddress(detail.value);
+                        if (addressError) validateAddress(detail.value);
+                      }}
+                      onBlur={() => validateAddress(address)}
+                      placeholder="Enter venue address"
+                      disabled={isSubmitting}
+                    />
+                  </FormField>
+                  <FormField label="Geographic Area" errorText={geographicAreaError} constraintText="Required">
+                    <EntitySelectorWithActions
+                      onRefresh={handleRefreshAreas}
+                      addEntityUrl="/geographic-areas/new"
+                      canAdd={canAddGeographicArea}
+                      isRefreshing={isRefreshingAreas}
+                      entityTypeName="geographic area"
+                    >
+                      <GeographicAreaSelector
+                        value={geographicAreaId}
+                        onChange={(value) => {
+                          setGeographicAreaId(value || '');
+                          if (geographicAreaError) validateGeographicArea(value || '');
                         }}
-                        onBlur={() => validateLatitude(latitude)}
-                        placeholder="Latitude"
+                        options={geographicAreas}
+                        loading={isLoadingAreas}
                         disabled={isSubmitting}
-                        type="number"
-                        inputMode="decimal"
+                        error={geographicAreaError}
+                        placeholder="Select a geographic area"
+                        onLoadItems={handleGeographicAreaSearch}
+                        filteringType="manual"
                       />
-                      <Input
-                        value={longitude}
-                        onChange={({ detail }) => {
-                          setLongitude(detail.value);
-                          if (longitudeError) validateLongitude(detail.value);
-                        }}
-                        onBlur={() => validateLongitude(longitude)}
-                        placeholder="Longitude"
-                        disabled={isSubmitting}
-                        type="number"
-                        inputMode="decimal"
-                      />
+                    </EntitySelectorWithActions>
+                  </FormField>
+                  <FormField 
+                    label="Coordinates" 
+                    description="Optional - can be geocoded from address or adjusted on map"
+                    info={!isOnline ? 'Geocoding requires internet connection' : undefined}
+                  >
+                    <SpaceBetween direction="vertical" size="xs">
+                      <SpaceBetween direction="horizontal" size="s">
+                        <Input
+                          value={latitude}
+                          onChange={({ detail }) => {
+                            setLatitude(detail.value);
+                            if (latitudeError) validateLatitude(detail.value);
+                          }}
+                          onBlur={() => validateLatitude(latitude)}
+                          placeholder="Latitude"
+                          disabled={isSubmitting}
+                          type="number"
+                          inputMode="decimal"
+                        />
+                        <Input
+                          value={longitude}
+                          onChange={({ detail }) => {
+                            setLongitude(detail.value);
+                            if (longitudeError) validateLongitude(detail.value);
+                          }}
+                          onBlur={() => validateLongitude(longitude)}
+                          placeholder="Longitude"
+                          disabled={isSubmitting}
+                          type="number"
+                          inputMode="decimal"
+                        />
                       <Button
                         onClick={handleGeocode}
                         loading={isGeocoding}
@@ -570,22 +571,25 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
                     disabled={isSubmitting}
                   />
                 </FormField>
-              </SpaceBetween>
+                </SpaceBetween>
+              </div>
 
-              {/* Right column: Map view */}
-              <Container>
-                <VenueFormMapView
-                  latitude={mapLatitude}
-                  longitude={mapLongitude}
-                  onCoordinatesChange={handleMapCoordinatesChange}
-                />
-                <Box margin={{ top: 's' }} variant="small" color="text-body-secondary">
-                  {mapLatitude !== null && mapLongitude !== null
-                    ? 'Drag the marker or right-click to adjust the location'
-                    : 'Enter coordinates, geocode the address, or use "Drop Pin" to set the location on the map'}
-                </Box>
-              </Container>
-            </Grid>
+              {/* Map view - positioned right on desktop, below on mobile */}
+              <div className={styles.venueFormMap}>
+                <Container>
+                  <VenueFormMapView
+                    latitude={mapLatitude}
+                    longitude={mapLongitude}
+                    onCoordinatesChange={handleMapCoordinatesChange}
+                  />
+                  <Box margin={{ top: 's' }} variant="small" color="text-body-secondary">
+                    {mapLatitude !== null && mapLongitude !== null
+                      ? 'Drag the marker or right-click to adjust the location'
+                      : 'Enter coordinates, geocode the address, or use "Drop Pin" to set the location on the map'}
+                  </Box>
+                </Container>
+              </div>
+            </div>
           </SpaceBetween>
         </Form>
       </form>

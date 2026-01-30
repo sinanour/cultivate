@@ -486,7 +486,7 @@ export async function buildAllImages(
     imageName: 'cat_frontend',
     tag: version,
     buildArgs: {
-      BACKEND_URL: process.env.BACKEND_URL || '/api/v1'
+      VITE_BACKEND_URL: process.env.VITE_BACKEND_URL || '/api/v1'
     },
     verbose: true
   }, onProgress);

@@ -2,7 +2,7 @@ import { AuthService } from '../auth/auth.service';
 import type { APIError } from '../../types';
 import { geographicFilterEvents } from '../../utils/geographic-filter-events';
 
-const API_BASE_URL = import.meta.env.BACKEND_URL || '/api/v1';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api/v1';
 
 export class ApiClient {
     static getBaseURL(): string {

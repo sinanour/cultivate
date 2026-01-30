@@ -38,6 +38,21 @@ class LocalStorageMock {
 beforeAll(() => {
   global.localStorage = new LocalStorageMock() as Storage;
 
+  // Mock window.matchMedia for responsive design tests
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(), // Deprecated
+      removeListener: vi.fn(), // Deprecated
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+
   // Suppress React error boundary console errors in tests
   // These are expected when testing error conditions
   const originalError = console.error;

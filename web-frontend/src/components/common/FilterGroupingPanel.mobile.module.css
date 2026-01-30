@@ -1,0 +1,82 @@
+/* Mobile FilterGroupingPanel layout styles */
+
+/* Desktop layout (default) */
+.desktopLayout .firstRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.desktopLayout .filterComponent {
+  flex: 1;
+  min-width: 0;
+}
+
+.desktopLayout .actionButtons {
+  flex-shrink: 0;
+}
+
+/* Mobile layout */
+@media (max-width: 767px) {
+  .mobileLayout {
+    padding: 16px;
+    width: 100%;
+  }
+  
+  /* First row stacks vertically on mobile */
+  .mobileLayout .firstRow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  /* Filter component full-width */
+  .mobileLayout .filterComponent {
+    width: 100%;
+  }
+  
+  /* Action buttons: natural width, right-justified */
+  .mobileLayout .actionButtons {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
+  
+  /* Buttons have natural width, not full-width */
+  .mobileLayout .actionButtons button {
+    width: auto;
+    min-height: 44px;
+    min-width: 100px; /* Reasonable minimum for touch */
+  }
+  
+  /* SpaceBetween inside action buttons */
+  .mobileLayout .actionButtons :global(.awsui-space-between) {
+    width: auto;
+  }
+  
+  /* DateRangePicker full-width */
+  .mobileLayout :global(.awsui-date-range-picker) {
+    width: 100%;
+  }
+  
+  /* PropertyFilter full-width */
+  .mobileLayout :global(.awsui-property-filter) {
+    width: 100%;
+  }
+  
+  /* Grouping controls full-width */
+  .mobileLayout :global(.awsui-multiselect),
+  .mobileLayout :global(.awsui-segmented-control) {
+    width: 100%;
+  }
+  
+  /* Segmented control options stack if needed */
+  .mobileLayout :global(.awsui-segmented-control) {
+    flex-wrap: wrap;
+  }
+  
+  /* Multiselect dropdown full-width */
+  .mobileLayout :global(.awsui-select-trigger) {
+    width: 100%;
+  }
+}

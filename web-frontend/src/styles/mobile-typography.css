@@ -1,0 +1,102 @@
+/* Mobile typography styles */
+
+@media (max-width: 767px) {
+  /* Base font size for readability on mobile */
+  body {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  
+  /* Headings adjusted for mobile */
+  h1 {
+    font-size: 1.75rem; /* 28px */
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  
+  h2 {
+    font-size: 1.5rem; /* 24px */
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  
+  h3 {
+    font-size: 1.25rem; /* 20px */
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  
+  h4 {
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+  
+  h5, h6 {
+    font-size: 1rem; /* 16px */
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  
+  /* Paragraph text */
+  p {
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  
+  /* Small text */
+  small, .small-text {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  /* Prevent text overflow */
+  * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Links with adequate touch targets */
+  a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  
+  /* Button text sizing */
+  button {
+    font-size: 16px;
+  }
+  
+  /* Form labels */
+  label {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    display: block;
+  }
+  
+  /* Input text */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Table text */
+  table {
+    font-size: 14px;
+  }
+  
+  /* CloudScape component overrides for mobile */
+  .awsui-button {
+    font-size: 16px !important;
+  }
+  
+  .awsui-input input {
+    font-size: 16px !important;
+  }
+  
+  .awsui-select select {
+    font-size: 16px !important;
+  }
+}

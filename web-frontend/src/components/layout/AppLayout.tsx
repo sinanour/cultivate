@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AppLayoutComponent from '@cloudscape-design/components/app-layout';
 import SideNavigation, { type SideNavigationProps } from '@cloudscape-design/components/side-navigation';
@@ -8,7 +8,10 @@ import Icon from '@cloudscape-design/components/icon';
 import { useAuth } from '../../hooks/useAuth';
 import { useConnectionStatus } from '../../hooks/useConnectionStatus';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { BREAKPOINTS } from '../../utils/responsive';
 import { GeographicAreaFilterSelector } from './GeographicAreaFilterSelector';
+import styles from './AppLayout.mobile.module.css';
 
 export function AppLayout() {
   const location = useLocation();
@@ -16,7 +19,17 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const { isOnline } = useConnectionStatus();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
-  const [navigationOpen, setNavigationOpen] = useState(true);
+  const isMobile = useMediaQuery(BREAKPOINTS.mobile);
+  const [navigationOpen, setNavigationOpen] = useState(!isMobile);
+
+  // Close navigation by default on mobile when viewport changes
+  useEffect(() => {
+    if (isMobile) {
+      setNavigationOpen(false);
+    } else {
+      setNavigationOpen(true);
+    }
+  }, [isMobile]);
 
   // Helper function to create menu item with icon on the left
   // Accepts either an icon name or a URL (URLs should start with '/' or 'http')
@@ -94,12 +107,15 @@ export function AppLayout() {
 
   return (
     <>
-      <div style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
-        backgroundColor: '#ffffff',
-      }}>
+      <div 
+        className={styles.headerContainer}
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000,
+          backgroundColor: '#ffffff',
+        }}
+      >
         <TopNavigation
           identity={{
             href: '/',
@@ -148,13 +164,16 @@ export function AppLayout() {
             },
           ]}
         />
-        <div style={{ 
-          padding: '8px 20px', 
-          borderBottom: '2px solid #e9ebed', 
-          backgroundColor: selectedGeographicAreaId ? '#f1fdf6' : '#ffffff',
-          boxShadow: '0 1px 1px 0 rgba(0,28,36,0.3)',
-          transition: 'background-color 0.2s ease',
-        }}>
+        <div 
+          className={styles.filterContainer}
+          style={{ 
+            padding: isMobile ? '12px 16px' : '8px 20px',
+            borderBottom: '2px solid #e9ebed', 
+            backgroundColor: selectedGeographicAreaId ? '#f1fdf6' : '#ffffff',
+            boxShadow: '0 1px 1px 0 rgba(0,28,36,0.3)',
+            transition: 'background-color 0.2s ease',
+          }}
+        >
           <GeographicAreaFilterSelector />
         </div>
       </div>
@@ -166,10 +185,15 @@ export function AppLayout() {
             onFollow={(event) => {
               event.preventDefault();
               navigate(event.detail.href);
+              // Auto-close navigation on mobile after selection
+              if (isMobile) {
+                setNavigationOpen(false);
+              }
             }}
           />
         }
         navigationOpen={navigationOpen}
+        navigationWidth={isMobile ? 280 : 320}
         onNavigationChange={({ detail }: { detail: { open: boolean } }) => setNavigationOpen(detail.open)}
         content={
           <Suspense fallback={<Spinner size="large" />}>

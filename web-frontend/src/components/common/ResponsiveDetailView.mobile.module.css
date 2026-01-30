@@ -1,0 +1,79 @@
+/* Mobile detail view layout styles */
+
+/* Desktop detail view (default) - preserve existing layouts */
+.desktopDetail {
+  /* No specific styles - allows existing component styles to apply */
+}
+
+/* Mobile detail view layout */
+@media (max-width: 767px) {
+  .mobileDetail {
+    padding: 16px;
+    width: 100%;
+  }
+  
+  /* Detail header */
+  .mobileDetail :global(.detail-header) {
+    margin-bottom: 16px;
+  }
+  
+  /* Action buttons stack vertically */
+  .mobileDetail :global(.detail-actions) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .mobileDetail :global(.detail-actions) button {
+    width: 100%;
+    min-height: 44px;
+  }
+  
+  /* Detail sections stack vertically */
+  .mobileDetail :global(.detail-section) {
+    margin-bottom: 24px;
+    width: 100%;
+  }
+  
+  /* Related entity lists */
+  .mobileDetail :global(.related-list) {
+    width: 100%;
+  }
+  
+  .mobileDetail :global(.related-item) {
+    padding: 12px;
+    border-bottom: 1px solid #e9ebed;
+    min-height: 44px;
+  }
+  
+  .mobileDetail :global(.related-item):last-child {
+    border-bottom: none;
+  }
+  
+  /* Info cards stack vertically */
+  .mobileDetail :global(.info-cards) {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .mobileDetail :global(.info-card) {
+    width: 100%;
+  }
+  
+  /* Tables with horizontal scroll if needed */
+  .mobileDetail :global(.detail-table) {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Ensure adequate spacing for touch */
+  .mobileDetail :global(.detail-link) {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 0;
+  }
+}

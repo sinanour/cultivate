@@ -1,0 +1,109 @@
+/* Mobile form layout styles */
+
+/* Desktop form (default) - preserve existing layouts */
+.desktopForm {
+  /* No specific styles - allows existing component styles to apply */
+}
+
+/* Mobile form layout */
+@media (max-width: 767px) {
+  .mobileForm {
+    padding: 16px;
+    width: 100%;
+  }
+  
+  /* All form fields full-width on mobile */
+  .mobileForm :global(.awsui-form-field),
+  .mobileForm :global([class*="form-field"]) {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  /* All inputs full-width on mobile */
+  .mobileForm :global(.awsui-input),
+  .mobileForm :global(.awsui-select),
+  .mobileForm :global(.awsui-textarea),
+  .mobileForm :global(.awsui-date-picker),
+  .mobileForm :global([class*="input"]),
+  .mobileForm :global([class*="select"]) {
+    width: 100% !important;
+  }
+  
+  /* Form sections stack vertically */
+  .mobileForm :global(.awsui-form-section),
+  .mobileForm :global([class*="form-section"]) {
+    margin-bottom: 24px;
+  }
+  
+  /* Form actions sticky at bottom */
+  .mobileForm :global(.form-actions),
+  .mobileForm :global([class*="form-actions"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 16px;
+    border-top: 1px solid #e9ebed;
+    margin: 0 -16px;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* All form buttons full-width on mobile */
+  .mobileForm :global(.form-actions) button,
+  .mobileForm :global([class*="form-actions"]) button {
+    width: 100%;
+    min-height: 44px;
+  }
+  
+  /* Venue form specific: map below fields */
+  .mobileForm :global(.venue-form-layout) {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .mobileForm :global(.venue-form-fields) {
+    width: 100%;
+    order: 1;
+  }
+  
+  .mobileForm :global(.venue-form-map) {
+    width: 100%;
+    height: 300px;
+    order: 2;
+    margin-top: 16px;
+  }
+  
+  /* Embedded tables (address history, venue history, assignments) */
+  .mobileForm :global(.embedded-table) {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Grid layouts become single column on mobile */
+  .mobileForm :global(.awsui-grid),
+  .mobileForm :global([class*="grid"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+/* Desktop/Tablet form layout */
+@media (min-width: 768px) {
+  .desktopForm :global(.venue-form-layout) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  
+  .desktopForm :global(.venue-form-fields) {
+    order: 0;
+  }
+  
+  .desktopForm :global(.venue-form-map) {
+    order: 0;
+  }
+}

@@ -1,3 +1,7 @@
+/* Import mobile-specific styles first */
+@import './styles/mobile-typography.css';
+@import './styles/mobile-spacing.css';
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

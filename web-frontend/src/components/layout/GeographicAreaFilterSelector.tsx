@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 import BreadcrumbGroup, { type BreadcrumbGroupProps } from '@cloudscape-design/components/breadcrumb-group';
 import Button from '@cloudscape-design/components/button';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { BREAKPOINTS } from '../../utils/responsive';
 import { GeographicAreaSelector } from '../common/GeographicAreaSelector';
+import styles from './GeographicAreaFilterSelector.mobile.module.css';
 
 export function GeographicAreaFilterSelector() {
   const {
@@ -15,6 +18,8 @@ export function GeographicAreaFilterSelector() {
     setSearchQuery,
     isSearching,
   } = useGlobalGeographicFilter();
+  
+  const isMobile = useMediaQuery(BREAKPOINTS.mobile);
 
   const handleChange = (areaId: string | null) => {
     setGeographicAreaFilter(areaId);
@@ -75,8 +80,8 @@ export function GeographicAreaFilterSelector() {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-      <div style={{ minWidth: '180px' }}>
+    <div className={isMobile ? styles.mobileContainer : styles.desktopContainer}>
+      <div className={styles.selectorWrapper}>
         <GeographicAreaSelector
           value={selectedGeographicAreaId}
           onChange={handleChange}
@@ -89,7 +94,7 @@ export function GeographicAreaFilterSelector() {
         />
       </div>
       {selectedGeographicAreaId && breadcrumbItems.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className={styles.breadcrumbWrapper}>
           <BreadcrumbGroup
             items={breadcrumbItems}
             onFollow={handleBreadcrumbClick}

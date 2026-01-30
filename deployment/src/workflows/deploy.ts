@@ -457,7 +457,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - BACKEND_URL=/api/v1
+      - VITE_BACKEND_URL=/api/v1
     networks:
       - backend
     healthcheck:

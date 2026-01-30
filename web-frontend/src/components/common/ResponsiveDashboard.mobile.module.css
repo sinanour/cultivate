@@ -1,0 +1,80 @@
+/* Mobile dashboard layout styles */
+
+/* Desktop dashboard (default) - preserve existing layouts */
+.desktopDashboard {
+  /* No specific styles - allows existing component styles to apply */
+}
+
+.desktopDashboard :global(.metrics-grid) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.desktopDashboard :global(.chart-row) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* Mobile dashboard layout */
+@media (max-width: 767px) {
+  .mobileDashboard {
+    padding: 16px;
+    width: 100%;
+  }
+  
+  /* Charts stack vertically and take full width */
+  .mobileDashboard :global(.chart-container) {
+    width: 100%;
+    margin-bottom: 24px;
+  }
+  
+  .mobileDashboard :global(.chart) {
+    width: 100%;
+    height: 300px;
+    min-height: 250px;
+  }
+  
+  /* Metrics grid becomes single column */
+  .mobileDashboard :global(.metrics-grid) {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .mobileDashboard :global(.metric-card) {
+    width: 100%;
+  }
+  
+  /* Summary table with horizontal scroll if needed */
+  .mobileDashboard :global(.summary-table) {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Reduce legend font size for mobile */
+  .mobileDashboard :global(.legend) {
+    font-size: 12px;
+    padding: 8px;
+  }
+  
+  /* Chart rows become single column */
+  .mobileDashboard :global(.chart-row) {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  /* Run Report button full-width on mobile */
+  .mobileDashboard :global(.run-report-button) {
+    width: 100%;
+    min-height: 44px;
+  }
+  
+  /* Filter panel adjustments */
+  .mobileDashboard :global(.filter-panel) {
+    margin-bottom: 16px;
+  }
+}

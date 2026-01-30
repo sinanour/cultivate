@@ -1,6 +1,6 @@
 import type { User, AuthTokens, LoginCredentials } from '../../types';
 
-const API_BASE_URL = import.meta.env.BACKEND_URL || '/api/v1';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api/v1';
 
 export class AuthService {
     private static readonly TOKEN_KEY = 'authTokens';

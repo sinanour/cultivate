@@ -1,0 +1,58 @@
+/* Mobile responsive styles for VenueForm */
+
+/* Base layout - mobile first (applies to all screen sizes by default) */
+.venueFormLayout {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+}
+
+.venueFormFields {
+  width: 100% !important;
+  order: 1 !important;
+}
+
+.venueFormMap {
+  width: 100% !important;
+  min-height: 300px !important;
+  order: 2 !important;
+}
+
+/* Desktop layout - side by side (overrides mobile default) */
+@media (min-width: 768px) {
+  .venueFormLayout {
+    display: grid !important;
+    flex-direction: initial !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 24px !important;
+  }
+  
+  .venueFormFields {
+    order: 0 !important;
+  }
+  
+  .venueFormMap {
+    order: 0 !important;
+    min-height: auto !important;
+  }
+}
+
+/* Additional mobile-specific adjustments */
+@media (max-width: 767px) {
+  /* Ensure map container is full width */
+  .venueFormMap :global(.awsui-container) {
+    width: 100% !important;
+  }
+  
+  /* Coordinate inputs stack vertically on very small screens */
+  @media (max-width: 400px) {
+    .venueFormLayout :global(.awsui-space-between[data-direction="horizontal"]) {
+      flex-direction: column !important;
+    }
+    
+    .venueFormLayout :global(.awsui-space-between[data-direction="horizontal"]) > * {
+      width: 100% !important;
+    }
+  }
+}

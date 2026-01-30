@@ -1,0 +1,132 @@
+/* Mobile spacing utilities */
+
+@media (max-width: 767px) {
+  /* Prevent horizontal overflow on mobile */
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  #root {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  /* Ensure all containers respect viewport width */
+  * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Minimum spacing between interactive elements */
+  .mobile-spacing-xs {
+    margin: 4px;
+  }
+  
+  .mobile-spacing-sm {
+    margin: 8px;
+  }
+  
+  .mobile-spacing-md {
+    margin: 12px;
+  }
+  
+  .mobile-spacing-lg {
+    margin: 16px;
+  }
+  
+  .mobile-spacing-xl {
+    margin: 24px;
+  }
+  
+  /* Padding utilities */
+  .mobile-padding-xs {
+    padding: 4px;
+  }
+  
+  .mobile-padding-sm {
+    padding: 8px;
+  }
+  
+  .mobile-padding-md {
+    padding: 12px;
+  }
+  
+  .mobile-padding-lg {
+    padding: 16px;
+  }
+  
+  .mobile-padding-xl {
+    padding: 24px;
+  }
+  
+  /* Gap utilities for flex/grid */
+  .mobile-gap-xs {
+    gap: 4px;
+  }
+  
+  .mobile-gap-sm {
+    gap: 8px;
+  }
+  
+  .mobile-gap-md {
+    gap: 12px;
+  }
+  
+  .mobile-gap-lg {
+    gap: 16px;
+  }
+  
+  .mobile-gap-xl {
+    gap: 24px;
+  }
+  
+  /* Content padding */
+  .mobile-content {
+    padding: 16px;
+  }
+  
+  /* Section spacing */
+  .mobile-section {
+    margin-bottom: 24px;
+  }
+  
+  /* Interactive element spacing */
+  .mobile-interactive-spacing {
+    margin: 8px 0;
+  }
+  
+  /* Touch target minimum size */
+  .mobile-touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  /* Full width utility */
+  .mobile-full-width {
+    width: 100%;
+  }
+  
+  /* CloudScape component spacing overrides */
+  .awsui-space-between {
+    gap: 12px !important;
+  }
+  
+  .awsui-container {
+    padding: 16px !important;
+  }
+  
+  .awsui-form-field {
+    margin-bottom: 16px !important;
+  }
+  
+  /* Button spacing */
+  .awsui-button-group {
+    gap: 8px !important;
+  }
+  
+  /* Card spacing */
+  .awsui-cards {
+    gap: 12px !important;
+  }
+}
