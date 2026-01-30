@@ -12,9 +12,8 @@
     overflow-x: hidden;
   }
   
-  /* Ensure all containers respect viewport width */
-  * {
-    max-width: 100%;
+  /* Apply box-sizing to common container elements only */
+  div, section, article, aside, main, header, footer, nav {
     box-sizing: border-box;
   }
   
