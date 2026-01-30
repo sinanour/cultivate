@@ -5,15 +5,16 @@ FROM postgres:15-alpine
 RUN addgroup -g 1001 apiuser && \
     adduser -D -u 1001 -G apiuser -s /bin/sh apiuser
 
-# Copy initialization scripts
-# These will be executed when the database container starts for the first time
-COPY deployment/scripts/init-db.sh /docker-entrypoint-initdb.d/
-COPY deployment/scripts/pg_hba.conf /etc/postgresql/
+# Copy initialization script
+COPY deployment/scripts/init-db.sh /docker-entrypoint-initdb.d/10-init-db.sh
+RUN chmod +x /docker-entrypoint-initdb.d/10-init-db.sh
 
-# Configure PostgreSQL to use peer authentication
-# This eliminates password-based authentication vulnerabilities
-ENV POSTGRES_HOST_AUTH_METHOD=peer
-ENV POSTGRES_INITDB_ARGS="--auth=peer"
+# Configure PostgreSQL with apiuser as the default user
+# The official postgres image will create this user and database automatically
+ENV POSTGRES_USER=apiuser
+ENV POSTGRES_DB=community_tracker
+# Allow trust authentication during initialization, we'll switch to peer after
+ENV POSTGRES_HOST_AUTH_METHOD=trust
 
-# Expose PostgreSQL port (though connections will use Unix socket)
-EXPOSE 5432
+# Note: No EXPOSE directive needed since we use Unix domain sockets exclusively
+# All TCP/IP connections are rejected via pg_hba.conf

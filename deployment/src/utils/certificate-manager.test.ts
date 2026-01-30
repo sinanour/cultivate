@@ -23,7 +23,6 @@ import {
   prepareCertificates,
   transferCertificates,
   generateNginxSslConfig,
-  updateNginxConfig,
   generateDockerComposeVolumeConfig,
   getCertificateConfigFromEnv,
   CertificateConfig
@@ -275,29 +274,13 @@ describe('Certificate Manager', () => {
       expect(config.enableHttps).toBe(false);
     });
   });
-});
-
-// Helper function to generate test certificates
-function generateTestCertificate(): { certificate: string; privateKey: string } {
-  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
-    modulusLength: 2048,
-    publicKeyEncoding: { type: 'spki', format: 'pem' },
-    privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
-  });
-
-  const certificate = `-----BEGIN CERTIFICATE-----
-MIICertificateDataHere==
------END CERTIFICATE-----`;
-
-  return { certificate, privateKey };
-}
 
   describe('reloadNginxConfig', () => {
     let mockSshClient: jest.Mocked<SSHClient>;
 
     beforeEach(() => {
       mockSshClient = {
-        executeCommand: jest.fn().mockResolvedValue(''),
+        executeCommand: jest.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }),
         uploadFile: jest.fn().mockResolvedValue(undefined),
         connect: jest.fn(),
         disconnect: jest.fn()
@@ -307,7 +290,7 @@ MIICertificateDataHere==
     it('should reload Nginx configuration successfully', async () => {
       const { reloadNginxConfig } = require('./certificate-manager');
       
-      mockSshClient.executeCommand.mockResolvedValue('signal process started');
+      mockSshClient.executeCommand.mockResolvedValue({ stdout: 'signal process started', stderr: '', exitCode: 0 });
 
       const result = await reloadNginxConfig(mockSshClient, 'cat_frontend');
       
@@ -320,7 +303,7 @@ MIICertificateDataHere==
     it('should handle reload failure', async () => {
       const { reloadNginxConfig } = require('./certificate-manager');
       
-      mockSshClient.executeCommand.mockResolvedValue('error: failed to reload');
+      mockSshClient.executeCommand.mockResolvedValue({ stdout: '', stderr: 'error: failed to reload', exitCode: 1 });
 
       const result = await reloadNginxConfig(mockSshClient, 'cat_frontend');
       
@@ -333,7 +316,7 @@ MIICertificateDataHere==
 
     beforeEach(() => {
       mockSshClient = {
-        executeCommand: jest.fn().mockResolvedValue(''),
+        executeCommand: jest.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }),
         uploadFile: jest.fn().mockResolvedValue(undefined),
         connect: jest.fn(),
         disconnect: jest.fn()
@@ -443,3 +426,19 @@ MIICertificateDataHere==
       expect(result).toBe(false);
     });
   });
+});
+
+// Helper function to generate test certificates
+function generateTestCertificate(): { certificate: string; privateKey: string } {
+  const { privateKey } = crypto.generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+  });
+
+  const certificate = `-----BEGIN CERTIFICATE-----
+MIICertificateDataHere==
+-----END CERTIFICATE-----`;
+
+  return { certificate, privateKey };
+}

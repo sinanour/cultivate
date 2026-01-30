@@ -455,19 +455,21 @@ export class ImageBuilder {
  * Build all three application images (frontend, backend, database)
  * 
  * @param version Version tag for the images
- * @param contextPath Base context path containing Dockerfiles
+ * @param contextPath Base context path (project root)
+ * @param dockerfilesPath Path to directory containing Dockerfiles
  * @param onProgress Optional progress callback
  * @returns Array of built image metadata
  */
 export async function buildAllImages(
   version: string,
   contextPath: string,
+  dockerfilesPath: string,
   onProgress?: ProgressCallback
 ): Promise<DockerImage[]> {
   const builder = new ImageBuilder();
   await builder.initialize();
 
-  logger.info('Building all application images', { version, contextPath });
+  logger.info('Building all application images', { version, contextPath, dockerfilesPath });
 
   const images: DockerImage[] = [];
 
@@ -477,7 +479,7 @@ export async function buildAllImages(
   }
 
   const frontendImage = await builder.buildImage({
-    dockerfile: path.join(contextPath, 'Dockerfile.frontend'),
+    dockerfile: path.join(dockerfilesPath, 'Dockerfile.frontend'),
     context: contextPath,
     imageName: 'cat_frontend',
     tag: version,
@@ -492,7 +494,7 @@ export async function buildAllImages(
   }
 
   const backendImage = await builder.buildImage({
-    dockerfile: path.join(contextPath, 'Dockerfile.backend'),
+    dockerfile: path.join(dockerfilesPath, 'Dockerfile.backend'),
     context: contextPath,
     imageName: 'cat_backend',
     tag: version,
@@ -507,7 +509,7 @@ export async function buildAllImages(
   }
 
   const databaseImage = await builder.buildImage({
-    dockerfile: path.join(contextPath, 'Dockerfile.database'),
+    dockerfile: path.join(dockerfilesPath, 'Dockerfile.database'),
     context: contextPath,
     imageName: 'cat_database',
     tag: version,

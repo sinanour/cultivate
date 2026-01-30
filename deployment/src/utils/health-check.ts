@@ -264,7 +264,14 @@ export class HealthCheck {
     try {
       // Get container status using docker inspect
       const cmd = `cd ${workingDirectory} && docker inspect --format='{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' ${containerName}`;
-      const result = await this.sshClient.executeCommand(cmd);
+      let result = await this.sshClient.executeCommand(cmd);
+
+      // If permission denied, retry with sudo
+      if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+        logger.debug('Docker permission denied, retrying with sudo');
+        const sudoCmd = cmd.replace(/docker inspect/g, 'sudo docker inspect');
+        result = await this.sshClient.executeCommand(sudoCmd);
+      }
 
       if (result.exitCode !== 0) {
         return {
@@ -298,7 +305,14 @@ export class HealthCheck {
   private async getContainerNames(workingDirectory: string): Promise<string[]> {
     try {
       const cmd = `cd ${workingDirectory} && docker-compose ps --format json`;
-      const result = await this.sshClient.executeCommand(cmd);
+      let result = await this.sshClient.executeCommand(cmd);
+
+      // If permission denied, retry with sudo
+      if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+        logger.debug('Docker permission denied, retrying with sudo');
+        const sudoCmd = cmd.replace(/docker-compose/g, 'sudo docker-compose');
+        result = await this.sshClient.executeCommand(sudoCmd);
+      }
 
       if (result.exitCode !== 0) {
         logger.warn(`Failed to get container names: ${result.stderr}`);

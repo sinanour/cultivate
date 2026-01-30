@@ -329,8 +329,26 @@ export class ConfigTransfer {
     logger.debug(`Ensuring remote directory exists: ${remotePath}`);
 
     try {
-      // Create directory with -p flag (creates parent directories if needed)
-      await this.sshClient.executeCommand(`mkdir -p ${remotePath}`);
+      // Try creating directory without sudo first
+      let result = await this.sshClient.executeCommand(`mkdir -p ${remotePath}`);
+
+      // If permission denied, try with sudo
+      if (result.exitCode !== 0 && result.stderr.includes('Permission denied')) {
+        logger.debug('Permission denied, retrying with sudo');
+        result = await this.sshClient.executeCommand(`sudo mkdir -p ${remotePath}`);
+
+        // Also ensure the current user can write to it
+        if (result.exitCode === 0) {
+          const whoamiResult = await this.sshClient.executeCommand('whoami');
+          const currentUser = whoamiResult.stdout.trim();
+          await this.sshClient.executeCommand(`sudo chown -R ${currentUser}:${currentUser} ${remotePath}`);
+        }
+      }
+
+      if (result.exitCode !== 0) {
+        throw new Error(result.stderr || 'Failed to create directory');
+      }
+
       logger.debug(`Remote directory ensured: ${remotePath}`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);

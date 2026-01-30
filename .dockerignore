@@ -1,0 +1,50 @@
+# Exclude node_modules from all packages (they'll be installed in the container)
+**/node_modules
+**/npm-debug.log
+
+# Exclude build artifacts
+**/dist
+**/build
+**/.next
+
+# Exclude development files
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Exclude test files
+**/__tests__
+**/*.test.ts
+**/*.test.js
+**/coverage
+
+# Exclude test spec files (but not openapi.spec.ts)
+**/__tests__/**/*.spec.ts
+**/__tests__/**/*.spec.js
+
+# Exclude git and version control
+.git
+.gitignore
+**/.git
+
+# Exclude IDE and editor files
+.vscode
+.idea
+**/.DS_Store
+
+# Exclude documentation (not needed in containers)
+*.md
+!README.md
+
+# Exclude deployment artifacts
+deployment/dist
+deployment/logs
+deployment/node_modules
+
+# Exclude infrastructure (not needed in app containers)
+infrastructure
+
+# Keep only what's needed for each container:
+# - For frontend: web-frontend source
+# - For backend: backend-api source
+# - For database: deployment/scripts

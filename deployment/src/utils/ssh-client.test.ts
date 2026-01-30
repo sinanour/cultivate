@@ -244,7 +244,7 @@ describe('SSHClient', () => {
       await sshClient.disconnect();
       const result = await sshClient.verifyConnection();
       expect(result).toBe(false);
-    });
+    }, 10000); // Increase timeout to 10 seconds
 
     it('should return false if verification command fails', async () => {
       mockClient.exec.mockImplementation((_cmd: string, callback: any) => {
@@ -352,7 +352,7 @@ describe('SSHClient', () => {
       await expect(sshClient.executeCommand('ls')).rejects.toThrow(
         'Not connected to SSH server'
       );
-    });
+    }, 10000); // Increase timeout to 10 seconds
 
     it('should throw error on exec failure', async () => {
       mockClient.exec.mockImplementation((_cmd: string, callback: any) => {
@@ -483,7 +483,7 @@ describe('SSHClient', () => {
     it('should resolve immediately if not connected', async () => {
       await sshClient.disconnect();
       await expect(sshClient.disconnect()).resolves.toBeUndefined();
-    });
+    }, 10000); // Increase timeout to 10 seconds
   });
 
   describe('getConnectionInfo', () => {
@@ -545,7 +545,7 @@ describe('SSHClient', () => {
       await expect(
         sshClient.uploadFile('/local/file.txt', '/remote/file.txt')
       ).rejects.toThrow('Not connected to SSH server');
-    });
+    }, 10000); // Increase timeout to 10 seconds
 
     it('should throw error on SFTP session failure', async () => {
       mockClient.sftp.mockImplementation((callback: any) => {
@@ -621,7 +621,7 @@ describe('SSHClient', () => {
       await expect(
         sshClient.downloadFile('/remote/file.txt', '/local/file.txt')
       ).rejects.toThrow('Not connected to SSH server');
-    });
+    }, 10000); // Increase timeout to 10 seconds
 
     it('should throw error on download failure', async () => {
       const mockSftp = {

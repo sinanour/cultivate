@@ -7,14 +7,14 @@
  * Requirements: 14.2, 14.4
  */
 
-import { DeploymentStateManager } from './deployment-state';
-import { SSHClient } from './ssh-client';
-import { ImageTransfer } from './image-transfer';
-import { ConfigTransfer } from './config-transfer';
-import { ContainerDeployment } from './container-deployment';
-import { HealthCheck } from './health-check';
-import { createLogger } from './logger';
-import { DeploymentState } from '../types/deployment';
+import { DeploymentStateManager } from './deployment-state.js';
+import { SSHClient } from './ssh-client.js';
+import { ImageTransfer } from './image-transfer.js';
+import { ConfigTransfer } from './config-transfer.js';
+import { ContainerDeployment } from './container-deployment.js';
+import { HealthCheck } from './health-check.js';
+import { createLogger } from './logger.js';
+import { DeploymentState } from '../types/deployment.js';
 
 const logger = createLogger();
 
@@ -30,6 +30,7 @@ export interface RollbackOptions {
     username: string;
     privateKeyPath?: string;
     port?: number;
+    timeout?: number;
   };
 
   /** Path to deployment state directory */

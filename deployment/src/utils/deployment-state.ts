@@ -10,8 +10,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { DeploymentState, DeploymentConfiguration } from '../types/deployment';
-import { createLogger } from './logger';
+import { DeploymentState, DeploymentConfiguration } from '../types/deployment.js';
+import { createLogger } from './logger.js';
 
 const logger = createLogger();
 

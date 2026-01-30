@@ -497,7 +497,7 @@ describe('buildAllImages', () => {
   });
 
   it('should build all three application images', async () => {
-    const images = await buildAllImages('1.0.0', '/path/to/context');
+    const images = await buildAllImages('1.0.0', '/path/to/context', '/path/to/context/dockerfiles');
 
     expect(images).toHaveLength(3);
     expect(images[0].name).toBe('cat_frontend');
@@ -509,7 +509,7 @@ describe('buildAllImages', () => {
   it('should call progress callback for each image', async () => {
     const progressCallback = jest.fn();
 
-    await buildAllImages('1.0.0', '/path/to/context', progressCallback);
+    await buildAllImages('1.0.0', '/path/to/context', '/path/to/context/dockerfiles', progressCallback);
 
     expect(progressCallback).toHaveBeenCalledWith('Building frontend image...');
     expect(progressCallback).toHaveBeenCalledWith('Building backend image...');
@@ -524,7 +524,7 @@ describe('buildAllImages', () => {
       .mockRejectedValueOnce(new Error('Backend build failed')); // backend build fails
 
     await expect(
-      buildAllImages('1.0.0', '/path/to/context')
+      buildAllImages('1.0.0', '/path/to/context', '/path/to/context/dockerfiles')
     ).rejects.toThrow();
   });
 });

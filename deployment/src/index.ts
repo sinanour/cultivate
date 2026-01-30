@@ -9,6 +9,7 @@
  */
 
 import { Command } from 'commander';
+import * as path from 'path';
 import { createLogger } from './utils/logger.js';
 import { deployWorkflow } from './workflows/deploy.js';
 import { rollbackWorkflow } from './workflows/rollback.js';
@@ -60,12 +61,18 @@ async function main(): Promise<void> {
                 const buildOptions: BuildOptions = {
                     buildMode: options.buildMode as 'local' | 'remote',
                     verbose: options.verbose,
-                    contextPath: process.cwd(),
+                    contextPath: path.resolve(process.cwd(), '..'), // Workspace root (parent of deployment)
                     buildArgs: {}
                 };
 
                 const deploymentOptions: Partial<DeploymentOptions> = {
                     targetHost: options.target,
+                    sshConfig: {
+                        username: options.user,
+                        port: parseInt(options.port, 10),
+                        privateKeyPath: options.key,
+                        timeout: 30000
+                    },
                     buildOptions,
                     rollback: false,
                     stateFilePath: options.stateFile
@@ -125,6 +132,12 @@ async function main(): Promise<void> {
 
                 const deploymentOptions: Partial<DeploymentOptions> = {
                     targetHost: options.target,
+                    sshConfig: {
+                        username: options.user,
+                        port: parseInt(options.port, 10),
+                        privateKeyPath: options.key,
+                        timeout: 30000
+                    },
                     buildOptions,
                     rollback: true,
                     stateFilePath: options.stateFile

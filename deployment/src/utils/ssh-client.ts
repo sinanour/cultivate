@@ -13,6 +13,7 @@ export interface SSHConnectionConfig {
   username?: string;
   password?: string;
   privateKey?: Buffer | string;
+  privateKeyPath?: string;
   passphrase?: string;
   timeout?: number;
 }
@@ -63,6 +64,42 @@ export class SSHClient {
    * @throws Error if connection fails or times out
    */
   async connect(): Promise<void> {
+    // Prepare connection configuration
+    const connectConfig: ConnectConfig = {
+      host: this.config.host,
+      port: this.config.port,
+      username: this.config.username || 'root',
+      readyTimeout: this.config.timeout,
+    };
+
+    // Add authentication method
+    if (this.config.privateKey) {
+      connectConfig.privateKey = this.config.privateKey;
+      if (this.config.passphrase) {
+        connectConfig.passphrase = this.config.passphrase;
+      }
+      logger.info(`Connecting to ${this.config.host} using SSH key authentication`);
+    } else if (this.config.privateKeyPath) {
+      // Read private key from file
+      try {
+        const fs = await import('fs/promises');
+        const keyContent = await fs.readFile(this.config.privateKeyPath, 'utf8');
+        connectConfig.privateKey = keyContent;
+        if (this.config.passphrase) {
+          connectConfig.passphrase = this.config.passphrase;
+        }
+        logger.info(`Connecting to ${this.config.host} using SSH key from ${this.config.privateKeyPath}`);
+      } catch (err) {
+        throw new Error(`Failed to read private key from ${this.config.privateKeyPath}: ${err}`);
+      }
+    } else if (this.config.password) {
+      connectConfig.password = this.config.password;
+      logger.info(`Connecting to ${this.config.host} using password authentication`);
+    } else {
+      throw new Error('No authentication method provided (privateKey, privateKeyPath, or password required)');
+    }
+
+    // Now establish the connection
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.client.end();
@@ -87,30 +124,6 @@ export class SSHClient {
         this.connected = false;
         logger.info('SSH connection closed');
       });
-
-      // Build connection configuration
-      const connectConfig: ConnectConfig = {
-        host: this.config.host,
-        port: this.config.port,
-        username: this.config.username || 'root',
-        readyTimeout: this.config.timeout,
-      };
-
-      // Add authentication method
-      if (this.config.privateKey) {
-        connectConfig.privateKey = this.config.privateKey;
-        if (this.config.passphrase) {
-          connectConfig.passphrase = this.config.passphrase;
-        }
-        logger.info(`Connecting to ${this.config.host} using SSH key authentication`);
-      } else if (this.config.password) {
-        connectConfig.password = this.config.password;
-        logger.info(`Connecting to ${this.config.host} using password authentication`);
-      } else {
-        clearTimeout(timeoutId);
-        reject(new Error('No authentication method provided (privateKey or password required)'));
-        return;
-      }
 
       try {
         this.client.connect(connectConfig);

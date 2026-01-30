@@ -344,8 +344,16 @@ export class ImageTransfer {
       imageTag
     });
 
-    const command = `docker load -i ${remoteTarPath}`;
-    const result = await sshClient.executeCommand(command);
+    // Try docker load without sudo first
+    let command = `docker load -i ${remoteTarPath}`;
+    let result = await sshClient.executeCommand(command);
+
+    // If permission denied, try with sudo
+    if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+      logger.debug('Docker permission denied, retrying with sudo', { imageTag });
+      command = `sudo docker load -i ${remoteTarPath}`;
+      result = await sshClient.executeCommand(command);
+    }
 
     if (result.exitCode !== 0) {
       throw new Error(`Failed to load image on remote host: ${result.stderr}`);
@@ -371,8 +379,16 @@ export class ImageTransfer {
   ): Promise<boolean> {
     logger.debug('Verifying image on remote host', { imageTag });
 
-    const command = `docker images -q ${imageTag}`;
-    const result = await sshClient.executeCommand(command);
+    // Try docker images without sudo first
+    let command = `docker images -q ${imageTag}`;
+    let result = await sshClient.executeCommand(command);
+
+    // If permission denied, try with sudo
+    if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+      logger.debug('Docker permission denied, retrying with sudo', { imageTag });
+      command = `sudo docker images -q ${imageTag}`;
+      result = await sshClient.executeCommand(command);
+    }
 
     if (result.exitCode !== 0) {
       logger.warn('Failed to verify remote image', {
@@ -553,8 +569,16 @@ export async function verifyAllImagesOnRemote(
   ];
 
   for (const imageTag of imagesToVerify) {
-    const command = `docker images -q ${imageTag}`;
-    const result = await sshClient.executeCommand(command);
+    // Try docker images without sudo first
+    let command = `docker images -q ${imageTag}`;
+    let result = await sshClient.executeCommand(command);
+
+    // If permission denied, try with sudo
+    if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+      logger.debug('Docker permission denied, retrying with sudo', { imageTag });
+      command = `sudo docker images -q ${imageTag}`;
+      result = await sshClient.executeCommand(command);
+    }
 
     if (result.exitCode !== 0 || result.stdout.trim().length === 0) {
       logger.warn('Image not found on remote host', { imageTag });

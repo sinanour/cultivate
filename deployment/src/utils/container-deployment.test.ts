@@ -115,6 +115,13 @@ describe('ContainerDeployment', () => {
           stderr: '',
           exitCode: 0,
         })
+        // Mock first attempt (without sudo) - permission denied
+        .mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'permission denied while trying to connect to the Docker daemon socket',
+          exitCode: 1,
+        })
+        // Mock second attempt (with sudo) - still fails
         .mockResolvedValueOnce({
           stdout: '',
           stderr: 'Error: network creation failed',
@@ -271,11 +278,19 @@ describe('ContainerDeployment', () => {
     });
 
     it('should return empty array when command fails', async () => {
-      mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: '',
-        stderr: 'Error: no containers found',
-        exitCode: 1,
-      });
+      // Mock first attempt (without sudo) - permission denied
+      mockSSHClient.executeCommand
+        .mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'permission denied while trying to connect to the Docker daemon socket',
+          exitCode: 1,
+        })
+        // Mock second attempt (with sudo) - still fails
+        .mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'Error: no containers found',
+          exitCode: 1,
+        });
 
       const statuses = await containerDeployment.getContainerStatus('/opt/app');
 
@@ -366,11 +381,19 @@ describe('ContainerDeployment', () => {
     });
 
     it('should throw error when stop fails', async () => {
-      mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: '',
-        stderr: 'Error: containers not found',
-        exitCode: 1,
-      });
+      // Mock first attempt (without sudo) - permission denied
+      mockSSHClient.executeCommand
+        .mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'permission denied while trying to connect to the Docker daemon socket',
+          exitCode: 1,
+        })
+        // Mock second attempt (with sudo) - still fails
+        .mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'Error: containers not found',
+          exitCode: 1,
+        });
 
       await expect(containerDeployment.stopContainers('/opt/app')).rejects.toThrow('Failed to stop containers');
     });
@@ -405,11 +428,19 @@ describe('ContainerDeployment', () => {
     });
 
     it('should throw error when removal fails', async () => {
-      mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: '',
-        stderr: 'Error: permission denied',
-        exitCode: 1,
-      });
+      // Mock first attempt (without sudo) - permission denied
+      mockSSHClient.executeCommand
+        .mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'permission denied while trying to connect to the Docker daemon socket',
+          exitCode: 1,
+        })
+        // Mock second attempt (with sudo) - still fails
+        .mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'Error: containers not found',
+          exitCode: 1,
+        });
 
       await expect(containerDeployment.removeContainers('/opt/app')).rejects.toThrow('Failed to remove containers');
     });

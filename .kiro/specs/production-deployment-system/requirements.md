@@ -115,6 +115,9 @@ This document specifies the requirements for a production deployment system that
 3. IF Docker is not installed, THEN THE Deployment_Script SHALL install Docker on the Target_Host
 4. IF Docker Compose is not installed, THEN THE Deployment_Script SHALL install Docker Compose on the Target_Host
 5. THE Deployment_Script SHALL verify minimum required versions of Docker and Docker Compose
+6. THE Deployment_Script SHALL detect the Target_Host operating system distribution before installing dependencies
+7. THE Deployment_Script SHALL use the appropriate package manager for the detected OS distribution (apt-get for Debian/Ubuntu, yum/dnf for RHEL/CentOS/Fedora/Amazon Linux, zypper for SUSE, apk for Alpine)
+8. WHEN the package manager detection fails, THE Deployment_Script SHALL provide clear error messages listing supported distributions
 
 ### Requirement 9: Image Build and Transfer
 

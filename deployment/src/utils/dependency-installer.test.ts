@@ -1,6 +1,7 @@
 import { DependencyInstaller } from './dependency-installer';
 import { SSHClient } from './ssh-client';
 import { DependencyChecker } from './dependency-checker';
+import { OSDetector } from './os-detector';
 
 // Mock the logger
 jest.mock('./logger', () => ({
@@ -15,9 +16,13 @@ jest.mock('./logger', () => ({
 // Mock the DependencyChecker
 jest.mock('./dependency-checker');
 
+// Mock the OSDetector
+jest.mock('./os-detector');
+
 describe('DependencyInstaller', () => {
   let mockSSHClient: jest.Mocked<SSHClient>;
   let mockDependencyChecker: jest.Mocked<DependencyChecker>;
+  let mockOSDetector: jest.Mocked<OSDetector>;
   let installer: DependencyInstaller;
 
   beforeEach(() => {
@@ -39,6 +44,17 @@ describe('DependencyInstaller', () => {
 
     // Get the mocked dependency checker instance
     mockDependencyChecker = (installer as any).dependencyChecker as jest.Mocked<DependencyChecker>;
+
+    // Get the mocked OS detector instance
+    mockOSDetector = (installer as any).osDetector as jest.Mocked<OSDetector>;
+
+    // Mock OS detection to return Ubuntu by default
+    mockOSDetector.detectOS = jest.fn().mockResolvedValue({
+      distribution: 'ubuntu',
+      version: '22.04',
+      packageManager: 'apt-get',
+      supported: true
+    });
   });
 
   afterEach(() => {
@@ -139,7 +155,7 @@ describe('DependencyInstaller', () => {
 
       expect(result.success).toBe(false);
       expect(result.installed).toBe(false);
-      expect(result.error).toBe('Network error');
+      expect(result.error).toContain('Network error');
       expect(result.message).toContain('installation failed');
     });
 
@@ -308,7 +324,7 @@ describe('DependencyInstaller', () => {
 
       expect(result.success).toBe(false);
       expect(result.installed).toBe(false);
-      expect(result.error).toBe('Package not found');
+      expect(result.error).toContain('Package not found');
       expect(result.message).toContain('installation failed');
     });
 

@@ -84,6 +84,26 @@ export class ContainerDeployment {
   }
 
   /**
+   * Executes a docker-compose command, automatically adding sudo if needed
+   * @param command The docker-compose command to execute
+   * @returns Promise that resolves with command result
+   */
+  private async executeDockerComposeCommand(command: string): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+    // Try without sudo first
+    let result = await this.sshClient.executeCommand(command);
+
+    // If permission denied, retry with sudo
+    if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+      logger.debug('Docker permission denied, retrying with sudo');
+      // Replace 'docker-compose' with 'sudo docker-compose' in the command
+      const sudoCommand = command.replace(/docker-compose/g, 'sudo docker-compose');
+      result = await this.sshClient.executeCommand(sudoCommand);
+    }
+
+    return result;
+  }
+
+  /**
    * Deploys containers using docker-compose up
    * @param options Deployment options
    * @returns Promise that resolves with deployment result
@@ -104,7 +124,7 @@ export class ContainerDeployment {
 
       // Execute docker-compose up
       const startTime = Date.now();
-      const result = await this.sshClient.executeCommand(composeCmd);
+      const result = await this.executeDockerComposeCommand(composeCmd);
 
       if (result.exitCode !== 0) {
         logger.error(`docker-compose up failed: ${result.stderr}`);
@@ -224,7 +244,7 @@ export class ContainerDeployment {
   async getContainerStatus(workingDirectory: string): Promise<ContainerStatus[]> {
     try {
       const cmd = `cd ${workingDirectory} && docker-compose ps --format json`;
-      const result = await this.sshClient.executeCommand(cmd);
+      const result = await this.executeDockerComposeCommand(cmd);
 
       if (result.exitCode !== 0) {
         logger.warn(`Failed to get container status: ${result.stderr}`);
@@ -270,7 +290,7 @@ export class ContainerDeployment {
   ): Promise<ContainerLogs> {
     try {
       const cmd = `cd ${workingDirectory} && docker-compose logs --tail=${tailLines} ${containerName}`;
-      const result = await this.sshClient.executeCommand(cmd);
+      const result = await this.executeDockerComposeCommand(cmd);
 
       return {
         containerName,
@@ -295,7 +315,7 @@ export class ContainerDeployment {
   private async getContainerNames(workingDirectory: string): Promise<string[]> {
     try {
       const cmd = `cd ${workingDirectory} && docker-compose ps --services`;
-      const result = await this.sshClient.executeCommand(cmd);
+      const result = await this.executeDockerComposeCommand(cmd);
 
       if (result.exitCode !== 0) {
         return [];
@@ -317,7 +337,7 @@ export class ContainerDeployment {
     try {
       logger.info('Stopping containers...');
       const cmd = `cd ${workingDirectory} && docker-compose stop`;
-      const result = await this.sshClient.executeCommand(cmd);
+      const result = await this.executeDockerComposeCommand(cmd);
 
       if (result.exitCode !== 0) {
         throw new Error(`Failed to stop containers: ${result.stderr}`);
@@ -341,7 +361,7 @@ export class ContainerDeployment {
       logger.info('Removing containers...');
       const volumeFlag = removeVolumes ? '-v' : '';
       const cmd = `cd ${workingDirectory} && docker-compose down ${volumeFlag}`;
-      const result = await this.sshClient.executeCommand(cmd);
+      const result = await this.executeDockerComposeCommand(cmd);
 
       if (result.exitCode !== 0) {
         throw new Error(`Failed to remove containers: ${result.stderr}`);

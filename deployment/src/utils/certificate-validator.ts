@@ -9,7 +9,7 @@
 
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { createLogger } from './logger';
+import { createLogger } from './logger.js';
 
 const logger = createLogger();
 

@@ -197,6 +197,21 @@ export interface DeploymentOptions {
   /** Target SSH host */
   targetHost: string;
 
+  /** SSH connection configuration */
+  sshConfig?: {
+    /** SSH username (default: 'root') */
+    username?: string;
+
+    /** SSH port (default: 22) */
+    port?: number;
+
+    /** Path to SSH private key */
+    privateKeyPath?: string;
+
+    /** Connection timeout in milliseconds (default: 30000) */
+    timeout?: number;
+  };
+
   /** Build configuration */
   buildOptions: BuildOptions;
 

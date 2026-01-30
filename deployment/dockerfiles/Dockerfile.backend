@@ -4,6 +4,9 @@
 
 FROM node:lts-alpine
 
+# Install bash and openssl for startup script and Prisma
+RUN apk add --no-cache bash openssl
+
 # Create apiuser with specific UID/GID (1001) for peer authentication
 # This UID/GID must match the database container's apiuser for peer auth to work
 RUN addgroup -g 1001 apiuser && \
@@ -18,20 +21,34 @@ COPY backend-api/package*.json ./
 # Install all dependencies (including devDependencies for building)
 RUN npm ci
 
-# Copy application source code
-COPY backend-api/ ./
+# Copy application source code (excluding .env file)
+COPY backend-api/src ./src
+COPY backend-api/prisma ./prisma
+COPY backend-api/tsconfig.json ./
+
+# Generate Prisma client FIRST
+# This must be done before building TypeScript so the types are available
+RUN npx prisma generate
 
 # Build the TypeScript application
 RUN npm run build
 
-# Generate Prisma client
-# This must be done after copying the schema to ensure the client matches the schema
-RUN npx prisma generate
+# Keep Prisma CLI for migrations - don't prune yet
+# We'll need it to run migrations on startup
 
-# Remove devDependencies to reduce image size
-RUN npm prune --production
+# Create startup script as root, then change ownership
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo 'echo "Waiting for database to be ready..."' >> /app/start.sh && \
+    echo 'sleep 5' >> /app/start.sh && \
+    echo 'echo "Running database migrations as $(whoami)..."' >> /app/start.sh && \
+    echo 'npx prisma migrate deploy || { echo "Migration failed"; exit 1; }' >> /app/start.sh && \
+    echo 'echo "Migrations completed successfully"' >> /app/start.sh && \
+    echo 'echo "Starting application..."' >> /app/start.sh && \
+    echo 'exec node dist/index.js' >> /app/start.sh && \
+    chmod +x /app/start.sh
 
-# Change ownership of application files to apiuser
+# Change ownership of ALL application files to apiuser (including start.sh)
 RUN chown -R apiuser:apiuser /app
 
 # Switch to apiuser for running the application (security best practice)
@@ -40,5 +57,5 @@ USER apiuser
 # Expose the backend API port
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start the application with migrations
+CMD ["/app/start.sh"]

@@ -324,8 +324,64 @@ establish_ssh_connection() {
 # Function: check_target_dependencies
 # Verify Docker and Docker Compose on target, install if missing
 check_target_dependencies() {
+    detect_target_os
     check_and_install_docker
     check_and_install_docker_compose
+}
+
+# Function: detect_target_os
+# Detect the operating system distribution on the target host
+detect_target_os() {
+    # Check for /etc/os-release (most modern distributions)
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_DISTRIBUTION=$ID
+        OS_VERSION=$VERSION_ID
+    # Fallback to other detection methods
+    elif [ -f /etc/redhat-release ]; then
+        OS_DISTRIBUTION="rhel"
+    elif [ -f /etc/debian_version ]; then
+        OS_DISTRIBUTION="debian"
+    else
+        echo "Error: Unable to detect OS distribution"
+        exit 1
+    fi
+    
+    # Determine package manager based on distribution
+    case "$OS_DISTRIBUTION" in
+        ubuntu|debian)
+            PACKAGE_MANAGER="apt-get"
+            ;;
+        rhel|centos|fedora|rocky|alma)
+            # Use dnf for newer versions, yum for older
+            if command -v dnf &> /dev/null; then
+                PACKAGE_MANAGER="dnf"
+            else
+                PACKAGE_MANAGER="yum"
+            fi
+            ;;
+        amzn)
+            # Amazon Linux: AL2023 uses dnf, AL2 uses yum
+            if command -v dnf &> /dev/null; then
+                PACKAGE_MANAGER="dnf"
+            else
+                PACKAGE_MANAGER="yum"
+            fi
+            ;;
+        sles|opensuse*)
+            PACKAGE_MANAGER="zypper"
+            ;;
+        alpine)
+            PACKAGE_MANAGER="apk"
+            ;;
+        *)
+            echo "Error: Unsupported OS distribution: $OS_DISTRIBUTION"
+            echo "Supported distributions: Ubuntu, Debian, RHEL, CentOS, Fedora, Rocky, AlmaLinux, Amazon Linux, SLES, openSUSE, Alpine"
+            exit 1
+            ;;
+    esac
+    
+    echo "Detected OS: $OS_DISTRIBUTION (using $PACKAGE_MANAGER)"
 }
 
 # Function: build_or_transfer_images
@@ -702,11 +758,23 @@ The properties below represent the unique, non-redundant set of correctness prop
 *For any* SSH connection failure, the Deployment_Script should produce an error message containing the target host and failure reason.
 **Validates: Requirements 7.4**
 
-**Property 18: Dependency verification and installation**
-*For any* target host, the Deployment_Script should check for Docker and Docker Compose, and install them if missing.
-**Validates: Requirements 8.1, 8.2, 8.3, 8.4**
+**Property 18: OS distribution detection**
+*For any* target host, the Deployment_Script should correctly detect the operating system distribution before attempting package installation.
+**Validates: Requirements 8.6**
 
-**Property 19: Version requirement enforcement**
+**Property 19: Package manager selection**
+*For any* detected OS distribution, the Deployment_Script should select the appropriate package manager (apt-get, yum, dnf, zypper, or apk) including special handling for Amazon Linux.
+**Validates: Requirements 8.7**
+
+**Property 20: Dependency verification and installation**
+*For any* target host, the Deployment_Script should check for Docker and Docker Compose, and install them using the correct package manager if missing, including Amazon Linux systems.
+**Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.7**
+
+**Property 21: Unsupported OS error handling**
+*For any* target host with an unsupported OS distribution, the Deployment_Script should provide an error message listing all supported distributions including Amazon Linux.
+**Validates: Requirements 8.8**
+
+**Property 22: Version requirement enforcement**
 *For any* target host with Docker or Docker Compose installed, if the version is below the minimum required version, the Deployment_Script should report the version mismatch.
 **Validates: Requirements 8.5**
 
