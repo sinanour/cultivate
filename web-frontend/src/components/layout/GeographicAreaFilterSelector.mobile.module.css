@@ -8,13 +8,14 @@
 }
 
 .desktopContainer .selectorWrapper {
-  min-width: 180px;
+  min-width: 300px;
 }
 
-.desktopContainer .breadcrumbWrapper {
+.breadcrumbWrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  margin-left: 8px;
+  margin-right: 8px;
 }
 
 /* Mobile layout */
@@ -26,32 +27,5 @@
     width: 100% !important;
     max-width: 100% !important;
     overflow: hidden !important;
-  }
-  
-  .mobileContainer .selectorWrapper {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  
-  /* Ensure CloudScape Select is constrained */
-  .mobileContainer .selectorWrapper :global(.awsui-select),
-  .mobileContainer .selectorWrapper :global([class*="select"]) {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  
-  .mobileContainer .breadcrumbWrapper {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    flex-wrap: wrap !important;
-  }
-  
-  /* Ensure clear button meets touch target size */
-  .mobileContainer .breadcrumbWrapper button {
-    min-width: 44px !important;
-    min-height: 44px !important;
   }
 }

@@ -51,11 +51,14 @@ This specification extends the Web Frontend package to provide an optimized mobi
 #### Acceptance Criteria
 
 1. THE Web_App SHALL stack header elements vertically on mobile viewports
-2. THE Web_App SHALL make the geographic area filter selector full-width on mobile
-3. THE Web_App SHALL ensure the user menu dropdown is accessible on mobile
-4. THE Web_App SHALL maintain the sticky header behavior on mobile viewports
-5. THE Web_App SHALL ensure all header buttons meet minimum touch target size on mobile
-6. THE Web_App SHALL preserve the existing horizontal header layout on desktop and tablet viewports
+2. THE Web_App SHALL display the geographic area filter selector and clear filter button inline (horizontally) on mobile viewports
+3. THE Web_App SHALL hide the breadcrumb ancestor hierarchy when a geographic area filter is active on mobile viewports
+4. THE Web_App SHALL display only the filter selector dropdown and clear button when a filter is active on mobile
+5. THE Web_App SHALL ensure the filter selector takes appropriate width (not full-width) to accommodate the inline clear button on mobile
+6. THE Web_App SHALL ensure the user menu dropdown is accessible on mobile
+7. THE Web_App SHALL maintain the sticky header behavior on mobile viewports
+8. THE Web_App SHALL ensure all header buttons meet minimum touch target size on mobile
+9. THE Web_App SHALL preserve the existing horizontal header layout on desktop and tablet viewports
 
 ### Requirement 4: Mobile Table and List Layouts
 

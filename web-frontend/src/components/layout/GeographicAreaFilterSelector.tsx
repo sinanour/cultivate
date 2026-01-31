@@ -18,7 +18,7 @@ export function GeographicAreaFilterSelector() {
     setSearchQuery,
     isSearching,
   } = useGlobalGeographicFilter();
-  
+
   const isMobile = useMediaQuery(BREAKPOINTS.mobile);
 
   const handleChange = (areaId: string | null) => {
@@ -33,21 +33,21 @@ export function GeographicAreaFilterSelector() {
 
   // Build breadcrumb items from the selected area's ancestry
   const breadcrumbItems = useMemo((): BreadcrumbGroupProps.Item[] => {
-    if (!selectedGeographicAreaId || !selectedGeographicArea) {
+    if (!selectedGeographicAreaId || !selectedGeographicArea || isMobile) {
       return [];
     }
 
     const items: BreadcrumbGroupProps.Item[] = [];
-    
+
     // Find the selected area in availableAreas to get its ancestors
     const areaWithHierarchy = availableAreas.find(a => a.id === selectedGeographicAreaId);
-    
+
     if (areaWithHierarchy && areaWithHierarchy.ancestors.length > 0) {
       // Reverse ancestors for breadcrumb: most distant to closest
       // Backend returns: [closest parent, ..., most distant ancestor]
       // Breadcrumb needs: [most distant ancestor, ..., closest parent]
       const reversedAncestors = [...areaWithHierarchy.ancestors].reverse();
-      
+
       reversedAncestors.forEach((ancestor) => {
         // All ancestors are clickable
         // Authorized ancestors will set filter to that area
@@ -66,14 +66,14 @@ export function GeographicAreaFilterSelector() {
     });
 
     return items;
-  }, [selectedGeographicAreaId, selectedGeographicArea, availableAreas]);
+  }, [selectedGeographicAreaId, selectedGeographicArea, availableAreas, isMobile]);
 
   const handleBreadcrumbClick: BreadcrumbGroupProps['onFollow'] = (event) => {
     event.preventDefault();
     const areaId = event.detail.href.substring(1); // Remove the '#' prefix
-    
+
     if (!areaId) return;
-    
+
     // Backend handles authorization - just set the filter
     // If unauthorized, backend will return 403 and filter will be cleared via error event
     setGeographicAreaFilter(areaId);
@@ -81,33 +81,37 @@ export function GeographicAreaFilterSelector() {
 
   return (
     <div className={isMobile ? styles.mobileContainer : styles.desktopContainer}>
-      <div className={styles.selectorWrapper}>
-        <GeographicAreaSelector
-          value={selectedGeographicAreaId}
-          onChange={handleChange}
-          options={availableAreas}
-          loading={isLoading || isSearching}
-          placeholder={selectedGeographicAreaId ? undefined : 'Global (All Areas)'}
-          inlineLabelText="Region Filter"
-          onLoadItems={handleLoadItems}
-          filteringType="manual"
-        />
-      </div>
-      {selectedGeographicAreaId && breadcrumbItems.length > 0 && (
-        <div className={styles.breadcrumbWrapper}>
-          <BreadcrumbGroup
-            items={breadcrumbItems}
-            onFollow={handleBreadcrumbClick}
-            ariaLabel="Geographic area hierarchy"
-          />
-          <Button
-            variant="icon"
-            iconName="close"
-            ariaLabel="Clear geographic area filter"
-            onClick={clearFilter}
-          />
+      <div className={selectedGeographicAreaId ? styles.selectorWrapperSelected : styles.selectorWrapper}>
+        <div style={{ display: 'flex' }}>
+          <div style={{ flex: 1 }}>
+            <GeographicAreaSelector
+              value={selectedGeographicAreaId}
+              onChange={handleChange}
+              options={availableAreas}
+              loading={isLoading || isSearching}
+              placeholder={selectedGeographicAreaId ? undefined : 'Global (All Areas)'}
+              inlineLabelText="Region Filter"
+              onLoadItems={handleLoadItems}
+              filteringType="manual"
+            />
+          </div>
+          {selectedGeographicAreaId && (
+            <div className={styles.breadcrumbWrapper}>
+              <BreadcrumbGroup
+                items={breadcrumbItems}
+                onFollow={handleBreadcrumbClick}
+                ariaLabel="Geographic area hierarchy"
+              />
+              <Button
+                variant="icon"
+                iconName="close"
+                ariaLabel="Clear geographic area filter"
+                onClick={clearFilter}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

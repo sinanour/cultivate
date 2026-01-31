@@ -59,24 +59,30 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
   - [x] 3.1 Create mobile header styles
     - Create mobile styles in `AppLayout.mobile.module.css`
     - Stack header elements vertically on mobile
-    - Make filter container full-width with appropriate padding
+    - Make filter container use flexbox with inline layout (filter selector + clear button)
+    - Set filter selector to flex: 1 with min-width: 0 to allow shrinking
+    - Set clear button to flex-shrink: 0 with min 44x44px touch target
+    - Hide breadcrumb container when filter is active on mobile
     - Ensure all header buttons meet 44x44px touch target size
     - Maintain sticky header behavior on mobile
-    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.7, 3.8_
 
   - [x] 3.2 Update GeographicAreaFilterSelector for mobile
     - Import useMediaQuery hook
+    - Conditionally hide breadcrumb on mobile when filter is active
+    - Create filter row container with flexbox layout
+    - Position Geographic_Area_Selector and clear button inline
     - Apply mobile-specific container class on mobile viewports
-    - Make selector full-width on mobile
     - Preserve existing horizontal layout on desktop/tablet
-    - _Requirements: 3.2, 3.6_
+    - _Requirements: 3.2, 3.3, 3.4, 3.5, 3.6, 3.9_
 
   - [ ]* 3.3 Write property tests for mobile header
     - **Property 276: Mobile Header Vertical Stacking**
-    - **Property 277: Mobile Filter Full Width**
+    - **Property 277: Mobile Filter Inline Layout**
+    - **Property 277a: Mobile Breadcrumb Hidden When Filter Active**
     - **Property 278: Mobile Header Touch Targets**
     - **Property 279: Mobile Header Sticky Behavior**
-    - **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5**
+    - **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.7, 3.8**
 
 - [-] 4. Implement mobile table layouts (card-based)
   - [x] 4.1 Create ResponsiveTable component
