@@ -5,10 +5,10 @@ import {
   SpaceBetween,
   Badge,
   Link,
+  Button,
 } from '@cloudscape-design/components';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
-import { ResponsiveButton } from '../common/ResponsiveButton';
 
 interface AddressHistoryTableProps {
   addressHistory: ParticipantAddressHistory[];
@@ -76,18 +76,16 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
           header: 'Actions',
           cell: (item: ParticipantAddressHistory) => (
             <Box>
-                <ResponsiveButton
-                  variant="inline-link"
-                  onClick={() => onEdit(item)}
-                >
-                  Edit
-                </ResponsiveButton>
-                <ResponsiveButton
-                  variant="inline-link"
-                  onClick={() => onDelete(item.id)}
-                >
-                  Remove
-                </ResponsiveButton>
+              <Button
+                variant="inline-link"
+                onClick={() => onEdit(item)}
+                iconName="edit"
+              />
+              <Button
+                variant="inline-link"
+                onClick={() => onDelete(item.id)}
+                iconName="remove"
+              />
             </Box>
           ),
         },

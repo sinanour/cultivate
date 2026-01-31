@@ -6,6 +6,7 @@ import {
   FormField,
   DatePicker,
   Alert,
+  Button,
 } from '@cloudscape-design/components';
 import { useQueryClient } from '@tanstack/react-query';
 import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
@@ -13,7 +14,6 @@ import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { VenueService } from '../../services/api/venue.service';
 import { formatDate } from '../../utils/date.utils';
 import { useAuth } from '../../hooks/useAuth';
-import { ResponsiveButton } from '../common/ResponsiveButton';
 
 interface ActivityVenueHistoryFormProps {
   visible: boolean;
@@ -118,17 +118,17 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
       footer={
         <Box float="right">
           <SpaceBetween direction="horizontal" size="xs">
-            <ResponsiveButton variant="link" onClick={onDismiss}>
+            <Button variant="link" onClick={onDismiss}>
               Cancel
-            </ResponsiveButton>
-            <ResponsiveButton
+            </Button>
+            <Button
               variant="primary"
               onClick={handleSubmit}
               disabled={submitting || loading}
               loading={submitting}
             >
               Add
-            </ResponsiveButton>
+            </Button>
           </SpaceBetween>
         </Box>
       }
