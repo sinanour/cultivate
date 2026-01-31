@@ -81,7 +81,7 @@ export function GeographicAreaFilterSelector() {
 
   return (
     <div className={isMobile ? styles.mobileContainer : styles.desktopContainer}>
-      <div className={selectedGeographicAreaId ? styles.selectorWrapperSelected : styles.selectorWrapper}>
+      <div className={styles.selectorWrapper}>
         <div style={{ display: 'flex' }}>
           <div style={{ flex: 1 }}>
             <GeographicAreaSelector

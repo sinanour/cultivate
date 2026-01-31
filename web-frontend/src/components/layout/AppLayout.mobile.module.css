@@ -18,15 +18,17 @@
     z-index: 999;
   }
   
-  /* Header container adjustments for mobile */
-  .headerContainer {
+  /* Top navigation container - separate from filter to allow dropdown rendering */
+  .topNavigationContainer {
     position: sticky;
     top: 0;
-    z-index: 1000;
+    z-index: 1001;
     background-color: #ffffff;
     width: 100%;
     max-width: 100vw;
-    overflow-x: hidden;
+    /* CRITICAL: Use overflow: visible to allow dropdown menus to render outside container */
+    /* CloudScape TopNavigation dropdowns use absolute positioning and will be clipped with overflow: hidden */
+    overflow: visible;
   }
   
   /* Filter container full-width on mobile with proper constraints */
@@ -35,7 +37,10 @@
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
+    /* Keep overflow hidden only for filter container to prevent horizontal scroll */
+    overflow-x: hidden;
+    /* Use relative positioning on mobile to avoid sticky behavior and gaps */
+    /* On desktop, inline styles will override with sticky positioning */
   }
   
   /* Filter selector full-width on mobile */

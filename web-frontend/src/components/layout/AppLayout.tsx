@@ -108,11 +108,11 @@ export function AppLayout() {
   return (
     <>
       <div 
-        className={styles.headerContainer}
+        className={styles.topNavigationContainer}
         style={{
           position: 'sticky',
           top: 0,
-          zIndex: 1000,
+          zIndex: 1001,
           backgroundColor: '#ffffff',
         }}
       >
@@ -164,18 +164,21 @@ export function AppLayout() {
             },
           ]}
         />
-        <div 
-          className={styles.filterContainer}
-          style={{ 
-            padding: isMobile ? '12px 16px' : '8px 20px',
-            borderBottom: '2px solid #e9ebed', 
-            backgroundColor: selectedGeographicAreaId ? '#f1fdf6' : '#ffffff',
-            boxShadow: '0 1px 1px 0 rgba(0,28,36,0.3)',
-            transition: 'background-color 0.2s ease',
-          }}
-        >
-          <GeographicAreaFilterSelector />
-        </div>
+      </div>
+      <div
+        className={styles.filterContainer}
+        style={{ 
+          position: isMobile ? 'relative' : 'sticky',
+          top: isMobile ? 'auto' : '56px',
+          zIndex: 1000,
+          padding: isMobile ? '12px 16px' : '8px 20px',
+          borderBottom: '2px solid #e9ebed',
+          backgroundColor: selectedGeographicAreaId ? '#f1fdf6' : '#ffffff',
+          boxShadow: '0 1px 1px 0 rgba(0,28,36,0.3)',
+          transition: 'background-color 0.2s ease',
+        }}
+      >
+        <GeographicAreaFilterSelector />
       </div>
       <AppLayoutComponent
         navigation={

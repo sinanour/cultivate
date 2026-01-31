@@ -84,6 +84,27 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
     - **Property 279: Mobile Header Sticky Behavior**
     - **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.7, 3.8**
 
+- [x] 3.4 Fix user profile dropdown menu on mobile
+  - [x] 3.4.1 Fix dropdown clipping issue
+    - Remove `overflow: hidden` from `.headerContainer` in mobile CSS
+    - Change to `overflow: visible` to allow dropdown to render outside container
+    - Ensure dropdown menu can extend below the header on mobile
+    - _Requirements: 3.6, 3.8_
+  
+  - [x] 3.4.2 Fix dropdown z-index stacking
+    - Verify TopNavigation dropdown has appropriate z-index (should be > 1000)
+    - Ensure dropdown appears above all other content including sticky header
+    - Test dropdown visibility when scrolling on mobile
+    - _Requirements: 3.6_
+  
+  - [x] 3.4.3 Test user profile dropdown on mobile
+    - Test dropdown opens correctly on mobile devices
+    - Verify dropdown menu items are visible and not clipped
+    - Test dropdown positioning at different scroll positions
+    - Verify touch targets for dropdown items meet 44x44px minimum
+    - Test "My Profile" and "Logout" menu item interactions
+    - _Requirements: 3.6, 3.8_
+
 - [-] 4. Implement mobile table layouts (card-based)
   - [x] 4.1 Create ResponsiveTable component
     - Create `web-frontend/src/components/common/ResponsiveTable.tsx`

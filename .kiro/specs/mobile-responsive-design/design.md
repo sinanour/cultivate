@@ -143,19 +143,41 @@ const isMobile = useMediaQuery(BREAKPOINTS.mobile);
 
 ### 4. Mobile Header Layout
 
+**Restructured Header Architecture:**
+
+To properly support CloudScape dropdown menus on mobile, the header has been restructured into two separate sticky containers:
+
+1. **TopNavigation Container** (z-index: 1001) - Contains the TopNavigation component with user profile dropdown
+2. **Filter Container** - Contains the GeographicAreaFilterSelector
+   - Mobile: `position: relative` (no sticky behavior, eliminates gaps)
+   - Desktop: `position: sticky, top: 56px, z-index: 1000`
+
+This separation ensures the TopNavigation dropdown can render outside its container without being clipped by the filter section below, while eliminating the spacing gap on mobile.
+
 **TopNavigation Mobile Styles:**
 ```css
 /* AppLayout.mobile.module.css */
 @media (max-width: 767px) {
-  .headerContainer {
+  .topNavigationContainer {
     position: sticky;
     top: 0;
-    z-index: 1000;
+    z-index: 1001;
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 100vw;
+    /* CRITICAL: Use overflow: visible to allow dropdown menus to render outside container */
+    overflow: visible;
   }
   
   .filterContainer {
     padding: 12px 16px;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    /* Keep overflow-x hidden only for filter container to prevent horizontal scroll */
+    overflow-x: hidden;
+    /* Use relative positioning on mobile to avoid sticky behavior and gaps */
+    /* On desktop, inline styles will override with sticky positioning */
   }
   
   .filterSelector {
@@ -168,6 +190,41 @@ const isMobile = useMediaQuery(BREAKPOINTS.mobile);
   }
 }
 ```
+
+**AppLayout Component Structure:**
+```typescript
+// components/layout/AppLayout.tsx
+return (
+  <>
+    {/* Separate TopNavigation container with higher z-index */}
+    <div className={styles.topNavigationContainer} style={{ position: 'sticky', top: 0, zIndex: 1001 }}>
+      <TopNavigation {...props} />
+    </div>
+    
+    {/* Separate Filter container - relative on mobile, sticky on desktop */}
+    <div 
+      className={styles.filterContainer} 
+      style={{ 
+        position: isMobile ? 'relative' : 'sticky',
+        top: isMobile ? 'auto' : '56px',
+        zIndex: 1000
+      }}
+    >
+      <GeographicAreaFilterSelector />
+    </div>
+    
+    <AppLayoutComponent {...props} />
+  </>
+);
+```
+
+**Important Note on Dropdown Menus:**
+- The `topNavigationContainer` must use `overflow: visible` to allow CloudScape dropdowns to render outside the container
+- The `topNavigationContainer` must have a higher z-index (1001) than the `filterContainer` (1000)
+- On mobile, the `filterContainer` uses `position: relative` to eliminate spacing gaps and stack naturally below TopNavigation
+- On desktop, the `filterContainer` uses `position: sticky` with `top: 56px` to maintain sticky behavior
+- CloudScape's TopNavigation component internally manages dropdown z-index (typically 5000+) to appear above all content
+- Separating these containers prevents the filter section from obscuring the dropdown menu
 
 **GeographicAreaFilterSelector Mobile Updates:**
 ```typescript

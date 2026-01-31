@@ -56,9 +56,11 @@ This specification extends the Web Frontend package to provide an optimized mobi
 4. THE Web_App SHALL display only the filter selector dropdown and clear button when a filter is active on mobile
 5. THE Web_App SHALL ensure the filter selector takes appropriate width (not full-width) to accommodate the inline clear button on mobile
 6. THE Web_App SHALL ensure the user menu dropdown is accessible on mobile
-7. THE Web_App SHALL maintain the sticky header behavior on mobile viewports
-8. THE Web_App SHALL ensure all header buttons meet minimum touch target size on mobile
-9. THE Web_App SHALL preserve the existing horizontal header layout on desktop and tablet viewports
+7. THE Web_App SHALL ensure the user profile dropdown menu renders completely visible without clipping on mobile viewports
+8. THE Web_App SHALL ensure the user profile dropdown menu appears above all other content with appropriate z-index on mobile
+9. THE Web_App SHALL maintain the sticky header behavior on mobile viewports
+10. THE Web_App SHALL ensure all header buttons meet minimum touch target size on mobile
+11. THE Web_App SHALL preserve the existing horizontal header layout on desktop and tablet viewports
 
 ### Requirement 4: Mobile Table and List Layouts
 
