@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import ContentLayout from '@cloudscape-design/components/content-layout';
 import Header from '@cloudscape-design/components/header';
-import Button from '@cloudscape-design/components/button';
 import { EngagementDashboard } from '../components/features/EngagementDashboard';
+import { ResponsiveButton } from '../components/common/ResponsiveButton';
 
 export default function EngagementDashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,14 +19,16 @@ export default function EngagementDashboardPage() {
           variant="h1" 
           description="View comprehensive engagement metrics, activity lifecycle events, and participation patterns across your community"
           actions={
-            <Button
+            <ResponsiveButton
               variant="primary"
               onClick={handleRunReportClick}
               loading={isLoading}
               disabled={isLoading}
+              mobileIcon="redo"
+              mobileAriaLabel="Run engagement analytics report"
             >
               Run Report
-            </Button>
+            </ResponsiveButton>
           }
         >
           Engagement Analytics

@@ -6,7 +6,6 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import Icon from '@cloudscape-design/components/icon';
@@ -16,6 +15,7 @@ import Badge from '@cloudscape-design/components/badge';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import { formatDate } from '../../utils/date.utils';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
 
@@ -89,10 +89,11 @@ export function VenueDetail() {
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
                   <>
-                    <Button variant="primary" onClick={() => navigate(`/venues/${id}/edit`)}>
+                    <ResponsiveButton variant="primary" onClick={() => navigate(`/venues/${id}/edit`)}>
                       Edit
-                    </Button>
-                    <Button 
+                    </ResponsiveButton>
+                    <ResponsiveButton 
+                      mobileIcon="remove"
                       onClick={() => {
                         if (window.confirm('Are you sure you want to delete this venue? This action cannot be undone.')) {
                           VenueService.deleteVenue(id!)
@@ -105,13 +106,17 @@ export function VenueDetail() {
                         }
                       }}
                     >
-                      Delete
-                    </Button>
+                      Remove
+                    </ResponsiveButton>
                   </>
                 )}
-                <Button onClick={() => navigate('/venues')}>
+                <ResponsiveButton 
+                  onClick={() => navigate('/venues')}
+                  mobileIcon="arrow-left"
+                  mobileAriaLabel="Back to venues list"
+                >
                   Back to Venues
-                </Button>
+                </ResponsiveButton>
               </SpaceBetween>
             }
           >
@@ -178,6 +183,7 @@ export function VenueDetail() {
       </Container>
 
       <Table
+        wrapLines={false}
         header={<Header variant="h3">Associated Activities</Header>}
         columnDefinitions={[
           {
@@ -212,6 +218,7 @@ export function VenueDetail() {
       />
 
       <Table
+        wrapLines={false}
         header={<Header variant="h3">Participants with Home Address Here</Header>}
         columnDefinitions={[
           {

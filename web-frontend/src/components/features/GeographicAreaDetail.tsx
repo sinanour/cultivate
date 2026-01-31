@@ -6,7 +6,6 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import Spinner from '@cloudscape-design/components/spinner';
@@ -16,6 +15,7 @@ import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import { formatDate } from '../../utils/date.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 
@@ -100,7 +100,8 @@ export function GeographicAreaDetail() {
             variant="h2"
             actions={
               <SpaceBetween direction="horizontal" size="xs">
-                <Button 
+                <ResponsiveButton 
+                  mobileIcon="filter" 
                   onClick={() => {
                     if (id) {
                       setGeographicAreaFilter(id);
@@ -109,13 +110,14 @@ export function GeographicAreaDetail() {
                   }}
                 >
                   Apply Filter
-                </Button>
+                </ResponsiveButton>
                 {canEdit() && (
                   <>
-                    <Button variant="primary" onClick={() => navigate(`/geographic-areas/${id}/edit`)}>
+                    <ResponsiveButton mobileIcon="edit" variant="primary" onClick={() => navigate(`/geographic-areas/${id}/edit`)}>
                       Edit
-                    </Button>
-                    <Button 
+                    </ResponsiveButton>
+                    <ResponsiveButton
+                      mobileIcon="remove" 
                       onClick={() => {
                         if (window.confirm('Are you sure you want to delete this geographic area? This action cannot be undone.')) {
                           GeographicAreaService.deleteGeographicArea(id!)
@@ -128,13 +130,17 @@ export function GeographicAreaDetail() {
                         }
                       }}
                     >
-                      Delete
-                    </Button>
+                      Remove
+                    </ResponsiveButton>
                   </>
                 )}
-                <Button onClick={() => navigate('/geographic-areas')}>
+                <ResponsiveButton 
+                  onClick={() => navigate('/geographic-areas')}
+                  mobileIcon="arrow-left"
+                  mobileAriaLabel="Back to geographic areas list"
+                >
                   Back to Geographic Areas
-                </Button>
+                </ResponsiveButton>
               </SpaceBetween>
             }
           >
@@ -191,6 +197,7 @@ export function GeographicAreaDetail() {
 
       {children.length > 0 && (
         <Table
+          wrapLines={false}
           header={<Header variant="h3">Sub-Divisions Within This Area</Header>}
           columnDefinitions={[
             {
@@ -218,6 +225,7 @@ export function GeographicAreaDetail() {
       )}
 
       <Table
+        wrapLines={false}
         header={<Header variant="h3">Venues in This Area</Header>}
         columnDefinitions={[
           {

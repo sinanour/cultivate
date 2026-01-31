@@ -18,6 +18,7 @@ import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
 import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
@@ -431,6 +432,7 @@ export function ParticipantList() {
       )}
       
       <Table
+        wrapLines={false}
         columnDefinitions={[
           {
             id: 'name',
@@ -464,18 +466,18 @@ export function ParticipantList() {
                 {canEdit() && (
                   <Button
                     variant="inline-link"
+                    iconName="edit"
                     onClick={() => handleEdit(item)}
-                  >
-                    Edit
-                  </Button>
+                    ariaLabel={`Edit ${item.name}`}
+                  />
                 )}
                 {canDelete() && (
                   <Button
                     variant="inline-link"
+                    iconName="remove"
                     onClick={() => handleDelete(item)}
-                  >
-                    Delete
-                  </Button>
+                    ariaLabel={`Remove ${item.name}`}
+                  />
                 )}
               </SpaceBetween>
             ),
@@ -492,7 +494,13 @@ export function ParticipantList() {
               {hasActiveFilters ? 'No participants match your filters.' : 'No participants to display.'}
             </Box>
             {canCreate() && !hasActiveFilters && (
-              <Button onClick={handleCreate}>Create participant</Button>
+              <ResponsiveButton 
+                onClick={handleCreate}
+                mobileIcon="add-plus"
+                mobileAriaLabel="Create new participant"
+              >
+                Create participant
+              </ResponsiveButton>
             )}
           </Box>
         }
@@ -520,28 +528,35 @@ export function ParticipantList() {
                       style={{ display: 'none' }}
                       onChange={handleFileSelect}
                     />
-                    <Button
+                    <ResponsiveButton
                       iconName="upload"
                       onClick={() => fileInputRef.current?.click()}
                       loading={isImporting}
                       disabled={isImporting}
+                      mobileAriaLabel="Import participants from CSV"
                     >
                       Import CSV
-                    </Button>
-                    <Button
+                    </ResponsiveButton>
+                    <ResponsiveButton
                       iconName="download"
                       onClick={handleExport}
                       loading={isExporting}
                       disabled={isExporting}
+                      mobileAriaLabel="Export participants to CSV"
                     >
                       Export CSV
-                    </Button>
+                    </ResponsiveButton>
                   </>
                 )}
                 {canCreate() && (
-                  <Button variant="primary" onClick={handleCreate}>
+                  <ResponsiveButton 
+                    variant="primary" 
+                    onClick={handleCreate}
+                    mobileIcon="add-plus"
+                    mobileAriaLabel="Create new participant"
+                  >
                     Create participant
-                  </Button>
+                  </ResponsiveButton>
                 )}
               </SpaceBetween>
             }

@@ -4,6 +4,7 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Container from '@cloudscape-design/components/container';
 import Box from '@cloudscape-design/components/box';
 import Link from '@cloudscape-design/components/link';
+import styles from './AboutPage.mobile.module.css';
 
 export default function AboutPage() {
   return (
@@ -23,31 +24,15 @@ export default function AboutPage() {
         <SpaceBetween size="l">
           {/* App Icon and Description */}
           <Container>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '200px 1fr', 
-              gap: '32px', 
-              alignItems: 'center',
-              padding: '20px' 
-            }}>
-              <div style={{
-                width: '180px',
-                height: '180px',
-                backgroundColor: '#0B1F3B',
-                borderRadius: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '10px',
-                boxSizing: 'border-box'
-              }}>
+            <div className={styles.aboutIconContainer}>
+              <div className={styles.aboutIcon}>
                 <img 
                   src="/icon-no-bg.svg" 
                   alt="Cultivate App Icon" 
-                  style={{ width: '180px', height: '180px' }}
+                  className={styles.aboutIconImage}
                 />
               </div>
-              <Box variant="p" fontSize="body-m">
+              <Box variant="p" fontSize="body-m" className={styles.aboutDescription}>
                 The Cultivate logo incorporates themes of concentric circles as well as expanding 
                 nuclei. The fact that the circles are not perfectly concentric is a reflection of the 
                 organic nature of this growth. Careful examination of the three circles will reveal

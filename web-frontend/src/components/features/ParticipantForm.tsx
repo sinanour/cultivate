@@ -827,6 +827,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
               )}
 
               <Table<ParticipantAddressHistory>
+                wrapLines={false}
                 header={
                   <Header
                     variant="h3"

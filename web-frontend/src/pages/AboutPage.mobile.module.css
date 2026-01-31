@@ -1,0 +1,55 @@
+/* Mobile styles for About page */
+@media (max-width: 767px) {
+  .aboutIconContainer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px !important;
+    align-items: center !important;
+    padding: 16px !important;
+  }
+
+  .aboutIcon {
+    width: 150px !important;
+    height: 150px !important;
+  }
+
+  .aboutIconImage {
+    width: 150px !important;
+    height: 150px !important;
+  }
+
+  .aboutDescription {
+    text-align: center;
+  }
+}
+
+@media (min-width: 768px) {
+  .aboutIconContainer {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 32px;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .aboutIcon {
+    width: 180px;
+    height: 180px;
+  }
+
+  .aboutIconImage {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+/* Common styles */
+.aboutIcon {
+  background-color: #0B1F3B;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+}

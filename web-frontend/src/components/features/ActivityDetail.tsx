@@ -22,6 +22,7 @@ import { ActivityVenueHistoryForm } from './ActivityVenueHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/date.utils';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -203,33 +204,38 @@ export function ActivityDetail() {
                 {canEdit() && (
                   <SpaceBetween direction="horizontal" size="xs">
                     {activity.status !== 'COMPLETED' && (
-                      <Button
+                      <ResponsiveButton
                         onClick={() => handleUpdateStatus('COMPLETED')}
                         loading={updateStatusMutation.isPending}
+                        mobileIcon="status-positive"
+                        mobileAriaLabel="Mark activity as complete"
                       >
                         Mark Complete
-                      </Button>
+                      </ResponsiveButton>
                     )}
                     {activity.status !== 'CANCELLED' && (
-                      <Button
+                      <ResponsiveButton
                         onClick={() => handleUpdateStatus('CANCELLED')}
                         loading={updateStatusMutation.isPending}
+                        mobileIcon="status-negative"
+                        mobileAriaLabel="Cancel this activity"
                       >
                         Cancel Activity
-                      </Button>
+                      </ResponsiveButton>
                     )}
                     {activity.status !== 'ACTIVE' && (
-                      <Button
+                      <ResponsiveButton
+                        mobileIcon="status-in-progress"
                         onClick={() => handleUpdateStatus('ACTIVE')}
                         loading={updateStatusMutation.isPending}
                       >
                         Set Active
-                      </Button>
+                      </ResponsiveButton>
                     )}
-                    <Button variant="primary" onClick={() => navigate(`/activities/${id}/edit`)}>
+                    <ResponsiveButton variant="primary" onClick={() => navigate(`/activities/${id}/edit`)}>
                       Edit
-                    </Button>
-                    <Button 
+                    </ResponsiveButton>
+                    <ResponsiveButton 
                       onClick={() => {
                         if (window.confirm('Are you sure you want to delete this activity? This action cannot be undone.')) {
                           ActivityService.deleteActivity(id!)
@@ -242,13 +248,17 @@ export function ActivityDetail() {
                         }
                       }}
                     >
-                      Delete
-                    </Button>
+                      Remove
+                    </ResponsiveButton>
                   </SpaceBetween>
                 )}
-                <Button onClick={() => navigate('/activities')}>
+                <ResponsiveButton 
+                  onClick={() => navigate('/activities')}
+                  mobileIcon="arrow-left"
+                  mobileAriaLabel="Back to activities list"
+                >
                   Back to Activities
-                </Button>
+                </ResponsiveButton>
               </SpaceBetween>
             }
           >
@@ -343,6 +353,7 @@ export function ActivityDetail() {
       />
 
       <Table
+        wrapLines={false}
         header={
           <Header
             variant="h3"

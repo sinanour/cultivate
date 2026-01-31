@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import ContentLayout from '@cloudscape-design/components/content-layout';
 import Header from '@cloudscape-design/components/header';
-import Button from '@cloudscape-design/components/button';
 import { GrowthDashboard } from '../components/features/GrowthDashboard';
+import { ResponsiveButton } from '../components/common/ResponsiveButton';
 
 export default function GrowthDashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,14 +19,16 @@ export default function GrowthDashboardPage() {
           variant="h1" 
           description="Track growth trends in participant and activity counts over time with flexible grouping options"
           actions={
-            <Button
+            <ResponsiveButton
               variant="primary"
               onClick={handleRunReportClick}
               loading={isLoading}
               disabled={isLoading}
+              mobileIcon="redo"
+              mobileAriaLabel="Run growth analytics report"
             >
               Run Report
-            </Button>
+            </ResponsiveButton>
           }
         >
           Growth Analytics

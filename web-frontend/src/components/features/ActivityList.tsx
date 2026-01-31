@@ -22,6 +22,7 @@ import { formatDate } from '../../utils/date.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
 import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
@@ -485,6 +486,7 @@ export function ActivityList() {
       )}
       
       <Table
+        wrapLines={false}
         columnDefinitions={[
           {
             id: 'name',
@@ -538,18 +540,18 @@ export function ActivityList() {
                 {canEdit() && (
                   <Button
                     variant="inline-link"
+                    iconName="edit"
                     onClick={() => handleEdit(item)}
-                  >
-                    Edit
-                  </Button>
+                    ariaLabel={`Edit ${item.name}`}
+                  />
                 )}
                 {canDelete() && (
                   <Button
                     variant="inline-link"
+                    iconName="remove"
                     onClick={() => handleDelete(item)}
-                  >
-                    Delete
-                  </Button>
+                    ariaLabel={`Remove ${item.name}`}
+                  />
                 )}
               </SpaceBetween>
             ),
@@ -566,7 +568,13 @@ export function ActivityList() {
               {hasActiveFilters ? 'No activities match your filters.' : 'No activities to display.'}
             </Box>
             {canCreate() && !hasActiveFilters && (
-              <Button onClick={handleCreate}>Create activity</Button>
+              <ResponsiveButton 
+                onClick={handleCreate}
+                mobileIcon="add-plus"
+                mobileAriaLabel="Create new activity"
+              >
+                Create activity
+              </ResponsiveButton>
             )}
           </Box>
         }
@@ -595,28 +603,35 @@ export function ActivityList() {
                       style={{ display: 'none' }}
                       onChange={handleFileSelect}
                     />
-                    <Button
+                    <ResponsiveButton
                       iconName="upload"
                       onClick={() => fileInputRef.current?.click()}
                       loading={isImporting}
                       disabled={isImporting}
+                      mobileAriaLabel="Import activities from CSV"
                     >
                       Import CSV
-                    </Button>
-                    <Button
+                    </ResponsiveButton>
+                    <ResponsiveButton
                       iconName="download"
                       onClick={handleExport}
                       loading={isExporting}
                       disabled={isExporting}
+                      mobileAriaLabel="Export activities to CSV"
                     >
                       Export CSV
-                    </Button>
+                    </ResponsiveButton>
                   </>
                 )}
                 {canCreate() && (
-                  <Button variant="primary" onClick={handleCreate}>
+                  <ResponsiveButton 
+                    variant="primary" 
+                    onClick={handleCreate}
+                    mobileIcon="add-plus"
+                    mobileAriaLabel="Create new activity"
+                  >
                     Create activity
-                  </Button>
+                  </ResponsiveButton>
                 )}
               </SpaceBetween>
             }

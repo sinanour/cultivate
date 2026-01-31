@@ -944,6 +944,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
               )}
 
               <Table<ActivityVenueHistory>
+                wrapLines={false}
                 header={
                   <Header
                     variant="h3"
@@ -1099,6 +1100,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
               )}
 
               <Table<Assignment>
+                wrapLines={false}
                 header={
                   <Header
                     variant="h3"

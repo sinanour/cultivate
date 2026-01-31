@@ -99,7 +99,7 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
               variant="inline-link"
               onClick={() => onDelete(item.id)}
             >
-              Delete
+              Remove
             </Button>
           ),
         },

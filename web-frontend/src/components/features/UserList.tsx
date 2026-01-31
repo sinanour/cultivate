@@ -111,6 +111,7 @@ export function UserList() {
           </Alert>
         )}
         <Table
+          wrapLines={false}
           columnDefinitions={[
             {
               id: 'displayName',
@@ -142,12 +143,18 @@ export function UserList() {
               header: 'Actions',
               cell: (item) => (
                 <SpaceBetween direction="horizontal" size="xs">
-                  <Button variant="inline-link" onClick={() => handleEdit(item)}>
-                    Edit
-                  </Button>
-                  <Button variant="inline-link" onClick={() => handleDeleteClick(item)}>
-                    Delete
-                  </Button>
+                  <Button 
+                    variant="inline-link" 
+                    iconName="edit"
+                    onClick={() => handleEdit(item)}
+                    ariaLabel={`Edit ${getDisplayName(item)}`}
+                  />
+                  <Button 
+                    variant="inline-link" 
+                    iconName="remove"
+                    onClick={() => handleDeleteClick(item)}
+                    ariaLabel={`Remove ${getDisplayName(item)}`}
+                  />
                 </SpaceBetween>
               ),
             },
@@ -180,11 +187,11 @@ export function UserList() {
         />
       </SpaceBetween>
 
-      {/* Delete Confirmation Modal */}
+      {/* Remove Confirmation Modal */}
       <Modal
         visible={showDeleteConfirmation}
         onDismiss={handleCancelDelete}
-        header="Delete User"
+        header="Remove User"
         footer={
           <Box float="right">
             <SpaceBetween direction="horizontal" size="xs">
@@ -196,7 +203,7 @@ export function UserList() {
                 onClick={handleConfirmDelete}
                 loading={deleteMutation.isPending}
               >
-                Delete
+                Remove
               </Button>
             </SpaceBetween>
           </Box>

@@ -8,9 +8,11 @@ import Header from '@cloudscape-design/components/header';
 import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
+import Link from '@cloudscape-design/components/link';
 import type { ParticipantRole } from '../../types';
 import { ParticipantRoleService } from '../../services/api/participant-role.service';
 import { ParticipantRoleForm } from './ParticipantRoleForm';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import { usePermissions } from '../../hooks/usePermissions';
 
 export function ParticipantRoleList() {
@@ -69,17 +71,20 @@ export function ParticipantRoleList() {
         </Alert>
       )}
       <Table
+        wrapLines={false}
         columnDefinitions={[
           {
             id: 'name',
             header: 'Name',
             cell: (item) => (
-              <Button
-                variant="inline-link"
-                onClick={() => handleEdit(item)}
+              <Link
+                onFollow={(e) => {
+                  e.preventDefault();
+                  handleEdit(item);
+                }}
               >
                 {item.name}
-              </Button>
+              </Link>
             ),
             sortingField: 'name',
           },
@@ -100,18 +105,18 @@ export function ParticipantRoleList() {
                 {canEdit() && (
                   <Button
                     variant="inline-link"
+                    iconName="edit"
                     onClick={() => handleEdit(item)}
-                  >
-                    Edit
-                  </Button>
+                    ariaLabel={`Edit ${item.name}`}
+                  />
                 )}
                 {canDelete() && !item.isPredefined && (
                   <Button
                     variant="inline-link"
+                    iconName="remove"
                     onClick={() => handleDelete(item)}
-                  >
-                    Delete
-                  </Button>
+                    ariaLabel={`Remove ${item.name}`}
+                  />
                 )}
               </SpaceBetween>
             ),
@@ -127,7 +132,13 @@ export function ParticipantRoleList() {
               No participant roles to display.
             </Box>
             {canCreate() && (
-              <Button onClick={handleCreate}>Create participant role</Button>
+              <ResponsiveButton 
+                onClick={handleCreate}
+                mobileIcon="add-plus"
+                mobileAriaLabel="Create new participant role"
+              >
+                Create participant role
+              </ResponsiveButton>
             )}
           </Box>
         }
@@ -136,9 +147,14 @@ export function ParticipantRoleList() {
             counter={`(${roles.length})`}
             actions={
               canCreate() && (
-                <Button variant="primary" onClick={handleCreate}>
+                <ResponsiveButton 
+                  variant="primary" 
+                  onClick={handleCreate}
+                  mobileIcon="add-plus"
+                  mobileAriaLabel="Create new participant role"
+                >
                   Create participant role
-                </Button>
+                </ResponsiveButton>
               )
             }
           >

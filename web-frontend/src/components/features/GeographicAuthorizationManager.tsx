@@ -64,7 +64,7 @@ export function GeographicAuthorizationManager({
     retry: false,
   });
 
-  // Delete mutation
+  // Remove mutation
   const deleteMutation = useMutation({
     mutationFn: (authId: string) =>
       geographicAuthorizationService.deleteAuthorizationRule(userId, authId),

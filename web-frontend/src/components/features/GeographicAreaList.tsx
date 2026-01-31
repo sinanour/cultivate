@@ -19,6 +19,7 @@ import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 import styles from './GeographicAreaList.module.scss';
@@ -572,13 +573,13 @@ export function GeographicAreaList() {
         <Button
           key="edit"
           variant="inline-link"
+          iconName="edit"
           onClick={(e) => {
             e.stopPropagation();
             handleEdit(area);
           }}
-        >
-          Edit
-        </Button>
+          ariaLabel={`Edit ${area.name}`}
+        />
       );
     }
     
@@ -587,13 +588,13 @@ export function GeographicAreaList() {
         <Button
           key="delete"
           variant="inline-link"
+          iconName="remove"
           onClick={(e) => {
             e.stopPropagation();
             handleDelete(area);
           }}
-        >
-          Delete
-        </Button>
+          ariaLabel={`Remove ${area.name}`}
+        />
       );
     }
 
@@ -684,28 +685,35 @@ export function GeographicAreaList() {
                         style={{ display: 'none' }}
                         onChange={handleFileSelect}
                       />
-                      <Button
+                      <ResponsiveButton
                         iconName="upload"
                         onClick={() => fileInputRef.current?.click()}
                         loading={isImporting}
                         disabled={isImporting}
+                        mobileAriaLabel="Import geographic areas from CSV"
                       >
                         Import CSV
-                      </Button>
-                      <Button
+                      </ResponsiveButton>
+                      <ResponsiveButton
                         iconName="download"
                         onClick={handleExport}
                         loading={isExporting}
                         disabled={isExporting}
+                        mobileAriaLabel="Export geographic areas to CSV"
                       >
                         Export CSV
-                      </Button>
+                      </ResponsiveButton>
                     </>
                   )}
                   {canCreate() && (
-                    <Button variant="primary" onClick={handleCreate}>
+                    <ResponsiveButton 
+                      variant="primary" 
+                      onClick={handleCreate}
+                      mobileIcon="add-plus"
+                      mobileAriaLabel="Create new geographic area"
+                    >
                       Create geographic area
-                    </Button>
+                    </ResponsiveButton>
                   )}
                 </SpaceBetween>
               }
@@ -741,7 +749,13 @@ export function GeographicAreaList() {
                 No geographic areas to display.
               </Box>
               {canCreate() && (
-                <Button onClick={handleCreate}>Create geographic area</Button>
+                <ResponsiveButton 
+                  onClick={handleCreate}
+                  mobileIcon="add-plus"
+                  mobileAriaLabel="Create new geographic area"
+                >
+                  Create geographic area
+                </ResponsiveButton>
               )}
             </Box>
           )}

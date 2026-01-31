@@ -795,6 +795,226 @@ export function ResponsiveDetailView({ children }: { children: React.ReactNode }
 5. Monitor analytics and user feedback
 6. Remove feature flag after validation
 
+### 11. Mobile Icon-Only Buttons
+
+**Button Icon Mapping Component:**
+```typescript
+// utils/mobile-button-icons.ts
+import { IconProps } from '@cloudscape-design/components';
+
+export const MOBILE_BUTTON_ICONS: Record<string, IconProps['name']> = {
+  // Create/Add actions
+  'create': 'add-plus',
+  'add': 'add-plus',
+  'new': 'add-plus',
+  
+  // Filter actions
+  'update': 'filter',
+  'apply': 'filter',
+  'clear all': 'undo',
+  'reset': 'undo',
+  
+  // CSV actions (already have icons, just hide text)
+  'import csv': 'upload',
+  'export csv': 'download',
+  
+  // Activity actions
+  'mark complete': 'status-positive',
+  'cancel activity': 'status-negative',
+  
+  // Navigation actions
+  'back': 'arrow-left',
+  
+  // Report actions
+  'run report': 'redo',
+} as const;
+
+export function getMobileButtonIcon(buttonText: string): IconProps['name'] | undefined {
+  const normalizedText = buttonText.toLowerCase().trim();
+  return MOBILE_BUTTON_ICONS[normalizedText];
+}
+```
+
+**Responsive Button Component:**
+```typescript
+// components/common/ResponsiveButton.tsx
+import { Button, ButtonProps, Icon } from '@cloudscape-design/components';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { BREAKPOINTS } from '../../utils/responsive';
+import { getMobileButtonIcon } from '../../utils/mobile-button-icons';
+
+interface ResponsiveButtonProps extends ButtonProps {
+  children: React.ReactNode;
+  mobileIcon?: ButtonProps['iconName'];
+  mobileAriaLabel?: string;
+}
+
+export function ResponsiveButton({ 
+  children, 
+  mobileIcon, 
+  mobileAriaLabel,
+  iconName,
+  ...props 
+}: ResponsiveButtonProps) {
+  const isMobile = useMediaQuery(BREAKPOINTS.mobile);
+  
+  // Auto-detect icon from button text if not provided
+  const autoIcon = typeof children === 'string' 
+    ? getMobileButtonIcon(children) 
+    : undefined;
+  
+  const effectiveMobileIcon = mobileIcon || autoIcon;
+  
+  if (isMobile && effectiveMobileIcon) {
+    return (
+      <Button
+        {...props}
+        iconName={effectiveMobileIcon}
+        ariaLabel={mobileAriaLabel || (typeof children === 'string' ? children : undefined)}
+      />
+    );
+  }
+  
+  return (
+    <Button {...props} iconName={iconName}>
+      {children}
+    </Button>
+  );
+}
+```
+
+**FilterGroupingPanel Button Updates:**
+```typescript
+// components/common/FilterGroupingPanel.tsx
+import { ResponsiveButton } from './ResponsiveButton';
+
+// Replace custom styled buttons with standard CloudScape buttons
+<div className={styles.actionRow}>
+  {!hideUpdateButton && (
+    <ResponsiveButton 
+      variant="primary"
+      onClick={onUpdate}
+      mobileIcon="filter"
+      mobileAriaLabel="Update filters"
+    >
+      Update
+    </ResponsiveButton>
+  )}
+  <ResponsiveButton 
+    onClick={onClearAll}
+    mobileIcon="undo"
+    mobileAriaLabel="Clear all filters"
+  >
+    Clear All
+  </ResponsiveButton>
+</div>
+```
+
+**List Page Button Updates:**
+```typescript
+// Example: ParticipantList.tsx
+<ResponsiveButton 
+  variant="primary"
+  onClick={() => navigate('/participants/new')}
+  mobileIcon="add-plus"
+  mobileAriaLabel="Create new participant"
+>
+  Create Participant
+</ResponsiveButton>
+
+<ResponsiveButton 
+  iconName="upload"
+  onClick={handleImportCSV}
+  mobileAriaLabel="Import participants from CSV"
+>
+  Import CSV
+</ResponsiveButton>
+
+<ResponsiveButton 
+  iconName="download"
+  onClick={handleExportCSV}
+  mobileAriaLabel="Export participants to CSV"
+>
+  Export CSV
+</ResponsiveButton>
+```
+
+**Detail Page Button Updates:**
+```typescript
+// Example: ActivityDetail.tsx
+<ResponsiveButton 
+  onClick={() => navigate('/activities')}
+  mobileIcon="arrow-left"
+  mobileAriaLabel="Back to activities"
+>
+  Back to Activities
+</ResponsiveButton>
+
+<ResponsiveButton 
+  variant="primary"
+  onClick={handleMarkComplete}
+  mobileIcon="status-positive"
+  mobileAriaLabel="Mark activity as complete"
+>
+  Mark Complete
+</ResponsiveButton>
+
+<ResponsiveButton 
+  onClick={handleCancelActivity}
+  mobileIcon="status-negative"
+  mobileAriaLabel="Cancel this activity"
+>
+  Cancel Activity
+</ResponsiveButton>
+```
+
+**Dashboard Button Updates:**
+```typescript
+// Example: EngagementDashboard.tsx, GrowthDashboard.tsx
+<ResponsiveButton 
+  variant="primary"
+  onClick={handleRunReport}
+  mobileIcon="redo"
+  mobileAriaLabel="Run analytics report"
+>
+  Run Report
+</ResponsiveButton>
+```
+
+**Mobile Button Styles:**
+```css
+/* ResponsiveButton.mobile.module.css */
+@media (max-width: 767px) {
+  /* Icon-only buttons maintain minimum touch target */
+  .iconOnlyButton {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 12px;
+  }
+  
+  /* Ensure icon is centered and appropriately sized */
+  .iconOnlyButton .icon {
+    font-size: 20px;
+  }
+}
+```
+
+**Accessibility Considerations:**
+- All icon-only buttons MUST have aria-label attributes
+- aria-label should describe the button action clearly
+- Screen readers will announce the aria-label instead of missing text
+- Visual users rely on familiar icon patterns from CloudScape
+
+**Icon Selection Rationale:**
+- **add-plus**: Universal symbol for creation/addition
+- **filter**: Represents filtering/updating data views
+- **undo**: Represents clearing/resetting to default state
+- **upload/download**: Standard icons for CSV import/export
+- **status-positive**: Green checkmark for completion
+- **status-negative**: Red X for cancellation
+- **arrow-left**: Standard back navigation icon
+- **redo**: Represents running/executing an action
+
 ## Future Enhancements
 
 Out of scope for this spec but potential future work:

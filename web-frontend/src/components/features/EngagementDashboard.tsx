@@ -6,7 +6,6 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import SegmentedControl from '@cloudscape-design/components/segmented-control';
@@ -40,6 +39,7 @@ import { generateEngagementSummaryCSV, downloadBlob } from '../../utils/csv.util
 import { generateEngagementSummaryFilename } from '../../utils/csv-filename.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import type { AreaType } from '../../types';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -1114,14 +1114,14 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
             variant="h3"
             actions={
               user?.role !== 'READ_ONLY' && (
-                <Button
+                <ResponsiveButton
                   iconName="download"
                   onClick={handleExportEngagementSummary}
                   loading={isExportingEngagementSummary}
                   disabled={isExportingEngagementSummary}
                 >
                   Export CSV
-                </Button>
+                </ResponsiveButton>
               )
             }
           >
@@ -1156,6 +1156,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
       >
         {renderWithLoadingState(
           <Table
+            wrapLines={false}
             columnDefinitions={[
             // First column for dimension label or "Total"
             {

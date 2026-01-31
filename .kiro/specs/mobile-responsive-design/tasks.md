@@ -376,21 +376,92 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
     - **Property 308: Mobile Text Overflow Prevention**
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5**
 
-- [ ] 11. Testing and validation
-  - [ ] 11.1 Set up device testing environment
+- [x] 11. Implement mobile icon-only buttons
+  - [x] 11.1 Create mobile button icon mapping utility
+    - Create `web-frontend/src/utils/mobile-button-icons.ts`
+    - Define MOBILE_BUTTON_ICONS constant with icon mappings
+    - Implement getMobileButtonIcon function for auto-detection
+    - Map common button text to CloudScape icon names
+    - _Requirements: 11.1, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 11.10, 11.11_
+
+  - [x] 11.2 Create ResponsiveButton component
+    - Create `web-frontend/src/components/common/ResponsiveButton.tsx`
+    - Accept mobileIcon and mobileAriaLabel props
+    - Use useMediaQuery to detect mobile viewport
+    - Render icon-only button on mobile with aria-label
+    - Render text button with optional icon on desktop/tablet
+    - Auto-detect icon from button text if mobileIcon not provided
+    - Preserve button variant (Primary, Default, Link)
+    - _Requirements: 11.1, 11.2, 11.13, 11.14_
+
+  - [x] 11.3 Create mobile button styles
+    - Create `web-frontend/src/components/common/ResponsiveButton.mobile.module.css`
+    - Ensure icon-only buttons meet 44x44px touch target
+    - Center icons appropriately
+    - Add appropriate padding for touch interaction
+    - _Requirements: 11.1_
+
+  - [x] 11.4 Update FilterGroupingPanel with ResponsiveButton
+    - Replace "Update" button with ResponsiveButton using "filter" icon
+    - Replace "Clear All" button with ResponsiveButton using "undo" icon
+    - Remove any custom button styling
+    - Use standard CloudScape button variants
+    - Add appropriate aria-labels
+    - _Requirements: 11.5, 11.6, 11.12, 11.13_
+
+  - [x] 11.5 Update list pages with ResponsiveButton
+    - Update ParticipantList "Create Participant" button with "add-plus" icon
+    - Update ActivityList "Create Activity" button with "add-plus" icon
+    - Update VenueList "Create Venue" button with "add-plus" icon
+    - Update GeographicAreaList "Create Geographic Area" button with "add-plus" icon
+    - Update "Import CSV" buttons to hide text on mobile (keep upload icon)
+    - Update "Export CSV" buttons to hide text on mobile (keep download icon)
+    - Add appropriate aria-labels for all buttons
+    - _Requirements: 11.4, 11.7, 11.13_
+
+  - [x] 11.6 Update ActivityDetail with ResponsiveButton
+    - Update "Back to Activities" button with "arrow-left" icon
+    - Update "Mark Complete" button with "status-positive" icon
+    - Update "Cancel Activity" button with "status-negative" icon
+    - Add appropriate aria-labels
+    - _Requirements: 11.8, 11.9, 11.10, 11.13_
+
+  - [x] 11.7 Update all detail pages with ResponsiveButton
+    - Update ParticipantDetail "Back to Participants" button with "arrow-left" icon
+    - Update VenueDetail "Back to Venues" button with "arrow-left" icon
+    - Update GeographicAreaDetail "Back to Geographic Areas" button with "arrow-left" icon
+    - Add appropriate aria-labels
+    - _Requirements: 11.10, 11.13_
+
+  - [x] 11.8 Update dashboard pages with ResponsiveButton
+    - Update EngagementDashboard "Run Report" button with "redo" icon
+    - Update GrowthDashboard "Run Report" button with "redo" icon
+    - Add appropriate aria-labels
+    - _Requirements: 11.11, 11.13_
+
+  - [ ]* 11.9 Write property tests for mobile icon-only buttons
+    - **Property 309: Mobile Button Icon Rendering**
+    - **Property 310: Mobile Button Variant Preservation**
+    - **Property 311: Mobile Button Accessibility Labels**
+    - **Property 312: Desktop Button Text Display**
+    - **Property 313: Mobile Button Touch Target Size**
+    - **Validates: Requirements 11.1, 11.2, 11.3, 11.13, 11.14**
+
+- [ ] 12. Testing and validation
+  - [ ] 12.1 Set up device testing environment
     - Configure browser dev tools for mobile testing
     - Set up device emulators (iPhone SE, iPhone 12, Samsung Galaxy S21, Google Pixel 5)
     - Prepare real devices for testing if available
     - _Requirements: All_
 
-  - [ ] 11.2 Test navigation on mobile devices
+  - [ ] 12.2 Test navigation on mobile devices
     - Test hamburger menu open/close
     - Test navigation between pages
     - Test auto-close after selection
     - Verify touch target sizes
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 11.3 Test forms on mobile devices
+  - [ ] 12.3 Test forms on mobile devices
     - Test participant form creation and editing
     - Test activity form creation and editing
     - Test venue form with map interaction
@@ -399,7 +470,7 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
     - Verify no horizontal scrolling
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-  - [ ] 11.4 Test lists on mobile devices
+  - [ ] 12.4 Test lists on mobile devices
     - Test participant list with mobile cards
     - Test activity list with mobile cards
     - Test venue list with mobile cards
@@ -407,7 +478,7 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
     - Verify card interactions
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
 
-  - [ ] 11.5 Test filters on mobile devices
+  - [ ] 12.5 Test filters on mobile devices
     - Test FilterGroupingPanel on all pages
     - Test date range picker on mobile
     - Test property filter on mobile
@@ -415,7 +486,7 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
     - Verify button interactions
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
 
-  - [ ] 11.6 Test dashboards on mobile devices
+  - [ ] 12.6 Test dashboards on mobile devices
     - Test engagement dashboard on mobile
     - Test growth dashboard on mobile
     - Verify chart rendering
@@ -423,7 +494,7 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
     - Verify filter interactions
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7_
 
-  - [ ] 11.7 Test map view on mobile devices
+  - [ ] 12.7 Test map view on mobile devices
     - Test map rendering on mobile
     - Test map controls and interactions
     - Test marker clicks and popups
@@ -431,7 +502,7 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
     - Test filter controls
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
-  - [ ] 11.8 Test detail views on mobile devices
+  - [ ] 12.8 Test detail views on mobile devices
     - Test participant detail on mobile
     - Test activity detail on mobile
     - Test venue detail on mobile
@@ -439,51 +510,65 @@ This implementation plan adds mobile responsiveness to the Web Frontend package,
     - Verify action buttons
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-  - [ ] 11.9 Perform cross-browser testing
+  - [ ] 12.9 Test icon-only buttons on mobile devices
+    - Test all create/add buttons display add-plus icon
+    - Test FilterGroupingPanel buttons display correct icons
+    - Test CSV import/export buttons hide text
+    - Test Activity Detail action buttons display correct icons
+    - Test back navigation buttons display arrow-left icon
+    - Test dashboard Run Report buttons display redo icon
+    - Verify all icon-only buttons have proper aria-labels
+    - Test button touch targets meet 44x44px minimum
+    - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 11.10, 11.11, 11.13_
+
+  - [ ] 12.10 Perform cross-browser testing
     - Test on Mobile Safari (iOS 14+)
     - Test on Chrome Mobile (Android 10+)
     - Test on Samsung Internet (14+)
     - Document any browser-specific issues
     - _Requirements: All_
 
-  - [ ] 11.10 Validate accessibility on mobile
+  - [ ] 12.11 Validate accessibility on mobile
     - Test with screen readers on mobile
     - Verify keyboard navigation on mobile browsers
     - Check focus indicators
     - Validate WCAG 2.1 AA compliance
-    - _Requirements: 1.7, All_
+    - Test icon-only button aria-labels with screen readers
+    - _Requirements: 1.7, 11.13, All_
 
-  - [ ] 11.11 Measure performance on mobile
+  - [ ] 12.12 Measure performance on mobile
     - Test page load times on 3G network
     - Measure bundle size increase
     - Profile rendering performance
     - Optimize if needed
     - _Requirements: Performance requirements_
 
-- [ ] 12. Documentation and polish
-  - [ ] 12.1 Update component documentation
+- [ ] 13. Documentation and polish
+  - [ ] 13.1 Update component documentation
     - Document mobile-specific props and behavior
     - Add mobile usage examples
     - Update component README files
+    - Document ResponsiveButton component usage
     - _Requirements: All_
 
-  - [ ] 12.2 Create mobile testing guide
+  - [ ] 13.2 Create mobile testing guide
     - Document mobile testing procedures
     - List supported devices and browsers
     - Provide troubleshooting tips
     - _Requirements: All_
 
-  - [ ] 12.3 Update user documentation
+  - [ ] 13.3 Update user documentation
     - Add mobile usage section to user guide
     - Include mobile screenshots
     - Document mobile-specific features
     - _Requirements: All_
 
-  - [ ] 12.4 Final bug fixes and polish
+  - [ ] 13.4 Final bug fixes and polish
     - Address any issues found during testing
     - Refine touch interactions
     - Optimize spacing and typography
     - Ensure consistent experience across devices
+    - Verify icon-only buttons work correctly across all pages
     - _Requirements: All_
 
 ## Testing Strategy

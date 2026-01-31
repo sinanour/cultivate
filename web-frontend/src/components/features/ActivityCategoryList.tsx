@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { activityCategoryService } from '../../services/api/activity-category.service';
 import type { ActivityCategory } from '../../types';
 import { ActivityCategoryForm } from './ActivityCategoryForm';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import { useNotification } from '../../hooks/useNotification';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -61,6 +62,7 @@ export function ActivityCategoryList() {
     return (
         <>
             <Table
+                wrapLines={false}
                 columnDefinitions={[
                     {
                         id: 'name',
@@ -93,13 +95,19 @@ export function ActivityCategoryList() {
                         cell: (item) =>
                             canEdit() ? (
                                 <SpaceBetween direction="horizontal" size="xs">
-                                    <Button variant="inline-link" onClick={() => handleEdit(item)}>
-                                        Edit
-                                    </Button>
+                                    <Button 
+                                        variant="inline-link" 
+                                        iconName="edit"
+                                        onClick={() => handleEdit(item)}
+                                        ariaLabel={`Edit ${item.name}`}
+                                    />
                                     {!item.isPredefined && (
-                                        <Button variant="inline-link" onClick={() => handleDelete(item)}>
-                                            Delete
-                                        </Button>
+                                        <Button 
+                                            variant="inline-link" 
+                                            iconName="remove"
+                                            onClick={() => handleDelete(item)}
+                                            ariaLabel={`Remove ${item.name}`}
+                                        />
                                     )}
                                 </SpaceBetween>
                             ) : null,
@@ -122,9 +130,14 @@ export function ActivityCategoryList() {
                         variant="h2"
                         actions={
                             canEdit() ? (
-                                <Button variant="primary" onClick={handleCreate}>
+                                <ResponsiveButton 
+                                    variant="primary" 
+                                    onClick={handleCreate}
+                                    mobileIcon="add-plus"
+                                    mobileAriaLabel="Create new activity category"
+                                >
                                     Create category
-                                </Button>
+                                </ResponsiveButton>
                             ) : undefined
                         }
                     >

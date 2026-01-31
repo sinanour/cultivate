@@ -251,7 +251,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
       });
 
       // Then apply authorization rule changes
-      // Delete rules that were marked for deletion
+      // Remove rules that were marked for deletion
       for (const ruleId of deletedRuleIds) {
         await geographicAuthorizationService.deleteAuthorizationRule(user!.id, ruleId);
       }
@@ -508,6 +508,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
 
           {/* Authorization Rules Table */}
           <Table
+            wrapLines={false}
             header={
               <Header
                 variant="h2"

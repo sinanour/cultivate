@@ -1,0 +1,15 @@
+/* Mobile button styles for icon-only buttons */
+
+@media (max-width: 767px) {
+  /* Ensure icon-only buttons maintain minimum touch target size */
+  .iconOnlyButton {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 12px;
+  }
+  
+  /* Ensure icon is centered and appropriately sized */
+  .iconOnlyButton .icon {
+    font-size: 20px;
+  }
+}

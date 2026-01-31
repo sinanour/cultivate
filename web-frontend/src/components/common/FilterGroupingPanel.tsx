@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   SpaceBetween,
-  Button,
   DateRangePicker,
   PropertyFilter,
   Multiselect,
@@ -17,6 +16,7 @@ import type {
 } from '@cloudscape-design/components';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { BREAKPOINTS } from '../../utils/responsive';
+import { ResponsiveButton } from './ResponsiveButton';
 import styles from './FilterGroupingPanel.mobile.module.css';
 
 export interface FilterGroupingState {
@@ -491,64 +491,65 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
           </Alert>
         )}
         
-        {/* First Row: First filtering component with action buttons beside it */}
-        <div className={styles.firstRow}>
-          {/* First filtering component (DateRangePicker if included, otherwise PropertyFilter) */}
-          <div className={styles.filterComponent}>
-          {includeDateRange ? (
-            <DateRangePicker
-              value={dateRange}
-              onChange={({ detail }) => setDateRange(detail.value)}
-              placeholder="Filter by date range"
-              dateOnly={true}
-              disabled={isLoading}
-              relativeOptions={[
-                { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
-                { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
-                { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
-                { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
-              ]}
-              isValidRange={(range) => {
-                if (range?.type === 'absolute') {
-                  const start = new Date(range.startDate);
-                  const end = new Date(range.endDate);
-                  if (start > end) {
-                    return {
-                      valid: false,
-                      errorMessage: 'Start date must be before end date',
-                    };
-                  }
+        {/* First Row: DateRangePicker (if included) */}
+        {includeDateRange && (
+          <DateRangePicker
+            value={dateRange}
+            onChange={({ detail }) => setDateRange(detail.value)}
+            placeholder="Filter by date range"
+            dateOnly={true}
+            disabled={isLoading}
+            relativeOptions={[
+              { key: 'previous-30-days', amount: 30, unit: 'day', type: 'relative' },
+              { key: 'previous-90-days', amount: 90, unit: 'day', type: 'relative' },
+              { key: 'previous-6-months', amount: 6, unit: 'month', type: 'relative' },
+              { key: 'previous-1-year', amount: 1, unit: 'year', type: 'relative' },
+            ]}
+            isValidRange={(range) => {
+              if (range?.type === 'absolute') {
+                const start = new Date(range.startDate);
+                const end = new Date(range.endDate);
+                if (start > end) {
+                  return {
+                    valid: false,
+                    errorMessage: 'Start date must be before end date',
+                  };
                 }
-                return { valid: true };
-              }}
-              i18nStrings={{
-                todayAriaLabel: 'Today',
-                nextMonthAriaLabel: 'Next month',
-                previousMonthAriaLabel: 'Previous month',
-                customRelativeRangeDurationLabel: 'Duration',
-                customRelativeRangeDurationPlaceholder: 'Enter duration',
-                customRelativeRangeOptionLabel: 'Custom range',
-                customRelativeRangeOptionDescription: 'Set a custom range in the past',
-                customRelativeRangeUnitLabel: 'Unit of time',
-                formatRelativeRange: (range) => {
-                  const unit = range.unit === 'day' ? 'days' : range.unit === 'month' ? 'months' : 'years';
-                  return `Last ${range.amount} ${unit}`;
-                },
-                formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
-                dateTimeConstraintText: 'Range must be between 6 and 30 days.',
-                relativeModeTitle: 'Relative range',
-                absoluteModeTitle: 'Absolute range',
-                relativeRangeSelectionHeading: 'Choose a range',
-                startDateLabel: 'Start date',
-                endDateLabel: 'End date',
-                startTimeLabel: 'Start time',
-                endTimeLabel: 'End time',
-                clearButtonLabel: 'Clear',
-                cancelButtonLabel: 'Cancel',
-                applyButtonLabel: 'Apply',
-              }}
-            />
-          ) : (
+              }
+              return { valid: true };
+            }}
+            i18nStrings={{
+              todayAriaLabel: 'Today',
+              nextMonthAriaLabel: 'Next month',
+              previousMonthAriaLabel: 'Previous month',
+              customRelativeRangeDurationLabel: 'Duration',
+              customRelativeRangeDurationPlaceholder: 'Enter duration',
+              customRelativeRangeOptionLabel: 'Custom range',
+              customRelativeRangeOptionDescription: 'Set a custom range in the past',
+              customRelativeRangeUnitLabel: 'Unit of time',
+              formatRelativeRange: (range) => {
+                const unit = range.unit === 'day' ? 'days' : range.unit === 'month' ? 'months' : 'years';
+                return `Last ${range.amount} ${unit}`;
+              },
+              formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),
+              dateTimeConstraintText: 'Range must be between 6 and 30 days.',
+              relativeModeTitle: 'Relative range',
+              absoluteModeTitle: 'Absolute range',
+              relativeRangeSelectionHeading: 'Choose a range',
+              startDateLabel: 'Start date',
+              endDateLabel: 'End date',
+              startTimeLabel: 'Start time',
+              endTimeLabel: 'End time',
+              clearButtonLabel: 'Clear',
+              cancelButtonLabel: 'Cancel',
+              applyButtonLabel: 'Apply',
+            }}
+          />
+        )}
+
+        {/* Second Row: PropertyFilter with action buttons inline */}
+        <div className={styles.firstRow}>
+          <div className={styles.filterComponent}>
             <PropertyFilter
               query={filterQuery}
               onChange={({ detail }) => setFilterQuery(detail)}
@@ -598,81 +599,32 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
                 enteredTextLabel: (text) => `Use: "${text}"`,
               }}
             />
-          )}
-        </div>
+          </div>
 
-        {/* Action buttons beside the first filtering component */}
-        <div className={styles.actionButtons}>
-          <SpaceBetween direction={isMobile ? 'vertical' : 'horizontal'} size="xs">
-            <Button onClick={handleClearAll} disabled={isLoading}>
+          {/* Action buttons inline with PropertyFilter */}
+          <div className={styles.actionButtons}>
+            <ResponsiveButton 
+              onClick={handleClearAll} 
+              disabled={isLoading}
+              mobileIcon="undo"
+              mobileAriaLabel="Clear all filters"
+            >
               Clear All
-            </Button>
+            </ResponsiveButton>
             {!hideUpdateButton && (
-              <Button
+              <ResponsiveButton
                 variant="primary"
                 onClick={handleUpdate}
                 disabled={!isDirty || isLoading}
                 loading={isLoading}
+                mobileIcon="filter"
+                mobileAriaLabel="Update filters"
               >
                 Update
-              </Button>
+              </ResponsiveButton>
             )}
-          </SpaceBetween>
+          </div>
         </div>
-      </div>
-
-      {/* Second Row: PropertyFilter (only if DateRangePicker is on first row) */}
-      {includeDateRange && (
-        <PropertyFilter
-          query={filterQuery}
-          onChange={({ detail }) => setFilterQuery(detail)}
-          filteringProperties={activeFilterProperties.map((prop) => ({
-            key: prop.key,
-            propertyLabel: prop.propertyLabel,
-            groupValuesLabel: prop.groupValuesLabel,
-            operators: prop.operators || ['='],
-          }))}
-          filteringOptions={filteringOptions}
-          filteringStatusType={filteringStatusType}
-          onLoadItems={handleLoadItems}
-          disabled={isLoading}
-          filteringPlaceholder="Filter data"
-          filteringEmpty="No matches found"
-          filteringLoadingText="Loading options..."
-          filteringFinishedText="End of results"
-          hideOperations={true}
-          i18nStrings={{
-            filteringAriaLabel: 'Filter data',
-            dismissAriaLabel: 'Dismiss',
-            filteringPlaceholder: 'Filter data',
-            groupValuesText: 'Values',
-            groupPropertiesText: 'Properties',
-            operatorsText: 'Operators',
-            operationAndText: 'and',
-            operationOrText: 'or',
-            operatorLessText: 'Less than',
-            operatorLessOrEqualText: 'Less than or equal',
-            operatorGreaterText: 'Greater than',
-            operatorGreaterOrEqualText: 'Greater than or equal',
-            operatorContainsText: 'Contains',
-            operatorDoesNotContainText: 'Does not contain',
-            operatorEqualsText: 'Equals',
-            operatorDoesNotEqualText: 'Does not equal',
-            editTokenHeader: 'Edit filter',
-            propertyText: 'Property',
-            operatorText: 'Operator',
-            valueText: 'Value',
-            cancelActionText: 'Cancel',
-            applyActionText: 'Apply',
-            allPropertiesLabel: 'All properties',
-            tokenLimitShowMore: 'Show more',
-            tokenLimitShowFewer: 'Show fewer',
-            clearFiltersText: 'Clear filters',
-            removeTokenButtonAriaLabel: (token) => `Remove token ${token.propertyKey}`,
-            enteredTextLabel: (text) => `Use: "${text}"`,
-          }}
-        />
-      )}
 
       {/* Third Row: Grouping Controls (only if groupingMode is not 'none') */}
       {groupingMode !== 'none' && (

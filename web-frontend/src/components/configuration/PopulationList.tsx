@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PopulationService } from '../../services/api/population.service';
 import type { Population } from '../../types';
 import { PopulationForm } from './PopulationForm';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import { useAuth } from '../../hooks/useAuth';
 
 export function PopulationList() {
@@ -65,6 +66,7 @@ export function PopulationList() {
   return (
     <SpaceBetween size="l">
       <Table
+        wrapLines={false}
         columnDefinitions={[
           {
             id: 'name',
@@ -80,12 +82,18 @@ export function PopulationList() {
             cell: (item) => (
               isAdmin ? (
                 <SpaceBetween direction="horizontal" size="xs">
-                  <Button variant="inline-link" onClick={() => handleEdit(item)}>
-                    Edit
-                  </Button>
-                  <Button variant="inline-link" onClick={() => handleDelete(item)}>
-                    Delete
-                  </Button>
+                  <Button 
+                    variant="inline-link" 
+                    iconName="edit"
+                    onClick={() => handleEdit(item)}
+                    ariaLabel={`Edit ${item.name}`}
+                  />
+                  <Button 
+                    variant="inline-link" 
+                    iconName="remove"
+                    onClick={() => handleDelete(item)}
+                    ariaLabel={`Remove ${item.name}`}
+                  />
                 </SpaceBetween>
               ) : null
             ),
@@ -107,9 +115,14 @@ export function PopulationList() {
           <Header
             actions={
               isAdmin && (
-                <Button variant="primary" onClick={handleCreate}>
+                <ResponsiveButton 
+                  variant="primary" 
+                  onClick={handleCreate}
+                  mobileIcon="add-plus"
+                  mobileAriaLabel="Create new population"
+                >
                   Create Population
-                </Button>
+                </ResponsiveButton>
               )
             }
           >

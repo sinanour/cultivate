@@ -151,6 +151,27 @@ This specification extends the Web Frontend package to provide an optimized mobi
 4. THE Web_App SHALL maintain the existing typography and spacing on desktop and tablet viewports
 5. THE Web_App SHALL ensure text doesn't overflow containers on mobile viewports
 
+### Requirement 11: Mobile Icon-Only Buttons
+
+**User Story:** As a mobile user, I want buttons to be compact and use icons instead of text labels, so that more screen space is available for content while maintaining clear visual affordances.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL render text-based buttons as icon-only buttons on mobile viewports
+2. THE Web_App SHALL preserve the button variant (Primary, Default, Link) when converting to icon-only on mobile
+3. THE Web_App SHALL use CloudScape's icon library exclusively for button icons
+4. THE Web_App SHALL use "add-plus" icon for all create/add entity buttons on mobile
+5. THE Web_App SHALL use "undo" icon for "Clear All" buttons in FilterGroupingPanel on mobile
+6. THE Web_App SHALL use "filter" icon for "Update" buttons in FilterGroupingPanel on mobile
+7. THE Web_App SHALL hide text labels for "Import CSV" and "Export CSV" buttons on mobile (icons already present)
+8. THE Web_App SHALL use "status-positive" icon for "Mark Complete" button on Activity Detail page on mobile
+9. THE Web_App SHALL use "status-negative" icon for "Cancel Activity" button on Activity Detail page on mobile
+10. THE Web_App SHALL use "arrow-left" icon for "Back to <entity>" buttons on all detail pages on mobile
+11. THE Web_App SHALL use "redo" icon for "Run Report" button on Growth and Engagement dashboards on mobile
+12. THE Web_App SHALL maintain standard CloudScape button styling for FilterGroupingPanel action buttons
+13. THE Web_App SHALL provide appropriate aria-label attributes for icon-only buttons to maintain accessibility
+14. THE Web_App SHALL display full text labels for buttons on desktop and tablet viewports
+
 ## Non-Functional Requirements
 
 ### Performance

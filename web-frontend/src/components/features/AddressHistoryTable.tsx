@@ -2,13 +2,13 @@ import React from 'react';
 import {
   Table,
   Box,
-  Button,
   SpaceBetween,
   Badge,
   Link,
 } from '@cloudscape-design/components';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 
 interface AddressHistoryTableProps {
   addressHistory: ParticipantAddressHistory[];
@@ -38,6 +38,7 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
   return (
     <Table
       header={header}
+      wrapLines={false}
       columnDefinitions={[
         {
           id: 'venue',
@@ -74,20 +75,20 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
           id: 'actions',
           header: 'Actions',
           cell: (item: ParticipantAddressHistory) => (
-            <SpaceBetween direction="horizontal" size="xs">
-              <Button
-                variant="inline-link"
-                onClick={() => onEdit(item)}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="inline-link"
-                onClick={() => onDelete(item.id)}
-              >
-                Delete
-              </Button>
-            </SpaceBetween>
+            <Box>
+                <ResponsiveButton
+                  variant="inline-link"
+                  onClick={() => onEdit(item)}
+                >
+                  Edit
+                </ResponsiveButton>
+                <ResponsiveButton
+                  variant="inline-link"
+                  onClick={() => onDelete(item.id)}
+                >
+                  Remove
+                </ResponsiveButton>
+            </Box>
           ),
         },
       ]}

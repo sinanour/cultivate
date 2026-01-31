@@ -6,7 +6,6 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Table from '@cloudscape-design/components/table';
@@ -18,6 +17,7 @@ import { ParticipantPopulationService } from '../../services/api/population.serv
 import { AddressHistoryTable } from './AddressHistoryTable';
 import { AddressHistoryForm } from './AddressHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
 
@@ -173,10 +173,10 @@ export function ParticipantDetail() {
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
                   <>
-                    <Button variant="primary" onClick={() => navigate(`/participants/${id}/edit`)}>
+                    <ResponsiveButton variant="primary" onClick={() => navigate(`/participants/${id}/edit`)}>
                       Edit
-                    </Button>
-                    <Button 
+                    </ResponsiveButton>
+                    <ResponsiveButton 
                       onClick={() => {
                         if (window.confirm('Are you sure you want to delete this participant? This action cannot be undone.')) {
                           ParticipantService.deleteParticipant(id!)
@@ -189,13 +189,17 @@ export function ParticipantDetail() {
                         }
                       }}
                     >
-                      Delete
-                    </Button>
+                      Remove
+                    </ResponsiveButton>
                   </>
                 )}
-                <Button onClick={() => navigate('/participants')}>
+                <ResponsiveButton 
+                  onClick={() => navigate('/participants')}
+                  mobileIcon="arrow-left"
+                  mobileAriaLabel="Back to participants list"
+                >
                   Back to Participants
-                </Button>
+                </ResponsiveButton>
               </SpaceBetween>
             }
           >
@@ -276,9 +280,9 @@ export function ParticipantDetail() {
             variant="h3"
             actions={
               canEdit() && (
-                <Button onClick={handleAddAddress}>
+                <ResponsiveButton mobileIcon="add-plus" variant="primary" onClick={handleAddAddress}>
                   Add Address History
-                </Button>
+                </ResponsiveButton>
               )
             }
           >
@@ -288,6 +292,7 @@ export function ParticipantDetail() {
       />
 
       <Table
+        wrapLines={false}
         header={<Header variant="h3">Activities</Header>}
         columnDefinitions={[
           {
