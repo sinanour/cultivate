@@ -8,7 +8,6 @@ import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
-import Icon from '@cloudscape-design/components/icon';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
@@ -18,6 +17,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { formatDate } from '../../utils/date.utils';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
+import { BreadcrumbGroup, type BreadcrumbGroupProps } from '@cloudscape-design/components';
+import type { GeographicArea } from '../../types';
 
 export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -131,27 +132,9 @@ export function VenueDetail() {
           </div>
           <div>
             <Box variant="awsui-key-label">Geographic Area</Box>
-            <div style={{ display: 'flex', alignItems: 'center', paddingTop: '4px' }}>
-              {hierarchyItems.length > 0 ? (
-                hierarchyItems.map((area, index) => (
-                  <span key={area.id} style={{ display: 'flex', alignItems: 'center' }}>
-                    <Link href={`/geographic-areas/${area.id}`} fontSize="body-m" variant="primary">
-                      {area.name}
-                    </Link>
-                    {index < hierarchyItems.length - 1 && (
-                      <span style={{ marginLeft: '8px', marginRight: '8px', display: 'flex', alignItems: 'center', color: 'var(--color-text-breadcrumb-icon, #8c8c94)' }}>
-                        <Icon 
-                          name="angle-right" 
-                          size="normal"
-                        />
-                      </span>
-                    )}
-                  </span>
-                ))
-              ) : (
-                '-'
-              )}
-            </div>
+            <BreadcrumbGroup items={hierarchyItems.map((area: GeographicArea): BreadcrumbGroupProps.Item => {
+              return { text: area.name, href: `/geographic-areas/${area.id}` };
+            }).concat({ text: "", href: "#" })} />
           </div>
           {venue.latitude && venue.longitude && (
             <>
