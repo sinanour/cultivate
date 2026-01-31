@@ -51,7 +51,7 @@ export const MOBILE_BUTTON_ICONS: Record<string, IconProps['name']> = {
  * @example
  * ```typescript
  * getMobileButtonIcon('Create Participant') // Returns 'add-plus'
- * getMobileButtonIcon('Update') // Returns 'filter'
+ * getMobileButtonIcon('Update') // Returns 'check'
  * getMobileButtonIcon('Back to Activities') // Returns 'arrow-left'
  * ```
  */

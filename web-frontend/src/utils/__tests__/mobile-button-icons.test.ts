@@ -14,7 +14,7 @@ describe('mobile-button-icons', () => {
     });
 
     it('should have mappings for filter actions', () => {
-      expect(MOBILE_BUTTON_ICONS['update']).toBe('filter');
+      expect(MOBILE_BUTTON_ICONS['update']).toBe('check');
       expect(MOBILE_BUTTON_ICONS['apply']).toBe('filter');
       expect(MOBILE_BUTTON_ICONS['clear all']).toBe('undo');
       expect(MOBILE_BUTTON_ICONS['reset']).toBe('undo');
@@ -46,13 +46,13 @@ describe('mobile-button-icons', () => {
   describe('getMobileButtonIcon', () => {
     it('should return correct icon for exact match', () => {
       expect(getMobileButtonIcon('Create')).toBe('add-plus');
-      expect(getMobileButtonIcon('Update')).toBe('filter');
+      expect(getMobileButtonIcon('Update')).toBe('check');
       expect(getMobileButtonIcon('Clear All')).toBe('undo');
     });
 
     it('should be case-insensitive', () => {
       expect(getMobileButtonIcon('CREATE')).toBe('add-plus');
-      expect(getMobileButtonIcon('UPDATE')).toBe('filter');
+      expect(getMobileButtonIcon('UPDATE')).toBe('check');
       expect(getMobileButtonIcon('CLEAR ALL')).toBe('undo');
       expect(getMobileButtonIcon('Create Participant')).toBe('add-plus');
       expect(getMobileButtonIcon('BACK TO ACTIVITIES')).toBe('arrow-left');
@@ -60,7 +60,7 @@ describe('mobile-button-icons', () => {
 
     it('should trim whitespace', () => {
       expect(getMobileButtonIcon('  Create  ')).toBe('add-plus');
-      expect(getMobileButtonIcon('  Update  ')).toBe('filter');
+      expect(getMobileButtonIcon('  Update  ')).toBe('check');
       expect(getMobileButtonIcon('  Clear All  ')).toBe('undo');
     });
 
