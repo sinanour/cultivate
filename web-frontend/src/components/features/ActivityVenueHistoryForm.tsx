@@ -3,7 +3,6 @@ import {
   Modal,
   Box,
   SpaceBetween,
-  Button,
   FormField,
   DatePicker,
   Alert,
@@ -14,6 +13,7 @@ import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { VenueService } from '../../services/api/venue.service';
 import { formatDate } from '../../utils/date.utils';
 import { useAuth } from '../../hooks/useAuth';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 
 interface ActivityVenueHistoryFormProps {
   visible: boolean;
@@ -118,17 +118,17 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
       footer={
         <Box float="right">
           <SpaceBetween direction="horizontal" size="xs">
-            <Button variant="link" onClick={onDismiss}>
+            <ResponsiveButton variant="link" onClick={onDismiss}>
               Cancel
-            </Button>
-            <Button
+            </ResponsiveButton>
+            <ResponsiveButton
               variant="primary"
               onClick={handleSubmit}
               disabled={submitting || loading}
               loading={submitting}
             >
               Add
-            </Button>
+            </ResponsiveButton>
           </SpaceBetween>
         </Box>
       }

@@ -94,7 +94,7 @@ export function ActivityCategoryList() {
                         header: 'Actions',
                         cell: (item) =>
                             canEdit() ? (
-                                <SpaceBetween direction="horizontal" size="xs">
+                                <Box>
                                     <Button 
                                         variant="inline-link" 
                                         iconName="edit"
@@ -109,7 +109,7 @@ export function ActivityCategoryList() {
                                             ariaLabel={`Remove ${item.name}`}
                                         />
                                     )}
-                                </SpaceBetween>
+                                </Box>
                             ) : null,
                     },
                 ]}
@@ -131,7 +131,6 @@ export function ActivityCategoryList() {
                         actions={
                             canEdit() ? (
                                 <ResponsiveButton 
-                                    variant="primary" 
                                     onClick={handleCreate}
                                     mobileIcon="add-plus"
                                     mobileAriaLabel="Create new activity category"

@@ -280,7 +280,7 @@ export function ParticipantDetail() {
             variant="h3"
             actions={
               canEdit() && (
-                <ResponsiveButton mobileIcon="add-plus" variant="primary" onClick={handleAddAddress}>
+                <ResponsiveButton mobileIcon="add-plus" onClick={handleAddAddress}>
                   Add Address History
                 </ResponsiveButton>
               )

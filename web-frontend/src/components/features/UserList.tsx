@@ -13,6 +13,7 @@ import Modal from '@cloudscape-design/components/modal';
 import type { User } from '../../types';
 import { UserService } from '../../services/api/user.service';
 import { useNotification } from '../../hooks/useNotification';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 
 export function UserList() {
   const [error, setError] = useState('');
@@ -142,7 +143,7 @@ export function UserList() {
               id: 'actions',
               header: 'Actions',
               cell: (item) => (
-                <SpaceBetween direction="horizontal" size="xs">
+                <Box>
                   <Button 
                     variant="inline-link" 
                     iconName="edit"
@@ -153,9 +154,9 @@ export function UserList() {
                     variant="inline-link" 
                     iconName="remove"
                     onClick={() => handleDeleteClick(item)}
-                    ariaLabel={`Remove ${getDisplayName(item)}`}
+                    ariaLabel={`Delete ${getDisplayName(item)}`}
                   />
-                </SpaceBetween>
+                </Box>
               ),
             },
           ]}
@@ -176,9 +177,9 @@ export function UserList() {
             <Header
               counter={`(${users.length})`}
               actions={
-                <Button variant="primary" onClick={handleCreate}>
+                <ResponsiveButton mobileIcon="add-plus" variant="primary" onClick={handleCreate}>
                   Create user
-                </Button>
+                </ResponsiveButton>
               }
             >
               Users
@@ -187,11 +188,11 @@ export function UserList() {
         />
       </SpaceBetween>
 
-      {/* Remove Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       <Modal
         visible={showDeleteConfirmation}
         onDismiss={handleCancelDelete}
-        header="Remove User"
+        header="Delete User"
         footer={
           <Box float="right">
             <SpaceBetween direction="horizontal" size="xs">
@@ -203,7 +204,7 @@ export function UserList() {
                 onClick={handleConfirmDelete}
                 loading={deleteMutation.isPending}
               >
-                Remove
+                Delete
               </Button>
             </SpaceBetween>
           </Box>

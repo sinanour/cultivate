@@ -438,7 +438,7 @@ export function VenueList() {
             id: 'actions',
             header: 'Actions',
             cell: (item) => (
-              <SpaceBetween direction="horizontal" size="xs">
+              <Box>
                 {canEdit() && (
                   <Button
                     variant="inline-link"
@@ -455,7 +455,7 @@ export function VenueList() {
                     ariaLabel={`Remove ${item.name}`}
                   />
                 )}
-              </SpaceBetween>
+              </Box>
             ),
           },
         ]}

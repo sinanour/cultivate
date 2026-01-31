@@ -6,7 +6,6 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import Spinner from '@cloudscape-design/components/spinner';
@@ -341,9 +340,9 @@ export function ActivityDetail() {
             variant="h3"
             actions={
               canEdit() && (
-                <Button onClick={handleAddVenue}>
+                <ResponsiveButton mobileIcon="add-plus" onClick={handleAddVenue}>
                   Add Venue
-                </Button>
+                </ResponsiveButton>
               )
             }
           >
@@ -359,9 +358,9 @@ export function ActivityDetail() {
             variant="h3"
             actions={
               canEdit() && (
-                <Button onClick={() => setIsAssignmentFormOpen(true)}>
+                <ResponsiveButton mobileIcon="add-plus" onClick={() => setIsAssignmentFormOpen(true)}>
                   Assign Participant
-                </Button>
+                </ResponsiveButton>
               )
             }
           >
@@ -396,12 +395,12 @@ export function ActivityDetail() {
             header: 'Actions',
             cell: (item) => (
               canEdit() && (
-                <Button
+                <ResponsiveButton
                   variant="inline-link"
                   onClick={() => handleRemoveAssignment(item.participantId)}
                 >
                   Remove
-                </Button>
+                </ResponsiveButton>
               )
             ),
           },

@@ -536,7 +536,7 @@ export function ActivityList() {
             id: 'actions',
             header: 'Actions',
             cell: (item) => (
-              <SpaceBetween direction="horizontal" size="xs">
+              <Box>
                 {canEdit() && (
                   <Button
                     variant="inline-link"
@@ -553,7 +553,7 @@ export function ActivityList() {
                     ariaLabel={`Remove ${item.name}`}
                   />
                 )}
-              </SpaceBetween>
+              </Box>
             ),
           },
         ]}

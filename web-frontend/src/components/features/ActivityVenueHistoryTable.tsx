@@ -2,12 +2,12 @@ import React from 'react';
 import {
   Table,
   Box,
-  Button,
   Badge,
   Link,
   SpaceBetween,
 } from '@cloudscape-design/components';
 import { formatDate } from '../../utils/date.utils';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 
 interface ActivityVenueHistoryRecord {
   id: string;
@@ -95,12 +95,12 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
           id: 'actions',
           header: 'Actions',
           cell: (item: ActivityVenueHistoryRecord) => (
-            <Button
+            <ResponsiveButton
               variant="inline-link"
               onClick={() => onDelete(item.id)}
             >
               Remove
-            </Button>
+            </ResponsiveButton>
           ),
         },
       ]}

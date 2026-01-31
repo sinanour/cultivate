@@ -836,9 +836,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                         onClick={(e) => handleAddAddress(e)}
                         disabled={isSubmitting}
                         iconName="add-plus"
-                      >
-                        Add Address
-                      </Button>
+                      />
                     }
                   >
                     Address History

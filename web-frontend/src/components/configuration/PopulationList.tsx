@@ -81,7 +81,7 @@ export function PopulationList() {
             header: 'Actions',
             cell: (item) => (
               isAdmin ? (
-                <SpaceBetween direction="horizontal" size="xs">
+                <Box>
                   <Button 
                     variant="inline-link" 
                     iconName="edit"
@@ -92,9 +92,9 @@ export function PopulationList() {
                     variant="inline-link" 
                     iconName="remove"
                     onClick={() => handleDelete(item)}
-                    ariaLabel={`Remove ${item.name}`}
+                    ariaLabel={`Delete ${item.name}`}
                   />
-                </SpaceBetween>
+                </Box>
               ) : null
             ),
           },
@@ -116,7 +116,6 @@ export function PopulationList() {
             actions={
               isAdmin && (
                 <ResponsiveButton 
-                  variant="primary" 
                   onClick={handleCreate}
                   mobileIcon="add-plus"
                   mobileAriaLabel="Create new population"

@@ -117,7 +117,7 @@ export function ActivityTypeList() {
             id: 'actions',
             header: 'Actions',
             cell: (item) => (
-              <SpaceBetween direction="horizontal" size="xs">
+              <Box>
                 {canEdit() && (
                   <Button
                     variant="inline-link"
@@ -134,7 +134,7 @@ export function ActivityTypeList() {
                     ariaLabel={`Remove ${item.name}`}
                   />
                 )}
-              </SpaceBetween>
+              </Box>
             ),
           },
         ]}
@@ -164,7 +164,6 @@ export function ActivityTypeList() {
             actions={
               canCreate() && (
                 <ResponsiveButton 
-                  variant="primary" 
                   onClick={handleCreate}
                   mobileIcon="add-plus"
                   mobileAriaLabel="Create new activity type"

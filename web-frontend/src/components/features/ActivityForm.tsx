@@ -33,6 +33,7 @@ import { AsyncEntitySelect } from '../common/AsyncEntitySelect';
 import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { useAuth } from '../../hooks/useAuth';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
+import { ResponsiveButton } from '../common/ResponsiveButton';
 
 interface ActivityFormProps {
   activity: Activity | null;
@@ -949,13 +950,14 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                   <Header
                     variant="h3"
                     actions={
-                      <Button
+                      <ResponsiveButton
                         onClick={(e) => handleAddVenue(e)}
                         disabled={isSubmitting}
                         iconName="add-plus"
+                        mobileIcon="add-plus"
                       >
                         Add Venue
-                      </Button>
+                      </ResponsiveButton>
                     }
                   >
                     Venue Associations
@@ -1105,13 +1107,14 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                   <Header
                     variant="h3"
                     actions={
-                      <Button
+                      <ResponsiveButton
                         onClick={(e) => handleAddAssignment(e)}
                         disabled={isSubmitting}
                         iconName="add-plus"
+                        mobileIcon="add-plus"
                       >
                         Assign Participant
-                      </Button>
+                      </ResponsiveButton>
                     }
                   >
                     Participant Assignments

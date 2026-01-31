@@ -15,7 +15,8 @@ export const MOBILE_BUTTON_ICONS: Record<string, IconProps['name']> = {
   'create geographic area': 'add-plus',
   
   // Filter actions
-  'update': 'filter',
+  'cancel': 'close',
+  'update': 'check',
   'apply': 'filter',
   'clear all': 'undo',
   'reset': 'undo',
