@@ -463,6 +463,44 @@ This implementation plan breaks down the production deployment system into discr
     - Verify containers stop and start correctly
     - _Requirements: 8.10, 14.2, 14.5_
 
+- [x] 23. Implement macOS/Finch filesystem boundary handling
+  - [x] 23.1 Create deployment paths utility module
+    - Create deployment-paths.ts with OS-specific path strategies
+    - Implement getDeploymentPaths() for Linux and macOS
+    - Add validateMacOSPaths() to check VM accessibility
+    - Add helper functions for path expansion and volume paths
+    - _Requirements: 8.9, 8.10, 10.6_
+  
+  - [x] 23.2 Write comprehensive tests for deployment paths
+    - Test Linux path generation (FHS standard)
+    - Test macOS path generation (home directory)
+    - Test path validation for macOS VM accessibility
+    - Test rejection of /opt, /var, /etc paths on macOS
+    - Test acceptance of /Users and /Volumes paths on macOS
+    - Test path expansion and helper functions
+    - _Requirements: 8.9, 8.10_
+  
+  - [x] 23.3 Update config-transfer to validate macOS paths
+    - Add isPathInaccessibleOnMacOS() method
+    - Update ensureRemoteDirectory() to check macOS paths
+    - Provide helpful error messages with solutions
+    - _Requirements: 8.9, 10.6_
+  
+  - [x] 23.4 Update deployment workflow to use path strategies
+    - Import deployment-paths module in deploy.ts
+    - Update checkAndInstallDependencies() to detect OS and return paths
+    - Update deployConfiguration() to use deployment paths
+    - Update generateDockerComposeFile() to use OS-appropriate paths
+    - Validate paths before deployment
+    - _Requirements: 8.9, 8.10, 10.6_
+  
+  - [x] 23.5 Create macOS deployment documentation
+    - Document Finch VM filesystem boundary issue
+    - Explain automatic path handling
+    - Provide troubleshooting guide
+    - Document manual configuration options (symlinks, Lima mounts)
+    - _Requirements: 8.9, 8.10_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

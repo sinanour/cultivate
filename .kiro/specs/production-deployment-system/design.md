@@ -642,6 +642,260 @@ class ImageBuilder {
 - Images built with either Docker or Finch are fully compatible across platforms
 - Docker Compose and Finch Compose configurations are identical and interchangeable
 
+### Component 3.2: macOS/Finch Filesystem Boundary Constraints
+
+**Critical Architectural Constraint for macOS Targets:**
+
+When deploying to macOS targets using Finch, there is a fundamental filesystem boundary issue that must be understood and addressed. This constraint affects all file path configurations and volume mounts.
+
+**The Filesystem Boundary Problem:**
+
+Finch on macOS runs containers inside a Lima-managed Linux VM. This creates a filesystem boundary between the macOS host and the Linux VM where containers actually execute:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    macOS Host                           │
+│                                                         │
+│  /Users/username/  ✅ Mounted in VM                     │
+│  /opt/cultivate/   ❌ NOT mounted in VM                 │
+│  /var/log/         ❌ NOT mounted in VM                 │
+│                                                         │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │           Lima Linux VM (Finch)                   │ │
+│  │                                                   │ │
+│  │  Only sees:                                       │ │
+│  │  - /Users (mounted from host)                     │ │
+│  │  - Sometimes /Volumes (if configured)             │ │
+│  │  - VM-internal paths only                         │ │
+│  │                                                   │ │
+│  │  Containers run HERE, not on macOS host          │ │
+│  └───────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Why This Matters:**
+
+1. **File paths passed to `finch compose` must exist inside the VM**, not just on the macOS host
+2. **Default VM mounts**: Lima typically only mounts `/Users` and sometimes `/Volumes` into the VM
+3. **Paths like `/opt` are NOT mounted** by default, so `/opt/cultivate` appears as "no such file or directory" inside the VM
+4. **This is NOT a permissions issue** - `chown` and `chmod` on the host won't help because the path doesn't exist in the VM filesystem
+
+**Impact on Deployment Configuration:**
+
+```yaml
+# ❌ FAILS on macOS with Finch - /opt not mounted in VM
+services:
+  database:
+    volumes:
+      - /opt/cultivate/data:/var/lib/postgresql/data
+
+# ✅ WORKS on macOS with Finch - /Users is mounted
+services:
+  database:
+    volumes:
+      - /Users/username/cultivate/data:/var/lib/postgresql/data
+
+# ✅ ALTERNATIVE: Use symlink in home directory
+# On host: ln -s /opt/cultivate ~/cultivate
+services:
+  database:
+    volumes:
+      - ~/cultivate/data:/var/lib/postgresql/data
+```
+
+**Deployment Path Strategy for macOS:**
+
+The deployment system must handle path configuration differently for macOS targets:
+
+```typescript
+interface DeploymentPathStrategy {
+    targetOS: 'linux' | 'macos';
+    deploymentBasePath: string;
+    configPath: string;
+    logPath: string;
+    volumePath: string;
+}
+
+function getDeploymentPaths(targetOS: 'linux' | 'macos', username?: string): DeploymentPathStrategy {
+    if (targetOS === 'linux') {
+        // Linux: Use standard FHS paths
+        return {
+            targetOS: 'linux',
+            deploymentBasePath: '/opt/cultivate',
+            configPath: '/opt/cultivate/config',
+            logPath: '/var/log/cultivate',
+            volumePath: '/opt/cultivate/volumes'
+        };
+    } else {
+        // macOS: Use home directory to ensure VM accessibility
+        const homeDir = username ? `/Users/${username}` : '~';
+        return {
+            targetOS: 'macos',
+            deploymentBasePath: `${homeDir}/cultivate`,
+            configPath: `${homeDir}/cultivate/config`,
+            logPath: `${homeDir}/cultivate/logs`,
+            volumePath: `${homeDir}/cultivate/volumes`
+        };
+    }
+}
+```
+
+**Configuration File Path Resolution:**
+
+When transferring configuration files to macOS targets:
+
+```typescript
+async function deployConfiguration(
+    sshClient: SSHClient,
+    targetOS: 'linux' | 'macos',
+    username: string
+): Promise<void> {
+    const paths = getDeploymentPaths(targetOS, username);
+    
+    // Create deployment directory structure
+    await sshClient.executeCommand(`mkdir -p ${paths.configPath}`);
+    await sshClient.executeCommand(`mkdir -p ${paths.logPath}`);
+    await sshClient.executeCommand(`mkdir -p ${paths.volumePath}`);
+    
+    // Transfer docker-compose.yml with OS-appropriate paths
+    const composeContent = generateComposeFile(paths);
+    await sshClient.transferFile(
+        composeContent,
+        `${paths.configPath}/docker-compose.yml`
+    );
+    
+    // Transfer .env file
+    const envContent = generateEnvFile(paths);
+    await sshClient.transferFile(
+        envContent,
+        `${paths.configPath}/.env`
+    );
+}
+```
+
+**Volume Path Configuration:**
+
+Docker Compose configuration uses different volume strategies based on the target OS and volume type:
+
+**Critical: Unix Domain Socket Volumes**
+
+Unix domain sockets CANNOT be created on macOS filesystems mounted into the Finch VM. Therefore, the socket volume MUST always use Docker named volumes, never host path mounts:
+
+```yaml
+# ✅ CORRECT: Named volume for socket (works on both Linux and macOS)
+services:
+  database:
+    volumes:
+      - db_socket:/var/run/postgresql  # Named volume
+
+volumes:
+  db_socket:
+    driver: local
+
+# ❌ INCORRECT: Host path for socket (fails on macOS)
+services:
+  database:
+    volumes:
+      - /Users/username/cultivate/volumes/db_socket:/var/run/postgresql  # Fails!
+```
+
+**Data Volume Strategy:**
+
+For data persistence, the strategy differs by OS:
+
+```yaml
+# Generated for Linux targets
+version: '3.8'
+services:
+  database:
+    volumes:
+      - /opt/cultivate/volumes/db_data:/var/lib/postgresql/data  # Host path
+      - db_socket:/var/run/postgresql  # Named volume
+
+volumes:
+  db_socket:
+    driver: local
+
+# Generated for macOS targets
+version: '3.8'
+services:
+  database:
+    volumes:
+      - db_data:/var/lib/postgresql/data  # Named volume (avoids filesystem issues)
+      - db_socket:/var/run/postgresql  # Named volume
+
+volumes:
+  db_data:
+    driver: local
+  db_socket:
+    driver: local
+```
+
+**Why This Matters:**
+
+1. **Unix sockets require native filesystem support** - They use special file types that don't work on mounted filesystems
+2. **macOS → VM boundary breaks socket creation** - Even if the directory is accessible, socket creation fails
+3. **Named volumes are VM-internal** - They exist inside the VM's native filesystem where sockets work properly
+4. **Data volumes can use host paths on Linux** - Regular files work fine on mounted filesystems, making backups easier
+
+**Symlink Alternative (Advanced):**
+
+For users who prefer `/opt` paths on macOS, the deployment script can create a symlink:
+
+```bash
+# On macOS target, create symlink from home directory to /opt
+sudo mkdir -p /opt
+sudo ln -s /Users/username/cultivate /opt/cultivate
+
+# Then use /opt/cultivate in compose files
+# The symlink makes /opt/cultivate accessible via ~/cultivate in the VM
+```
+
+**Note:** Even with symlinks, socket volumes must still use named volumes, not host paths.
+
+**Documentation Requirements:**
+
+The deployment system must:
+
+1. **Detect macOS targets** and automatically use named volumes for sockets
+2. **Use named volumes for data on macOS** to avoid filesystem boundary issues
+3. **Document the socket volume constraint** in error messages
+4. **Provide clear guidance** on volume configuration for macOS users
+5. **Log volume strategy** in verbose mode to aid troubleshooting
+
+**Error Message Example:**
+
+```
+Error: Cannot access path '/opt/cultivate' on macOS target
+
+Finch runs containers in a Linux VM that only mounts certain host directories.
+The path '/opt/cultivate' is not accessible inside the VM.
+
+Solutions:
+1. Use a path under /Users (recommended):
+   DEPLOYMENT_PATH=/Users/username/cultivate
+
+2. Create a symlink in your home directory:
+   ln -s /opt/cultivate ~/cultivate
+   DEPLOYMENT_PATH=~/cultivate
+
+3. Configure Lima to mount /opt (advanced):
+   Edit ~/.finch/finch.yaml to add /opt to mounts
+
+For more information, see: docs/MACOS_DEPLOYMENT.md
+```
+
+**Testing Considerations:**
+
+Property tests for macOS deployment must verify:
+
+1. All configured paths are under VM-mounted directories
+2. Volume mounts use VM-accessible paths
+3. Configuration files are transferred to VM-accessible locations
+4. Error messages guide users when paths are inaccessible
+
+This filesystem boundary constraint is a fundamental architectural consideration for macOS deployments and must be handled correctly to ensure successful container orchestration with Finch.
+
 ### Component 4: Configuration Management
 
 **Environment Configuration (.env):**

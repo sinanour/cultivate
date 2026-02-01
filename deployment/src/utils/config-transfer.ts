@@ -329,25 +329,33 @@ export class ConfigTransfer {
     logger.debug(`Ensuring remote directory exists: ${remotePath}`);
 
     try {
+      // Check if we're on macOS first
+      const unameResult = await this.sshClient.executeCommand('uname');
+      const isMacOS = unameResult.stdout.trim() === 'Darwin';
+
+      // On macOS, validate that path is VM-accessible
+      if (isMacOS && this.isPathInaccessibleOnMacOS(remotePath)) {
+        throw new Error(
+          `Cannot create directory ${remotePath} on macOS target.\n\n` +
+          `Finch runs containers in a Linux VM that only mounts certain host directories.\n` +
+          `The path '${remotePath}' is not accessible inside the VM.\n\n` +
+          `Solutions:\n` +
+          `1. Use a path under /Users (recommended):\n` +
+          `   DEPLOYMENT_PATH=/Users/username/cultivate\n\n` +
+          `2. Create a symlink in your home directory:\n` +
+          `   ln -s ${remotePath} ~/cultivate\n` +
+          `   DEPLOYMENT_PATH=~/cultivate\n\n` +
+          `3. Configure Lima to mount ${remotePath.split('/')[1]} (advanced):\n` +
+          `   Edit ~/.finch/finch.yaml to add ${remotePath.split('/')[1]} to mounts\n\n` +
+          `For more information, see: docs/MACOS_DEPLOYMENT.md`
+        );
+      }
+
       // Try creating directory without sudo first
       let result = await this.sshClient.executeCommand(`mkdir -p ${remotePath}`);
 
-      // If permission denied and path starts with /opt or other system directories
-      if (result.exitCode !== 0 && result.stderr.includes('Permission denied')) {
-        // Check if we're on macOS
-        const unameResult = await this.sshClient.executeCommand('uname');
-        const isMacOS = unameResult.stdout.trim() === 'Darwin';
-
-        if (isMacOS && remotePath.startsWith('/opt')) {
-          // On macOS, /opt requires sudo but we can't use it over SSH without password
-          // Suggest using a user-accessible directory instead
-          throw new Error(
-            `Cannot create directory ${remotePath} on macOS without sudo password. ` +
-            `Please use a user-accessible directory like ~/cultivate instead, ` +
-            `or manually create ${remotePath} with appropriate permissions before deployment.`
-          );
-        }
-
+      // If permission denied, try with sudo (Linux only)
+      if (result.exitCode !== 0 && result.stderr.includes('Permission denied') && !isMacOS) {
         logger.debug('Permission denied, retrying with sudo');
         result = await this.sshClient.executeCommand(`sudo mkdir -p ${remotePath}`);
 
@@ -369,6 +377,39 @@ export class ConfigTransfer {
       logger.error(`Failed to create remote directory: ${errorMessage}`);
       throw new Error(`Failed to create remote directory ${remotePath}: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Checks if a path is inaccessible in the Finch VM on macOS
+   * @param path Path to check
+   * @returns True if path is not mounted in Finch VM
+   */
+  private isPathInaccessibleOnMacOS(path: string): boolean {
+    // Paths that are NOT mounted in Finch VM by default
+    const inaccessiblePrefixes = ['/opt', '/var', '/etc', '/usr/local'];
+
+    // Paths that ARE mounted in Finch VM
+    const accessiblePrefixes = ['/Users', '/Volumes', '/tmp', '/private/tmp'];
+
+    // Check if path starts with an accessible prefix
+    const isAccessible = accessiblePrefixes.some(prefix => path.startsWith(prefix));
+    if (isAccessible) {
+      return false;
+    }
+
+    // Check if path starts with an inaccessible prefix
+    const isInaccessible = inaccessiblePrefixes.some(prefix => path.startsWith(prefix));
+    if (isInaccessible) {
+      return true;
+    }
+
+    // If path starts with / but not in accessible list, assume inaccessible
+    if (path.startsWith('/')) {
+      return true;
+    }
+
+    // Relative paths or ~ paths are accessible
+    return false;
   }
 
   /**

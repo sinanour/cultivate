@@ -20,6 +20,7 @@
 import type { DeploymentOptions, DeploymentResult, DeploymentState } from '../types/deployment.js';
 import { createLogger } from '../utils/logger.js';
 import { SSHClient } from '../utils/ssh-client.js';
+import { OSDetector } from '../utils/os-detector.js';
 import { DependencyChecker } from '../utils/dependency-checker.js';
 import { DependencyInstaller } from '../utils/dependency-installer.js';
 import { buildAllImages } from '../utils/image-builder.js';
@@ -34,6 +35,13 @@ import { DiagnosticCapture } from '../utils/diagnostic-capture.js';
 import { RollbackExecutor } from '../utils/rollback-executor.js';
 import { FailureHandler } from '../utils/failure-handler.js';
 import { detectComposeCommand, ensureFinchVMReady } from '../utils/compose-command-detector.js';
+import {
+    getDeploymentPaths,
+    validateMacOSPaths,
+    logDeploymentPaths,
+    getUsername,
+    type DeploymentPathStrategy
+} from '../utils/deployment-paths.js';
 import * as path from 'path';
 import * as os from 'os';
 
@@ -72,8 +80,15 @@ export async function deployWorkflow(
 
         // Step 3: Check and install target dependencies
         log('Step 3: Checking target dependencies...');
-        const composeCommand = await checkAndInstallDependencies(sshClient);
+        const { composeCommand, deploymentPaths } = await checkAndInstallDependencies(sshClient, options);
         log(`Target dependencies verified. Using compose command: ${composeCommand}`);
+        logDeploymentPaths(deploymentPaths);
+
+        // Validate paths for macOS
+        const pathValidation = validateMacOSPaths(deploymentPaths);
+        if (!pathValidation.valid) {
+            throw new Error(pathValidation.error);
+        }
 
         // Step 4: Build or transfer images
         log('Step 4: Building and transferring images...');
@@ -88,7 +103,7 @@ export async function deployWorkflow(
 
         // Step 5: Deploy configuration
         log('Step 5: Deploying configuration...');
-        const config = await deployConfiguration(options, sshClient, version);
+        const config = await deployConfiguration(options, sshClient, version, deploymentPaths);
         log('Configuration deployed successfully');
 
         // Step 6: Create deployment state
@@ -107,8 +122,8 @@ export async function deployWorkflow(
         const containerDeployment = new ContainerDeployment(sshClient, composeCommand);
         logger.debug(`ContainerDeployment created, deploying containers...`);
         const deployResult = await containerDeployment.deployContainers({
-            composePath: '/opt/cultivate/docker-compose.yml',
-            workingDirectory: '/opt/cultivate',
+            composePath: path.join(deploymentPaths.configPath, 'docker-compose.yml'),
+            workingDirectory: deploymentPaths.configPath,
             pullImages: false,
             forceRecreate: true
         });
@@ -122,7 +137,7 @@ export async function deployWorkflow(
         log('Step 8: Verifying deployment...');
         const healthCheck = new HealthCheck(sshClient, composeCommand);
         const healthResult = await healthCheck.verifyContainerHealth({
-            workingDirectory: '/opt/cultivate',
+            workingDirectory: deploymentPaths.configPath,
             timeout: 300000, // 5 minutes
             maxRetries: 60,
             useExponentialBackoff: true
@@ -260,10 +275,28 @@ async function establishSSHConnection(options: DeploymentOptions): Promise<SSHCl
 
 /**
  * Check and install dependencies on target host
- * Returns the compose command to use based on detected runtime
+ * Returns the compose command to use based on detected runtime and deployment paths
  */
-async function checkAndInstallDependencies(sshClient: SSHClient): Promise<string> {
+async function checkAndInstallDependencies(
+    sshClient: SSHClient,
+    options: DeploymentOptions
+): Promise<{ composeCommand: string; deploymentPaths: DeploymentPathStrategy }> {
     logger.info('Checking target dependencies...');
+
+    // Detect OS first to determine deployment paths
+    const osDetector = new OSDetector(sshClient);
+    const osResult = await osDetector.detectOS();
+
+    if (!osResult.supported) {
+        throw new Error(osResult.error || 'Unsupported operating system');
+    }
+
+    // Get deployment paths based on OS
+    const username = getUsername(options.sshConfig?.username);
+    const deploymentPaths = getDeploymentPaths(osResult, username);
+
+    logger.info(`Detected OS: ${osResult.distribution} ${osResult.version || ''}`);
+    logger.info(`Using deployment paths for ${deploymentPaths.targetOS}`);
 
     const dependencyChecker = new DependencyChecker(sshClient);
     const summary = await dependencyChecker.checkAllDependencies();
@@ -306,7 +339,7 @@ async function checkAndInstallDependencies(sshClient: SSHClient): Promise<string
         await ensureFinchVMReady(sshClient, composeResult.runtimePath);
     }
 
-    return composeResult.command;
+    return { composeCommand: composeResult.command, deploymentPaths };
 }
 
 /**
@@ -353,11 +386,12 @@ async function buildAndTransferImages(
 async function deployConfiguration(
     _options: DeploymentOptions,
     sshClient: SSHClient,
-    version: string
+    version: string,
+    deploymentPaths: DeploymentPathStrategy
 ): Promise<any> {
     logger.info('Deploying configuration...');
 
-    // Create default configuration
+    // Create default configuration using deployment paths
     const config = ConfigValidator.applyDefaults({
         network: {
             httpPort: 80,
@@ -365,12 +399,12 @@ async function deployConfiguration(
             enableHttps: false
         },
         volumes: {
-            dataPath: '/var/lib/postgresql/data',
-            socketPath: '/var/run/postgresql'
+            dataPath: path.join(deploymentPaths.volumePath, 'db_data'),
+            socketPath: path.join(deploymentPaths.volumePath, 'db_socket')
         },
         environment: {
             nodeEnv: 'production',
-            databaseUrl: 'postgresql://apiuser@localhost/cultivate?host=/var/run/postgresql',
+            databaseUrl: `postgresql://apiuser@localhost/cultivate?host=${path.join(deploymentPaths.volumePath, 'db_socket')}`,
             backendPort: 3000
         },
         security: {
@@ -391,9 +425,9 @@ async function deployConfiguration(
     const envPath = path.join(tempDir, '.env');
     await ConfigTransfer.writeEnvFile(config, envPath);
 
-    // Generate docker-compose.yml
+    // Generate docker-compose.yml with OS-appropriate paths
     const composePath = path.join(tempDir, 'docker-compose.yml');
-    const composeContent = generateDockerComposeFile(version);
+    const composeContent = generateDockerComposeFile(version, deploymentPaths);
     const fs = await import('fs/promises');
     await fs.writeFile(composePath, composeContent);
 
@@ -402,7 +436,7 @@ async function deployConfiguration(
     const transferResult = await configTransfer.transferConfiguration({
         composeFilePath: composePath,
         envFilePath: envPath,
-        targetDir: '/opt/cultivate',
+        targetDir: deploymentPaths.configPath,
         setPermissions: true
     });
 
@@ -415,9 +449,26 @@ async function deployConfiguration(
 }
 
 /**
- * Generate docker-compose.yml content
+ * Generate docker-compose.yml content with OS-appropriate paths
+ * 
+ * For socket volumes, we ALWAYS use Docker named volumes (not host paths)
+ * because Unix domain sockets don't work on macOS filesystems mounted into Finch VM.
+ * 
+ * For data volumes, we use host paths on Linux for easier backup/management,
+ * but named volumes on macOS to avoid filesystem boundary issues.
  */
-function generateDockerComposeFile(version: string): string {
+function generateDockerComposeFile(version: string, deploymentPaths: DeploymentPathStrategy): string {
+    // For macOS, use named volumes for both data and socket
+    // For Linux, use host path for data (easier backup) and named volume for socket
+    const useNamedVolumes = deploymentPaths.targetOS === 'macos';
+
+    const dbDataVolume = useNamedVolumes
+        ? 'db_data'
+        : path.join(deploymentPaths.volumePath, 'db_data');
+
+    // Socket MUST always be a named volume (Unix sockets don't work on mounted filesystems)
+    const dbSocketVolume = 'db_socket';
+
     return `version: '3.8'
 
 services:
@@ -425,8 +476,8 @@ services:
     image: cultivate_database:${version}
     container_name: cultivate_database
     volumes:
-      - db_data:/var/lib/postgresql/data
-      - db_socket:/var/run/postgresql
+      - ${dbDataVolume}:/var/lib/postgresql/data
+      - ${dbSocketVolume}:/var/run/postgresql
     environment:
       - POSTGRES_USER=apiuser
       - POSTGRES_DB=cultivate
@@ -437,6 +488,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   backend:
     image: cultivate_backend:${version}
@@ -445,7 +497,7 @@ services:
       database:
         condition: service_healthy
     volumes:
-      - db_socket:/var/run/postgresql:rw
+      - ${dbSocketVolume}:/var/run/postgresql:rw
     environment:
       - DATABASE_URL=postgresql://apiuser@localhost/cultivate?host=/var/run/postgresql
       - NODE_ENV=production
@@ -463,6 +515,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   frontend:
     image: cultivate_frontend:${version}
@@ -482,6 +535,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
 networks:
   backend:
