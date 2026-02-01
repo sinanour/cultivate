@@ -65,6 +65,7 @@ export interface HealthCheckResult {
  */
 export class HealthCheck {
   private sshClient: SSHClient;
+  private composeCommand: string;
   private readonly DEFAULT_TIMEOUT = 300000; // 5 minutes
   private readonly DEFAULT_CHECK_INTERVAL = 5000; // 5 seconds
   private readonly DEFAULT_MAX_RETRIES = 60; // 60 retries = 5 minutes with 5s interval
@@ -74,9 +75,11 @@ export class HealthCheck {
   /**
    * Creates a new HealthCheck instance
    * @param sshClient SSH client for remote operations
+   * @param composeCommand Optional compose command (default: 'docker-compose')
    */
-  constructor(sshClient: SSHClient) {
+  constructor(sshClient: SSHClient, composeCommand: string = 'docker-compose') {
     this.sshClient = sshClient;
+    this.composeCommand = composeCommand;
   }
 
   /**
@@ -304,13 +307,13 @@ export class HealthCheck {
    */
   private async getContainerNames(workingDirectory: string): Promise<string[]> {
     try {
-      const cmd = `cd ${workingDirectory} && docker-compose ps --format json`;
+      const cmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml ps --format json`;
       let result = await this.sshClient.executeCommand(cmd);
 
       // If permission denied, retry with sudo
       if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
-        logger.debug('Docker permission denied, retrying with sudo');
-        const sudoCmd = cmd.replace(/docker-compose/g, 'sudo docker-compose');
+        logger.debug('Container runtime permission denied, retrying with sudo');
+        const sudoCmd = `cd ${workingDirectory} && sudo ${this.composeCommand} -f docker-compose.yml ps --format json`;
         result = await this.sshClient.executeCommand(sudoCmd);
       }
 

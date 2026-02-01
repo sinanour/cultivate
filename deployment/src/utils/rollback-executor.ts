@@ -213,6 +213,31 @@ export class RollbackExecutor {
   }
 
   /**
+   * Detect container runtime on remote host
+   */
+  private async detectRemoteRuntime(): Promise<string> {
+    // Try finch first (for macOS) with multiple paths
+    const finchPaths = [
+      'finch',
+      '/usr/local/bin/finch',
+      '/opt/homebrew/bin/finch',
+      '$HOME/.finch/bin/finch',
+    ];
+
+    for (const finchPath of finchPaths) {
+      const result = await this.sshClient.executeCommand(`command -v ${finchPath} || ${finchPath} --version`);
+      if (result.exitCode === 0) {
+        this.log(`Detected Finch on remote host at: ${finchPath}`, 'info');
+        return finchPath;
+      }
+    }
+
+    // Fall back to docker
+    this.log('Detected Docker on remote host', 'info');
+    return 'docker';
+  }
+
+  /**
    * Check if Docker images exist on target host
    * 
    * @param imageVersions - Image versions to check
@@ -224,6 +249,10 @@ export class RollbackExecutor {
     database: string;
   }): Promise<boolean> {
     try {
+      // Detect remote runtime
+      const remoteRuntime = await this.detectRemoteRuntime();
+      this.log(`Using remote runtime for image check: ${remoteRuntime}`, 'info');
+
       const images = [
         imageVersions.frontend,
         imageVersions.backend,
@@ -231,8 +260,16 @@ export class RollbackExecutor {
       ];
 
       for (const image of images) {
-        const command = `docker images -q ${image}`;
-        const result = await this.sshClient.executeCommand(command);
+        // Try without sudo first
+        let command = `${remoteRuntime} images -q ${image}`;
+        let result = await this.sshClient.executeCommand(command);
+
+        // If permission denied, try with sudo
+        if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+          this.log(`Container runtime permission denied, retrying with sudo for ${image}`, 'info');
+          command = `sudo ${remoteRuntime} images -q ${image}`;
+          result = await this.sshClient.executeCommand(command);
+        }
 
         if (!result.stdout.trim()) {
           this.log(`Image not found: ${image}`, 'warn');

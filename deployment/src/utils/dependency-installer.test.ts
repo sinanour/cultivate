@@ -242,6 +242,70 @@ describe('DependencyInstaller', () => {
       const enable = executionOrder.indexOf('enable');
       expect(start).toBeLessThan(enable);
     });
+
+    it('should provide installation instructions for macOS when Finch is not installed', async () => {
+      // Mock macOS detection
+      mockOSDetector.detectOS.mockResolvedValue({
+        distribution: 'macos',
+        version: '14.2.1',
+        packageManager: 'brew',
+        supported: true,
+        isMacOS: true,
+      });
+
+      // Mock Finch not installed
+      mockDependencyChecker.checkDocker.mockResolvedValue({
+        installed: false,
+        meetsMinimum: false,
+      });
+
+      // Mock command -v finch fails
+      mockSSHClient.executeCommand.mockResolvedValue({
+        stdout: '',
+        stderr: 'command not found',
+        exitCode: 1,
+      });
+
+      const result = await installer.installDocker();
+
+      expect(result.success).toBe(false);
+      expect(result.installed).toBe(false);
+      expect(result.error).toContain('Finch not installed');
+      expect(result.message).toContain('brew install --cask finch');
+      expect(result.message).toContain('finch vm init');
+    });
+
+    it('should verify Finch when already installed on macOS', async () => {
+      // Mock macOS detection
+      mockOSDetector.detectOS.mockResolvedValue({
+        distribution: 'macos',
+        version: '14.2.1',
+        packageManager: 'brew',
+        supported: true,
+        isMacOS: true,
+      });
+
+      // Mock Finch already installed
+      mockDependencyChecker.checkDocker.mockResolvedValue({
+        installed: true,
+        version: '1.0.0',
+        meetsMinimum: true,
+      });
+
+      // Mock command -v finch succeeds
+      mockSSHClient.executeCommand.mockResolvedValue({
+        stdout: '/usr/local/bin/finch\n',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const result = await installer.installDocker();
+
+      expect(result.success).toBe(true);
+      expect(result.installed).toBe(false);
+      expect(result.version).toBe('1.0.0');
+      expect(result.message).toContain('already installed');
+    });
   });
 
   describe('installDockerCompose', () => {
@@ -438,6 +502,37 @@ describe('DependencyInstaller', () => {
       expect(result.allSuccessful).toBe(false);
       expect(result.docker.success).toBe(true);
       expect(result.dockerCompose.success).toBe(false);
+    });
+
+    it('should verify Finch Compose on macOS (included with Finch)', async () => {
+      // Mock macOS detection
+      mockOSDetector.detectOS.mockResolvedValue({
+        distribution: 'macos',
+        version: '14.2.1',
+        packageManager: 'brew',
+        supported: true,
+        isMacOS: true,
+      });
+
+      // Mock Finch Compose not installed initially
+      mockDependencyChecker.checkDockerCompose
+        .mockResolvedValueOnce({
+          installed: false,
+          meetsMinimum: false,
+        })
+        .mockResolvedValueOnce({
+          installed: true,
+          version: '2.5.0',
+          meetsMinimum: true,
+        });
+
+      const result = await installer.installDockerCompose();
+
+      expect(result.success).toBe(true);
+      expect(result.version).toBe('2.5.0');
+      expect(result.message).toContain('installed successfully');
+      // Should not call any installation commands for macOS (Finch includes compose)
+      expect(mockSSHClient.executeCommandSimple).not.toHaveBeenCalled();
     });
   });
 

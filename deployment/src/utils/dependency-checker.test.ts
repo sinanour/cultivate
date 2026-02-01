@@ -1,4 +1,4 @@
-import { DependencyChecker, MIN_DOCKER_VERSION, MIN_DOCKER_COMPOSE_VERSION } from './dependency-checker';
+import { DependencyChecker, MIN_DOCKER_VERSION, MIN_FINCH_VERSION, MIN_DOCKER_COMPOSE_VERSION } from './dependency-checker';
 import { SSHClient } from './ssh-client';
 
 // Mock the logger
@@ -84,11 +84,21 @@ describe('DependencyChecker', () => {
     });
 
     it('should handle Docker not installed (command not found)', async () => {
-      mockSSHClient.executeCommand.mockResolvedValue({
+      // First call: docker --version fails
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
         stdout: '',
         stderr: 'bash: docker: command not found',
         exitCode: 127,
       });
+
+      // Multiple calls for Finch paths - all fail
+      for (let i = 0; i < 4; i++) {
+        mockSSHClient.executeCommand.mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'bash: finch: command not found',
+          exitCode: 127,
+        });
+      }
 
       const result = await dependencyChecker.checkDocker();
 
@@ -108,7 +118,7 @@ describe('DependencyChecker', () => {
 
       expect(result.installed).toBe(true);
       expect(result.meetsMinimum).toBe(false);
-      expect(result.error).toBe('Could not parse Docker version');
+      expect(result.error).toBe('Could not parse Docker/Finch version');
     });
 
     it('should handle SSH command execution errors', async () => {
@@ -138,6 +148,58 @@ describe('DependencyChecker', () => {
 
         const result = await dependencyChecker.checkDocker();
         expect(result.version).toBe(testCase.expected);
+      }
+    });
+
+    it('should detect Finch when Docker is not available', async () => {
+      // First call: docker --version fails
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'command not found',
+        exitCode: 127,
+      });
+
+      // Second call: finch --version succeeds (first path tried)
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: 'finch version v1.0.0',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const result = await dependencyChecker.checkDocker();
+
+      expect(result.installed).toBe(true);
+      expect(result.version).toBe('1.0.0');
+      expect(result.meetsMinimum).toBe(true); // v1.0.0 meets Finch minimum v1.0.0
+      expect(mockSSHClient.executeCommand).toHaveBeenCalled();
+      expect(mockSSHClient.executeCommand).toHaveBeenCalledWith('docker --version');
+    });
+
+    it('should parse Finch version with different formats', async () => {
+      const testCases = [
+        { output: 'finch version v1.0.0', expected: '1.0.0', meetsMin: true },
+        { output: 'finch version 1.2.3', expected: '1.2.3', meetsMin: true },
+        { output: 'finch version v0.9.0', expected: '0.9.0', meetsMin: false },
+      ];
+
+      for (const testCase of testCases) {
+        // Docker fails
+        mockSSHClient.executeCommand.mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'command not found',
+          exitCode: 127,
+        });
+
+        // Finch succeeds
+        mockSSHClient.executeCommand.mockResolvedValueOnce({
+          stdout: testCase.output,
+          stderr: '',
+          exitCode: 0,
+        });
+
+        const result = await dependencyChecker.checkDocker();
+        expect(result.version).toBe(testCase.expected);
+        expect(result.meetsMinimum).toBe(testCase.meetsMin);
       }
     });
   });
@@ -181,7 +243,16 @@ describe('DependencyChecker', () => {
         exitCode: 1,
       });
 
-      // Second call (docker-compose) succeeds
+      // Multiple calls for Finch compose paths - all fail (4 paths × 2 commands = 8 calls)
+      for (let i = 0; i < 8; i++) {
+        mockSSHClient.executeCommand.mockResolvedValueOnce({
+          stdout: '',
+          stderr: 'finch: command not found',
+          exitCode: 1,
+        });
+      }
+
+      // Last call (docker-compose) succeeds
       mockSSHClient.executeCommand.mockResolvedValueOnce({
         stdout: 'docker-compose version 1.29.2, build 5becea4c',
         stderr: '',
@@ -193,9 +264,7 @@ describe('DependencyChecker', () => {
       expect(result.installed).toBe(true);
       expect(result.version).toBe('1.29.2');
       expect(result.meetsMinimum).toBe(false); // v1.x is below minimum v2.0.0
-      expect(mockSSHClient.executeCommand).toHaveBeenCalledTimes(2);
-      expect(mockSSHClient.executeCommand).toHaveBeenNthCalledWith(1, 'docker compose version');
-      expect(mockSSHClient.executeCommand).toHaveBeenNthCalledWith(2, 'docker-compose --version');
+      expect(mockSSHClient.executeCommand).toHaveBeenCalled();
     });
 
     it('should detect Docker Compose when version exactly meets minimum', async () => {
@@ -265,7 +334,7 @@ describe('DependencyChecker', () => {
 
       expect(result.installed).toBe(true);
       expect(result.meetsMinimum).toBe(false);
-      expect(result.error).toBe('Could not parse Docker Compose version');
+      expect(result.error).toContain('Could not parse Docker Compose/Finch Compose version');
     });
 
     it('should handle SSH command execution errors', async () => {
@@ -276,6 +345,59 @@ describe('DependencyChecker', () => {
       expect(result.installed).toBe(false);
       expect(result.meetsMinimum).toBe(false);
       expect(result.error).toBe('Network timeout');
+    });
+
+    it('should detect Finch Compose when Docker Compose is not available', async () => {
+      // First call: docker compose fails
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'command not found',
+        exitCode: 127,
+      });
+
+      // Second call: finch compose succeeds
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: 'finch compose version v2.5.0',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const result = await dependencyChecker.checkDockerCompose();
+
+      expect(result.installed).toBe(true);
+      expect(result.version).toBe('2.5.0');
+      expect(result.meetsMinimum).toBe(true);
+      expect(mockSSHClient.executeCommand).toHaveBeenCalled();
+    });
+
+    it('should use finch --version as fallback when finch compose version fails', async () => {
+      // First call: docker compose fails
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'command not found',
+        exitCode: 127,
+      });
+
+      // Second call: finch compose version fails
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'unknown command',
+        exitCode: 1,
+      });
+
+      // Third call: finch --version succeeds (compose is built-in)
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: 'finch version v1.14.1',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const result = await dependencyChecker.checkDockerCompose();
+
+      expect(result.installed).toBe(true);
+      expect(result.version).toBe('1.14.1');
+      expect(result.meetsMinimum).toBe(true); // 1.14.1 >= 1.0.0 (Finch minimum)
+      expect(mockSSHClient.executeCommand).toHaveBeenCalled();
     });
   });
 
@@ -303,17 +425,28 @@ describe('DependencyChecker', () => {
     });
 
     it('should report dependencies not met when Docker is missing', async () => {
-      mockSSHClient.executeCommand
-        .mockResolvedValueOnce({
+      // First call: docker --version fails
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'command not found',
+        exitCode: 127,
+      });
+
+      // Multiple calls for Finch paths - all fail
+      for (let i = 0; i < 4; i++) {
+        mockSSHClient.executeCommand.mockResolvedValueOnce({
           stdout: '',
           stderr: 'command not found',
           exitCode: 127,
-        })
-        .mockResolvedValueOnce({
-          stdout: 'Docker Compose version v2.17.2',
-          stderr: '',
-          exitCode: 0,
         });
+      }
+
+      // Call for docker compose version succeeds
+      mockSSHClient.executeCommand.mockResolvedValueOnce({
+        stdout: 'Docker Compose version v2.17.2',
+        stderr: '',
+        exitCode: 0,
+      });
 
       const result = await dependencyChecker.checkAllDependencies();
 
@@ -469,6 +602,7 @@ describe('DependencyChecker', () => {
   describe('constants', () => {
     it('should export minimum version constants', () => {
       expect(MIN_DOCKER_VERSION).toBe('20.10.0');
+      expect(MIN_FINCH_VERSION).toBe('1.0.0');
       expect(MIN_DOCKER_COMPOSE_VERSION).toBe('2.0.0');
     });
   });

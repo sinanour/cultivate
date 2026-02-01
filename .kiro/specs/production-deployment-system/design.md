@@ -332,7 +332,16 @@ check_target_dependencies() {
 # Function: detect_target_os
 # Detect the operating system distribution on the target host
 detect_target_os() {
-    # Check for /etc/os-release (most modern distributions)
+    # Check if running on macOS
+    if [ "$(uname)" = "Darwin" ]; then
+        OS_DISTRIBUTION="macos"
+        OS_VERSION=$(sw_vers -productVersion)
+        PACKAGE_MANAGER="brew"
+        echo "Detected OS: macOS $OS_VERSION (using Homebrew)"
+        return
+    fi
+    
+    # Check for /etc/os-release (most modern Linux distributions)
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         OS_DISTRIBUTION=$ID
@@ -348,6 +357,41 @@ detect_target_os() {
     fi
     
     # Determine package manager based on distribution
+    case "$OS_DISTRIBUTION" in
+        ubuntu|debian)
+            PACKAGE_MANAGER="apt-get"
+            ;;
+        rhel|centos|fedora|rocky|alma)
+            # Use dnf for newer versions, yum for older
+            if command -v dnf &> /dev/null; then
+                PACKAGE_MANAGER="dnf"
+            else
+                PACKAGE_MANAGER="yum"
+            fi
+            ;;
+        amzn)
+            # Amazon Linux: AL2023 uses dnf, AL2 uses yum
+            if command -v dnf &> /dev/null; then
+                PACKAGE_MANAGER="dnf"
+            else
+                PACKAGE_MANAGER="yum"
+            fi
+            ;;
+        sles|opensuse*)
+            PACKAGE_MANAGER="zypper"
+            ;;
+        alpine)
+            PACKAGE_MANAGER="apk"
+            ;;
+        *)
+            echo "Error: Unsupported OS distribution: $OS_DISTRIBUTION"
+            echo "Supported distributions: Ubuntu, Debian, RHEL, CentOS, Fedora, Rocky, AlmaLinux, Amazon Linux, SLES, openSUSE, Alpine, macOS"
+            exit 1
+            ;;
+    esac
+    
+    echo "Detected OS: $OS_DISTRIBUTION (using $PACKAGE_MANAGER)"
+}
     case "$OS_DISTRIBUTION" in
         ubuntu|debian)
             PACKAGE_MANAGER="apt-get"
@@ -421,7 +465,15 @@ verify_deployment() {
 
 **Container Runtime Support:**
 
-The deployment system supports both Docker and Finch as container runtimes for local image building. This provides flexibility for developers on different platforms, particularly macOS users who may prefer Finch.
+The deployment system supports both Docker and Finch as container runtimes for both local image building and target host deployment. This provides flexibility for developers on different platforms, particularly macOS users who may prefer Finch.
+
+**Local Machine Runtime Detection:**
+
+For local image building, the system detects the available container runtime on the development machine.
+
+**Target Host Runtime Detection:**
+
+For target host deployment, the system detects whether the target is running Docker or Finch and uses the appropriate commands for all container operations.
 
 **Runtime Detection Logic:**
 
@@ -454,6 +506,83 @@ async function detectContainerRuntime(): Promise<ContainerRuntime> {
             composeCommand: 'finch compose',
             available: true
         };
+    }
+    
+    throw new Error('No container runtime found. Please install Docker or Finch.');
+}
+```
+
+**macOS Target Host Support:**
+
+When deploying to a macOS target host:
+
+1. **OS Detection**: The system detects macOS using `uname` command
+2. **Finch Check**: Verifies Finch is installed on the target
+3. **Installation Guidance**: If Finch is not installed, provides installation instructions
+4. **Command Adaptation**: Uses `finch` and `finch compose` commands instead of `docker` and `docker-compose`
+5. **Compose Compatibility**: Finch's built-in compose support works identically to Docker Compose
+
+**macOS Dependency Management:**
+
+```typescript
+async function checkMacOSDependencies(sshClient: SSHClient): Promise<DependencyCheckSummary> {
+    // Check for Finch installation
+    const finchCheck = await sshClient.executeCommand('command -v finch');
+    
+    if (finchCheck.exitCode !== 0) {
+        return {
+            docker: {
+                installed: false,
+                meetsMinimum: false,
+                error: 'Finch not installed on macOS target'
+            },
+            dockerCompose: {
+                installed: false,
+                meetsMinimum: false,
+                error: 'Finch not installed on macOS target'
+            },
+            allDependenciesMet: false
+        };
+    }
+    
+    // Verify Finch version
+    const versionResult = await sshClient.executeCommand('finch --version');
+    const version = parseFinchVersion(versionResult.stdout);
+    
+    // Finch includes compose built-in, so both are satisfied
+    return {
+        docker: {
+            installed: true,
+            version,
+            meetsMinimum: true
+        },
+        dockerCompose: {
+            installed: true,
+            version,
+            meetsMinimum: true
+        },
+        allDependenciesMet: true
+    };
+}
+```
+
+**Finch Installation Instructions for macOS:**
+
+When Finch is not found on a macOS target, the deployment script provides:
+
+```bash
+echo "Finch is not installed on the target macOS system."
+echo "To install Finch, run the following commands on the target host:"
+echo ""
+echo "  # Using Homebrew:"
+echo "  brew install --cask finch"
+echo ""
+echo "  # Or download from GitHub:"
+echo "  # https://github.com/runfinch/finch/releases"
+echo ""
+echo "After installation, initialize Finch:"
+echo "  finch vm init"
+```
     }
     
     throw new Error('No container runtime found. Please install Docker or Finch.');
@@ -507,10 +636,11 @@ class ImageBuilder {
 
 **Target Host Requirements:**
 
-- Target hosts always use Docker (not Finch) for running containers
-- Finch is only used on the development/build machine
-- Images built with Finch are fully compatible with Docker on target hosts
-- Docker Compose configuration works identically on target hosts regardless of build runtime
+- Linux target hosts use Docker for running containers
+- macOS target hosts use Finch for running containers
+- Finch is only used on macOS systems (both development and target)
+- Images built with either Docker or Finch are fully compatible across platforms
+- Docker Compose and Finch Compose configurations are identical and interchangeable
 
 ### Component 4: Configuration Management
 

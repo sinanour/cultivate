@@ -28,17 +28,41 @@ describe('ImageTransfer', () => {
   let transfer: ImageTransfer;
   let mockSSHClient: jest.Mocked<SSHClient>;
 
+  /**
+   * Helper to setup SSH client mock with runtime detection support
+   */
+  const setupSSHMock = (useFinch: boolean = false) => {
+    mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
+      // Runtime detection calls
+      if (cmd.includes('command -v') || (cmd.includes('--version') && !cmd.includes('load') && !cmd.includes('images'))) {
+        if (useFinch && cmd.includes('finch')) {
+          return { stdout: 'finch version v1.14.1', stderr: '', exitCode: 0 };
+        }
+        if (!useFinch && cmd.includes('docker') && !cmd.includes('finch')) {
+          return { stdout: 'docker', stderr: '', exitCode: 0 };
+        }
+        return { stdout: '', stderr: 'not found', exitCode: 1 };
+      }
+      // Image verification
+      if (cmd.includes('images -q')) {
+        return { stdout: 'abc123def456', stderr: '', exitCode: 0 };
+      }
+      // Image loading
+      if (cmd.includes('load')) {
+        return { stdout: 'Loaded image: test-image:1.0.0', stderr: '', exitCode: 0 };
+      }
+      // Default
+      return { stdout: '', stderr: '', exitCode: 0 };
+    });
+  };
+
   beforeEach(() => {
     transfer = new ImageTransfer();
 
     // Create mock SSH client
     mockSSHClient = {
       isConnected: jest.fn().mockReturnValue(true),
-      executeCommand: jest.fn().mockResolvedValue({
-        stdout: '',
-        stderr: '',
-        exitCode: 0
-      }),
+      executeCommand: jest.fn(),
       uploadFile: jest.fn().mockResolvedValue(undefined)
     } as any;
 
@@ -53,28 +77,7 @@ describe('ImageTransfer', () => {
 
   describe('transferImage', () => {
     it('should transfer an image successfully', async () => {
-      // Mock docker images verification
-      mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker images -q')) {
-          return {
-            stdout: 'abc123def456',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        if (cmd.includes('docker load')) {
-          return {
-            stdout: 'Loaded image: test-image:1.0.0',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        return {
-          stdout: '',
-          stderr: '',
-          exitCode: 0
-        };
-      });
+      setupSSHMock(false); // Use Docker
 
       const result = await transfer.transferImage({
         sshClient: mockSSHClient,
@@ -100,28 +103,7 @@ describe('ImageTransfer', () => {
     });
 
     it('should call progress callback during transfer', async () => {
-      // Mock docker images verification
-      mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker images -q')) {
-          return {
-            stdout: 'abc123',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        if (cmd.includes('docker load')) {
-          return {
-            stdout: 'Loaded image: test-image:1.0.0',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        return {
-          stdout: '',
-          stderr: '',
-          exitCode: 0
-        };
-      });
+      setupSSHMock(false); // Use Docker
 
       const progressMessages: string[] = [];
       const onProgress = (message: string) => {
@@ -141,6 +123,18 @@ describe('ImageTransfer', () => {
     });
 
     it('should handle transfer failure and return error result', async () => {
+      // Mock runtime detection first
+      mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
+        // Runtime detection
+        if (cmd.includes('command -v') || cmd.includes('--version')) {
+          if (cmd.includes('finch')) {
+            return { stdout: '', stderr: 'not found', exitCode: 1 };
+          }
+          return { stdout: 'docker', stderr: '', exitCode: 0 };
+        }
+        return { stdout: '', stderr: '', exitCode: 0 };
+      });
+
       // Mock upload failure
       mockSSHClient.uploadFile.mockRejectedValue(
         new Error('Network error')
@@ -156,9 +150,17 @@ describe('ImageTransfer', () => {
     });
 
     it('should handle docker load failure', async () => {
-      // Mock docker load failure
+      // Mock runtime detection to use docker, then mock load failure
       mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker load')) {
+        // Runtime detection
+        if (cmd.includes('command -v') || (cmd.includes('--version') && !cmd.includes('load'))) {
+          if (cmd.includes('finch')) {
+            return { stdout: '', stderr: 'not found', exitCode: 1 };
+          }
+          return { stdout: 'docker', stderr: '', exitCode: 0 };
+        }
+        // Load failure
+        if (cmd.includes('load')) {
           return {
             stdout: '',
             stderr: 'Error loading image',
@@ -182,16 +184,25 @@ describe('ImageTransfer', () => {
     });
 
     it('should handle image verification failure', async () => {
-      // Mock verification failure
+      // Mock runtime detection and verification failure
       mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker images -q')) {
+        // Runtime detection
+        if (cmd.includes('command -v') || (cmd.includes('--version') && !cmd.includes('load') && !cmd.includes('images'))) {
+          if (cmd.includes('finch')) {
+            return { stdout: '', stderr: 'not found', exitCode: 1 };
+          }
+          return { stdout: 'docker', stderr: '', exitCode: 0 };
+        }
+        // Verification failure
+        if (cmd.includes('images -q')) {
           return {
             stdout: '', // Empty output means image not found
             stderr: '',
             exitCode: 0
           };
         }
-        if (cmd.includes('docker load')) {
+        // Load succeeds
+        if (cmd.includes('load')) {
           return {
             stdout: 'Loaded image',
             stderr: '',
@@ -254,28 +265,7 @@ describe('ImageTransfer', () => {
     });
 
     it('should cleanup local tar file by default', async () => {
-      // Mock docker images verification
-      mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker images -q')) {
-          return {
-            stdout: 'abc123',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        if (cmd.includes('docker load')) {
-          return {
-            stdout: 'Loaded image',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        return {
-          stdout: '',
-          stderr: '',
-          exitCode: 0
-        };
-      });
+      setupSSHMock(false); // Use Docker
 
       const result = await transfer.transferImage({
         sshClient: mockSSHClient,
@@ -291,16 +281,26 @@ describe('ImageTransfer', () => {
     });
 
     it('should not cleanup local tar file if cleanupLocal is false', async () => {
-      // Mock docker images verification
+      setupSSHMock(false); // Use Docker
+
+      // Override to add docker images verification
+      const originalMock = mockSSHClient.executeCommand.getMockImplementation();
       mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker images -q')) {
+        // Runtime detection and other commands
+        if (cmd.includes('command -v') || cmd.includes('--version') ||
+          cmd.includes('mkdir') || cmd.includes('rm -f')) {
+          return originalMock!(cmd);
+        }
+        // Docker images verification
+        if (cmd.includes('images -q')) {
           return {
             stdout: 'abc123',
             stderr: '',
             exitCode: 0
           };
         }
-        if (cmd.includes('docker load')) {
+        // Docker load
+        if (cmd.includes('load')) {
           return {
             stdout: 'Loaded image',
             stderr: '',
@@ -324,28 +324,7 @@ describe('ImageTransfer', () => {
     });
 
     it('should report progress with bytes transferred', async () => {
-      // Mock docker images verification
-      mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker images -q')) {
-          return {
-            stdout: 'abc123',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        if (cmd.includes('docker load')) {
-          return {
-            stdout: 'Loaded image',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        return {
-          stdout: '',
-          stderr: '',
-          exitCode: 0
-        };
-      });
+      setupSSHMock(false); // Use Docker
 
       const progressCalls: Array<{ message: string; bytes?: number; total?: number }> = [];
       const onProgress = (message: string, bytes?: number, total?: number) => {
@@ -365,28 +344,7 @@ describe('ImageTransfer', () => {
 
   describe('transferAllImages', () => {
     it('should transfer all three application images', async () => {
-      // Mock docker images verification
-      mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker images -q')) {
-          return {
-            stdout: 'abc123',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        if (cmd.includes('docker load')) {
-          return {
-            stdout: 'Loaded image',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        return {
-          stdout: '',
-          stderr: '',
-          exitCode: 0
-        };
-      });
+      setupSSHMock(false); // Use Docker
 
       const results = await transferAllImages(
         mockSSHClient,
@@ -440,28 +398,7 @@ describe('ImageTransfer', () => {
     });
 
     it('should call progress callback for each image', async () => {
-      // Mock docker images verification
-      mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
-        if (cmd.includes('docker images -q')) {
-          return {
-            stdout: 'abc123',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        if (cmd.includes('docker load')) {
-          return {
-            stdout: 'Loaded image',
-            stderr: '',
-            exitCode: 0
-          };
-        }
-        return {
-          stdout: '',
-          stderr: '',
-          exitCode: 0
-        };
-      });
+      setupSSHMock(false); // Use Docker
 
       const progressMessages: string[] = [];
       const onProgress = (message: string) => {

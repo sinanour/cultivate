@@ -332,8 +332,22 @@ export class ConfigTransfer {
       // Try creating directory without sudo first
       let result = await this.sshClient.executeCommand(`mkdir -p ${remotePath}`);
 
-      // If permission denied, try with sudo
+      // If permission denied and path starts with /opt or other system directories
       if (result.exitCode !== 0 && result.stderr.includes('Permission denied')) {
+        // Check if we're on macOS
+        const unameResult = await this.sshClient.executeCommand('uname');
+        const isMacOS = unameResult.stdout.trim() === 'Darwin';
+
+        if (isMacOS && remotePath.startsWith('/opt')) {
+          // On macOS, /opt requires sudo but we can't use it over SSH without password
+          // Suggest using a user-accessible directory instead
+          throw new Error(
+            `Cannot create directory ${remotePath} on macOS without sudo password. ` +
+            `Please use a user-accessible directory like ~/community-tracker instead, ` +
+            `or manually create ${remotePath} with appropriate permissions before deployment.`
+          );
+        }
+
         logger.debug('Permission denied, retrying with sudo');
         result = await this.sshClient.executeCommand(`sudo mkdir -p ${remotePath}`);
 

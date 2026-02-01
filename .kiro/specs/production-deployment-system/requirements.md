@@ -110,14 +110,16 @@ This document specifies the requirements for a production deployment system that
 
 #### Acceptance Criteria
 
-1. WHEN the Deployment_Script connects to a Target_Host, THE Deployment_System SHALL check for Docker installation
-2. WHEN the Deployment_Script connects to a Target_Host, THE Deployment_System SHALL check for Docker Compose installation
-3. IF Docker is not installed, THEN THE Deployment_Script SHALL install Docker on the Target_Host
-4. IF Docker Compose is not installed, THEN THE Deployment_Script SHALL install Docker Compose on the Target_Host
-5. THE Deployment_Script SHALL verify minimum required versions of Docker and Docker Compose
-6. THE Deployment_Script SHALL detect the Target_Host operating system distribution before installing dependencies
-7. THE Deployment_Script SHALL use the appropriate package manager for the detected OS distribution (apt-get for Debian/Ubuntu, yum/dnf for RHEL/CentOS/Fedora/Amazon Linux, zypper for SUSE, apk for Alpine)
+1. WHEN the Deployment_Script connects to a Target_Host, THE Deployment_System SHALL check for Docker or Finch installation
+2. WHEN the Deployment_Script connects to a Target_Host, THE Deployment_System SHALL check for Docker Compose or Finch Compose installation
+3. IF Docker or Finch is not installed on Linux, THEN THE Deployment_Script SHALL install Docker on the Target_Host
+4. IF Docker Compose is not installed on Linux, THEN THE Deployment_Script SHALL install Docker Compose on the Target_Host
+5. THE Deployment_Script SHALL verify minimum required versions of Docker/Finch and Docker Compose/Finch Compose
+6. THE Deployment_Script SHALL detect the Target_Host operating system (Linux distributions or macOS) before checking dependencies
+7. THE Deployment_Script SHALL use the appropriate package manager for the detected OS distribution (apt-get for Debian/Ubuntu, yum/dnf for RHEL/CentOS/Fedora/Amazon Linux, zypper for SUSE, apk for Alpine, Homebrew for macOS)
 8. WHEN the package manager detection fails, THE Deployment_Script SHALL provide clear error messages listing supported distributions
+9. WHEN the Target_Host is macOS, THE Deployment_Script SHALL check for Finch installation and provide installation instructions if missing
+10. WHEN the Target_Host is macOS with Finch installed, THE Deployment_Script SHALL use Finch commands instead of Docker commands for all container operations
 
 ### Requirement 9: Image Build and Transfer
 
@@ -142,9 +144,10 @@ This document specifies the requirements for a production deployment system that
 
 1. WHEN images are available on the Target_Host, THE Deployment_Script SHALL deploy the Docker_Compose_Configuration
 2. THE Deployment_Script SHALL transfer environment configuration to the Target_Host
-3. THE Deployment_Script SHALL start containers using Docker Compose
+3. THE Deployment_Script SHALL start containers using Docker Compose or Finch Compose based on the detected Container_Runtime
 4. THE Deployment_Script SHALL verify that all containers start successfully
 5. IF any container fails to start, THEN THE Deployment_Script SHALL provide diagnostic information and rollback
+6. WHEN the Target_Host is macOS with Finch, THE Deployment_Script SHALL use `finch compose` commands for all compose operations
 
 ### Requirement 11: Configuration Management
 

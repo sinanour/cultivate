@@ -4,9 +4,9 @@ import { createLogger } from './logger.js';
 const logger = createLogger();
 
 /**
- * Supported Linux distributions
+ * Supported operating system distributions
  */
-export type LinuxDistribution = 
+export type OSDistribution = 
   | 'ubuntu' 
   | 'debian' 
   | 'rhel' 
@@ -18,21 +18,23 @@ export type LinuxDistribution =
   | 'sles' 
   | 'opensuse' 
   | 'alpine'
+  | 'macos'
   | 'unknown';
 
 /**
  * Package manager types
  */
-export type PackageManager = 'apt-get' | 'yum' | 'dnf' | 'zypper' | 'apk';
+export type PackageManager = 'apt-get' | 'yum' | 'dnf' | 'zypper' | 'apk' | 'brew';
 
 /**
  * OS detection result
  */
 export interface OSDetectionResult {
-  distribution: LinuxDistribution;
+  distribution: OSDistribution;
   version?: string;
   packageManager: PackageManager;
   supported: boolean;
+  isMacOS?: boolean;
   error?: string;
 }
 
@@ -41,11 +43,12 @@ export interface OSDetectionResult {
  * 
  * Features:
  * - Detects Linux distribution from /etc/os-release
- * - Falls back to legacy detection methods
+ * - Detects macOS using uname command
+ * - Falls back to legacy detection methods for Linux
  * - Determines appropriate package manager
- * - Validates OS is supported for Docker installation
+ * - Validates OS is supported for Docker/Finch installation
  * 
- * Requirements: 8.6, 8.7, 8.8
+ * Requirements: 8.6, 8.7, 8.8, 8.9
  */
 export class OSDetector {
   private sshClient: SSHClient;
@@ -62,7 +65,14 @@ export class OSDetector {
     logger.info('Detecting target host operating system...');
 
     try {
-      // Try modern /etc/os-release first (most distributions)
+      // Try macOS detection first
+      const macOSResult = await this.detectMacOS();
+      if (macOSResult.supported) {
+        logger.info(`Detected OS: macOS ${macOSResult.version}`);
+        return macOSResult;
+      }
+
+      // Try modern /etc/os-release for Linux distributions
       const osReleaseResult = await this.detectFromOSRelease();
       if (osReleaseResult.supported) {
         logger.info(`Detected OS: ${osReleaseResult.distribution} (${osReleaseResult.packageManager})`);
@@ -93,6 +103,45 @@ export class OSDetector {
         packageManager: 'apt-get',
         supported: false,
         error
+      };
+    }
+  }
+
+  /**
+   * Detects macOS using uname command
+   */
+  private async detectMacOS(): Promise<OSDetectionResult> {
+    try {
+      // Check if running on macOS using uname
+      const unameResult = await this.sshClient.executeCommand('uname');
+
+      if (unameResult.exitCode === 0 && unameResult.stdout.trim() === 'Darwin') {
+        // Get macOS version
+        const versionResult = await this.sshClient.executeCommand('sw_vers -productVersion');
+        const version = versionResult.exitCode === 0 ? versionResult.stdout.trim() : undefined;
+
+        logger.info(`Detected macOS ${version || 'unknown version'}`);
+
+        return {
+          distribution: 'macos',
+          version,
+          packageManager: 'brew',
+          supported: true,
+          isMacOS: true
+        };
+      }
+
+      return {
+        distribution: 'unknown',
+        packageManager: 'apt-get',
+        supported: false
+      };
+    } catch (err) {
+      logger.debug(`Failed to detect macOS: ${err}`);
+      return {
+        distribution: 'unknown',
+        packageManager: 'apt-get',
+        supported: false
       };
     }
   }
@@ -129,7 +178,7 @@ export class OSDetector {
         };
       }
 
-      const distribution = idMatch[1].toLowerCase() as LinuxDistribution;
+      const distribution = idMatch[1].toLowerCase() as OSDistribution;
       const version = versionMatch ? versionMatch[1] : undefined;
 
       // Determine package manager and support
@@ -191,10 +240,19 @@ export class OSDetector {
    * Maps distribution to package manager and determines support
    */
   private mapDistributionToPackageManager(
-    distribution: LinuxDistribution,
+    distribution: OSDistribution,
     version?: string
   ): OSDetectionResult {
     switch (distribution) {
+      case 'macos':
+        return {
+          distribution,
+          version,
+          packageManager: 'brew',
+          supported: true,
+          isMacOS: true
+        };
+
       case 'ubuntu':
       case 'debian':
         return {
@@ -259,7 +317,7 @@ export class OSDetector {
           version,
           packageManager: 'apt-get', // Default fallback
           supported: false,
-          error: `Unsupported distribution: ${distribution}. Supported: Ubuntu, Debian, RHEL, CentOS, Fedora, Rocky, AlmaLinux, Amazon Linux, SLES, openSUSE, Alpine`
+          error: `Unsupported distribution: ${distribution}. Supported: Ubuntu, Debian, RHEL, CentOS, Fedora, Rocky, AlmaLinux, Amazon Linux, SLES, openSUSE, Alpine, macOS`
         };
     }
   }

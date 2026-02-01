@@ -144,6 +144,14 @@ This implementation plan breaks down the production deployment system into discr
   - [ ]* 7.4 Write property test for version requirement enforcement
     - **Property 19: Version requirement enforcement**
     - **Validates: Requirements 8.5**
+  
+  - [x] 7.5 Add macOS/Finch support for target hosts
+    - Update OS detector to detect macOS using `uname`
+    - Add Finch detection for macOS targets
+    - Provide Finch installation instructions when not found
+    - Update dependency checker to support Finch on macOS
+    - Update container deployment to use Finch commands on macOS targets
+    - _Requirements: 8.6, 8.9, 8.10, 10.6_
 
 - [x] 8. Checkpoint - Verify SSH and dependency management
   - Test SSH connection to a test host
@@ -428,6 +436,32 @@ This implementation plan breaks down the production deployment system into discr
   - Perform manual end-to-end deployment test
   - Verify all requirements are covered by tests
   - Ensure all tests pass, ask the user if questions arise
+
+- [x] 22. Fix macOS/Finch compose command detection in rollback workflow
+  - [x] 22.1 Extract compose command detection into reusable function
+    - Move the runtime detection logic from deploy.ts into a shared utility function
+    - Function should detect macOS and check for Finch at multiple paths
+    - Return the appropriate compose command ('finch compose' or 'docker-compose')
+    - _Requirements: 8.9, 8.10, 10.6_
+  
+  - [x] 22.2 Update rollback workflow to use detected compose command
+    - Call the compose command detection function in rollback.ts
+    - Pass the detected compose command to ContainerDeployment constructor
+    - Pass the detected compose command to HealthCheck constructor
+    - _Requirements: 8.10, 10.6, 14.2_
+  
+  - [x] 22.3 Add Finch VM initialization check
+    - Check if Finch VM is initialized on macOS targets
+    - If not initialized, run 'finch vm init' automatically
+    - Add logging for VM initialization status
+    - Handle initialization failures gracefully
+    - _Requirements: 8.9, 8.10_
+  
+  - [x] 22.4 Test rollback with Finch on macOS
+    - Deploy to macOS target with Finch
+    - Trigger rollback and verify it uses 'finch compose' commands
+    - Verify containers stop and start correctly
+    - _Requirements: 8.10, 14.2, 14.5_
 
 ## Notes
 

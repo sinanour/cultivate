@@ -79,10 +79,12 @@ export interface RollbackVerificationResult {
 export class RollbackVerification {
   private sshClient: SSHClient;
   private healthCheck: HealthCheck;
+  private composeCommand: string;
 
-  constructor(sshClient: SSHClient) {
+  constructor(sshClient: SSHClient, composeCommand: string = 'docker-compose') {
     this.sshClient = sshClient;
-    this.healthCheck = new HealthCheck(sshClient);
+    this.composeCommand = composeCommand;
+    this.healthCheck = new HealthCheck(sshClient, composeCommand);
   }
 
   /**
@@ -186,7 +188,7 @@ export class RollbackVerification {
   ): Promise<ContainerVerificationStatus[]> {
     logger.info('Verifying containers are running');
 
-    const command = `cd ${options.workingDirectory} && docker-compose ps --format json`;
+    const command = `cd ${options.workingDirectory} && ${this.composeCommand} -f docker-compose.yml ps --format json`;
     const result = await this.sshClient.executeCommand(command);
 
     if (result.exitCode !== 0) {

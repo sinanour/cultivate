@@ -33,6 +33,7 @@ import { FailureDetection } from '../utils/failure-detection.js';
 import { DiagnosticCapture } from '../utils/diagnostic-capture.js';
 import { RollbackExecutor } from '../utils/rollback-executor.js';
 import { FailureHandler } from '../utils/failure-handler.js';
+import { detectComposeCommand, ensureFinchVMReady } from '../utils/compose-command-detector.js';
 import * as path from 'path';
 import * as os from 'os';
 
@@ -71,8 +72,8 @@ export async function deployWorkflow(
 
         // Step 3: Check and install target dependencies
         log('Step 3: Checking target dependencies...');
-        await checkAndInstallDependencies(sshClient);
-        log('Target dependencies verified');
+        const composeCommand = await checkAndInstallDependencies(sshClient);
+        log(`Target dependencies verified. Using compose command: ${composeCommand}`);
 
         // Step 4: Build or transfer images
         log('Step 4: Building and transferring images...');
@@ -102,7 +103,9 @@ export async function deployWorkflow(
 
         // Step 7: Start containers
         log('Step 7: Starting containers...');
-        const containerDeployment = new ContainerDeployment(sshClient);
+        logger.debug(`Creating ContainerDeployment with compose command: ${composeCommand}`);
+        const containerDeployment = new ContainerDeployment(sshClient, composeCommand);
+        logger.debug(`ContainerDeployment created, deploying containers...`);
         const deployResult = await containerDeployment.deployContainers({
             composePath: '/opt/community-tracker/docker-compose.yml',
             workingDirectory: '/opt/community-tracker',
@@ -117,7 +120,7 @@ export async function deployWorkflow(
 
         // Step 8: Verify deployment with health checks
         log('Step 8: Verifying deployment...');
-        const healthCheck = new HealthCheck(sshClient);
+        const healthCheck = new HealthCheck(sshClient, composeCommand);
         const healthResult = await healthCheck.verifyContainerHealth({
             workingDirectory: '/opt/community-tracker',
             timeout: 300000, // 5 minutes
@@ -257,39 +260,53 @@ async function establishSSHConnection(options: DeploymentOptions): Promise<SSHCl
 
 /**
  * Check and install dependencies on target host
+ * Returns the compose command to use based on detected runtime
  */
-async function checkAndInstallDependencies(sshClient: SSHClient): Promise<void> {
+async function checkAndInstallDependencies(sshClient: SSHClient): Promise<string> {
     logger.info('Checking target dependencies...');
 
     const dependencyChecker = new DependencyChecker(sshClient);
     const summary = await dependencyChecker.checkAllDependencies();
 
-    if (summary.allDependenciesMet) {
-        logger.info('All dependencies are installed and meet minimum requirements');
-        return;
-    }
+    if (!summary.allDependenciesMet) {
+        // Install missing dependencies
+        logger.info('Installing missing dependencies...');
+        const installer = new DependencyInstaller(sshClient);
 
-    // Install missing dependencies
-    logger.info('Installing missing dependencies...');
-    const installer = new DependencyInstaller(sshClient);
+        if (!summary.docker.installed || !summary.docker.meetsMinimum) {
+            logger.info('Installing Docker/Finch...');
+            const installResult = await installer.installDocker();
+            if (!installResult.success) {
+                throw new Error(`Failed to install Docker/Finch: ${installResult.error || installResult.message}`);
+            }
+        }
 
-    if (!summary.docker.installed || !summary.docker.meetsMinimum) {
-        logger.info('Installing Docker...');
-        await installer.installDocker();
-    }
+        if (!summary.dockerCompose.installed || !summary.dockerCompose.meetsMinimum) {
+            logger.info('Installing Docker Compose/Finch Compose...');
+            const installResult = await installer.installDockerCompose();
+            if (!installResult.success) {
+                throw new Error(`Failed to install Docker Compose/Finch Compose: ${installResult.error || installResult.message}`);
+            }
+        }
 
-    if (!summary.dockerCompose.installed || !summary.dockerCompose.meetsMinimum) {
-        logger.info('Installing Docker Compose...');
-        await installer.installDockerCompose();
-    }
-
-    // Verify installation
-    const verifyResult = await dependencyChecker.checkAllDependencies();
-    if (!verifyResult.allDependenciesMet) {
-        throw new Error('Failed to install required dependencies');
+        // Verify installation
+        const verifyResult = await dependencyChecker.checkAllDependencies();
+        if (!verifyResult.allDependenciesMet) {
+            throw new Error('Failed to install required dependencies');
+        }
     }
 
     logger.info('All dependencies installed successfully');
+
+    // Detect which compose command to use
+    const composeResult = await detectComposeCommand(sshClient);
+
+    // If Finch is detected, ensure VM is ready
+    if (composeResult.isFinch && composeResult.runtimePath) {
+        await ensureFinchVMReady(sshClient, composeResult.runtimePath);
+    }
+
+    return composeResult.command;
 }
 
 /**
@@ -489,7 +506,7 @@ async function handleDeploymentFailure(
     logger.info('Handling deployment failure...');
 
     const containerDeployment = new ContainerDeployment(sshClient);
-    const healthCheck = new HealthCheck(sshClient);
+    const healthCheck = new HealthCheck(sshClient, 'docker-compose'); // Will be overridden in actual deployment
     const failureDetection = new FailureDetection(sshClient, containerDeployment, healthCheck);
     const diagnosticCapture = new DiagnosticCapture(sshClient, containerDeployment);
     const imageTransfer = new ImageTransfer();

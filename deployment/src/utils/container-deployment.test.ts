@@ -105,7 +105,7 @@ describe('ContainerDeployment', () => {
       const result = await containerDeployment.deployContainers(defaultOptions);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('docker-compose file not found');
+      expect(result.error).toContain('Compose file not found');
     });
 
     it('should fail when docker-compose up fails', async () => {
@@ -131,7 +131,7 @@ describe('ContainerDeployment', () => {
       const result = await containerDeployment.deployContainers(defaultOptions);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('docker-compose up failed');
+      expect(result.error).toContain('Compose up failed');
     });
 
     it('should fail when a container exits during startup', async () => {
@@ -377,7 +377,7 @@ describe('ContainerDeployment', () => {
       await expect(containerDeployment.stopContainers('/opt/app')).resolves.not.toThrow();
 
       const command = mockSSHClient.executeCommand.mock.calls[0][0];
-      expect(command).toContain('docker-compose stop');
+      expect(command).toContain('docker-compose -f docker-compose.yml stop');
     });
 
     it('should throw error when stop fails', async () => {
@@ -410,7 +410,7 @@ describe('ContainerDeployment', () => {
       await expect(containerDeployment.removeContainers('/opt/app', false)).resolves.not.toThrow();
 
       const command = mockSSHClient.executeCommand.mock.calls[0][0];
-      expect(command).toContain('docker-compose down');
+      expect(command).toContain('docker-compose -f docker-compose.yml down');
       expect(command).not.toContain('-v');
     });
 
@@ -424,7 +424,7 @@ describe('ContainerDeployment', () => {
       await expect(containerDeployment.removeContainers('/opt/app', true)).resolves.not.toThrow();
 
       const command = mockSSHClient.executeCommand.mock.calls[0][0];
-      expect(command).toContain('docker-compose down -v');
+      expect(command).toContain('docker-compose -f docker-compose.yml down -v');
     });
 
     it('should throw error when removal fails', async () => {

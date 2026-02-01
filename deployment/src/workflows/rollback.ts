@@ -26,6 +26,7 @@ import { ConfigTransfer } from '../utils/config-transfer.js';
 import { ContainerDeployment } from '../utils/container-deployment.js';
 import { HealthCheck } from '../utils/health-check.js';
 import { RollbackExecutor } from '../utils/rollback-executor.js';
+import { detectComposeCommand, ensureFinchVMReady } from '../utils/compose-command-detector.js';
 
 const logger = createLogger();
 
@@ -85,13 +86,24 @@ export async function rollbackWorkflow(
     }
     log(`SSH connection established to ${options.targetHost}`);
 
-    // Step 3-7: Execute rollback using RollbackExecutor
-    log('Step 3: Executing rollback...');
+    // Step 3: Detect compose command
+    log('Step 3: Detecting container runtime...');
+    const composeResult = await detectComposeCommand(sshClient);
+    log(`Will use compose command: ${composeResult.command}`);
+
+    // If Finch is detected, ensure VM is ready
+    if (composeResult.isFinch && composeResult.runtimePath) {
+      await ensureFinchVMReady(sshClient, composeResult.runtimePath);
+      log('Finch VM is ready');
+    }
+
+    // Step 4-8: Execute rollback using RollbackExecutor
+    log('Step 4: Executing rollback...');
 
     const imageTransfer = new ImageTransfer();
     const configTransfer = new ConfigTransfer(sshClient);
-    const containerDeployment = new ContainerDeployment(sshClient);
-    const healthCheck = new HealthCheck(sshClient);
+    const containerDeployment = new ContainerDeployment(sshClient, composeResult.command);
+    const healthCheck = new HealthCheck(sshClient, composeResult.command);
 
     const rollbackExecutor = new RollbackExecutor(
       stateManager,

@@ -62,49 +62,72 @@ export interface DeploymentResult {
 }
 
 /**
- * ContainerDeployment class for deploying and managing Docker containers via docker-compose
+ * ContainerDeployment class for deploying and managing Docker/Finch containers via compose
  * 
  * Features:
- * - Deploy containers using docker-compose up
+ * - Deploy containers using docker-compose or finch compose
  * - Monitor container startup progress
  * - Capture container logs during startup
  * - Check container status and health
  * - Stop and remove containers
+ * - Support both Docker and Finch runtimes
  */
 export class ContainerDeployment {
   private sshClient: SSHClient;
   private readonly DEFAULT_STARTUP_TIMEOUT = 300000; // 5 minutes
+  private composeCommand: string;
 
   /**
    * Creates a new ContainerDeployment instance
    * @param sshClient SSH client for remote operations
+   * @param composeCommand Optional compose command (default: 'docker-compose')
    */
-  constructor(sshClient: SSHClient) {
+  constructor(sshClient: SSHClient, composeCommand: string = 'docker-compose') {
     this.sshClient = sshClient;
+    this.composeCommand = composeCommand;
+    logger.info(`ContainerDeployment initialized with compose command: ${composeCommand}`);
   }
 
   /**
-   * Executes a docker-compose command, automatically adding sudo if needed
-   * @param command The docker-compose command to execute
+   * Sets the compose command to use (docker-compose or finch compose)
+   * @param command The compose command to use
+   */
+  setComposeCommand(command: string): void {
+    this.composeCommand = command;
+    logger.info(`Container deployment will use: ${command}`);
+  }
+
+  /**
+   * Executes a compose command, automatically adding sudo if needed
+   * @param command The full compose command to execute
    * @returns Promise that resolves with command result
    */
   private async executeDockerComposeCommand(command: string): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+    logger.info(`Executing compose command: ${command}`);
+
     // Try without sudo first
     let result = await this.sshClient.executeCommand(command);
 
     // If permission denied, retry with sudo
     if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
-      logger.debug('Docker permission denied, retrying with sudo');
-      // Replace 'docker-compose' with 'sudo docker-compose' in the command
-      const sudoCommand = command.replace(/docker-compose/g, 'sudo docker-compose');
+      logger.debug('Container runtime permission denied, retrying with sudo');
+      // Add sudo to the compose command part
+      const sudoCommand = command.replace(this.composeCommand, `sudo ${this.composeCommand}`);
+      logger.info(`Retrying with sudo: ${sudoCommand}`);
       result = await this.sshClient.executeCommand(sudoCommand);
+    }
+
+    if (result.exitCode !== 0) {
+      logger.error(`Compose command failed with exit code ${result.exitCode}`);
+      logger.error(`stderr: ${result.stderr}`);
+      logger.error(`stdout: ${result.stdout}`);
     }
 
     return result;
   }
 
   /**
-   * Deploys containers using docker-compose up
+   * Deploys containers using compose up
    * @param options Deployment options
    * @returns Promise that resolves with deployment result
    */
@@ -115,28 +138,28 @@ export class ContainerDeployment {
     try {
       logger.info('Starting container deployment...');
 
-      // Verify docker-compose file exists
+      // Verify compose file exists
       await this.verifyComposeFile(options.composePath);
 
-      // Build docker-compose command
+      // Build compose command
       const composeCmd = this.buildComposeCommand(options);
       logger.info(`Executing: ${composeCmd}`);
 
-      // Execute docker-compose up
+      // Execute compose up
       const startTime = Date.now();
       const result = await this.executeDockerComposeCommand(composeCmd);
 
       if (result.exitCode !== 0) {
-        logger.error(`docker-compose up failed: ${result.stderr}`);
+        logger.error(`Compose up failed: ${result.stderr}`);
         return {
           success: false,
           containers: [],
           logs: [],
-          error: `docker-compose up failed: ${result.stderr}`,
+          error: `Compose up failed: ${result.stderr}`,
         };
       }
 
-      logger.info('docker-compose up completed, monitoring container startup...');
+      logger.info('Compose up completed, monitoring container startup...');
 
       // Monitor container startup
       const monitorResult = await this.monitorContainerStartup(
@@ -183,7 +206,7 @@ export class ContainerDeployment {
 
   /**
    * Monitors container startup until all containers are running or timeout occurs
-   * @param workingDirectory Working directory containing docker-compose.yml
+   * @param workingDirectory Working directory containing compose file
    * @param timeout Timeout in milliseconds
    * @returns Promise that resolves with deployment result
    */
@@ -237,13 +260,13 @@ export class ContainerDeployment {
   }
 
   /**
-   * Gets the status of all containers in the docker-compose project
-   * @param workingDirectory Working directory containing docker-compose.yml
+   * Gets the status of all containers in the compose project
+   * @param workingDirectory Working directory containing compose file
    * @returns Promise that resolves with array of container statuses
    */
   async getContainerStatus(workingDirectory: string): Promise<ContainerStatus[]> {
     try {
-      const cmd = `cd ${workingDirectory} && docker-compose ps --format json`;
+      const cmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml ps --format json`;
       const result = await this.executeDockerComposeCommand(cmd);
 
       if (result.exitCode !== 0) {
@@ -279,7 +302,7 @@ export class ContainerDeployment {
   /**
    * Captures logs from a specific container
    * @param containerName Name of the container
-   * @param workingDirectory Working directory containing docker-compose.yml
+   * @param workingDirectory Working directory containing compose file
    * @param tailLines Number of lines to tail (default: 100)
    * @returns Promise that resolves with container logs
    */
@@ -289,7 +312,7 @@ export class ContainerDeployment {
     tailLines: number = 100
   ): Promise<ContainerLogs> {
     try {
-      const cmd = `cd ${workingDirectory} && docker-compose logs --tail=${tailLines} ${containerName}`;
+      const cmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml logs --tail=${tailLines} ${containerName}`;
       const result = await this.executeDockerComposeCommand(cmd);
 
       return {
@@ -308,13 +331,13 @@ export class ContainerDeployment {
   }
 
   /**
-   * Gets the names of all containers in the docker-compose project
-   * @param workingDirectory Working directory containing docker-compose.yml
+   * Gets the names of all containers in the compose project
+   * @param workingDirectory Working directory containing compose file
    * @returns Promise that resolves with array of container names
    */
   private async getContainerNames(workingDirectory: string): Promise<string[]> {
     try {
-      const cmd = `cd ${workingDirectory} && docker-compose ps --services`;
+      const cmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml ps --services`;
       const result = await this.executeDockerComposeCommand(cmd);
 
       if (result.exitCode !== 0) {
@@ -329,14 +352,14 @@ export class ContainerDeployment {
   }
 
   /**
-   * Stops all containers in the docker-compose project
-   * @param workingDirectory Working directory containing docker-compose.yml
+   * Stops all containers in the compose project
+   * @param workingDirectory Working directory containing compose file
    * @returns Promise that resolves when containers are stopped
    */
   async stopContainers(workingDirectory: string): Promise<void> {
     try {
       logger.info('Stopping containers...');
-      const cmd = `cd ${workingDirectory} && docker-compose stop`;
+      const cmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml stop`;
       const result = await this.executeDockerComposeCommand(cmd);
 
       if (result.exitCode !== 0) {
@@ -351,8 +374,8 @@ export class ContainerDeployment {
   }
 
   /**
-   * Stops and removes all containers in the docker-compose project
-   * @param workingDirectory Working directory containing docker-compose.yml
+   * Stops and removes all containers in the compose project
+   * @param workingDirectory Working directory containing compose file
    * @param removeVolumes Whether to remove volumes as well
    * @returns Promise that resolves when containers are removed
    */
@@ -360,7 +383,7 @@ export class ContainerDeployment {
     try {
       logger.info('Removing containers...');
       const volumeFlag = removeVolumes ? '-v' : '';
-      const cmd = `cd ${workingDirectory} && docker-compose down ${volumeFlag}`;
+      const cmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml down ${volumeFlag}`;
       const result = await this.executeDockerComposeCommand(cmd);
 
       if (result.exitCode !== 0) {
@@ -375,8 +398,8 @@ export class ContainerDeployment {
   }
 
   /**
-   * Verifies that the docker-compose file exists on the remote host
-   * @param composePath Path to docker-compose.yml
+   * Verifies that the compose file exists on the remote host
+   * @param composePath Path to compose file
    * @returns Promise that resolves if file exists
    * @throws Error if file does not exist
    */
@@ -385,37 +408,39 @@ export class ContainerDeployment {
     const result = await this.sshClient.executeCommand(cmd);
 
     if (!result.stdout.includes('exists')) {
-      throw new Error(`docker-compose file not found: ${composePath}`);
+      throw new Error(`Compose file not found: ${composePath}`);
     }
   }
 
   /**
-   * Builds the docker-compose up command with options
+   * Builds the compose up command with options
    * @param options Deployment options
-   * @returns docker-compose command string
+   * @returns compose command string
    */
   private buildComposeCommand(options: ContainerDeploymentOptions): string {
-    const parts = [`cd ${options.workingDirectory} && docker-compose`];
+    // Build the command directly without shell wrapper
+    // The SSH client will execute it in the default shell
+    // Always specify the compose file explicitly with -f for compatibility with both Docker and Finch
+    let command = `cd ${options.workingDirectory} && ${this.composeCommand} -f ${options.composePath} up -d`;
 
-    // Add environment variables
+    if (options.forceRecreate) {
+      command += ' --force-recreate';
+    }
+
+    if (options.pullImages) {
+      command += ' --pull always';
+    }
+
+    // Add environment variables at the beginning if provided
     if (options.environment) {
       const envVars = Object.entries(options.environment)
         .map(([key, value]) => `${key}="${value}"`)
         .join(' ');
-      parts[0] = `${envVars} ${parts[0]}`;
+      command = `${envVars} ${command}`;
     }
 
-    parts.push('up -d'); // Detached mode
-
-    if (options.forceRecreate) {
-      parts.push('--force-recreate');
-    }
-
-    if (options.pullImages) {
-      parts.push('--pull always');
-    }
-
-    return parts.join(' ');
+    logger.debug(`Built compose command: ${command}`);
+    return command;
   }
 
   /**

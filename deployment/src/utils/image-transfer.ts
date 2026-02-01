@@ -64,7 +64,7 @@ export interface ImageTransferResult {
 
 /**
  * Image transfer class
- * Handles transferring Docker images to remote hosts
+ * Handles transferring Docker/Finch images to remote hosts
  */
 export class ImageTransfer {
   private readonly DEFAULT_REMOTE_TEMP_DIR = '/tmp/docker-images';
@@ -72,6 +72,89 @@ export class ImageTransfer {
 
   constructor() {
     this.imageBuilder = new ImageBuilder();
+  }
+
+  /**
+   * Detect container runtime on remote host
+   */
+  private async detectRemoteRuntime(sshClient: SSHClient): Promise<string> {
+    // Try finch first (for macOS) with multiple paths
+    const finchPaths = [
+      'finch',
+      '/usr/local/bin/finch',
+      '/opt/homebrew/bin/finch',
+      '$HOME/.finch/bin/finch',
+    ];
+
+    for (const finchPath of finchPaths) {
+      const result = await sshClient.executeCommand(`command -v ${finchPath} || ${finchPath} --version`);
+      if (result.exitCode === 0) {
+        logger.debug(`Detected Finch on remote host at: ${finchPath}`);
+        return finchPath;
+      }
+    }
+
+    // Fall back to docker
+    logger.debug('Detected Docker on remote host');
+    return 'docker';
+  }
+
+  /**
+   * Ensure Finch VM is running on remote host
+   * Checks VM status and starts it if stopped
+   */
+  private async ensureRemoteFinchVMRunning(
+    sshClient: SSHClient,
+    finchPath: string,
+    onProgress?: TransferProgressCallback
+  ): Promise<void> {
+    logger.debug('Checking Finch VM status on remote host');
+
+    // Check VM status
+    const statusResult = await sshClient.executeCommand(`${finchPath} vm status 2>&1`);
+    const statusOutput = statusResult.stdout.toLowerCase();
+
+    // If VM is not initialized, initialize it
+    if (statusOutput.includes('nonexistent') || statusOutput.includes('not found') || statusResult.exitCode !== 0) {
+      logger.info('Finch VM not initialized on remote host, initializing (this may take up to 2 minutes)...');
+      if (onProgress) {
+        onProgress('Initializing Finch VM on remote host (this may take up to 2 minutes)...');
+      }
+
+      const initResult = await sshClient.executeCommand(`${finchPath} vm init 2>&1`);
+      if (initResult.exitCode !== 0 && !initResult.stdout.includes('already exists')) {
+        throw new Error(`Failed to initialize Finch VM: ${initResult.stderr || initResult.stdout}`);
+      }
+
+      logger.info('Finch VM initialized on remote host');
+
+      // Wait for VM to be ready
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return;
+    }
+
+    // If VM is stopped, start it
+    if (statusOutput.includes('stopped')) {
+      logger.info('Finch VM is stopped on remote host, starting (this may take up to 2 minutes)...');
+      if (onProgress) {
+        onProgress('Starting Finch VM on remote host (this may take up to 2 minutes)...');
+      }
+
+      const startResult = await sshClient.executeCommand(`${finchPath} vm start 2>&1`);
+      if (startResult.exitCode !== 0) {
+        throw new Error(`Failed to start Finch VM: ${startResult.stderr || startResult.stdout}`);
+      }
+
+      logger.info('Finch VM started on remote host');
+
+      // Wait for VM to be fully ready
+      if (onProgress) {
+        onProgress('Waiting for Finch VM to be fully ready...');
+      }
+      await new Promise(resolve => setTimeout(resolve, 10000)); // 10 second wait
+    } else {
+      logger.debug('Finch VM is already running on remote host');
+    }
   }
 
   /**
@@ -106,6 +189,10 @@ export class ImageTransfer {
     if (!sshClient.isConnected()) {
       throw new Error('SSH client is not connected');
     }
+
+    // Detect remote runtime
+    const remoteRuntime = await this.detectRemoteRuntime(sshClient);
+    logger.info(`Using remote runtime: ${remoteRuntime}`);
 
     let localTarPath: string | null = null;
     let remoteTarPath: string | null = null;
@@ -160,6 +247,7 @@ export class ImageTransfer {
         sshClient,
         remoteTarPath,
         imageTag,
+        remoteRuntime,
         onProgress
       );
 
@@ -168,7 +256,7 @@ export class ImageTransfer {
         onProgress('Verifying image on remote host...');
       }
 
-      const verified = await this.verifyRemoteImage(sshClient, imageTag);
+      const verified = await this.verifyRemoteImage(sshClient, imageTag, remoteRuntime);
       if (!verified) {
         throw new Error('Image verification failed on remote host');
       }
@@ -331,37 +419,65 @@ export class ImageTransfer {
   }
 
   /**
-   * Load Docker image on remote host from tar file
+   * Load Docker/Finch image on remote host from tar file
    */
   private async loadImageOnRemote(
     sshClient: SSHClient,
     remoteTarPath: string,
     imageTag: string,
+    remoteRuntime: string,
     onProgress?: TransferProgressCallback
   ): Promise<void> {
     logger.debug('Loading image on remote host', {
       remoteTarPath,
-      imageTag
+      imageTag,
+      runtime: remoteRuntime
     });
 
-    // Try docker load without sudo first
-    let command = `docker load -i ${remoteTarPath}`;
-    let result = await sshClient.executeCommand(command);
+    // For Finch on macOS, we need to use stdin redirection because the VM may not have access to /tmp
+    const isFinch = remoteRuntime.includes('finch');
 
-    // If permission denied, try with sudo
-    if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
-      logger.debug('Docker permission denied, retrying with sudo', { imageTag });
-      command = `sudo docker load -i ${remoteTarPath}`;
+    // If Finch, ensure VM is running before attempting to load
+    if (isFinch) {
+      await this.ensureRemoteFinchVMRunning(sshClient, remoteRuntime, onProgress);
+    }
+
+    let command: string;
+    let result: any;
+
+    if (isFinch) {
+      // Use cat to pipe the tar file into finch load via stdin
+      // This works because cat runs on the host and finch load reads from stdin
+      logger.debug('Using stdin redirection for Finch load', { imageTag });
+      command = `cat ${remoteTarPath} | ${remoteRuntime} load`;
       result = await sshClient.executeCommand(command);
+
+      // If permission denied, try with sudo on the finch command
+      if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+        logger.debug('Finch permission denied, retrying with sudo', { imageTag });
+        command = `cat ${remoteTarPath} | sudo ${remoteRuntime} load`;
+        result = await sshClient.executeCommand(command);
+      }
+    } else {
+      // For Docker, use the -i flag directly
+      command = `${remoteRuntime} load -i ${remoteTarPath}`;
+      result = await sshClient.executeCommand(command);
+
+      // If permission denied, try with sudo
+      if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
+        logger.debug('Docker permission denied, retrying with sudo', { imageTag });
+        command = `sudo ${remoteRuntime} load -i ${remoteTarPath}`;
+        result = await sshClient.executeCommand(command);
+      }
     }
 
     if (result.exitCode !== 0) {
       throw new Error(`Failed to load image on remote host: ${result.stderr}`);
     }
 
-    // Log docker load output
+    // Log load output
     if (result.stdout) {
-      logger.debug('Docker load output', { stdout: result.stdout });
+      logger.debug('Container runtime load output', { stdout: result.stdout });
       if (onProgress) {
         onProgress(`  ${result.stdout.trim()}`);
       }
@@ -375,18 +491,19 @@ export class ImageTransfer {
    */
   private async verifyRemoteImage(
     sshClient: SSHClient,
-    imageTag: string
+    imageTag: string,
+    remoteRuntime: string
   ): Promise<boolean> {
-    logger.debug('Verifying image on remote host', { imageTag });
+    logger.debug('Verifying image on remote host', { imageTag, runtime: remoteRuntime });
 
-    // Try docker images without sudo first
-    let command = `docker images -q ${imageTag}`;
+    // Try images command without sudo first
+    let command = `${remoteRuntime} images -q ${imageTag}`;
     let result = await sshClient.executeCommand(command);
 
     // If permission denied, try with sudo
     if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
-      logger.debug('Docker permission denied, retrying with sudo', { imageTag });
-      command = `sudo docker images -q ${imageTag}`;
+      logger.debug('Container runtime permission denied, retrying with sudo', { imageTag });
+      command = `sudo ${remoteRuntime} images -q ${imageTag}`;
       result = await sshClient.executeCommand(command);
     }
 
@@ -562,6 +679,11 @@ export async function verifyAllImagesOnRemote(
 ): Promise<boolean> {
   logger.info('Verifying all images on remote host', { version });
 
+  // Detect remote runtime
+  const transfer = new ImageTransfer();
+  const remoteRuntime = await (transfer as any).detectRemoteRuntime(sshClient);
+  logger.debug(`Using remote runtime for verification: ${remoteRuntime}`);
+
   const imagesToVerify = [
     `cat_frontend:${version}`,
     `cat_backend:${version}`,
@@ -569,14 +691,14 @@ export async function verifyAllImagesOnRemote(
   ];
 
   for (const imageTag of imagesToVerify) {
-    // Try docker images without sudo first
-    let command = `docker images -q ${imageTag}`;
+    // Try images command without sudo first
+    let command = `${remoteRuntime} images -q ${imageTag}`;
     let result = await sshClient.executeCommand(command);
 
     // If permission denied, try with sudo
     if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
-      logger.debug('Docker permission denied, retrying with sudo', { imageTag });
-      command = `sudo docker images -q ${imageTag}`;
+      logger.debug('Container runtime permission denied, retrying with sudo', { imageTag });
+      command = `sudo ${remoteRuntime} images -q ${imageTag}`;
       result = await sshClient.executeCommand(command);
     }
 

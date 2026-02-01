@@ -27,17 +27,18 @@ export interface InstallationSummary {
 }
 
 /**
- * DependencyInstaller class for installing Docker and Docker Compose on remote hosts
+ * DependencyInstaller class for installing Docker/Finch and Docker Compose/Finch Compose on remote hosts
  * 
  * Features:
- * - Automatic OS detection
- * - Multi-distribution support (Ubuntu, Debian, RHEL, CentOS, Fedora, Rocky, AlmaLinux, SLES, openSUSE, Alpine)
- * - Appropriate package manager selection (apt-get, yum, dnf, zypper, apk)
+ * - Automatic OS detection (Linux distributions and macOS)
+ * - Multi-distribution support (Ubuntu, Debian, RHEL, CentOS, Fedora, Rocky, AlmaLinux, SLES, openSUSE, Alpine, macOS)
+ * - Appropriate package manager selection (apt-get, yum, dnf, zypper, apk, brew)
  * - Docker Compose v2 (plugin) installation
+ * - Finch support for macOS with installation guidance
  * - Installation verification using DependencyChecker
  * - Proper error handling and logging
  * 
- * Requirements: 8.3, 8.4, 8.6, 8.7, 8.8
+ * Requirements: 8.3, 8.4, 8.6, 8.7, 8.8, 8.9, 8.10
  */
 export class DependencyInstaller {
   private sshClient: SSHClient;
@@ -66,7 +67,7 @@ export class DependencyInstaller {
         throw new Error(
           this.osInfo.error ||
           `Unsupported OS distribution: ${this.osInfo.distribution}. ` +
-          `Supported distributions: Ubuntu, Debian, RHEL, CentOS, Fedora, Rocky, AlmaLinux, SLES, openSUSE, Alpine`
+          `Supported distributions: Ubuntu, Debian, RHEL, CentOS, Fedora, Rocky, AlmaLinux, SLES, openSUSE, Alpine, macOS`
         );
       }
     }
@@ -74,36 +75,41 @@ export class DependencyInstaller {
   }
 
   /**
-   * Installs Docker using the appropriate method for the detected OS
+   * Installs Docker or Finch using the appropriate method for the detected OS
    * @returns Promise that resolves with installation result
    */
   async installDocker(): Promise<InstallationResult> {
-    logger.info('Starting Docker installation...');
+    logger.info('Starting Docker/Finch installation...');
 
     try {
       // Detect OS first
       const osInfo = await this.ensureOSDetected();
-      logger.info(`Installing Docker on ${osInfo.distribution} using ${osInfo.packageManager}`);
+      logger.info(`Installing Docker/Finch on ${osInfo.distribution} using ${osInfo.packageManager}`);
 
-      // Check if Docker is already installed and meets requirements
+      // Check if Docker/Finch is already installed and meets requirements
       const checkResult = await this.dependencyChecker.checkDocker();
       
       if (checkResult.installed && checkResult.meetsMinimum) {
-        logger.info(`Docker ${checkResult.version} is already installed and meets requirements`);
+        logger.info(`Docker/Finch ${checkResult.version} is already installed and meets requirements`);
         return {
           success: true,
           installed: false,
           version: checkResult.version,
-          message: `Docker ${checkResult.version} is already installed`,
+          message: `Docker/Finch ${checkResult.version} is already installed`,
         };
       }
 
       if (checkResult.installed && !checkResult.meetsMinimum) {
-        logger.warn(`Docker ${checkResult.version} is installed but does not meet minimum requirement (${MIN_DOCKER_VERSION})`);
-        logger.info('Proceeding with Docker upgrade...');
+        logger.warn(`Docker/Finch ${checkResult.version} is installed but does not meet minimum requirement (${MIN_DOCKER_VERSION})`);
+        logger.info('Proceeding with Docker/Finch upgrade...');
       }
 
-      // Install Docker based on package manager
+      // Handle macOS separately
+      if (osInfo.isMacOS) {
+        return await this.handleMacOSFinch();
+      }
+
+      // Install Docker based on package manager for Linux
       switch (osInfo.packageManager) {
         case 'apt-get':
           return await this.installDockerApt(osInfo);
@@ -122,7 +128,7 @@ export class DependencyInstaller {
           throw new Error(`Unsupported package manager: ${osInfo.packageManager}`);
       }
     } catch (err) {
-      const errorMsg = `Docker installation failed: ${err instanceof Error ? err.message : String(err)}`;
+      const errorMsg = `Docker/Finch installation failed: ${err instanceof Error ? err.message : String(err)}`;
       logger.error(errorMsg);
       return {
         success: false,
@@ -131,6 +137,64 @@ export class DependencyInstaller {
         message: errorMsg,
       };
     }
+  }
+
+  /**
+   * Handles Finch installation/verification on macOS
+   */
+  private async handleMacOSFinch(): Promise<InstallationResult> {
+    logger.info('Handling Finch on macOS...');
+
+    // Check if Finch is installed in common locations
+    const finchPaths = [
+      'finch',                           // In PATH
+      '/usr/local/bin/finch',           // Homebrew default
+      '/opt/homebrew/bin/finch',        // Homebrew on Apple Silicon
+      '$HOME/.finch/bin/finch',         // User installation
+    ];
+
+    let finchFound = false;
+    for (const finchPath of finchPaths) {
+      const finchCheck = await this.sshClient.executeCommand(`command -v ${finchPath} || ${finchPath} --version`);
+      if (finchCheck.exitCode === 0) {
+        finchFound = true;
+        logger.info(`Found Finch at: ${finchPath}`);
+        break;
+      }
+    }
+
+    if (finchFound) {
+      // Finch is installed, verify it
+      return await this.verifyDockerInstallation();
+    }
+
+    // Finch is not installed, provide installation instructions
+    const installInstructions = `
+Finch is not installed on the target macOS system.
+
+To install Finch, run the following commands on the target host:
+
+  # Using Homebrew:
+  brew install --cask finch
+
+  # Or download from GitHub:
+  # https://github.com/runfinch/finch/releases
+
+After installation, initialize Finch:
+  finch vm init
+
+Then re-run the deployment script.
+`;
+
+    logger.warn('Finch not found on macOS target');
+    logger.info(installInstructions);
+
+    return {
+      success: false,
+      installed: false,
+      error: 'Finch not installed on macOS target',
+      message: installInstructions.trim(),
+    };
   }
 
   /**
@@ -363,36 +427,42 @@ export class DependencyInstaller {
   }
 
   /**
-   * Installs Docker Compose using the appropriate method for the detected OS
+   * Installs Docker Compose or Finch Compose using the appropriate method for the detected OS
    * @returns Promise that resolves with installation result
    */
   async installDockerCompose(): Promise<InstallationResult> {
-    logger.info('Starting Docker Compose installation...');
+    logger.info('Starting Docker Compose/Finch Compose installation...');
 
     try {
       // Detect OS first
       const osInfo = await this.ensureOSDetected();
-      logger.info(`Installing Docker Compose on ${osInfo.distribution} using ${osInfo.packageManager}`);
+      logger.info(`Installing Docker Compose/Finch Compose on ${osInfo.distribution} using ${osInfo.packageManager}`);
 
-      // Check if Docker Compose is already installed and meets requirements
+      // Check if Docker Compose/Finch Compose is already installed and meets requirements
       const checkResult = await this.dependencyChecker.checkDockerCompose();
       
       if (checkResult.installed && checkResult.meetsMinimum) {
-        logger.info(`Docker Compose ${checkResult.version} is already installed and meets requirements`);
+        logger.info(`Docker Compose/Finch Compose ${checkResult.version} is already installed and meets requirements`);
         return {
           success: true,
           installed: false,
           version: checkResult.version,
-          message: `Docker Compose ${checkResult.version} is already installed`,
+          message: `Docker Compose/Finch Compose ${checkResult.version} is already installed`,
         };
       }
 
       if (checkResult.installed && !checkResult.meetsMinimum) {
-        logger.warn(`Docker Compose ${checkResult.version} is installed but does not meet minimum requirement (${MIN_DOCKER_COMPOSE_VERSION})`);
-        logger.info('Proceeding with Docker Compose upgrade...');
+        logger.warn(`Docker Compose/Finch Compose ${checkResult.version} is installed but does not meet minimum requirement (${MIN_DOCKER_COMPOSE_VERSION})`);
+        logger.info('Proceeding with Docker Compose/Finch Compose upgrade...');
       }
 
-      // Install Docker Compose based on package manager
+      // Handle macOS separately - Finch includes compose built-in
+      if (osInfo.isMacOS) {
+        // Finch includes compose, so just verify it
+        return await this.verifyDockerComposeInstallation();
+      }
+
+      // Install Docker Compose based on package manager for Linux
       switch (osInfo.packageManager) {
         case 'apt-get':
           return await this.installDockerComposeApt();
@@ -412,7 +482,7 @@ export class DependencyInstaller {
           throw new Error(`Unsupported package manager: ${osInfo.packageManager}`);
       }
     } catch (err) {
-      const errorMsg = `Docker Compose installation failed: ${err instanceof Error ? err.message : String(err)}`;
+      const errorMsg = `Docker Compose/Finch Compose installation failed: ${err instanceof Error ? err.message : String(err)}`;
       logger.error(errorMsg);
       return {
         success: false,

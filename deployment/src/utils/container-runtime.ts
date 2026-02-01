@@ -87,13 +87,100 @@ export async function detectContainerRuntime(): Promise<ContainerRuntime> {
 }
 
 /**
+ * Check if Finch VM is initialized on local machine
+ */
+async function isLocalFinchVMInitialized(): Promise<boolean> {
+    try {
+        const { stdout } = await execAsync('finch vm status 2>/dev/null');
+        const output = stdout.toLowerCase();
+        return output.includes('running') || output.includes('stopped');
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Initialize Finch VM on local machine
+ */
+async function initializeLocalFinchVM(): Promise<void> {
+    logger.info('Initializing Finch VM on local machine...');
+    try {
+        await execAsync('finch vm init', { timeout: 120000 }); // 120 second timeout
+        logger.info('Finch VM initialized successfully');
+    } catch (error) {
+        throw new Error(`Failed to initialize Finch VM: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Start Finch VM on local machine
+ */
+async function startLocalFinchVM(): Promise<void> {
+    logger.info('Starting Finch VM on local machine...');
+    try {
+        await execAsync('finch vm start', { timeout: 120000 }); // 120 second timeout
+        logger.info('Finch VM started successfully');
+
+        // Wait a bit for VM to be fully ready
+        await new Promise(resolve => setTimeout(resolve, 5000));
+    } catch (error) {
+        throw new Error(`Failed to start Finch VM: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Ensure Finch VM is ready on local machine
+ */
+async function ensureLocalFinchVMReady(): Promise<void> {
+    logger.info('Ensuring Finch VM is ready on local machine...');
+
+    // Check if VM is initialized
+    const isInitialized = await isLocalFinchVMInitialized();
+
+    if (!isInitialized) {
+        logger.info('Finch VM not initialized, initializing now (this may take a few minutes)...');
+        await initializeLocalFinchVM();
+        return;
+    }
+
+    // Check if VM is running
+    try {
+        const { stdout } = await execAsync('finch vm status 2>/dev/null');
+        if (stdout.toLowerCase().includes('stopped')) {
+            logger.info('Finch VM is stopped, starting it...');
+            await startLocalFinchVM();
+        } else {
+            logger.info('Finch VM is already running');
+        }
+    } catch (error) {
+        logger.warn('Could not check Finch VM status, attempting to start anyway');
+        await startLocalFinchVM();
+    }
+
+    logger.info('Finch VM is ready');
+}
+
+/**
  * Verify that the detected runtime is functional
  * Tests basic operations like listing images
+ * For Finch, ensures VM is initialized and running first
  */
 export async function verifyContainerRuntime(runtime: ContainerRuntime): Promise<boolean> {
     try {
         logger.debug(`Verifying ${runtime.name} functionality...`);
         
+        // If Finch, ensure VM is ready first
+        if (runtime.name === 'finch') {
+            try {
+                await ensureLocalFinchVMReady();
+            } catch (vmError) {
+                logger.error('Failed to ensure Finch VM is ready', {
+                    error: vmError instanceof Error ? vmError.message : String(vmError)
+                });
+                return false;
+            }
+        }
+
         // Try to list images as a basic functionality test
         await execAsync(`${runtime.buildCommand} images`);
         
