@@ -24,7 +24,7 @@ export interface ImageTransferOptions {
   /** SSH client connected to remote host */
   sshClient: SSHClient;
 
-  /** Image tag to transfer (e.g., "cat_frontend:1.0.0") */
+  /** Image tag to transfer (e.g., "cultivate_frontend:1.0.0") */
   imageTag: string;
 
   /** Optional container runtime (auto-detected if not specified) */
@@ -627,9 +627,9 @@ export async function transferAllImages(
 
   // Define images to transfer
   const imagesToTransfer = [
-    `cat_frontend:${version}`,
-    `cat_backend:${version}`,
-    `cat_database:${version}`
+    `cultivate_frontend:${version}`,
+    `cultivate_backend:${version}`,
+    `cultivate_database:${version}`
   ];
 
   // Transfer each image
@@ -685,9 +685,9 @@ export async function verifyAllImagesOnRemote(
   logger.debug(`Using remote runtime for verification: ${remoteRuntime}`);
 
   const imagesToVerify = [
-    `cat_frontend:${version}`,
-    `cat_backend:${version}`,
-    `cat_database:${version}`
+    `cultivate_frontend:${version}`,
+    `cultivate_backend:${version}`,
+    `cultivate_database:${version}`
   ];
 
   for (const imageTag of imagesToVerify) {

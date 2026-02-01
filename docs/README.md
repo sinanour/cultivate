@@ -196,12 +196,12 @@ This directory contains comprehensive documentation for coordinating the develop
 - **Format**: Demo features, discuss API changes, plan next week
 
 ### Slack Channels
-- `#community-tracker-general`: General discussion
-- `#community-tracker-backend`: Backend-specific
-- `#community-tracker-frontend`: Frontend-specific
-- `#community-tracker-mobile`: Mobile-specific
-- `#community-tracker-infra`: Infrastructure-specific
-- `#community-tracker-api-changes`: API change notifications
+- `#cultivate-general`: General discussion
+- `#cultivate-backend`: Backend-specific
+- `#cultivate-frontend`: Frontend-specific
+- `#cultivate-mobile`: Mobile-specific
+- `#cultivate-infra`: Infrastructure-specific
+- `#cultivate-api-changes`: API change notifications
 
 ## Key Principles
 
@@ -226,7 +226,7 @@ Comprehensive testing strategy including unit tests, property-based tests, integ
 - All API changes must be documented in `API_CONTRACT.md`
 - Breaking changes require API versioning
 - Non-breaking changes should be backward compatible
-- Notify all teams via `#community-tracker-api-changes`
+- Notify all teams via `#cultivate-api-changes`
 
 ### Data Model Changes
 - All data model changes must be documented in `SHARED_DATA_MODELS.md`
@@ -272,7 +272,7 @@ Comprehensive testing strategy including unit tests, property-based tests, integ
 ## Resources
 
 ### Package Specifications
-- System: `.kiro/specs/community-activity-tracker/`
+- System: `.kiro/specs/cultivate/`
 - Infrastructure: `.kiro/specs/infrastructure/`
 - Backend API: `.kiro/specs/backend-api/`
 - Web Frontend: `.kiro/specs/web-frontend/`
@@ -297,7 +297,7 @@ Comprehensive testing strategy including unit tests, property-based tests, integ
 
 If you find issues or have suggestions for improving this documentation:
 1. Create a GitHub issue with label `documentation`
-2. Post in `#community-tracker-general` Slack channel
+2. Post in `#cultivate-general` Slack channel
 3. Discuss in weekly sync meeting
 
 ## License

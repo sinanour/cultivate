@@ -357,7 +357,7 @@ describe('ActivityTypeService', () => {
 
     describe('createActivityType', () => {
         it('should create activity type with valid data', async () => {
-            const input = { name: 'Test Type', activityCategoryId: 'cat-1' };
+            const input = { name: 'Test Type', activityCategoryId: 'cultivate-1' };
             const mockType = { 
                 id: '1', 
                 name: input.name, 
@@ -368,7 +368,7 @@ describe('ActivityTypeService', () => {
                 version: 1 
             };
             const mockCategory = { 
-                id: 'cat-1', 
+                id: 'cultivate-1', 
                 name: 'Test Category', 
                 isPredefined: true, 
                 version: 1, 

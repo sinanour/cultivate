@@ -19,7 +19,7 @@ describe('ConfigValidator', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {
@@ -109,7 +109,7 @@ describe('ConfigValidator', () => {
       const config: Partial<DeploymentConfiguration> = {
         environment: {
           nodeEnv: 'development' as any, // Invalid value
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
       };
@@ -124,7 +124,7 @@ describe('ConfigValidator', () => {
       const config: Partial<DeploymentConfiguration> = {
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: -1, // Invalid port
         },
       };
@@ -381,7 +381,7 @@ describe('ConfigValidator', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {
@@ -404,7 +404,7 @@ describe('ConfigValidator', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {

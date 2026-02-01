@@ -11,7 +11,7 @@ echo "Starting database initialization..."
 # using POSTGRES_USER and POSTGRES_DB environment variables
 # We just need to set up permissions
 
-# Connect to community_tracker and set up schema permissions
+# Connect to cultivate and set up schema permissions
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     -- Grant schema permissions to apiuser
     GRANT ALL ON SCHEMA public TO apiuser;
@@ -23,7 +23,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 EOSQL
 
 echo "Database initialization completed successfully"
-echo "  - Database 'community_tracker' ready"
+echo "  - Database 'cultivate' ready"
 echo "  - User 'apiuser' has all necessary privileges"
 
 # Configure pg_hba.conf for trust authentication (simpler than peer for containerized setup)

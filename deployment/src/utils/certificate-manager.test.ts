@@ -236,7 +236,7 @@ describe('Certificate Manager', () => {
       const result = generateDockerComposeVolumeConfig(config);
       
       expect(result).toContain('/etc/nginx/certs:ro');
-      expect(result).toContain('/opt/community-tracker/certs');
+      expect(result).toContain('/opt/cultivate/certs');
     });
   });
 
@@ -292,11 +292,11 @@ describe('Certificate Manager', () => {
       
       mockSshClient.executeCommand.mockResolvedValue({ stdout: 'signal process started', stderr: '', exitCode: 0 });
 
-      const result = await reloadNginxConfig(mockSshClient, 'cat_frontend');
+      const result = await reloadNginxConfig(mockSshClient, 'cultivate_frontend');
       
       expect(result).toBe(true);
       expect(mockSshClient.executeCommand).toHaveBeenCalledWith(
-        'docker exec cat_frontend nginx -s reload'
+        'docker exec cultivate_frontend nginx -s reload'
       );
     });
 
@@ -305,7 +305,7 @@ describe('Certificate Manager', () => {
       
       mockSshClient.executeCommand.mockResolvedValue({ stdout: '', stderr: 'error: failed to reload', exitCode: 1 });
 
-      const result = await reloadNginxConfig(mockSshClient, 'cat_frontend');
+      const result = await reloadNginxConfig(mockSshClient, 'cultivate_frontend');
       
       expect(result).toBe(false);
     });

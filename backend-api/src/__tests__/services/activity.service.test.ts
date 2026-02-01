@@ -92,7 +92,7 @@ describe('ActivityService', () => {
                 createdAt: now,
                 updatedAt: now,
                 version: 1,
-                activityType: { id: 'type-1', name: 'Test Type', activityCategoryId: 'cat-1', createdAt: now, updatedAt: now, version: 1, isPredefined: false }
+                activityType: { id: 'type-1', name: 'Test Type', activityCategoryId: 'cultivate-1', createdAt: now, updatedAt: now, version: 1, isPredefined: false }
             };
 
             mockPrisma.activityType.count.mockResolvedValue(1); // exists check
@@ -154,7 +154,7 @@ describe('ActivityService', () => {
                 createdAt: sameDate,
                 updatedAt: sameDate,
                 version: 1,
-                activityType: { id: 'type-1', name: 'Test Type', activityCategoryId: 'cat-1', createdAt: sameDate, updatedAt: sameDate, version: 1, isPredefined: false }
+                activityType: { id: 'type-1', name: 'Test Type', activityCategoryId: 'cultivate-1', createdAt: sameDate, updatedAt: sameDate, version: 1, isPredefined: false }
             };
 
             mockPrisma.activityType.count.mockResolvedValue(1); // exists check
@@ -184,7 +184,7 @@ describe('ActivityService', () => {
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 version: 1,
-                activityType: { id: 'type-1', name: 'Test Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false }
+                activityType: { id: 'type-1', name: 'Test Type', activityCategoryId: 'cultivate-1', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false }
             };
 
             mockPrisma.activityType.count.mockResolvedValue(1); // exists check

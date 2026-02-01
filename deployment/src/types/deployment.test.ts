@@ -17,9 +17,9 @@ describe('Type Definitions', () => {
         timestamp: new Date(),
         targetHost: 'example.com',
         imageVersions: {
-          frontend: 'cat_frontend:1.0.0',
-          backend: 'cat_backend:1.0.0',
-          database: 'cat_database:1.0.0',
+          frontend: 'cultivate_frontend:1.0.0',
+          backend: 'cultivate_backend:1.0.0',
+          database: 'cultivate_database:1.0.0',
         },
         configurationHash: 'abc123',
         status: 'active',
@@ -28,7 +28,7 @@ describe('Type Definitions', () => {
 
       expect(state.version).toBe('1.0.0');
       expect(state.status).toBe('active');
-      expect(state.imageVersions.frontend).toBe('cat_frontend:1.0.0');
+      expect(state.imageVersions.frontend).toBe('cultivate_frontend:1.0.0');
     });
 
     it('should support all status values', () => {
@@ -45,9 +45,9 @@ describe('Type Definitions', () => {
           timestamp: new Date(),
           targetHost: 'example.com',
           imageVersions: {
-            frontend: 'cat_frontend:1.0.0',
-            backend: 'cat_backend:1.0.0',
-            database: 'cat_database:1.0.0',
+            frontend: 'cultivate_frontend:1.0.0',
+            backend: 'cultivate_backend:1.0.0',
+            database: 'cultivate_database:1.0.0',
           },
           configurationHash: 'abc123',
           status,
@@ -106,7 +106,7 @@ describe('Type Definitions', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {
@@ -135,7 +135,7 @@ describe('Type Definitions', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {
@@ -153,7 +153,7 @@ describe('Type Definitions', () => {
   describe('DockerImage', () => {
     it('should create a valid docker image object', () => {
       const image: DockerImage = {
-        name: 'cat_frontend',
+        name: 'cultivate_frontend',
         tag: '1.0.0',
         digest: 'sha256:abc123',
         size: 1024000,
@@ -161,7 +161,7 @@ describe('Type Definitions', () => {
         buildHost: 'local',
       };
 
-      expect(image.name).toBe('cat_frontend');
+      expect(image.name).toBe('cultivate_frontend');
       expect(image.tag).toBe('1.0.0');
       expect(image.buildHost).toBe('local');
     });
@@ -171,7 +171,7 @@ describe('Type Definitions', () => {
 
       buildHosts.forEach((buildHost) => {
         const image: DockerImage = {
-          name: 'cat_frontend',
+          name: 'cultivate_frontend',
           tag: '1.0.0',
           digest: 'sha256:abc123',
           size: 1024000,

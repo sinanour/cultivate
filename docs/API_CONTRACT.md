@@ -5,7 +5,7 @@
 This document defines the complete API contract between the Backend API and all client applications (Web Frontend, iOS Mobile App, Android Mobile App). All clients must implement this contract to ensure interoperability and data consistency.
 
 **Version**: 1.0.0  
-**Base URL**: `https://api.community-tracker.example.com/api/v1`  
+**Base URL**: `https://api.cultivate.example.com/api/v1`  
 **Protocol**: HTTPS only  
 **Format**: JSON  
 **Authentication**: JWT Bearer tokens

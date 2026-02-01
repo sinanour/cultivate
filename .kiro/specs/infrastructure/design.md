@@ -252,11 +252,11 @@ interface DatabaseSecret {
 ```typescript
 {
   Environment: string;      // dev, staging, production
-  Application: string;      // community-activity-tracker
+  Application: string;      // cultivate
   CostCenter: string;       // engineering
   Owner: string;            // devops-team
   ManagedBy: string;        // cdk
-  Project: string;          // community-tracker
+  Project: string;          // cultivate
 }
 ```
 
@@ -288,7 +288,7 @@ interface DatabaseSecret {
       "minTasks": 1,
       "maxTasks": 3
     },
-    "domainName": "dev.communitytracker.example.com"
+    "domainName": "dev.cultivate.example.com"
   },
   "staging": { /* ... */ },
   "production": { /* ... */ }

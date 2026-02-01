@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides detailed migration paths for deploying the Community Activity Tracker application to major cloud platforms. The current Docker Compose-based deployment can be migrated to AWS ECS/Fargate, Google Cloud Run, or Azure Container Instances with minimal code changes.
+This guide provides detailed migration paths for deploying the Cultivate application to major cloud platforms. The current Docker Compose-based deployment can be migrated to AWS ECS/Fargate, Google Cloud Run, or Azure Container Instances with minimal code changes.
 
 ## Table of Contents
 
@@ -120,34 +120,34 @@ Before migrating to any cloud platform, ensure the following prerequisites are m
 
 ```bash
 # Create ECR repositories
-aws ecr create-repository --repository-name cat-frontend
-aws ecr create-repository --repository-name cat-backend
+aws ecr create-repository --repository-name cultivate-frontend
+aws ecr create-repository --repository-name cultivate-backend
 
 # Authenticate Docker to ECR
 aws ecr get-login-password --region us-east-1 | \
   docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
 
 # Tag and push images
-docker tag cat-frontend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/cat-frontend:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/cat-frontend:latest
+docker tag cultivate-frontend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/cultivate-frontend:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/cultivate-frontend:latest
 
-docker tag cat-backend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/cat-backend:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/cat-backend:latest
+docker tag cultivate-backend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/cultivate-backend:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/cultivate-backend:latest
 ```
 
 #### Step 2: Create VPC and Networking
 
 ```bash
 # Create VPC
-aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=cat-vpc}]'
+aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=cultivate-vpc}]'
 
 # Create subnets
-aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=cat-public-1a}]'
-aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.2.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=cat-private-1a}]'
-aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.3.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=cat-private-1b}]'
+aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=cultivate-public-1a}]'
+aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.2.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=cultivate-private-1a}]'
+aws ec2 create-subnet --vpc-id <vpc-id> --cidr-block 10.0.3.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=cultivate-private-1b}]'
 
 # Create Internet Gateway
-aws ec2 create-internet-gateway --tag-specifications 'ResourceType=internet-gateway,Tags=[{Key=Name,Value=cat-igw}]'
+aws ec2 create-internet-gateway --tag-specifications 'ResourceType=internet-gateway,Tags=[{Key=Name,Value=cultivate-igw}]'
 aws ec2 attach-internet-gateway --vpc-id <vpc-id> --internet-gateway-id <igw-id>
 
 # Create NAT Gateway (for private subnets to access internet)
@@ -163,14 +163,14 @@ aws ec2 create-nat-gateway --subnet-id <public-subnet-id> --allocation-id <eip-a
 ```bash
 # Create DB subnet group
 aws rds create-db-subnet-group \
-  --db-subnet-group-name cat-db-subnet-group \
-  --db-subnet-group-description "Subnet group for Community Tracker DB" \
+  --db-subnet-group-name cultivate-db-subnet-group \
+  --db-subnet-group-description "Subnet group for Cultivate DB" \
   --subnet-ids <private-subnet-1-id> <private-subnet-2-id>
 
 # Create security group for RDS
 aws ec2 create-security-group \
-  --group-name cat-db-sg \
-  --description "Security group for Community Tracker database" \
+  --group-name cultivate-db-sg \
+  --description "Security group for Cultivate database" \
   --vpc-id <vpc-id>
 
 # Allow PostgreSQL access from ECS tasks
@@ -182,7 +182,7 @@ aws ec2 authorize-security-group-ingress \
 
 # Create RDS instance
 aws rds create-db-instance \
-  --db-instance-identifier cat-database \
+  --db-instance-identifier cultivate-database \
   --db-instance-class db.t3.medium \
   --engine postgres \
   --engine-version 15.3 \
@@ -191,7 +191,7 @@ aws rds create-db-instance \
   --allocated-storage 20 \
   --storage-type gp3 \
   --vpc-security-group-ids <db-sg-id> \
-  --db-subnet-group-name cat-db-subnet-group \
+  --db-subnet-group-name cultivate-db-subnet-group \
   --backup-retention-period 7 \
   --multi-az \
   --enable-iam-database-authentication \
@@ -204,13 +204,13 @@ aws rds create-db-instance \
 # Store database credentials
 aws secretsmanager create-secret \
   --name cat/database/credentials \
-  --description "Database credentials for Community Tracker" \
-  --secret-string '{"username":"dbadmin","password":"<secure-password>","host":"<rds-endpoint>","port":"5432","database":"community_tracker"}'
+  --description "Database credentials for Cultivate" \
+  --secret-string '{"username":"dbadmin","password":"<secure-password>","host":"<rds-endpoint>","port":"5432","database":"cultivate"}'
 
 # Store API keys
 aws secretsmanager create-secret \
   --name cat/api/keys \
-  --description "API keys for Community Tracker" \
+  --description "API keys for Cultivate" \
   --secret-string '{"api_key":"<your-api-key>"}'
 ```
 
@@ -218,13 +218,13 @@ aws secretsmanager create-secret \
 
 **ECS Cluster:**
 ```bash
-aws ecs create-cluster --cluster-name cat-cluster --capacity-providers FARGATE FARGATE_SPOT
+aws ecs create-cluster --cluster-name cultivate-cluster --capacity-providers FARGATE FARGATE_SPOT
 ```
 
 **Backend Task Definition (backend-task-definition.json):**
 ```json
 {
-  "family": "cat-backend",
+  "family": "cultivate-backend",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
@@ -234,7 +234,7 @@ aws ecs create-cluster --cluster-name cat-cluster --capacity-providers FARGATE F
   "containerDefinitions": [
     {
       "name": "backend",
-      "image": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/cat-backend:latest",
+      "image": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/cultivate-backend:latest",
       "essential": true,
       "portMappings": [
         {
@@ -261,7 +261,7 @@ aws ecs create-cluster --cluster-name cat-cluster --capacity-providers FARGATE F
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/cat-backend",
+          "awslogs-group": "/ecs/cultivate-backend",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }
@@ -281,7 +281,7 @@ aws ecs create-cluster --cluster-name cat-cluster --capacity-providers FARGATE F
 **Frontend Task Definition (frontend-task-definition.json):**
 ```json
 {
-  "family": "cat-frontend",
+  "family": "cultivate-frontend",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
@@ -290,7 +290,7 @@ aws ecs create-cluster --cluster-name cat-cluster --capacity-providers FARGATE F
   "containerDefinitions": [
     {
       "name": "frontend",
-      "image": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/cat-frontend:latest",
+      "image": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/cultivate-frontend:latest",
       "essential": true,
       "portMappings": [
         {
@@ -307,7 +307,7 @@ aws ecs create-cluster --cluster-name cat-cluster --capacity-providers FARGATE F
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/cat-frontend",
+          "awslogs-group": "/ecs/cultivate-frontend",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }
@@ -335,7 +335,7 @@ aws ecs register-task-definition --cli-input-json file://frontend-task-definitio
 ```bash
 # Create ALB
 aws elbv2 create-load-balancer \
-  --name cat-alb \
+  --name cultivate-alb \
   --subnets <public-subnet-1-id> <public-subnet-2-id> \
   --security-groups <alb-sg-id> \
   --scheme internet-facing \
@@ -343,7 +343,7 @@ aws elbv2 create-load-balancer \
 
 # Create target groups
 aws elbv2 create-target-group \
-  --name cat-frontend-tg \
+  --name cultivate-frontend-tg \
   --protocol HTTP \
   --port 80 \
   --vpc-id <vpc-id> \
@@ -352,7 +352,7 @@ aws elbv2 create-target-group \
   --health-check-interval-seconds 30
 
 aws elbv2 create-target-group \
-  --name cat-backend-tg \
+  --name cultivate-backend-tg \
   --protocol HTTP \
   --port 3000 \
   --vpc-id <vpc-id> \
@@ -388,9 +388,9 @@ aws elbv2 create-listener \
 ```bash
 # Create backend service
 aws ecs create-service \
-  --cluster cat-cluster \
-  --service-name cat-backend \
-  --task-definition cat-backend \
+  --cluster cultivate-cluster \
+  --service-name cultivate-backend \
+  --task-definition cultivate-backend \
   --desired-count 2 \
   --launch-type FARGATE \
   --network-configuration "awsvpcConfiguration={subnets=[<private-subnet-1-id>,<private-subnet-2-id>],securityGroups=[<ecs-sg-id>],assignPublicIp=DISABLED}" \
@@ -400,9 +400,9 @@ aws ecs create-service \
 
 # Create frontend service
 aws ecs create-service \
-  --cluster cat-cluster \
-  --service-name cat-frontend \
-  --task-definition cat-frontend \
+  --cluster cultivate-cluster \
+  --service-name cultivate-frontend \
+  --task-definition cultivate-frontend \
   --desired-count 2 \
   --launch-type FARGATE \
   --network-configuration "awsvpcConfiguration={subnets=[<private-subnet-1-id>,<private-subnet-2-id>],securityGroups=[<ecs-sg-id>],assignPublicIp=DISABLED}" \
@@ -417,7 +417,7 @@ aws ecs create-service \
 # Register scalable targets
 aws application-autoscaling register-scalable-target \
   --service-namespace ecs \
-  --resource-id service/cat-cluster/cat-backend \
+  --resource-id service/cultivate-cluster/cultivate-backend \
   --scalable-dimension ecs:service:DesiredCount \
   --min-capacity 2 \
   --max-capacity 10
@@ -425,9 +425,9 @@ aws application-autoscaling register-scalable-target \
 # Create scaling policy (CPU-based)
 aws application-autoscaling put-scaling-policy \
   --service-namespace ecs \
-  --resource-id service/cat-cluster/cat-backend \
+  --resource-id service/cultivate-cluster/cultivate-backend \
   --scalable-dimension ecs:service:DesiredCount \
-  --policy-name cat-backend-cpu-scaling \
+  --policy-name cultivate-backend-cpu-scaling \
   --policy-type TargetTrackingScaling \
   --target-tracking-scaling-policy-configuration file://scaling-policy.json
 
@@ -447,12 +447,12 @@ aws application-autoscaling put-scaling-policy \
 ```bash
 # Create CloudWatch dashboard
 aws cloudwatch put-dashboard \
-  --dashboard-name cat-monitoring \
+  --dashboard-name cultivate-monitoring \
   --dashboard-body file://dashboard.json
 
 # Create alarms
 aws cloudwatch put-metric-alarm \
-  --alarm-name cat-backend-high-cpu \
+  --alarm-name cultivate-backend-high-cpu \
   --alarm-description "Alert when backend CPU exceeds 80%" \
   --metric-name CPUUtilization \
   --namespace AWS/ECS \
@@ -461,10 +461,10 @@ aws cloudwatch put-metric-alarm \
   --threshold 80 \
   --comparison-operator GreaterThanThreshold \
   --evaluation-periods 2 \
-  --dimensions Name=ServiceName,Value=cat-backend Name=ClusterName,Value=cat-cluster
+  --dimensions Name=ServiceName,Value=cultivate-backend Name=ClusterName,Value=cultivate-cluster
 
 aws cloudwatch put-metric-alarm \
-  --alarm-name cat-backend-unhealthy-targets \
+  --alarm-name cultivate-backend-unhealthy-targets \
   --alarm-description "Alert when backend has unhealthy targets" \
   --metric-name UnHealthyHostCount \
   --namespace AWS/ApplicationELB \
@@ -482,13 +482,13 @@ aws cloudwatch put-metric-alarm \
 **Option 1: pg_dump/pg_restore**
 ```bash
 # Export from on-premise
-docker exec cat_database pg_dump -U apiuser -d community_tracker -F c -f /tmp/backup.dump
+docker exec cultivate_database pg_dump -U apiuser -d cultivate -F c -f /tmp/backup.dump
 
 # Copy backup file
-docker cp cat_database:/tmp/backup.dump ./backup.dump
+docker cp cultivate_database:/tmp/backup.dump ./backup.dump
 
 # Import to RDS
-pg_restore -h <rds-endpoint> -U dbadmin -d community_tracker -v backup.dump
+pg_restore -h <rds-endpoint> -U dbadmin -d cultivate -v backup.dump
 ```
 
 **Option 2: AWS Database Migration Service (DMS)**
@@ -516,7 +516,7 @@ async function getDatabasePassword(): Promise<string> {
 
 // Use in Prisma connection
 const password = await getDatabasePassword();
-const databaseUrl = `postgresql://${process.env.DB_USER}:${password}@${process.env.DB_HOST}:5432/community_tracker`;
+const databaseUrl = `postgresql://${process.env.DB_USER}:${password}@${process.env.DB_HOST}:5432/cultivate`;
 ```
 
 #### ECS Service Discovery
@@ -531,12 +531,12 @@ aws servicediscovery create-private-dns-namespace \
 
 # Update ECS service to register with service discovery
 aws ecs update-service \
-  --cluster cat-cluster \
-  --service cat-backend \
+  --cluster cultivate-cluster \
+  --service cultivate-backend \
   --service-registries registryArn=<service-registry-arn>
 ```
 
-Then services can communicate using DNS names like `cat-backend.cat.local`.
+Then services can communicate using DNS names like `cultivate-backend.cat.local`.
 
 #### Cost Optimization for AWS
 
@@ -617,27 +617,27 @@ gcloud services enable run.googleapis.com
 gcloud services enable sqladmin.googleapis.com
 
 # Create Artifact Registry repository
-gcloud artifacts repositories create cat-images \
+gcloud artifacts repositories create cultivate-images \
   --repository-format=docker \
   --location=us-central1 \
-  --description="Community Activity Tracker container images"
+  --description="Cultivate container images"
 
 # Configure Docker authentication
 gcloud auth configure-docker us-central1-docker.pkg.dev
 
 # Tag and push images
-docker tag cat-frontend:latest us-central1-docker.pkg.dev/<project-id>/cat-images/frontend:latest
-docker push us-central1-docker.pkg.dev/<project-id>/cat-images/frontend:latest
+docker tag cultivate-frontend:latest us-central1-docker.pkg.dev/<project-id>/cultivate-images/frontend:latest
+docker push us-central1-docker.pkg.dev/<project-id>/cultivate-images/frontend:latest
 
-docker tag cat-backend:latest us-central1-docker.pkg.dev/<project-id>/cat-images/backend:latest
-docker push us-central1-docker.pkg.dev/<project-id>/cat-images/backend:latest
+docker tag cultivate-backend:latest us-central1-docker.pkg.dev/<project-id>/cultivate-images/backend:latest
+docker push us-central1-docker.pkg.dev/<project-id>/cultivate-images/backend:latest
 ```
 
 #### Step 2: Create Cloud SQL Instance
 
 ```bash
 # Create Cloud SQL PostgreSQL instance
-gcloud sql instances create cat-database \
+gcloud sql instances create cultivate-database \
   --database-version=POSTGRES_15 \
   --tier=db-custom-2-7680 \
   --region=us-central1 \
@@ -649,17 +649,17 @@ gcloud sql instances create cat-database \
   --database-flags=cloudsql.iam_authentication=on
 
 # Create database
-gcloud sql databases create community_tracker \
-  --instance=cat-database
+gcloud sql databases create cultivate \
+  --instance=cultivate-database
 
 # Create database user
 gcloud sql users create dbadmin \
-  --instance=cat-database \
+  --instance=cultivate-database \
   --password=<secure-password>
 
 # Create IAM database user for Cloud Run
 gcloud sql users create <service-account-email> \
-  --instance=cat-database \
+  --instance=cultivate-database \
   --type=CLOUD_IAM_SERVICE_ACCOUNT
 ```
 
@@ -690,7 +690,7 @@ gcloud secrets add-iam-policy-binding db-password \
 
 ```bash
 # Create VPC connector
-gcloud compute networks vpc-access connectors create cat-connector \
+gcloud compute networks vpc-access connectors create cultivate-connector \
   --region=us-central1 \
   --network=default \
   --range=10.8.0.0/28 \
@@ -702,8 +702,8 @@ gcloud compute networks vpc-access connectors create cat-connector \
 
 ```bash
 # Deploy backend service
-gcloud run deploy cat-backend \
-  --image=us-central1-docker.pkg.dev/<project-id>/cat-images/backend:latest \
+gcloud run deploy cultivate-backend \
+  --image=us-central1-docker.pkg.dev/<project-id>/cultivate-images/backend:latest \
   --platform=managed \
   --region=us-central1 \
   --allow-unauthenticated \
@@ -715,20 +715,20 @@ gcloud run deploy cat-backend \
   --timeout=300 \
   --set-env-vars="NODE_ENV=production,PORT=3000" \
   --set-secrets="DATABASE_URL=database-url:latest,API_KEY=api-key:latest" \
-  --add-cloudsql-instances=<project-id>:us-central1:cat-database \
-  --vpc-connector=cat-connector \
+  --add-cloudsql-instances=<project-id>:us-central1:cultivate-database \
+  --vpc-connector=cultivate-connector \
   --vpc-egress=private-ranges-only
 
 # Get backend service URL
-gcloud run services describe cat-backend --region=us-central1 --format='value(status.url)'
+gcloud run services describe cultivate-backend --region=us-central1 --format='value(status.url)'
 ```
 
 #### Step 6: Deploy Frontend Service to Cloud Run
 
 ```bash
 # Deploy frontend service
-gcloud run deploy cat-frontend \
-  --image=us-central1-docker.pkg.dev/<project-id>/cat-images/frontend:latest \
+gcloud run deploy cultivate-frontend \
+  --image=us-central1-docker.pkg.dev/<project-id>/cultivate-images/frontend:latest \
   --platform=managed \
   --region=us-central1 \
   --allow-unauthenticated \
@@ -741,70 +741,70 @@ gcloud run deploy cat-frontend \
   --set-env-vars="BACKEND_URL=<backend-service-url>"
 
 # Get frontend service URL
-gcloud run services describe cat-frontend --region=us-central1 --format='value(status.url)'
+gcloud run services describe cultivate-frontend --region=us-central1 --format='value(status.url)'
 ```
 
 #### Step 7: Set Up Load Balancer with Custom Domain
 
 ```bash
 # Reserve static IP address
-gcloud compute addresses create cat-ip \
+gcloud compute addresses create cultivate-ip \
   --global
 
 # Create backend service for Cloud Run
-gcloud compute backend-services create cat-backend-service \
+gcloud compute backend-services create cultivate-backend-service \
   --global
 
 # Add Cloud Run NEG (Network Endpoint Group)
-gcloud compute network-endpoint-groups create cat-frontend-neg \
+gcloud compute network-endpoint-groups create cultivate-frontend-neg \
   --region=us-central1 \
   --network-endpoint-type=serverless \
-  --cloud-run-service=cat-frontend
+  --cloud-run-service=cultivate-frontend
 
-gcloud compute backend-services add-backend cat-backend-service \
+gcloud compute backend-services add-backend cultivate-backend-service \
   --global \
-  --network-endpoint-group=cat-frontend-neg \
+  --network-endpoint-group=cultivate-frontend-neg \
   --network-endpoint-group-region=us-central1
 
 # Create URL map
-gcloud compute url-maps create cat-url-map \
-  --default-service=cat-backend-service
+gcloud compute url-maps create cultivate-url-map \
+  --default-service=cultivate-backend-service
 
 # Create Google-managed SSL certificate
-gcloud compute ssl-certificates create cat-ssl-cert \
+gcloud compute ssl-certificates create cultivate-ssl-cert \
   --domains=example.com,www.example.com \
   --global
 
 # Create HTTPS proxy
-gcloud compute target-https-proxies create cat-https-proxy \
-  --url-map=cat-url-map \
-  --ssl-certificates=cat-ssl-cert
+gcloud compute target-https-proxies create cultivate-https-proxy \
+  --url-map=cultivate-url-map \
+  --ssl-certificates=cultivate-ssl-cert
 
 # Create forwarding rule
-gcloud compute forwarding-rules create cat-https-rule \
-  --address=cat-ip \
+gcloud compute forwarding-rules create cultivate-https-rule \
+  --address=cultivate-ip \
   --global \
-  --target-https-proxy=cat-https-proxy \
+  --target-https-proxy=cultivate-https-proxy \
   --ports=443
 
 # Create HTTP to HTTPS redirect
-gcloud compute url-maps import cat-http-redirect \
+gcloud compute url-maps import cultivate-http-redirect \
   --global \
   --source=/dev/stdin <<EOF
 kind: compute#urlMap
-name: cat-http-redirect
+name: cultivate-http-redirect
 defaultUrlRedirect:
   redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
   httpsRedirect: true
 EOF
 
-gcloud compute target-http-proxies create cat-http-proxy \
-  --url-map=cat-http-redirect
+gcloud compute target-http-proxies create cultivate-http-proxy \
+  --url-map=cultivate-http-redirect
 
-gcloud compute forwarding-rules create cat-http-rule \
-  --address=cat-ip \
+gcloud compute forwarding-rules create cultivate-http-rule \
+  --address=cultivate-ip \
   --global \
-  --target-http-proxy=cat-http-proxy \
+  --target-http-proxy=cultivate-http-proxy \
   --ports=80
 ```
 
@@ -815,7 +815,7 @@ gcloud compute forwarding-rules create cat-http-rule \
 gcloud logging metrics create backend_errors \
   --description="Count of backend errors" \
   --log-filter='resource.type="cloud_run_revision"
-    resource.labels.service_name="cat-backend"
+    resource.labels.service_name="cultivate-backend"
     severity>=ERROR'
 
 # Create alert policy
@@ -958,11 +958,11 @@ const prisma = new PrismaClient({
 
 ```bash
 # Create resource group
-az group create --name cat-rg --location eastus
+az group create --name cultivate-rg --location eastus
 
 # Create container registry
 az acr create \
-  --resource-group cat-rg \
+  --resource-group cultivate-rg \
   --name catregistry \
   --sku Standard \
   --admin-enabled true
@@ -971,10 +971,10 @@ az acr create \
 az acr login --name catregistry
 
 # Tag and push images
-docker tag cat-frontend:latest catregistry.azurecr.io/frontend:latest
+docker tag cultivate-frontend:latest catregistry.azurecr.io/frontend:latest
 docker push catregistry.azurecr.io/frontend:latest
 
-docker tag cat-backend:latest catregistry.azurecr.io/backend:latest
+docker tag cultivate-backend:latest catregistry.azurecr.io/backend:latest
 docker push catregistry.azurecr.io/backend:latest
 ```
 
@@ -983,16 +983,16 @@ docker push catregistry.azurecr.io/backend:latest
 ```bash
 # Create virtual network
 az network vnet create \
-  --resource-group cat-rg \
-  --name cat-vnet \
+  --resource-group cultivate-rg \
+  --name cultivate-vnet \
   --address-prefix 10.0.0.0/16 \
-  --subnet-name cat-subnet \
+  --subnet-name cultivate-subnet \
   --subnet-prefix 10.0.1.0/24
 
 # Create subnet for database
 az network vnet subnet create \
-  --resource-group cat-rg \
-  --vnet-name cat-vnet \
+  --resource-group cultivate-rg \
+  --vnet-name cultivate-vnet \
   --name db-subnet \
   --address-prefix 10.0.2.0/24 \
   --service-endpoints Microsoft.Sql
@@ -1003,8 +1003,8 @@ az network vnet subnet create \
 ```bash
 # Create PostgreSQL flexible server
 az postgres flexible-server create \
-  --resource-group cat-rg \
-  --name cat-database \
+  --resource-group cultivate-rg \
+  --name cultivate-database \
   --location eastus \
   --admin-user dbadmin \
   --admin-password <secure-password> \
@@ -1016,20 +1016,20 @@ az postgres flexible-server create \
   --high-availability Enabled \
   --zone 1 \
   --standby-zone 2 \
-  --vnet cat-vnet \
+  --vnet cultivate-vnet \
   --subnet db-subnet \
-  --private-dns-zone cat-database.private.postgres.database.azure.com
+  --private-dns-zone cultivate-database.private.postgres.database.azure.com
 
 # Create database
 az postgres flexible-server db create \
-  --resource-group cat-rg \
-  --server-name cat-database \
-  --database-name community_tracker
+  --resource-group cultivate-rg \
+  --server-name cultivate-database \
+  --database-name cultivate
 
 # Configure firewall (allow Azure services)
 az postgres flexible-server firewall-rule create \
-  --resource-group cat-rg \
-  --name cat-database \
+  --resource-group cultivate-rg \
+  --name cultivate-database \
   --rule-name AllowAzureServices \
   --start-ip-address 0.0.0.0 \
   --end-ip-address 0.0.0.0
@@ -1040,35 +1040,35 @@ az postgres flexible-server firewall-rule create \
 ```bash
 # Create Key Vault
 az keyvault create \
-  --resource-group cat-rg \
-  --name cat-keyvault \
+  --resource-group cultivate-rg \
+  --name cultivate-keyvault \
   --location eastus \
   --enable-rbac-authorization false
 
 # Store secrets
 az keyvault secret set \
-  --vault-name cat-keyvault \
+  --vault-name cultivate-keyvault \
   --name db-password \
   --value "<secure-password>"
 
 az keyvault secret set \
-  --vault-name cat-keyvault \
+  --vault-name cultivate-keyvault \
   --name database-url \
-  --value "postgresql://dbadmin:<password>@cat-database.postgres.database.azure.com:5432/community_tracker?sslmode=require"
+  --value "postgresql://dbadmin:<password>@cultivate-database.postgres.database.azure.com:5432/cultivate?sslmode=require"
 
 az keyvault secret set \
-  --vault-name cat-keyvault \
+  --vault-name cultivate-keyvault \
   --name api-key \
   --value "<your-api-key>"
 
 # Create managed identity for container instances
 az identity create \
-  --resource-group cat-rg \
-  --name cat-identity
+  --resource-group cultivate-rg \
+  --name cultivate-identity
 
 # Grant identity access to Key Vault
 az keyvault set-policy \
-  --name cat-keyvault \
+  --name cultivate-keyvault \
   --object-id <identity-principal-id> \
   --secret-permissions get list
 ```
@@ -1082,8 +1082,8 @@ ACR_PASSWORD=$(az acr credential show --name catregistry --query passwords[0].va
 
 # Create backend container group
 az container create \
-  --resource-group cat-rg \
-  --name cat-backend \
+  --resource-group cultivate-rg \
+  --name cultivate-backend \
   --image catregistry.azurecr.io/backend:latest \
   --registry-login-server catregistry.azurecr.io \
   --registry-username $ACR_USERNAME \
@@ -1093,21 +1093,21 @@ az container create \
   --ports 3000 \
   --protocol TCP \
   --ip-address Private \
-  --vnet cat-vnet \
-  --subnet cat-subnet \
+  --vnet cultivate-vnet \
+  --subnet cultivate-subnet \
   --environment-variables \
     NODE_ENV=production \
     PORT=3000 \
   --secure-environment-variables \
-    DATABASE_URL=@Microsoft.KeyVault(SecretUri=https://cat-keyvault.vault.azure.net/secrets/database-url/) \
-    API_KEY=@Microsoft.KeyVault(SecretUri=https://cat-keyvault.vault.azure.net/secrets/api-key/) \
+    DATABASE_URL=@Microsoft.KeyVault(SecretUri=https://cultivate-keyvault.vault.azure.net/secrets/database-url/) \
+    API_KEY=@Microsoft.KeyVault(SecretUri=https://cultivate-keyvault.vault.azure.net/secrets/api-key/) \
   --assign-identity <identity-resource-id> \
   --restart-policy Always
 
 # Get backend private IP
 az container show \
-  --resource-group cat-rg \
-  --name cat-backend \
+  --resource-group cultivate-rg \
+  --name cultivate-backend \
   --query ipAddress.ip -o tsv
 ```
 
@@ -1116,8 +1116,8 @@ az container show \
 ```bash
 # Create frontend container group
 az container create \
-  --resource-group cat-rg \
-  --name cat-frontend \
+  --resource-group cultivate-rg \
+  --name cultivate-frontend \
   --image catregistry.azurecr.io/frontend:latest \
   --registry-login-server catregistry.azurecr.io \
   --registry-username $ACR_USERNAME \
@@ -1127,16 +1127,16 @@ az container create \
   --ports 80 443 \
   --protocol TCP \
   --ip-address Private \
-  --vnet cat-vnet \
-  --subnet cat-subnet \
+  --vnet cultivate-vnet \
+  --subnet cultivate-subnet \
   --environment-variables \
     BACKEND_URL=/api/v1 \
   --restart-policy Always
 
 # Get frontend private IP
 az container show \
-  --resource-group cat-rg \
-  --name cat-frontend \
+  --resource-group cultivate-rg \
+  --name cultivate-frontend \
   --query ipAddress.ip -o tsv
 ```
 
@@ -1145,28 +1145,28 @@ az container show \
 ```bash
 # Create public IP for Application Gateway
 az network public-ip create \
-  --resource-group cat-rg \
-  --name cat-appgw-ip \
+  --resource-group cultivate-rg \
+  --name cultivate-appgw-ip \
   --allocation-method Static \
   --sku Standard
 
 # Create subnet for Application Gateway
 az network vnet subnet create \
-  --resource-group cat-rg \
-  --vnet-name cat-vnet \
+  --resource-group cultivate-rg \
+  --vnet-name cultivate-vnet \
   --name appgw-subnet \
   --address-prefix 10.0.3.0/24
 
 # Create Application Gateway
 az network application-gateway create \
-  --resource-group cat-rg \
-  --name cat-appgw \
+  --resource-group cultivate-rg \
+  --name cultivate-appgw \
   --location eastus \
-  --vnet-name cat-vnet \
+  --vnet-name cultivate-vnet \
   --subnet appgw-subnet \
   --capacity 2 \
   --sku Standard_v2 \
-  --public-ip-address cat-appgw-ip \
+  --public-ip-address cultivate-appgw-ip \
   --frontend-port 80 \
   --http-settings-cookie-based-affinity Disabled \
   --http-settings-port 80 \
@@ -1175,29 +1175,29 @@ az network application-gateway create \
 
 # Add HTTPS listener with certificate
 az network application-gateway ssl-cert create \
-  --resource-group cat-rg \
-  --gateway-name cat-appgw \
-  --name cat-ssl-cert \
+  --resource-group cultivate-rg \
+  --gateway-name cultivate-appgw \
+  --name cultivate-ssl-cert \
   --cert-file /path/to/certificate.pfx \
   --cert-password <cert-password>
 
 az network application-gateway frontend-port create \
-  --resource-group cat-rg \
-  --gateway-name cat-appgw \
+  --resource-group cultivate-rg \
+  --gateway-name cultivate-appgw \
   --name https-port \
   --port 443
 
 az network application-gateway http-listener create \
-  --resource-group cat-rg \
-  --gateway-name cat-appgw \
+  --resource-group cultivate-rg \
+  --gateway-name cultivate-appgw \
   --name https-listener \
   --frontend-port https-port \
-  --ssl-cert cat-ssl-cert
+  --ssl-cert cultivate-ssl-cert
 
 # Create redirect configuration for HTTP to HTTPS
 az network application-gateway redirect-config create \
-  --resource-group cat-rg \
-  --gateway-name cat-appgw \
+  --resource-group cultivate-rg \
+  --gateway-name cultivate-appgw \
   --name http-to-https \
   --type Permanent \
   --target-listener https-listener \
@@ -1205,8 +1205,8 @@ az network application-gateway redirect-config create \
   --include-query-string true
 
 az network application-gateway rule create \
-  --resource-group cat-rg \
-  --gateway-name cat-appgw \
+  --resource-group cultivate-rg \
+  --gateway-name cultivate-appgw \
   --name http-redirect-rule \
   --http-listener appGatewayHttpListener \
   --rule-type Basic \
@@ -1218,32 +1218,32 @@ az network application-gateway rule create \
 ```bash
 # Create Log Analytics workspace
 az monitor log-analytics workspace create \
-  --resource-group cat-rg \
-  --workspace-name cat-logs \
+  --resource-group cultivate-rg \
+  --workspace-name cultivate-logs \
   --location eastus
 
 # Enable container insights
 az container create \
-  --resource-group cat-rg \
-  --name cat-backend \
+  --resource-group cultivate-rg \
+  --name cultivate-backend \
   --log-analytics-workspace <workspace-id> \
   --log-analytics-workspace-key <workspace-key>
 
 # Create alert rules
 az monitor metrics alert create \
-  --resource-group cat-rg \
+  --resource-group cultivate-rg \
   --name backend-high-cpu \
   --description "Alert when backend CPU exceeds 80%" \
-  --scopes /subscriptions/<subscription-id>/resourceGroups/cat-rg/providers/Microsoft.ContainerInstance/containerGroups/cat-backend \
+  --scopes /subscriptions/<subscription-id>/resourceGroups/cultivate-rg/providers/Microsoft.ContainerInstance/containerGroups/cultivate-backend \
   --condition "avg Percentage CPU > 80" \
   --window-size 5m \
   --evaluation-frequency 1m
 
 az monitor metrics alert create \
-  --resource-group cat-rg \
+  --resource-group cultivate-rg \
   --name backend-high-memory \
   --description "Alert when backend memory exceeds 80%" \
-  --scopes /subscriptions/<subscription-id>/resourceGroups/cat-rg/providers/Microsoft.ContainerInstance/containerGroups/cat-backend \
+  --scopes /subscriptions/<subscription-id>/resourceGroups/cultivate-rg/providers/Microsoft.ContainerInstance/containerGroups/cultivate-backend \
   --condition "avg Memory Usage > 1600000000" \
   --window-size 5m \
   --evaluation-frequency 1m
@@ -1267,15 +1267,15 @@ For production workloads, consider Azure Container Apps (built on Kubernetes):
 ```bash
 # Create Container Apps environment
 az containerapp env create \
-  --resource-group cat-rg \
-  --name cat-env \
+  --resource-group cultivate-rg \
+  --name cultivate-env \
   --location eastus
 
 # Deploy backend app
 az containerapp create \
-  --resource-group cat-rg \
-  --name cat-backend \
-  --environment cat-env \
+  --resource-group cultivate-rg \
+  --name cultivate-backend \
+  --environment cultivate-env \
   --image catregistry.azurecr.io/backend:latest \
   --target-port 3000 \
   --ingress internal \
@@ -1297,8 +1297,8 @@ Enable Azure AD authentication for enhanced security:
 ```bash
 # Enable Azure AD authentication
 az postgres flexible-server ad-admin create \
-  --resource-group cat-rg \
-  --server-name cat-database \
+  --resource-group cultivate-rg \
+  --server-name cultivate-database \
   --display-name "DB Admin" \
   --object-id <azure-ad-user-object-id>
 
@@ -1317,7 +1317,7 @@ async function getDatabaseToken(): Promise<string> {
 
 // Use in connection string
 const token = await getDatabaseToken();
-const connectionString = `postgresql://user@cat-database:${token}@cat-database.postgres.database.azure.com/community_tracker`;
+const connectionString = `postgresql://user@cultivate-database:${token}@cultivate-database.postgres.database.azure.com/cultivate`;
 ```
 
 #### Cost Optimization for Azure
@@ -1670,7 +1670,7 @@ gcloud billing budgets create \
 ```bash
 # Set up cost alerts
 az consumption budget create \
-  --resource-group cat-rg \
+  --resource-group cultivate-rg \
   --budget-name monthly-budget \
   --amount 500 \
   --time-grain Monthly \
@@ -1691,16 +1691,16 @@ Test containers locally with cloud-like configurations:
 
 ```bash
 # Test with environment variables (no .env file)
-docker run -e DATABASE_URL=postgresql://... -e NODE_ENV=production cat-backend:latest
+docker run -e DATABASE_URL=postgresql://... -e NODE_ENV=production cultivate-backend:latest
 
 # Test with TCP database connection (not Unix socket)
-docker run -e DATABASE_URL=postgresql://user:pass@host:5432/db cat-backend:latest
+docker run -e DATABASE_URL=postgresql://user:pass@host:5432/db cultivate-backend:latest
 
 # Test health check endpoints
 curl http://localhost:3000/health
 
 # Test graceful shutdown
-docker stop --time=30 cat-backend
+docker stop --time=30 cultivate-backend
 ```
 
 #### 2. Load Testing
@@ -1724,13 +1724,13 @@ Test database migration process:
 
 ```bash
 # Export from on-premise
-pg_dump -h localhost -U apiuser -d community_tracker -F c -f backup.dump
+pg_dump -h localhost -U apiuser -d cultivate -F c -f backup.dump
 
 # Import to test cloud database
-pg_restore -h <cloud-db-host> -U dbadmin -d community_tracker backup.dump
+pg_restore -h <cloud-db-host> -U dbadmin -d cultivate backup.dump
 
 # Verify data integrity
-psql -h <cloud-db-host> -U dbadmin -d community_tracker -c "SELECT COUNT(*) FROM users;"
+psql -h <cloud-db-host> -U dbadmin -d cultivate -c "SELECT COUNT(*) FROM users;"
 ```
 
 ### Migration Execution
@@ -1823,7 +1823,7 @@ If migration fails, have a rollback plan:
 
 ## Conclusion
 
-Migrating the Community Activity Tracker to cloud platforms is straightforward due to the cloud-compatible architecture. The key steps are:
+Migrating the Cultivate to cloud platforms is straightforward due to the cloud-compatible architecture. The key steps are:
 
 1. **Choose your platform** based on requirements, cost, and expertise
 2. **Follow the platform-specific migration guide** in this document

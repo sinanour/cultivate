@@ -6,7 +6,7 @@ services:
     build:
       context: ../..
       dockerfile: deployment/dockerfiles/Dockerfile.database
-    container_name: cat_database
+    container_name: cultivate_database
     volumes:
       # Data volume for PostgreSQL persistence
       - db_data:/var/lib/postgresql/data
@@ -16,7 +16,7 @@ services:
       # PostgreSQL user for peer authentication
       - POSTGRES_USER=${POSTGRES_USER:-apiuser}
       # Database name
-      - POSTGRES_DB=${POSTGRES_DB:-community_tracker}
+      - POSTGRES_DB=${POSTGRES_DB:-cultivate}
     networks:
       - backend
     healthcheck:
@@ -33,7 +33,7 @@ services:
     build:
       context: ../..
       dockerfile: deployment/dockerfiles/Dockerfile.backend
-    container_name: cat_backend
+    container_name: cultivate_backend
     depends_on:
       database:
         # Wait for database to be healthy before starting backend
@@ -43,7 +43,7 @@ services:
       - db_socket:/var/run/postgresql:rw
     environment:
       # Database connection URL using Unix socket for peer authentication
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-apiuser}@/community_tracker?host=/var/run/postgresql
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-apiuser}@/cultivate?host=/var/run/postgresql
       # Node environment
       - NODE_ENV=${NODE_ENV:-production}
       # Backend API port
@@ -64,7 +64,7 @@ services:
     build:
       context: ../..
       dockerfile: deployment/dockerfiles/Dockerfile.frontend
-    container_name: cat_frontend
+    container_name: cultivate_frontend
     depends_on:
       backend:
         # Wait for backend to be healthy before starting frontend

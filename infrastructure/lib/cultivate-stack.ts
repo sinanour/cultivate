@@ -14,12 +14,12 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { EnvironmentConfig, ResourceTags } from './types';
 
-export interface CommunityActivityTrackerStackProps extends cdk.StackProps {
+export interface CultivateStackProps extends cdk.StackProps {
   environmentName: string;
   config: EnvironmentConfig;
 }
 
-export class CommunityActivityTrackerStack extends cdk.Stack {
+export class CultivateStack extends cdk.Stack {
   public readonly vpc: ec2.Vpc;
   public readonly database: rds.DatabaseCluster;
   public readonly databaseSecret: secretsmanager.Secret;
@@ -29,7 +29,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
   public readonly frontendBucket: s3.Bucket;
   public readonly distribution: cloudfront.Distribution;
 
-  constructor(scope: Construct, id: string, props: CommunityActivityTrackerStackProps) {
+  constructor(scope: Construct, id: string, props: CultivateStackProps) {
     super(scope, id, props);
 
     const { environmentName, config } = props;
@@ -100,7 +100,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
 
     // Create database credentials in Secrets Manager
     this.databaseSecret = new secretsmanager.Secret(this, 'DatabaseSecret', {
-      secretName: `${environmentName}/community-tracker/database`,
+      secretName: `${environmentName}/cultivate/database`,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'dbadmin' }),
         generateStringKey: 'password',
@@ -131,7 +131,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       securityGroups: [databaseSecurityGroup],
-      defaultDatabaseName: 'communitytracker',
+      defaultDatabaseName: 'cultivate',
       backup: {
         retention: cdk.Duration.days(7),
         preferredWindow: '03:00-04:00',
@@ -149,7 +149,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
     // Create ECS Cluster
     this.ecsCluster = new ecs.Cluster(this, 'EcsCluster', {
       vpc: this.vpc,
-      clusterName: `${environmentName}-community-tracker`,
+      clusterName: `${environmentName}-cultivate`,
       enableFargateCapacityProviders: true,
     });
 
@@ -165,7 +165,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
 
     // Create log group for API
     const apiLogGroup = new logs.LogGroup(this, 'ApiLogGroup', {
-      logGroupName: `/ecs/${environmentName}/community-tracker-api`,
+      logGroupName: `/ecs/${environmentName}/cultivate-api`,
       retention: Math.round(config.logRetentionDays) as logs.RetentionDays,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
@@ -265,7 +265,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
 
     // Create S3 bucket for frontend
     this.frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
-      bucketName: `${environmentName}-community-tracker-frontend-${this.account}`,
+      bucketName: `${environmentName}-cultivate-frontend-${this.account}`,
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -308,12 +308,12 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
     // Create SNS topics for alarms
     const criticalAlarmTopic = new sns.Topic(this, 'CriticalAlarmTopic', {
       displayName: `${environmentName} Critical Alarms`,
-      topicName: `${environmentName}-community-tracker-critical-alarms`,
+      topicName: `${environmentName}-cultivate-critical-alarms`,
     });
 
     const warningAlarmTopic = new sns.Topic(this, 'WarningAlarmTopic', {
       displayName: `${environmentName} Warning Alarms`,
-      topicName: `${environmentName}-community-tracker-warning-alarms`,
+      topicName: `${environmentName}-cultivate-warning-alarms`,
     });
 
     // Create CloudWatch alarms
@@ -372,7 +372,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
 
     // Create CloudWatch Dashboard
     const dashboard = new cloudwatch.Dashboard(this, 'Dashboard', {
-      dashboardName: `${environmentName}-community-tracker`,
+      dashboardName: `${environmentName}-cultivate`,
     });
 
     dashboard.addWidgets(
@@ -449,7 +449,7 @@ export class CommunityActivityTrackerStack extends cdk.Stack {
   private applyTags(environmentName: string): void {
     const tags: ResourceTags = {
       Environment: environmentName,
-      Application: 'CommunityActivityTracker',
+      Application: 'Cultivate',
       CostCenter: 'Engineering',
       Owner: 'DevOps',
       ManagedBy: 'CDK',

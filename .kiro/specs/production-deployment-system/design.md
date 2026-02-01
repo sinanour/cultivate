@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Production Deployment System provides a containerized packaging and deployment solution for the Community Activity Tracker application. The system uses Docker containers orchestrated by Docker Compose for single-host deployments, with a security-first approach using PostgreSQL peer authentication via Unix domain sockets. An automated deployment script handles the complete workflow from building images to starting containers on remote hosts.
+The Production Deployment System provides a containerized packaging and deployment solution for the Cultivate application. The system uses Docker containers orchestrated by Docker Compose for single-host deployments, with a security-first approach using PostgreSQL peer authentication via Unix domain sockets. An automated deployment script handles the complete workflow from building images to starting containers on remote hosts.
 
 The architecture separates concerns between application containers (web frontend, backend API, database), deployment orchestration (Docker Compose), and deployment automation (deployment script). This separation enables future migration to cloud platforms while maintaining security best practices for on-premise deployments.
 
@@ -171,13 +171,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.database
-    container_name: cat_database
+    container_name: cultivate_database
     volumes:
       - db_data:/var/lib/postgresql/data
       - db_socket:/var/run/postgresql
     environment:
       - POSTGRES_USER=apiuser
-      - POSTGRES_DB=community_tracker
+      - POSTGRES_DB=cultivate
     networks:
       - backend
     healthcheck:
@@ -190,14 +190,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: cat_backend
+    container_name: cultivate_backend
     depends_on:
       database:
         condition: service_healthy
     volumes:
       - db_socket:/var/run/postgresql:rw
     environment:
-      - DATABASE_URL=postgresql://apiuser@/community_tracker?host=/var/run/postgresql
+      - DATABASE_URL=postgresql://apiuser@/cultivate?host=/var/run/postgresql
       - NODE_ENV=production
       - PORT=3000
     networks:
@@ -212,7 +212,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: cat_frontend
+    container_name: cultivate_frontend
     depends_on:
       backend:
         condition: service_healthy
@@ -450,7 +450,7 @@ deploy_configuration() {
 # Function: start_containers
 # Use docker-compose to start all containers
 start_containers() {
-    ssh "$TARGET_HOST" "cd /opt/community-tracker && docker-compose up -d"
+    ssh "$TARGET_HOST" "cd /opt/cultivate && docker-compose up -d"
 }
 
 # Function: verify_deployment
@@ -656,15 +656,15 @@ CERT_PATH=/path/to/certs
 
 # Database Configuration
 POSTGRES_USER=apiuser
-POSTGRES_DB=community_tracker
+POSTGRES_DB=cultivate
 
 # Backend Configuration
 NODE_ENV=production
 BACKEND_PORT=3000
 
 # Deployment Configuration
-DEPLOYMENT_PATH=/opt/community-tracker
-LOG_PATH=/var/log/community-tracker
+DEPLOYMENT_PATH=/opt/cultivate
+LOG_PATH=/var/log/cultivate
 ```
 
 **Certificate Configuration:**
@@ -683,8 +683,8 @@ set -e
 # Create apiuser if not exists
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
     CREATE USER apiuser;
-    CREATE DATABASE community_tracker OWNER apiuser;
-    GRANT ALL PRIVILEGES ON DATABASE community_tracker TO apiuser;
+    CREATE DATABASE cultivate OWNER apiuser;
+    GRANT ALL PRIVILEGES ON DATABASE cultivate TO apiuser;
 EOSQL
 
 # Run Prisma migrations

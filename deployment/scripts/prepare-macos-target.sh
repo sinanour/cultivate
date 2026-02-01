@@ -5,7 +5,7 @@
 set -e
 
 echo "=========================================="
-echo "Community Activity Tracker"
+echo "Cultivate"
 echo "macOS Target Preparation Script"
 echo "=========================================="
 echo ""
@@ -39,7 +39,7 @@ fi
 echo ""
 
 # Create deployment directory
-DEPLOY_DIR="/opt/community-tracker"
+DEPLOY_DIR="/opt/cultivate"
 
 echo "Creating deployment directory: $DEPLOY_DIR"
 if [ -d "$DEPLOY_DIR" ]; then

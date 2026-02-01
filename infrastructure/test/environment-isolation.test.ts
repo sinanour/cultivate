@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as fc from 'fast-check';
-import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
+import { CultivateStack } from '../lib/cultivate-stack';
 import { EnvironmentConfig } from '../lib/types';
 import { getNumRuns } from './test-config';
 
@@ -48,7 +48,7 @@ describe('Property 1: Environment Isolation', () => {
                     const config = { ...baseConfig, vpcCidr: cidrBlocks[i] };
 
                     const app = new cdk.App();
-                    const stack = new CommunityActivityTrackerStack(app, `TestStack-${envName}`, {
+                    const stack = new CultivateStack(app, `TestStack-${envName}`, {
                         environmentName: envName,
                         config,
                         env: {
@@ -95,7 +95,7 @@ describe('Property 1: Environment Isolation', () => {
                     const config = { ...baseConfig, vpcCidr: cidrBlocks[i] };
 
                     const app = new cdk.App();
-                    const stack = new CommunityActivityTrackerStack(app, `TestStack-${envName}`, {
+                    const stack = new CultivateStack(app, `TestStack-${envName}`, {
                         environmentName: envName,
                         config,
                         env: {
@@ -136,7 +136,7 @@ describe('Property 1: Environment Isolation', () => {
                     const config = { ...baseConfig, vpcCidr: cidrBlocks[i] };
 
                     const app = new cdk.App();
-                    const stack = new CommunityActivityTrackerStack(app, `TestStack-${envName}`, {
+                    const stack = new CultivateStack(app, `TestStack-${envName}`, {
                         environmentName: envName,
                         config,
                         env: {
@@ -184,7 +184,7 @@ describe('Property 1: Environment Isolation', () => {
                     const config = { ...baseConfig, vpcCidr: cidrBlocks[i] };
 
                     const app = new cdk.App();
-                    const stack = new CommunityActivityTrackerStack(app, `TestStack-${envName}`, {
+                    const stack = new CultivateStack(app, `TestStack-${envName}`, {
                         environmentName: envName,
                         config,
                         env: {
@@ -232,7 +232,7 @@ describe('Property 1: Environment Isolation', () => {
                     const config = { ...baseConfig, vpcCidr: cidrBlocks[i] };
 
                     const app = new cdk.App();
-                    const stack = new CommunityActivityTrackerStack(app, `TestStack-${envName}`, {
+                    const stack = new CultivateStack(app, `TestStack-${envName}`, {
                         environmentName: envName,
                         config,
                         env: {
@@ -275,7 +275,7 @@ describe('Property 1: Environment Isolation', () => {
 
                 for (const envName of environments) {
                     const app = new cdk.App();
-                    const stack = new CommunityActivityTrackerStack(app, `TestStack-${envName}`, {
+                    const stack = new CultivateStack(app, `TestStack-${envName}`, {
                         environmentName: envName,
                         config,
                         env: {
@@ -299,7 +299,7 @@ describe('Property 1: Environment Isolation', () => {
 
                 for (const envName of environments) {
                     const app = new cdk.App();
-                    const stack = new CommunityActivityTrackerStack(app, `TestStack-${envName}`, {
+                    const stack = new CultivateStack(app, `TestStack-${envName}`, {
                         environmentName: envName,
                         config,
                         env: {
@@ -327,7 +327,7 @@ describe('Property 1: Environment Isolation', () => {
 
                 for (const envName of environments) {
                     const app = new cdk.App();
-                    const stack = new CommunityActivityTrackerStack(app, `TestStack-${envName}`, {
+                    const stack = new CultivateStack(app, `TestStack-${envName}`, {
                         environmentName: envName,
                         config,
                         env: {

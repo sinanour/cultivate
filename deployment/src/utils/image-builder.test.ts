@@ -500,9 +500,9 @@ describe('buildAllImages', () => {
     const images = await buildAllImages('1.0.0', '/path/to/context', '/path/to/context/dockerfiles');
 
     expect(images).toHaveLength(3);
-    expect(images[0].name).toBe('cat_frontend');
-    expect(images[1].name).toBe('cat_backend');
-    expect(images[2].name).toBe('cat_database');
+    expect(images[0].name).toBe('cultivate_frontend');
+    expect(images[1].name).toBe('cultivate_backend');
+    expect(images[2].name).toBe('cultivate_database');
     expect(images.every(img => img.tag === '1.0.0')).toBe(true);
   });
 
@@ -552,9 +552,9 @@ describe('saveAllImages', () => {
     const outputPaths = await saveAllImages('1.0.0', '/tmp/images');
 
     expect(outputPaths).toHaveLength(3);
-    expect(outputPaths[0]).toContain('cat_frontend-1.0.0.tar');
-    expect(outputPaths[1]).toContain('cat_backend-1.0.0.tar');
-    expect(outputPaths[2]).toContain('cat_database-1.0.0.tar');
+    expect(outputPaths[0]).toContain('cultivate_frontend-1.0.0.tar');
+    expect(outputPaths[1]).toContain('cultivate_backend-1.0.0.tar');
+    expect(outputPaths[2]).toContain('cultivate_database-1.0.0.tar');
   });
 
   it('should call progress callback for each image', async () => {
@@ -562,9 +562,9 @@ describe('saveAllImages', () => {
 
     await saveAllImages('1.0.0', '/tmp/images', progressCallback);
 
-    expect(progressCallback).toHaveBeenCalledWith(expect.stringContaining('Saving image cat_frontend:1.0.0'));
-    expect(progressCallback).toHaveBeenCalledWith(expect.stringContaining('Saving image cat_backend:1.0.0'));
-    expect(progressCallback).toHaveBeenCalledWith(expect.stringContaining('Saving image cat_database:1.0.0'));
+    expect(progressCallback).toHaveBeenCalledWith(expect.stringContaining('Saving image cultivate_frontend:1.0.0'));
+    expect(progressCallback).toHaveBeenCalledWith(expect.stringContaining('Saving image cultivate_backend:1.0.0'));
+    expect(progressCallback).toHaveBeenCalledWith(expect.stringContaining('Saving image cultivate_database:1.0.0'));
     expect(progressCallback).toHaveBeenCalledWith(expect.stringContaining('All images saved'));
   });
 

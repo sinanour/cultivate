@@ -23,13 +23,13 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-CONTAINER_NAME="cat-postgres-local"
+CONTAINER_NAME="cultivate-postgres-local"
 POSTGRES_VERSION="16-alpine"
 POSTGRES_PORT="5432"
-POSTGRES_DB="community_activity_tracker"
-POSTGRES_USER="cat_user"
-POSTGRES_PASSWORD="cat_local_dev_password"
-VOLUME_NAME="cat-postgres-data"
+POSTGRES_DB="cultivate"
+POSTGRES_USER="cultivate_user"
+POSTGRES_PASSWORD="cultivate_local_dev_password"
+VOLUME_NAME="cultivate-postgres-data"
 
 # Verbose mode flag
 VERBOSE=false
@@ -740,4 +740,91 @@ echo "  Remove container:  finch rm -f $CONTAINER_NAME"
 echo "  Remove volume:     finch volume rm $VOLUME_NAME"
 echo ""
 
-print_success "You can now run 'npm run prisma:migrate' to set up your database schema!"
+print_success "Container setup complete!"
+echo ""
+
+# Step 8: Set up development database
+print_info "=========================================="
+print_info "Step 8: Setting up development database..."
+print_info "=========================================="
+echo ""
+
+print_info "Running migrations on development database ($POSTGRES_DB)..."
+if DATABASE_URL="$CONNECTION_STRING" npx prisma migrate deploy; then
+    print_success "Development database migrations completed"
+else
+    print_error "Failed to run migrations on development database"
+    exit 1
+fi
+
+echo ""
+print_info "Seeding development database..."
+if DATABASE_URL="$CONNECTION_STRING" npx prisma db seed; then
+    print_success "Development database seeded successfully"
+else
+    print_error "Failed to seed development database"
+    exit 1
+fi
+
+echo ""
+
+# Step 9: Set up test database
+print_info "=========================================="
+print_info "Step 9: Setting up test database..."
+print_info "=========================================="
+echo ""
+
+TEST_DB_NAME="${POSTGRES_DB}_test"
+TEST_CONNECTION_STRING="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${TEST_DB_NAME}?schema=public"
+
+print_info "Creating test database ($TEST_DB_NAME)..."
+if finch exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE DATABASE ${TEST_DB_NAME};" 2>/dev/null; then
+    print_success "Test database created"
+elif finch exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1 FROM pg_database WHERE datname='${TEST_DB_NAME}';" | grep -q 1; then
+    print_info "Test database already exists"
+else
+    print_error "Failed to create test database"
+    exit 1
+fi
+
+echo ""
+print_info "Running migrations on test database ($TEST_DB_NAME)..."
+if DATABASE_URL="$TEST_CONNECTION_STRING" npx prisma migrate deploy; then
+    print_success "Test database migrations completed"
+else
+    print_error "Failed to run migrations on test database"
+    exit 1
+fi
+
+echo ""
+print_info "Seeding test database..."
+if DATABASE_URL="$TEST_CONNECTION_STRING" npx prisma db seed; then
+    print_success "Test database seeded successfully"
+else
+    print_error "Failed to seed test database"
+    exit 1
+fi
+
+echo ""
+
+# Final summary
+print_info "=========================================="
+print_success "Database Setup Complete!"
+print_info "=========================================="
+echo ""
+
+print_info "Development Database:"
+echo "  Database: $POSTGRES_DB"
+echo "  URL:      $CONNECTION_STRING"
+echo ""
+
+print_info "Test Database:"
+echo "  Database: $TEST_DB_NAME"
+echo "  URL:      $TEST_CONNECTION_STRING"
+echo ""
+
+print_info "Add this to your .env file:"
+echo "  DATABASE_URL=\"$CONNECTION_STRING\""
+echo ""
+
+print_success "You can now run 'npm test' to run your test suite!"

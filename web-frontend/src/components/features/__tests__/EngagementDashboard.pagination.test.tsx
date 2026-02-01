@@ -244,8 +244,8 @@ describe('EngagementDashboard - Pagination', () => {
       lookups: {
         activityTypes: [{ id: 'type-1', name: 'Workshop' }],
         activityCategories: [
-          { id: 'cat-1', name: 'Education' },
-          { id: 'cat-2', name: 'Recreation' },
+          { id: 'cultivate-1', name: 'Education' },
+          { id: 'cultivate-2', name: 'Recreation' },
         ],
       },
       metadata: {
@@ -275,8 +275,8 @@ describe('EngagementDashboard - Pagination', () => {
           { id: 'type-2', name: 'Training' },
         ],
         activityCategories: [
-          { id: 'cat-1', name: 'Education' },
-          { id: 'cat-2', name: 'Recreation' },
+          { id: 'cultivate-1', name: 'Education' },
+          { id: 'cultivate-2', name: 'Recreation' },
         ],
       },
       metadata: {

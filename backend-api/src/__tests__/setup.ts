@@ -11,8 +11,8 @@ process.env.NODE_ENV = 'test';
 // Override DATABASE_URL for tests if not already set to a test database
 if (!process.env.DATABASE_URL || !process.env.DATABASE_URL.includes('test')) {
     // Use test database
-    process.env.DATABASE_URL = 'postgresql://cat_user:cat_local_dev_password@localhost:5432/community_activity_tracker_test?schema=public';
-    console.log('📝 Using test database: community_activity_tracker_test');
+    process.env.DATABASE_URL = 'postgresql://cultivate_user:cultivate_local_dev_password@localhost:5432/cultivate_test?schema=public';
+    console.log('📝 Using test database: cultivate_test');
 }
 
 // Safety check: Ensure tests are running against a test database

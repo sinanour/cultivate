@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { CommunityActivityTrackerStack } from '../lib/community-activity-tracker-stack';
+import { CultivateStack } from '../lib/cultivate-stack';
 import { EnvironmentConfig } from '../lib/types';
 
 const app = new cdk.App();
@@ -20,7 +20,7 @@ if (!config) {
 }
 
 // Create stack with environment-specific configuration
-new CommunityActivityTrackerStack(app, `CommunityActivityTracker-${environmentName}`, {
+new CultivateStack(app, `Cultivate-${environmentName}`, {
   environmentName,
   config,
   env: {
@@ -30,7 +30,7 @@ new CommunityActivityTrackerStack(app, `CommunityActivityTracker-${environmentNa
   description: `Cultivate infrastructure for ${environmentName} environment`,
   tags: {
     Environment: environmentName,
-    Application: 'CommunityActivityTracker',
+    Application: 'Cultivate',
   },
 });
 

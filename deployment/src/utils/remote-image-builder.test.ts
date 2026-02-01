@@ -331,9 +331,9 @@ describe('RemoteImageBuilder', () => {
       );
 
       expect(results).toHaveLength(3);
-      expect(results[0].name).toBe('cat_frontend');
-      expect(results[1].name).toBe('cat_backend');
-      expect(results[2].name).toBe('cat_database');
+      expect(results[0].name).toBe('cultivate_frontend');
+      expect(results[1].name).toBe('cultivate_backend');
+      expect(results[2].name).toBe('cultivate_database');
       expect(results.every(img => img.tag === '1.0.0')).toBe(true);
       expect(results.every(img => img.buildHost === 'remote')).toBe(true);
     });

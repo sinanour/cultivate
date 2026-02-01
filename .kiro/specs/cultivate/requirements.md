@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Cultivate is a distributed system that enables communities to track, manage, and analyze their community-building activities across multiple platforms. The system is composed of five independent packages that work together to provide a complete solution: infrastructure, backend API, web frontend, iOS mobile app, and Android mobile app.
+Cultivate is a distributed system that enables communities to track, manage, and analyze their community-building activities across multiple platforms. The system is composed of five independent packages that work together to provide a complete solution: infrastructure, backend API, web frontend, iOS mobile app, and Android mobile app.
 
 This document defines the overall system requirements and references detailed specifications for each component package.
 

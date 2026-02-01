@@ -40,7 +40,7 @@ interface NominatimResponse {
 
 export class GeocodingService {
     private static readonly BASE_URL = 'https://nominatim.openstreetmap.org';
-    private static readonly USER_AGENT = 'CommunityActivityTracker/1.0';
+    private static readonly USER_AGENT = 'Cultivate/1.0';
     private static readonly RATE_LIMIT_MS = 1000; // 1 request per second
     private static lastRequestTime = 0;
     private static cache = new Map<string, GeocodingResult[]>();

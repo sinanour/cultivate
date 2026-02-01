@@ -40,12 +40,12 @@ describe('Role Distribution Optimization', () => {
 
             it('should build query with activity category filter', () => {
                 const { sql, parameters } = queryBuilder.buildRoleDistributionQuery({
-                    activityCategoryIds: ['cat-1'],
+                    activityCategoryIds: ['cultivate-1'],
                 });
 
                 expect(sql).toContain('at."activityCategoryId" = ANY($1)');
                 expect(sql).toContain('JOIN activity_types at');
-                expect(parameters).toEqual([['cat-1']]);
+                expect(parameters).toEqual([['cultivate-1']]);
             });
 
             it('should build query with venue filter', () => {
@@ -97,7 +97,7 @@ describe('Role Distribution Optimization', () => {
             it('should build query with multiple filters', () => {
                 const { sql, parameters } = queryBuilder.buildRoleDistributionQuery({
                     activityTypeIds: ['type-1'],
-                    activityCategoryIds: ['cat-1'],
+                    activityCategoryIds: ['cultivate-1'],
                     venueIds: ['venue-1'],
                     geographicAreaIds: ['area-1'],
                     populationIds: ['pop-1'],

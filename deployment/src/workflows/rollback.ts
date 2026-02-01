@@ -123,7 +123,7 @@ export async function rollbackWorkflow(
         timeout: options.sshConfig?.timeout || 30000
       },
       stateDir: options.stateFilePath,
-      composePath: '/opt/community-tracker/docker-compose.yml',
+      composePath: '/opt/cultivate/docker-compose.yml',
       verifyHealth: true
     });
 

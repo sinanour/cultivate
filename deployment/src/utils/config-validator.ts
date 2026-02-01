@@ -41,7 +41,7 @@ const DEFAULT_CONFIG: Partial<DeploymentConfiguration> = {
   },
   environment: {
     nodeEnv: 'production',
-    databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+    databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
     backendPort: 3000,
   },
   security: {

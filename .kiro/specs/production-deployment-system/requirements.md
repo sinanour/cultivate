@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document specifies the requirements for a production deployment system that packages the Community Activity Tracker application using Docker containers. The system enables secure, flexible deployment to on-premise infrastructure with architecture that supports future cloud deployment options. The deployment uses Docker Compose for single-host orchestration and includes automated deployment scripts for streamlined operations.
+This document specifies the requirements for a production deployment system that packages the Cultivate application using Docker containers. The system enables secure, flexible deployment to on-premise infrastructure with architecture that supports future cloud deployment options. The deployment uses Docker Compose for single-host orchestration and includes automated deployment scripts for streamlined operations.
 
 ## Glossary
 

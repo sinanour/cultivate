@@ -28,7 +28,7 @@ async function main(): Promise<void> {
 
     program
         .name('deploy')
-        .description('Community Activity Tracker Production Deployment System')
+        .description('Cultivate Production Deployment System')
         .version('1.0.0');
 
     // Deploy command

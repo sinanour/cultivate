@@ -169,12 +169,12 @@ This document provides coordination guidelines for developing the five independe
 ### Asynchronous Communication
 
 **Slack Channels**:
-- `#community-tracker-general`: General discussion
-- `#community-tracker-backend`: Backend-specific
-- `#community-tracker-frontend`: Frontend-specific
-- `#community-tracker-mobile`: Mobile-specific
-- `#community-tracker-infra`: Infrastructure-specific
-- `#community-tracker-api-changes`: API change notifications
+- `#cultivate-general`: General discussion
+- `#cultivate-backend`: Backend-specific
+- `#cultivate-frontend`: Frontend-specific
+- `#cultivate-mobile`: Mobile-specific
+- `#cultivate-infra`: Infrastructure-specific
+- `#cultivate-api-changes`: API change notifications
 
 **Documentation**:
 - Update API contract document for any API changes
@@ -197,7 +197,7 @@ This document provides coordination guidelines for developing the five independe
    - Estimate impact on clients
 
 2. **Review Process**:
-   - Post RFC in `#community-tracker-api-changes`
+   - Post RFC in `#cultivate-api-changes`
    - Allow 2 business days for feedback
    - Address concerns
    - Get approval from tech lead
@@ -580,8 +580,8 @@ If necessary:
 
 - **API Contract**: `docs/API_CONTRACT.md`
 - **Shared Data Models**: `docs/SHARED_DATA_MODELS.md`
-- **System Requirements**: `.kiro/specs/community-activity-tracker/requirements.md`
-- **System Design**: `.kiro/specs/community-activity-tracker/design.md`
+- **System Requirements**: `.kiro/specs/cultivate/requirements.md`
+- **System Design**: `.kiro/specs/cultivate/design.md`
 
 ### Contact Information
 

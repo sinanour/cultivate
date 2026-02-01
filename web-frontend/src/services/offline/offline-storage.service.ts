@@ -19,7 +19,7 @@ class OfflineDatabase extends Dexie {
     syncQueue!: EntityTable<QueuedOperation, 'id'>;
 
     constructor() {
-        super('CommunityActivityTrackerDB');
+        super('CultivateDB');
 
         this.version(1).stores({
             participants: 'id, name, email',

@@ -91,7 +91,7 @@ describe('GeographicBreakdownQueryBuilder', () => {
 
         it('should apply activity category filter', () => {
             const filters: GeographicBreakdownFilters = {
-                activityCategoryIds: ['cat-1', 'cat-2'],
+                activityCategoryIds: ['cultivate-1', 'cultivate-2'],
             };
 
             const { sql, parameters } = queryBuilder.buildGeographicBreakdownQuery(
@@ -102,7 +102,7 @@ describe('GeographicBreakdownQueryBuilder', () => {
 
             expect(sql).toContain('JOIN activity_types at');
             expect(sql).toContain('at."activityCategoryId" = ANY($1)');
-            expect(parameters).toEqual([['cat-1', 'cat-2']]);
+            expect(parameters).toEqual([['cultivate-1', 'cultivate-2']]);
         });
 
         it('should apply venue filter', () => {
@@ -413,7 +413,7 @@ describe('GeographicBreakdownQueryBuilder', () => {
         it('should use parameterized queries for safety', () => {
             const filters: GeographicBreakdownFilters = {
                 activityTypeIds: ['type-1'],
-                activityCategoryIds: ['cat-1'],
+                activityCategoryIds: ['cultivate-1'],
                 venueIds: ['venue-1'],
             };
 

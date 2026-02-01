@@ -1,6 +1,6 @@
 # Docker Container Definitions
 
-This directory contains Dockerfile definitions for the Community Activity Tracker application containers.
+This directory contains Dockerfile definitions for the Cultivate application containers.
 
 ## Web Frontend Container
 
@@ -31,7 +31,7 @@ The Dockerfile follows these steps:
 From the project root directory:
 
 ```bash
-docker build -f deployment/dockerfiles/Dockerfile.frontend -t cat-frontend:latest .
+docker build -f deployment/dockerfiles/Dockerfile.frontend -t cultivate-frontend:latest .
 ```
 
 ### nginx.conf
@@ -63,7 +63,7 @@ The HTTPS server block is **always present** in the nginx.conf, but it will only
 
 1. **HTTP-only mode**: Run the container without mounting certificates
    ```bash
-   docker run -p 80:80 cat-frontend:latest
+   docker run -p 80:80 cultivate-frontend:latest
    ```
    - HTTP server works normally on port 80
    - HTTPS server on port 443 will fail to start (Nginx will log errors but HTTP continues)
@@ -72,7 +72,7 @@ The HTTPS server block is **always present** in the nginx.conf, but it will only
    ```bash
    docker run -p 80:80 -p 443:443 \
      -v /path/to/certs:/etc/nginx/certs:ro \
-     cat-frontend:latest
+     cultivate-frontend:latest
    ```
    - Both HTTP (port 80) and HTTPS (port 443) servers work
    - Certificates are mounted read-only for security
@@ -91,7 +91,7 @@ Certificates can be renewed without rebuilding the Docker image:
 1. Update certificate files on the host system
 2. Reload Nginx configuration:
    ```bash
-   docker exec cat_frontend nginx -s reload
+   docker exec cultivate_frontend nginx -s reload
    ```
 
 ### Security Features
@@ -152,7 +152,7 @@ The Dockerfile follows these steps:
 From the project root directory:
 
 ```bash
-docker build -f deployment/dockerfiles/Dockerfile.backend -t cat-backend:latest .
+docker build -f deployment/dockerfiles/Dockerfile.backend -t cultivate-backend:latest .
 ```
 
 #### Peer Authentication
@@ -178,7 +178,7 @@ The UID/GID 1001 is **critical** for peer authentication:
 The backend requires the following environment variables:
 
 - `DATABASE_URL`: PostgreSQL connection string using Unix socket
-  - Example: `postgresql://apiuser@/community_tracker?host=/var/run/postgresql`
+  - Example: `postgresql://apiuser@/cultivate?host=/var/run/postgresql`
 - `NODE_ENV`: Set to `production` for production deployments
 - `PORT`: Backend API port (default: 3000)
 
@@ -192,11 +192,11 @@ The backend container requires:
 Example with Docker Compose:
 ```yaml
 backend:
-  image: cat-backend:latest
+  image: cultivate-backend:latest
   volumes:
     - db_socket:/var/run/postgresql:rw
   environment:
-    - DATABASE_URL=postgresql://apiuser@/community_tracker?host=/var/run/postgresql
+    - DATABASE_URL=postgresql://apiuser@/cultivate?host=/var/run/postgresql
     - NODE_ENV=production
     - PORT=3000
   depends_on:
@@ -254,7 +254,7 @@ The Dockerfile follows these steps:
 From the project root directory:
 
 ```bash
-docker build -f deployment/dockerfiles/Dockerfile.database -t cat-database:latest .
+docker build -f deployment/dockerfiles/Dockerfile.database -t cultivate-database:latest .
 ```
 
 #### Peer Authentication Configuration
@@ -279,7 +279,7 @@ The Dockerfile expects these files to be present (created in Task 5):
 
 1. **init-db.sh**: Database initialization script
    - Creates `apiuser` database user
-   - Creates `community_tracker` database
+   - Creates `cultivate` database
    - Grants necessary privileges
    - Located at: `deployment/dockerfiles/init-db.sh`
 
@@ -295,7 +295,7 @@ The database container uses these environment variables:
 - `POSTGRES_HOST_AUTH_METHOD=peer`: Configures peer authentication
 - `POSTGRES_INITDB_ARGS="--auth=peer"`: Initializes database with peer authentication
 - `POSTGRES_USER=apiuser`: Sets the PostgreSQL superuser (set by Docker Compose)
-- `POSTGRES_DB=community_tracker`: Sets the default database name (set by Docker Compose)
+- `POSTGRES_DB=cultivate`: Sets the default database name (set by Docker Compose)
 
 #### Running the Container
 
@@ -316,13 +316,13 @@ The database container requires:
 Example with Docker Compose:
 ```yaml
 database:
-  image: cat-database:latest
+  image: cultivate-database:latest
   volumes:
     - db_data:/var/lib/postgresql/data
     - db_socket:/var/run/postgresql
   environment:
     - POSTGRES_USER=apiuser
-    - POSTGRES_DB=community_tracker
+    - POSTGRES_DB=cultivate
   healthcheck:
     test: ["CMD-SHELL", "pg_isready -U apiuser"]
     interval: 10s

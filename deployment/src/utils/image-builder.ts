@@ -52,7 +52,7 @@ export interface ImageBuildOptions {
  * Options for saving a Docker image to a tar file
  */
 export interface ImageSaveOptions {
-  /** Image name with tag (e.g., "cat_frontend:1.0.0") */
+  /** Image name with tag (e.g., "cultivate_frontend:1.0.0") */
   imageTag: string;
 
   /** Output file path for the tar file */
@@ -483,7 +483,7 @@ export async function buildAllImages(
   const frontendImage = await builder.buildImage({
     dockerfile: path.join(dockerfilesPath, 'Dockerfile.frontend'),
     context: contextPath,
-    imageName: 'cat_frontend',
+    imageName: 'cultivate_frontend',
     tag: version,
     buildArgs: {
       VITE_BACKEND_URL: process.env.VITE_BACKEND_URL || '/api/v1'
@@ -501,7 +501,7 @@ export async function buildAllImages(
   const backendImage = await builder.buildImage({
     dockerfile: path.join(dockerfilesPath, 'Dockerfile.backend'),
     context: contextPath,
-    imageName: 'cat_backend',
+    imageName: 'cultivate_backend',
     tag: version,
     verbose: true
   }, onProgress);
@@ -516,7 +516,7 @@ export async function buildAllImages(
   const databaseImage = await builder.buildImage({
     dockerfile: path.join(dockerfilesPath, 'Dockerfile.database'),
     context: contextPath,
-    imageName: 'cat_database',
+    imageName: 'cultivate_database',
     tag: version,
     verbose: true
   }, onProgress);
@@ -557,9 +557,9 @@ export async function saveAllImages(
 
   // Define images to save
   const imagesToSave = [
-    { name: 'cat_frontend', tag: version },
-    { name: 'cat_backend', tag: version },
-    { name: 'cat_database', tag: version }
+    { name: 'cultivate_frontend', tag: version },
+    { name: 'cultivate_backend', tag: version },
+    { name: 'cultivate_database', tag: version }
   ];
 
   // Save each image

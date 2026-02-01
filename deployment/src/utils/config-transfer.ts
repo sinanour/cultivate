@@ -343,7 +343,7 @@ export class ConfigTransfer {
           // Suggest using a user-accessible directory instead
           throw new Error(
             `Cannot create directory ${remotePath} on macOS without sudo password. ` +
-            `Please use a user-accessible directory like ~/community-tracker instead, ` +
+            `Please use a user-accessible directory like ~/cultivate instead, ` +
             `or manually create ${remotePath} with appropriate permissions before deployment.`
           );
         }

@@ -333,7 +333,7 @@ describe('ConfigTransfer', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {
@@ -368,7 +368,7 @@ describe('ConfigTransfer', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {
@@ -399,7 +399,7 @@ describe('ConfigTransfer', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {
@@ -431,7 +431,7 @@ describe('ConfigTransfer', () => {
         },
         environment: {
           nodeEnv: 'production',
-          databaseUrl: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+          databaseUrl: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
           backendPort: 3000,
         },
         security: {

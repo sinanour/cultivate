@@ -48,7 +48,7 @@ describe('GeocodingService', () => {
                 expect.stringContaining('nominatim.openstreetmap.org/search'),
                 expect.objectContaining({
                     headers: {
-                        'User-Agent': 'CommunityActivityTracker/1.0'
+                        'User-Agent': 'Cultivate/1.0'
                     }
                 })
             );

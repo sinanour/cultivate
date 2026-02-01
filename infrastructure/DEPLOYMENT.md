@@ -65,7 +65,7 @@ After deployment completes, verify the stack outputs:
 
 ```bash
 aws cloudformation describe-stacks \
-  --stack-name CommunityActivityTracker-dev \
+  --stack-name Cultivate-dev \
   --query 'Stacks[0].Outputs'
 ```
 
@@ -83,12 +83,12 @@ Expected outputs:
 ```bash
 # Get database credentials from Secrets Manager
 aws secretsmanager get-secret-value \
-  --secret-id dev/community-tracker/database \
+  --secret-id dev/cultivate/database \
   --query SecretString \
   --output text
 
 # Connect to database (from within VPC or via bastion host)
-psql -h <DatabaseEndpoint> -U dbadmin -d communitytracker
+psql -h <DatabaseEndpoint> -U dbadmin -d cultivate
 ```
 
 ### 4. Deploy API Container
@@ -97,18 +97,18 @@ The infrastructure creates an ECS cluster and service, but you need to build and
 
 ```bash
 # Build API container (from backend-api directory)
-docker build -t community-tracker-api .
+docker build -t cultivate-api .
 
 # Tag for ECR
-docker tag community-tracker-api:latest \
-  ACCOUNT-ID.dkr.ecr.REGION.amazonaws.com/community-tracker-api:latest
+docker tag cultivate-api:latest \
+  ACCOUNT-ID.dkr.ecr.REGION.amazonaws.com/cultivate-api:latest
 
 # Push to ECR
-docker push ACCOUNT-ID.dkr.ecr.REGION.amazonaws.com/community-tracker-api:latest
+docker push ACCOUNT-ID.dkr.ecr.REGION.amazonaws.com/cultivate-api:latest
 
 # Update ECS service to use new image
 aws ecs update-service \
-  --cluster dev-community-tracker \
+  --cluster dev-cultivate \
   --service ApiService \
   --force-new-deployment
 ```
@@ -155,13 +155,13 @@ After deployment, configure CloudWatch alarm notifications:
 ```bash
 # Subscribe to critical alarms
 aws sns subscribe \
-  --topic-arn arn:aws:sns:REGION:ACCOUNT:dev-community-tracker-critical-alarms \
+  --topic-arn arn:aws:sns:REGION:ACCOUNT:dev-cultivate-critical-alarms \
   --protocol email \
   --notification-endpoint your-email@example.com
 
 # Subscribe to warning alarms
 aws sns subscribe \
-  --topic-arn arn:aws:sns:REGION:ACCOUNT:dev-community-tracker-warning-alarms \
+  --topic-arn arn:aws:sns:REGION:ACCOUNT:dev-cultivate-warning-alarms \
   --protocol email \
   --notification-endpoint your-email@example.com
 ```
@@ -173,7 +173,7 @@ If deployment fails or issues are detected:
 ```bash
 # Rollback to previous version
 aws cloudformation rollback-stack \
-  --stack-name CommunityActivityTracker-dev
+  --stack-name Cultivate-dev
 ```
 
 ## Cleanup
@@ -193,7 +193,7 @@ npm run destroy -- -c environment=dev
 1. Check CloudFormation events:
    ```bash
    aws cloudformation describe-stack-events \
-     --stack-name CommunityActivityTracker-dev
+     --stack-name Cultivate-dev
    ```
 
 2. Review CDK synthesis output for errors:
@@ -211,12 +211,12 @@ npm run destroy -- -c environment=dev
 
 1. Check ECS task status:
    ```bash
-   aws ecs list-tasks --cluster dev-community-tracker
+   aws ecs list-tasks --cluster dev-cultivate
    ```
 
 2. View container logs:
    ```bash
-   aws logs tail /ecs/dev/community-tracker-api --follow
+   aws logs tail /ecs/dev/cultivate-api --follow
    ```
 
 3. Verify ALB target health:

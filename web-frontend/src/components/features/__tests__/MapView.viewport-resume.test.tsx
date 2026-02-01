@@ -77,7 +77,7 @@ describe('MapView - Viewport Change During Paused Loading', () => {
           latitude: 49.2827,
           longitude: -123.1207,
           activityTypeId: 'type-1',
-          activityCategoryId: 'cat-1',
+          activityCategoryId: 'cultivate-1',
         },
       ],
       pagination: {
@@ -94,7 +94,7 @@ describe('MapView - Viewport Change During Paused Loading', () => {
         name: 'Study Circle',
         isPredefined: true,
         activityCategory: {
-          id: 'cat-1',
+          id: 'cultivate-1',
           name: 'Core Activities',
           isPredefined: true,
           createdAt: '2024-01-01T00:00:00Z',

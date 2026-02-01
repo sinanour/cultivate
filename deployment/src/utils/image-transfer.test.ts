@@ -353,9 +353,9 @@ describe('ImageTransfer', () => {
 
       expect(results).toHaveLength(3);
       expect(results.every(r => r.success)).toBe(true);
-      expect(results[0].imageTag).toBe('cat_frontend:1.0.0');
-      expect(results[1].imageTag).toBe('cat_backend:1.0.0');
-      expect(results[2].imageTag).toBe('cat_database:1.0.0');
+      expect(results[0].imageTag).toBe('cultivate_frontend:1.0.0');
+      expect(results[1].imageTag).toBe('cultivate_backend:1.0.0');
+      expect(results[2].imageTag).toBe('cultivate_database:1.0.0');
     });
 
     it('should stop on first transfer failure', async () => {
@@ -411,9 +411,9 @@ describe('ImageTransfer', () => {
         onProgress
       );
 
-      expect(progressMessages.some(msg => msg.includes('cat_frontend'))).toBe(true);
-      expect(progressMessages.some(msg => msg.includes('cat_backend'))).toBe(true);
-      expect(progressMessages.some(msg => msg.includes('cat_database'))).toBe(true);
+      expect(progressMessages.some(msg => msg.includes('cultivate_frontend'))).toBe(true);
+      expect(progressMessages.some(msg => msg.includes('cultivate_backend'))).toBe(true);
+      expect(progressMessages.some(msg => msg.includes('cultivate_database'))).toBe(true);
     });
   });
 

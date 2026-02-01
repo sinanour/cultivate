@@ -19,8 +19,8 @@ describe('EngagementDashboard - Optimized Endpoint Integration', () => {
             { id: 'type-2', name: "Children's Class" },
           ],
           activityCategories: [
-            { id: 'cat-1', name: 'Core Activities' },
-            { id: 'cat-2', name: 'Educational Programs' },
+            { id: 'cultivate-1', name: 'Core Activities' },
+            { id: 'cultivate-2', name: 'Educational Programs' },
           ],
         },
         metadata: {
@@ -194,7 +194,7 @@ describe('EngagementDashboard - Optimized Endpoint Integration', () => {
         ],
         lookups: {
           activityTypes: [{ id: 'type-1', name: 'Study Circle' }],
-          activityCategories: [{ id: 'cat-1', name: 'Core Activities' }],
+          activityCategories: [{ id: 'cultivate-1', name: 'Core Activities' }],
         },
         metadata: {
           columns: [

@@ -37,9 +37,9 @@ describe('AnalyticsService - Population Filter', () => {
                     activityType: {
                         id: 'type-1',
                         name: 'Test Type',
-                        activityCategoryId: 'cat-1',
+                        activityCategoryId: 'cultivate-1',
                         activityCategory: {
-                            id: 'cat-1',
+                            id: 'cultivate-1',
                             name: 'Test Category',
                         },
                     },
@@ -144,9 +144,9 @@ describe('AnalyticsService - Population Filter', () => {
                     activityType: {
                         id: 'type-1',
                         name: 'Test Type',
-                        activityCategoryId: 'cat-1',
+                        activityCategoryId: 'cultivate-1',
                         activityCategory: {
-                            id: 'cat-1',
+                            id: 'cultivate-1',
                             name: 'Test Category',
                         },
                     },
@@ -197,9 +197,9 @@ describe('AnalyticsService - Population Filter', () => {
                     activityType: {
                         id: 'type-1',
                         name: 'Test Type',
-                        activityCategoryId: 'cat-1',
+                        activityCategoryId: 'cultivate-1',
                         activityCategory: {
-                            id: 'cat-1',
+                            id: 'cultivate-1',
                             name: 'Test Category',
                         },
                     },
@@ -274,9 +274,9 @@ describe('AnalyticsService - Population Filter', () => {
                     activityType: {
                         id: 'type-1',
                         name: 'Test Type',
-                        activityCategoryId: 'cat-1',
+                        activityCategoryId: 'cultivate-1',
                         activityCategory: {
-                            id: 'cat-1',
+                            id: 'cultivate-1',
                             name: 'Test Category',
                         },
                     },
@@ -358,9 +358,9 @@ describe('AnalyticsService - Population Filter', () => {
                     activityType: {
                         id: 'type-1',
                         name: 'Test Type',
-                        activityCategoryId: 'cat-1',
+                        activityCategoryId: 'cultivate-1',
                         activityCategory: {
-                            id: 'cat-1',
+                            id: 'cultivate-1',
                             name: 'Test Category',
                         },
                     },
@@ -409,9 +409,9 @@ describe('AnalyticsService - Population Filter', () => {
                     activityType: {
                         id: 'type-1',
                         name: 'Test Type',
-                        activityCategoryId: 'cat-1',
+                        activityCategoryId: 'cultivate-1',
                         activityCategory: {
-                            id: 'cat-1',
+                            id: 'cultivate-1',
                             name: 'Test Category',
                         },
                     },

@@ -107,8 +107,8 @@ export async function deployWorkflow(
         const containerDeployment = new ContainerDeployment(sshClient, composeCommand);
         logger.debug(`ContainerDeployment created, deploying containers...`);
         const deployResult = await containerDeployment.deployContainers({
-            composePath: '/opt/community-tracker/docker-compose.yml',
-            workingDirectory: '/opt/community-tracker',
+            composePath: '/opt/cultivate/docker-compose.yml',
+            workingDirectory: '/opt/cultivate',
             pullImages: false,
             forceRecreate: true
         });
@@ -122,7 +122,7 @@ export async function deployWorkflow(
         log('Step 8: Verifying deployment...');
         const healthCheck = new HealthCheck(sshClient, composeCommand);
         const healthResult = await healthCheck.verifyContainerHealth({
-            workingDirectory: '/opt/community-tracker',
+            workingDirectory: '/opt/cultivate',
             timeout: 300000, // 5 minutes
             maxRetries: 60,
             useExponentialBackoff: true
@@ -341,9 +341,9 @@ async function buildAndTransferImages(
     }
 
     return {
-        frontend: `cat_frontend:${version}`,
-        backend: `cat_backend:${version}`,
-        database: `cat_database:${version}`
+        frontend: `cultivate_frontend:${version}`,
+        backend: `cultivate_backend:${version}`,
+        database: `cultivate_database:${version}`
     };
 }
 
@@ -370,7 +370,7 @@ async function deployConfiguration(
         },
         environment: {
             nodeEnv: 'production',
-            databaseUrl: 'postgresql://apiuser@localhost/community_tracker?host=/var/run/postgresql',
+            databaseUrl: 'postgresql://apiuser@localhost/cultivate?host=/var/run/postgresql',
             backendPort: 3000
         },
         security: {
@@ -402,7 +402,7 @@ async function deployConfiguration(
     const transferResult = await configTransfer.transferConfiguration({
         composeFilePath: composePath,
         envFilePath: envPath,
-        targetDir: '/opt/community-tracker',
+        targetDir: '/opt/cultivate',
         setPermissions: true
     });
 
@@ -422,32 +422,32 @@ function generateDockerComposeFile(version: string): string {
 
 services:
   database:
-    image: cat_database:${version}
-    container_name: cat_database
+    image: cultivate_database:${version}
+    container_name: cultivate_database
     volumes:
       - db_data:/var/lib/postgresql/data
       - db_socket:/var/run/postgresql
     environment:
       - POSTGRES_USER=apiuser
-      - POSTGRES_DB=community_tracker
+      - POSTGRES_DB=cultivate
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U apiuser -d community_tracker"]
+      test: ["CMD-SHELL", "pg_isready -U apiuser -d cultivate"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   backend:
-    image: cat_backend:${version}
-    container_name: cat_backend
+    image: cultivate_backend:${version}
+    container_name: cultivate_backend
     depends_on:
       database:
         condition: service_healthy
     volumes:
       - db_socket:/var/run/postgresql:rw
     environment:
-      - DATABASE_URL=postgresql://apiuser@localhost/community_tracker?host=/var/run/postgresql
+      - DATABASE_URL=postgresql://apiuser@localhost/cultivate?host=/var/run/postgresql
       - NODE_ENV=production
       - PORT=3000
       - CORS_ORIGIN=\${CORS_ORIGIN:-*}
@@ -465,8 +465,8 @@ services:
       retries: 5
 
   frontend:
-    image: cat_frontend:${version}
-    container_name: cat_frontend
+    image: cultivate_frontend:${version}
+    container_name: cultivate_frontend
     depends_on:
       backend:
         condition: service_healthy
@@ -528,7 +528,7 @@ async function handleDeploymentFailure(
     );
 
     const result = await failureHandler.handleFailure({
-        workingDirectory: '/opt/community-tracker',
+        workingDirectory: '/opt/cultivate',
         rollbackOptions: {
             targetHost: _options.targetHost,
             sshConfig: {
@@ -537,7 +537,7 @@ async function handleDeploymentFailure(
                 privateKeyPath: _options.sshConfig?.privateKeyPath,
                 timeout: _options.sshConfig?.timeout || 30000
             },
-            composePath: '/opt/community-tracker/docker-compose.yml',
+            composePath: '/opt/cultivate/docker-compose.yml',
             verifyHealth: true
         },
         autoRollback: true,

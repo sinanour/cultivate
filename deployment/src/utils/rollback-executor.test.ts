@@ -86,9 +86,9 @@ describe('RollbackExecutor', () => {
     mockHealthCheck.verifyContainerHealth = jest.fn().mockResolvedValue({
       allHealthy: true,
       containers: [
-        { containerName: 'cat_frontend', status: 'healthy', state: 'running', attempts: 1 },
-        { containerName: 'cat_backend', status: 'healthy', state: 'running', attempts: 1 },
-        { containerName: 'cat_database', status: 'healthy', state: 'running', attempts: 1 }
+        { containerName: 'cultivate_frontend', status: 'healthy', state: 'running', attempts: 1 },
+        { containerName: 'cultivate_backend', status: 'healthy', state: 'running', attempts: 1 },
+        { containerName: 'cultivate_database', status: 'healthy', state: 'running', attempts: 1 }
       ],
       duration: 1000
     });
@@ -175,7 +175,7 @@ describe('RollbackExecutor', () => {
       mockHealthCheck.verifyContainerHealth = jest.fn().mockResolvedValue({
         allHealthy: false,
         containers: [
-          { containerName: 'cat_frontend', status: 'unhealthy', state: 'running', attempts: 5, lastError: 'Service not responding' }
+          { containerName: 'cultivate_frontend', status: 'unhealthy', state: 'running', attempts: 5, lastError: 'Service not responding' }
         ],
         duration: 5000,
         error: 'Health check failed'

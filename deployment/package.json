@@ -1,7 +1,7 @@
 {
-  "name": "community-tracker-deployment",
+  "name": "cultivate-deployment",
   "version": "1.0.0",
-  "description": "Production deployment system for Community Activity Tracker",
+  "description": "Production deployment system for Cultivate",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {

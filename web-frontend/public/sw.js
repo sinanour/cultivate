@@ -1,4 +1,4 @@
-const CACHE_NAME = 'community-activity-tracker-v1';
+const CACHE_NAME = 'cultivate-v1';
 const urlsToCache = [
   '/',
   '/index.html',

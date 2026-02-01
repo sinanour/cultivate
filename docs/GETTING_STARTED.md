@@ -47,7 +47,7 @@ This guide will help you get started with developing the Cultivate system. Follo
 
 ```bash
 git clone <repository-url>
-cd community-activity-tracker
+cd cultivate
 ```
 
 ### 2. Review Documentation
@@ -129,10 +129,10 @@ cd ios-mobile-app
 pod install
 
 # Open workspace in Xcode
-open CommunityTracker.xcworkspace
+open Cultivate.xcworkspace
 
 # Or if using SPM, open project
-open CommunityTracker.xcodeproj
+open Cultivate.xcodeproj
 ```
 
 **In Xcode**:
@@ -198,9 +198,9 @@ npm run deploy:dev
 ### 4. Join Communication Channels
 
 **Slack Channels**:
-- Join `#community-tracker-general`
+- Join `#cultivate-general`
 - Join your team-specific channel
-- Join `#community-tracker-api-changes`
+- Join `#cultivate-api-changes`
 - Introduce yourself!
 
 **Meetings**:
@@ -344,7 +344,7 @@ husky install
 ### Making API Changes
 
 1. Create RFC document
-2. Post in `#community-tracker-api-changes`
+2. Post in `#cultivate-api-changes`
 3. Wait for feedback (2 business days)
 4. Update `docs/API_CONTRACT.md`
 5. Implement in backend

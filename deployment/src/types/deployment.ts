@@ -110,7 +110,7 @@ export interface DeploymentConfiguration {
  * Tracks information about built or transferred images
  */
 export interface DockerImage {
-  /** Image name (e.g., "cat_frontend") */
+  /** Image name (e.g., "cultivate_frontend") */
   name: string;
 
   /** Image tag/version (e.g., "1.0.0", "latest") */

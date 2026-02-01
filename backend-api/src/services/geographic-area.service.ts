@@ -532,7 +532,10 @@ export class GeographicAreaService {
             } else {
             // No restrictions - fetch normally
                 const parentId = geographicAreaId || null;
-                areas = await this.geographicAreaRepository.findWithDepth(parentId, depth);
+                const nestedAreas = await this.geographicAreaRepository.findWithDepth(parentId, depth);
+
+                // Flatten the nested structure
+                areas = this.flattenGeographicAreas(nestedAreas);
 
                 // Apply flexible filter if provided
                 let filteredAreas = areas;

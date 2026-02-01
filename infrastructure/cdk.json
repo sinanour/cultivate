@@ -75,7 +75,7 @@
       "apiCpu": 256,
       "apiMemory": 512,
       "logRetentionDays": 7,
-      "domainName": "dev.community-tracker.example.com"
+      "domainName": "dev.cultivate.example.com"
     },
     "staging": {
       "account": "123456789012",
@@ -88,7 +88,7 @@
       "apiCpu": 512,
       "apiMemory": 1024,
       "logRetentionDays": 14,
-      "domainName": "staging.community-tracker.example.com"
+      "domainName": "staging.cultivate.example.com"
     },
     "production": {
       "account": "123456789012",
@@ -101,7 +101,7 @@
       "apiCpu": 1024,
       "apiMemory": 2048,
       "logRetentionDays": 30,
-      "domainName": "community-tracker.example.com"
+      "domainName": "cultivate.example.com"
     }
   }
 }

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Cultivate is a distributed, multi-platform system designed to help communities track, manage, and analyze their community-building activities. The system follows a microservices architecture with five independent packages that communicate through well-defined APIs.
+Cultivate is a distributed, multi-platform system designed to help communities track, manage, and analyze their community-building activities. The system follows a microservices architecture with five independent packages that communicate through well-defined APIs.
 
 ### Design Philosophy
 
@@ -1141,7 +1141,7 @@ Both approaches are complementary and necessary for comprehensive coverage. Unit
 **Configuration**:
 - Minimum 100 iterations per property test
 - Each test tagged with feature name and property number
-- Tag format: `Feature: community-activity-tracker, Property {N}: {property_text}`
+- Tag format: `Feature: cultivate, Property {N}: {property_text}`
 
 **Property Test Examples**:
 

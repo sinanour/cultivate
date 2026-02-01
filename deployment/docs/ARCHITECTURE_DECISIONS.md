@@ -60,7 +60,7 @@ The deployment scripts and Docker Compose configuration handle:
 ```yaml
 services:
   backend:
-    image: cat-backend:latest
+    image: cultivate-backend:latest
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - PORT=3000
@@ -73,7 +73,7 @@ services:
 {
   "containerDefinitions": [{
     "name": "backend",
-    "image": "cat-backend:latest",
+    "image": "cultivate-backend:latest",
     "environment": [
       {"name": "DATABASE_URL", "value": "..."},
       {"name": "PORT", "value": "3000"}
@@ -91,7 +91,7 @@ services:
 
 ### Anti-Patterns Avoided
 
-❌ **Hard-coded paths**: No `/opt/community-tracker` or similar deployment-specific paths in application code
+❌ **Hard-coded paths**: No `/opt/cultivate` or similar deployment-specific paths in application code
 
 ❌ **Orchestration assumptions**: No code that assumes Docker Compose, systemd, or specific process managers
 
@@ -120,13 +120,13 @@ Environment variables are:
 #### 1. Database Configuration
 ```bash
 # Connection details
-DATABASE_URL=postgresql://apiuser@/community_tracker?host=/var/run/postgresql
+DATABASE_URL=postgresql://apiuser@/cultivate?host=/var/run/postgresql
 
 # On-premise: Unix socket path
-DATABASE_URL=postgresql://apiuser@/community_tracker?host=/var/run/postgresql
+DATABASE_URL=postgresql://apiuser@/cultivate?host=/var/run/postgresql
 
 # Cloud: TCP connection with managed database
-DATABASE_URL=postgresql://apiuser:password@db.example.com:5432/community_tracker
+DATABASE_URL=postgresql://apiuser:password@db.example.com:5432/cultivate
 ```
 
 #### 2. Network Configuration
@@ -186,7 +186,7 @@ const config = {
 // ❌ Bad: Hard-coded configuration
 const config = {
   database: {
-    url: 'postgresql://apiuser@/community_tracker?host=/var/run/postgresql',
+    url: 'postgresql://apiuser@/cultivate?host=/var/run/postgresql',
   },
   server: {
     port: 3000,
@@ -502,7 +502,7 @@ CMD ["node", "src/index.js"]
 # Docker Compose
 services:
   backend:
-    image: cat-backend:latest
+    image: cultivate-backend:latest
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - NODE_ENV=production
@@ -666,13 +666,13 @@ When migrating to cloud platforms, the following changes will be required:
 #### 1. Database Migration
 ```typescript
 // Current: Unix socket
-DATABASE_URL=postgresql://apiuser@/community_tracker?host=/var/run/postgresql
+DATABASE_URL=postgresql://apiuser@/cultivate?host=/var/run/postgresql
 
 // Cloud: TCP with managed database
-DATABASE_URL=postgresql://apiuser:password@db.example.com:5432/community_tracker
+DATABASE_URL=postgresql://apiuser:password@db.example.com:5432/cultivate
 
 // Or with IAM authentication (AWS RDS)
-DATABASE_URL=postgresql://apiuser@db.example.com:5432/community_tracker?sslmode=require
+DATABASE_URL=postgresql://apiuser@db.example.com:5432/cultivate?sslmode=require
 // + IAM token generation in application code
 ```
 

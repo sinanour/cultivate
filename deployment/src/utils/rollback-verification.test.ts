@@ -31,17 +31,17 @@ describe('RollbackVerification', () => {
     // Setup default mock implementations
     mockSSHClient.executeCommand = jest.fn().mockResolvedValue({
       stdout: JSON.stringify({
-        Name: 'cat_frontend',
+        Name: 'cultivate_frontend',
         State: 'running',
         Health: 'healthy',
         Status: 'Up 5 minutes'
       }) + '\n' + JSON.stringify({
-        Name: 'cat_backend',
+        Name: 'cultivate_backend',
         State: 'running',
         Health: 'healthy',
         Status: 'Up 5 minutes'
       }) + '\n' + JSON.stringify({
-        Name: 'cat_database',
+        Name: 'cultivate_database',
         State: 'running',
         Health: 'healthy',
         Status: 'Up 5 minutes'
@@ -53,9 +53,9 @@ describe('RollbackVerification', () => {
     mockHealthCheck.verifyContainerHealth = jest.fn().mockResolvedValue({
       allHealthy: true,
       containers: [
-        { containerName: 'cat_frontend', status: 'healthy', state: 'running', attempts: 1 },
-        { containerName: 'cat_backend', status: 'healthy', state: 'running', attempts: 1 },
-        { containerName: 'cat_database', status: 'healthy', state: 'running', attempts: 1 }
+        { containerName: 'cultivate_frontend', status: 'healthy', state: 'running', attempts: 1 },
+        { containerName: 'cultivate_backend', status: 'healthy', state: 'running', attempts: 1 },
+        { containerName: 'cultivate_database', status: 'healthy', state: 'running', attempts: 1 }
       ],
       duration: 1000
     });
@@ -63,7 +63,7 @@ describe('RollbackVerification', () => {
 
   describe('verifyRollback', () => {
     const verificationOptions: RollbackVerificationOptions = {
-      workingDirectory: '/opt/community-tracker'
+      workingDirectory: '/opt/cultivate'
     };
 
     it('should successfully verify rollback when all containers are healthy', async () => {
@@ -80,7 +80,7 @@ describe('RollbackVerification', () => {
     it('should fail when containers are not running', async () => {
       mockSSHClient.executeCommand = jest.fn().mockResolvedValue({
         stdout: JSON.stringify({
-          Name: 'cat_frontend',
+          Name: 'cultivate_frontend',
           State: 'exited',
           Health: 'none',
           Status: 'Exited (1) 2 minutes ago'
@@ -93,16 +93,16 @@ describe('RollbackVerification', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Containers not running after rollback');
-      expect(result.error).toContain('cat_frontend');
+      expect(result.error).toContain('cultivate_frontend');
     });
 
     it('should fail when health checks fail', async () => {
       mockHealthCheck.verifyContainerHealth = jest.fn().mockResolvedValue({
         allHealthy: false,
         containers: [
-          { containerName: 'cat_frontend', status: 'unhealthy', state: 'running', attempts: 5, lastError: 'Connection refused' },
-          { containerName: 'cat_backend', status: 'healthy', state: 'running', attempts: 1 },
-          { containerName: 'cat_database', status: 'healthy', state: 'running', attempts: 1 }
+          { containerName: 'cultivate_frontend', status: 'unhealthy', state: 'running', attempts: 5, lastError: 'Connection refused' },
+          { containerName: 'cultivate_backend', status: 'healthy', state: 'running', attempts: 1 },
+          { containerName: 'cultivate_database', status: 'healthy', state: 'running', attempts: 1 }
         ],
         duration: 5000,
         error: 'Health check failed'
@@ -112,14 +112,14 @@ describe('RollbackVerification', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Health checks failed');
-      expect(result.error).toContain('cat_frontend');
+      expect(result.error).toContain('cultivate_frontend');
     });
 
     it('should capture logs when captureLogs is true and health checks fail', async () => {
       mockHealthCheck.verifyContainerHealth = jest.fn().mockResolvedValue({
         allHealthy: false,
         containers: [
-          { containerName: 'cat_frontend', status: 'unhealthy', state: 'running', attempts: 5 }
+          { containerName: 'cultivate_frontend', status: 'unhealthy', state: 'running', attempts: 5 }
         ],
         duration: 5000
       });
@@ -128,7 +128,7 @@ describe('RollbackVerification', () => {
       mockSSHClient.executeCommand = jest.fn()
         .mockResolvedValueOnce({
           stdout: JSON.stringify({
-            Name: 'cat_frontend',
+            Name: 'cultivate_frontend',
             State: 'running',
             Health: 'unhealthy',
             Status: 'Up 5 minutes'
@@ -179,7 +179,7 @@ describe('RollbackVerification', () => {
 
     it('should pass timeout and maxRetries to health check', async () => {
       await rollbackVerification.verifyRollback({
-        workingDirectory: '/opt/community-tracker',
+        workingDirectory: '/opt/cultivate',
         timeout: 600000,
         maxRetries: 120
       });
@@ -213,17 +213,17 @@ describe('RollbackVerification', () => {
     it('should parse health status correctly', async () => {
       mockSSHClient.executeCommand = jest.fn().mockResolvedValue({
         stdout: JSON.stringify({
-          Name: 'cat_frontend',
+          Name: 'cultivate_frontend',
           State: 'running',
           Health: 'healthy',
           Status: 'Up 5 minutes'
         }) + '\n' + JSON.stringify({
-          Name: 'cat_backend',
+          Name: 'cultivate_backend',
           State: 'running',
           Health: 'starting',
           Status: 'Up 1 minute'
         }) + '\n' + JSON.stringify({
-          Name: 'cat_database',
+          Name: 'cultivate_database',
           State: 'running',
           Health: 'unhealthy',
           Status: 'Up 5 minutes'
@@ -235,9 +235,9 @@ describe('RollbackVerification', () => {
       mockHealthCheck.verifyContainerHealth = jest.fn().mockResolvedValue({
         allHealthy: false,
         containers: [
-          { containerName: 'cat_frontend', status: 'healthy', state: 'running', attempts: 1 },
-          { containerName: 'cat_backend', status: 'starting', state: 'running', attempts: 1 },
-          { containerName: 'cat_database', status: 'unhealthy', state: 'running', attempts: 1 }
+          { containerName: 'cultivate_frontend', status: 'healthy', state: 'running', attempts: 1 },
+          { containerName: 'cultivate_backend', status: 'starting', state: 'running', attempts: 1 },
+          { containerName: 'cultivate_database', status: 'unhealthy', state: 'running', attempts: 1 }
         ],
         duration: 1000
       });
@@ -252,7 +252,7 @@ describe('RollbackVerification', () => {
 
   describe('quickVerify', () => {
     it('should return true when all containers are running', async () => {
-      const result = await rollbackVerification.quickVerify('/opt/community-tracker');
+      const result = await rollbackVerification.quickVerify('/opt/cultivate');
 
       expect(result).toBe(true);
     });
@@ -260,7 +260,7 @@ describe('RollbackVerification', () => {
     it('should return false when any container is not running', async () => {
       mockSSHClient.executeCommand = jest.fn().mockResolvedValue({
         stdout: JSON.stringify({
-          Name: 'cat_frontend',
+          Name: 'cultivate_frontend',
           State: 'exited',
           Health: 'none',
           Status: 'Exited (1) 2 minutes ago'
@@ -269,7 +269,7 @@ describe('RollbackVerification', () => {
         exitCode: 0
       });
 
-      const result = await rollbackVerification.quickVerify('/opt/community-tracker');
+      const result = await rollbackVerification.quickVerify('/opt/cultivate');
 
       expect(result).toBe(false);
     });
@@ -279,7 +279,7 @@ describe('RollbackVerification', () => {
         new Error('Connection failed')
       );
 
-      const result = await rollbackVerification.quickVerify('/opt/community-tracker');
+      const result = await rollbackVerification.quickVerify('/opt/cultivate');
 
       expect(result).toBe(false);
     });

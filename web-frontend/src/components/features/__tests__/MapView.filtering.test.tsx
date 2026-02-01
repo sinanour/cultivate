@@ -71,7 +71,7 @@ describe('MapView - Comprehensive Filtering', () => {
         name: 'Study Circle',
         isPredefined: true,
         activityCategory: {
-          id: 'cat-1',
+          id: 'cultivate-1',
           name: 'Core Activities',
           isPredefined: true,
           createdAt: '2024-01-01T00:00:00Z',
@@ -143,7 +143,7 @@ describe('MapView - Comprehensive Filtering', () => {
       <TestWrapper>
         <MapView
           mode="activitiesByType"
-          activityCategoryIds={['cat-1', 'cat-2']}
+          activityCategoryIds={['cultivate-1', 'cultivate-2']}
           readyToFetch={true}
         />
       </TestWrapper>
@@ -156,7 +156,7 @@ describe('MapView - Comprehensive Filtering', () => {
     const callArgs = vi.mocked(MapDataService.getActivityMarkers).mock.calls[0];
     const filters = callArgs[0];
     
-    expect(filters.activityCategoryIds).toEqual(['cat-1', 'cat-2']);
+    expect(filters.activityCategoryIds).toEqual(['cultivate-1', 'cultivate-2']);
   });
 
   /**
@@ -288,7 +288,7 @@ describe('MapView - Comprehensive Filtering', () => {
       <TestWrapper>
         <MapView
           mode="venues"
-          activityCategoryIds={['cat-1']}
+          activityCategoryIds={['cultivate-1']}
           activityTypeIds={['type-1']}
           status="ACTIVE"
           populationIds={['pop-1']}
@@ -324,7 +324,7 @@ describe('MapView - Comprehensive Filtering', () => {
       <TestWrapper>
         <MapView
           mode="participantHomes"
-          activityCategoryIds={['cat-1']}
+          activityCategoryIds={['cultivate-1']}
           activityTypeIds={['type-1']}
           status="ACTIVE"
           populationIds={['pop-1']}
@@ -362,7 +362,7 @@ describe('MapView - Comprehensive Filtering', () => {
       <TestWrapper>
         <MapView
           mode="activitiesByType"
-          activityCategoryIds={['cat-1']}
+          activityCategoryIds={['cultivate-1']}
           activityTypeIds={['type-1']}
           status="ACTIVE"
           populationIds={['pop-1']}
@@ -378,7 +378,7 @@ describe('MapView - Comprehensive Filtering', () => {
     // Verify filters were applied in activity mode
     let callArgs = vi.mocked(MapDataService.getActivityMarkers).mock.calls[0];
     let filters = callArgs[0];
-    expect(filters.activityCategoryIds).toEqual(['cat-1']);
+    expect(filters.activityCategoryIds).toEqual(['cultivate-1']);
     expect(filters.activityTypeIds).toEqual(['type-1']);
     expect(filters.status).toBe('ACTIVE');
     expect(filters.populationIds).toEqual(['pop-1']);
@@ -388,7 +388,7 @@ describe('MapView - Comprehensive Filtering', () => {
       <TestWrapper>
         <MapView
           mode="venues"
-          activityCategoryIds={['cat-1']}
+          activityCategoryIds={['cultivate-1']}
           activityTypeIds={['type-1']}
           status="ACTIVE"
           populationIds={['pop-1']}
@@ -414,7 +414,7 @@ describe('MapView - Comprehensive Filtering', () => {
       <TestWrapper>
         <MapView
           mode="activitiesByCategory"
-          activityCategoryIds={['cat-1']}
+          activityCategoryIds={['cultivate-1']}
           activityTypeIds={['type-1']}
           status="ACTIVE"
           populationIds={['pop-1']}
@@ -432,7 +432,7 @@ describe('MapView - Comprehensive Filtering', () => {
     const lastCallIndex = vi.mocked(MapDataService.getActivityMarkers).mock.calls.length - 1;
     callArgs = vi.mocked(MapDataService.getActivityMarkers).mock.calls[lastCallIndex];
     filters = callArgs[0];
-    expect(filters.activityCategoryIds).toEqual(['cat-1']);
+    expect(filters.activityCategoryIds).toEqual(['cultivate-1']);
     expect(filters.activityTypeIds).toEqual(['type-1']);
     expect(filters.status).toBe('ACTIVE');
     expect(filters.populationIds).toEqual(['pop-1']);
@@ -460,7 +460,7 @@ describe('MapView - Comprehensive Filtering', () => {
         <TestWrapper>
           <MapView
             mode={mode}
-            activityCategoryIds={['cat-1']}
+            activityCategoryIds={['cultivate-1']}
             activityTypeIds={['type-1']}
             status="ACTIVE"
             populationIds={['pop-1']}
@@ -493,7 +493,7 @@ describe('MapView - Comprehensive Filtering', () => {
       <TestWrapper>
         <MapView
           mode="activitiesByType"
-          activityCategoryIds={['cat-1', 'cat-2']}
+          activityCategoryIds={['cultivate-1', 'cultivate-2']}
           activityTypeIds={['type-1']}
           status="ACTIVE,PLANNED"
           populationIds={['pop-1', 'pop-2']}
@@ -511,7 +511,7 @@ describe('MapView - Comprehensive Filtering', () => {
     const callArgs = vi.mocked(MapDataService.getActivityMarkers).mock.calls[0];
     const filters = callArgs[0];
     
-    expect(filters.activityCategoryIds).toEqual(['cat-1', 'cat-2']);
+    expect(filters.activityCategoryIds).toEqual(['cultivate-1', 'cultivate-2']);
     expect(filters.activityTypeIds).toEqual(['type-1']);
     expect(filters.status).toBe('ACTIVE,PLANNED');
     expect(filters.populationIds).toEqual(['pop-1', 'pop-2']);
@@ -585,7 +585,7 @@ describe('MapView - Comprehensive Filtering', () => {
       <TestWrapper>
         <MapView
           mode="venues"
-          activityCategoryIds={['cat-1']}
+          activityCategoryIds={['cultivate-1']}
           activityTypeIds={['type-1']}
           status="ACTIVE"
           populationIds={['pop-1']}

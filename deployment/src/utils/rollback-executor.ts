@@ -181,7 +181,7 @@ export class RollbackExecutor {
   private async stopContainers(): Promise<void> {
     try {
       this.log('Stopping current containers');
-      await this.containerDeployment.stopContainers('/opt/community-tracker');
+      await this.containerDeployment.stopContainers('/opt/cultivate');
       this.log('Containers stopped successfully');
     } catch (error) {
       this.log(`Warning: Failed to stop containers: ${error}`, 'warn');
@@ -300,7 +300,7 @@ export class RollbackExecutor {
     // For now, we'll update the docker-compose.yml to use previous image versions
     const composeContent = this.generateComposeFile(previousState);
 
-    const remotePath = options.composePath || '/opt/community-tracker/docker-compose.yml';
+    const remotePath = options.composePath || '/opt/cultivate/docker-compose.yml';
     await this.sshClient.uploadFile(
       composeContent,
       remotePath
@@ -323,13 +323,13 @@ export class RollbackExecutor {
 services:
   database:
     image: ${imageVersions.database}
-    container_name: cat_database
+    container_name: cultivate_database
     volumes:
       - db_data:/var/lib/postgresql/data
       - db_socket:/var/run/postgresql
     environment:
       - POSTGRES_USER=apiuser
-      - POSTGRES_DB=community_tracker
+      - POSTGRES_DB=cultivate
     networks:
       - backend
     healthcheck:
@@ -340,14 +340,14 @@ services:
 
   backend:
     image: ${imageVersions.backend}
-    container_name: cat_backend
+    container_name: cultivate_backend
     depends_on:
       database:
         condition: service_healthy
     volumes:
       - db_socket:/var/run/postgresql:rw
     environment:
-      - DATABASE_URL=postgresql://apiuser@/community_tracker?host=/var/run/postgresql
+      - DATABASE_URL=postgresql://apiuser@/cultivate?host=/var/run/postgresql
       - NODE_ENV=production
       - PORT=3000
     networks:
@@ -360,7 +360,7 @@ services:
 
   frontend:
     image: ${imageVersions.frontend}
-    container_name: cat_frontend
+    container_name: cultivate_frontend
     depends_on:
       backend:
         condition: service_healthy
@@ -395,8 +395,8 @@ volumes:
   private async startContainers(): Promise<void> {
     this.log('Starting containers with previous versions');
     await this.containerDeployment.deployContainers({
-      composePath: '/opt/community-tracker/docker-compose.yml',
-      workingDirectory: '/opt/community-tracker',
+      composePath: '/opt/cultivate/docker-compose.yml',
+      workingDirectory: '/opt/cultivate',
       pullImages: false,
       forceRecreate: true
     });
@@ -410,7 +410,7 @@ volumes:
     this.log('Verifying rollback with health checks');
 
     const healthResult = await this.healthCheck.verifyContainerHealth({
-      workingDirectory: '/opt/community-tracker',
+      workingDirectory: '/opt/cultivate',
       timeout: 300000, // 5 minutes
       maxRetries: 60
     });

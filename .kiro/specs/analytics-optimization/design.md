@@ -259,8 +259,8 @@ interface EngagementWireFormat {
       { id: "type-uuid-2", name: "Training" }
     ],
     activityCategories: [
-      { id: "cat-uuid-1", name: "Education" },
-      { id: "cat-uuid-2", name: "Recreation" }
+      { id: "cultivate-uuid-1", name: "Education" },
+      { id: "cultivate-uuid-2", name: "Recreation" }
     ]
   },
   metadata: {

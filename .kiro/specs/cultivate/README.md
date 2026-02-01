@@ -15,7 +15,7 @@ The Cultivate specification has been structured into a modular architecture with
 
 ### System-Level Specification
 
-**Location:** `.kiro/specs/community-activity-tracker/`
+**Location:** `.kiro/specs/cultivate/`
 
 **Purpose:** Defines overall system requirements, architecture, and cross-package integration.
 
@@ -186,7 +186,7 @@ All packages implement equivalent models:
 
 ## References
 
-- System Requirements: `.kiro/specs/community-activity-tracker/requirements.md`
+- System Requirements: `.kiro/specs/cultivate/requirements.md`
 - Infrastructure Requirements: `.kiro/specs/infrastructure/requirements.md`
 - Backend API Requirements: `.kiro/specs/backend-api/requirements.md`
 - Web Frontend Requirements: `.kiro/specs/web-frontend/requirements.md`

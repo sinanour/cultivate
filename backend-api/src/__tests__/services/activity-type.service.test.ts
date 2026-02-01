@@ -24,8 +24,8 @@ describe('ActivityTypeService', () => {
     describe('getAllActivityTypes', () => {
         it('should return all activity types', async () => {
             const mockTypes = [
-                { id: '1', name: "Children's Class", activityCategoryId: 'cat-1', isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 },
-                { id: '2', name: 'Ruhi Book 01', activityCategoryId: 'cat-2', isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '1', name: "Children's Class", activityCategoryId: 'cultivate-1', isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 },
+                { id: '2', name: 'Ruhi Book 01', activityCategoryId: 'cultivate-2', isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 },
             ];
             mockPrisma.activityType.findMany.mockResolvedValue(mockTypes as any);
 
@@ -47,9 +47,9 @@ describe('ActivityTypeService', () => {
 
     describe('createActivityType', () => {
         it('should create activity type with valid data', async () => {
-            const input = { name: 'Ruhi Book 01', activityCategoryId: 'cat-1' };
+            const input = { name: 'Ruhi Book 01', activityCategoryId: 'cultivate-1' };
             const mockType = { id: '1', name: input.name, activityCategoryId: input.activityCategoryId, isPredefined: false, createdAt: new Date(), updatedAt: new Date(), version: 1 };
-            const mockCategory = { id: 'cat-1', name: 'Study Circles', isPredefined: true, version: 1, createdAt: new Date(), updatedAt: new Date() };
+            const mockCategory = { id: 'cultivate-1', name: 'Study Circles', isPredefined: true, version: 1, createdAt: new Date(), updatedAt: new Date() };
 
             mockPrisma.activityType.findUnique.mockResolvedValue(null);
             mockPrisma.activityCategory.findUnique.mockResolvedValue(mockCategory as any);
@@ -60,7 +60,7 @@ describe('ActivityTypeService', () => {
             // Service should add computed isPredefined field based on name
             expect(result).toEqual({ ...mockType, activityCategory: mockCategory, isPredefined: true });
             expect(mockPrisma.activityType.findUnique).toHaveBeenCalledWith({ where: { name: 'Ruhi Book 01' } });
-            expect(mockPrisma.activityCategory.findUnique).toHaveBeenCalledWith({ where: { id: 'cat-1' } });
+            expect(mockPrisma.activityCategory.findUnique).toHaveBeenCalledWith({ where: { id: 'cultivate-1' } });
             expect(mockPrisma.activityType.create).toHaveBeenCalledWith({
                 data: {
                     name: input.name,
@@ -72,8 +72,8 @@ describe('ActivityTypeService', () => {
         });
 
         it('should throw error for duplicate name', async () => {
-            const input = { name: 'Ruhi Book 1', activityCategoryId: 'cat-1' };
-            const existing = { id: '1', name: 'Ruhi Book 1', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
+            const input = { name: 'Ruhi Book 1', activityCategoryId: 'cultivate-1' };
+            const existing = { id: '1', name: 'Ruhi Book 1', activityCategoryId: 'cultivate-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
             mockPrisma.activityType.findUnique.mockResolvedValue(existing as any);
 
@@ -81,7 +81,7 @@ describe('ActivityTypeService', () => {
         });
 
         it('should throw error for missing name', async () => {
-            const input = { name: '', activityCategoryId: 'cat-1' };
+            const input = { name: '', activityCategoryId: 'cultivate-1' };
 
             await expect(service.createActivityType(input)).rejects.toThrow('required');
         });
@@ -100,7 +100,7 @@ describe('ActivityTypeService', () => {
         it('should update activity type with valid data', async () => {
             const id = '1';
             const input = { name: 'Updated Custom Type' };
-            const existing = { id, name: 'Custom Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
+            const existing = { id, name: 'Custom Type', activityCategoryId: 'cultivate-1', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
             const updated = { ...existing, ...input, version: 2 };
 
             mockPrisma.activityType.findUnique.mockResolvedValueOnce(existing as any); // First call for findById
@@ -129,8 +129,8 @@ describe('ActivityTypeService', () => {
         it('should throw error for duplicate name', async () => {
             const id = '1';
             const input = { name: 'Ruhi Book 1' };
-            const existing = { id, name: 'Old Name', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
-            const duplicate = { id: '2', name: 'Ruhi Book 1', activityCategoryId: 'cat-2', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
+            const existing = { id, name: 'Old Name', activityCategoryId: 'cultivate-1', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
+            const duplicate = { id: '2', name: 'Ruhi Book 1', activityCategoryId: 'cultivate-2', createdAt: new Date(), updatedAt: new Date(), version: 1, isPredefined: false };
 
             mockPrisma.activityType.findUnique.mockResolvedValueOnce(existing as any); // First call for findById
             mockPrisma.activityType.findUnique.mockResolvedValueOnce(duplicate as any); // Second call for findByName
@@ -142,7 +142,7 @@ describe('ActivityTypeService', () => {
     describe('deleteActivityType', () => {
         it('should delete activity type when not referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Custom Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
+            const existing = { id, name: 'Custom Type', activityCategoryId: 'cultivate-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
             mockPrisma.activityType.findUnique.mockResolvedValue(existing as any);
             mockPrisma.activity.count.mockResolvedValue(0);
@@ -161,7 +161,7 @@ describe('ActivityTypeService', () => {
 
         it('should throw error when activity type is referenced', async () => {
             const id = '1';
-            const existing = { id, name: 'Custom Type', activityCategoryId: 'cat-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
+            const existing = { id, name: 'Custom Type', activityCategoryId: 'cultivate-1', createdAt: new Date(), updatedAt: new Date(), version: 1 };
 
             mockPrisma.activityType.findUnique.mockResolvedValue(existing as any);
             mockPrisma.activity.count.mockResolvedValue(5);

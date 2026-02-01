@@ -12,7 +12,7 @@ RUN chmod +x /docker-entrypoint-initdb.d/10-init-db.sh
 # Configure PostgreSQL with apiuser as the default user
 # The official postgres image will create this user and database automatically
 ENV POSTGRES_USER=apiuser
-ENV POSTGRES_DB=community_tracker
+ENV POSTGRES_DB=cultivate
 # Allow trust authentication during initialization, we'll switch to peer after
 ENV POSTGRES_HOST_AUTH_METHOD=trust
 

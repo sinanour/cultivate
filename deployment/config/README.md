@@ -1,6 +1,6 @@
 # Docker Compose Configuration
 
-This directory contains the Docker Compose configuration for the Community Activity Tracker production deployment system.
+This directory contains the Docker Compose configuration for the Cultivate production deployment system.
 
 ## Files
 
@@ -68,7 +68,7 @@ HTTPS_PORT=443
 
 # Database Configuration
 POSTGRES_USER=apiuser
-POSTGRES_DB=community_tracker
+POSTGRES_DB=cultivate
 
 # Backend Configuration
 NODE_ENV=production
@@ -191,7 +191,7 @@ This ensures each service has its dependencies available before starting.
 If the backend cannot connect to the database:
 
 1. Check database health: `docker-compose ps`
-2. Verify socket volume is mounted: `docker inspect cat_backend`
+2. Verify socket volume is mounted: `docker inspect cultivate_backend`
 3. Check database logs: `docker-compose logs database`
 4. Verify apiuser exists in database
 

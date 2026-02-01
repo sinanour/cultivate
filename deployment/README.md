@@ -1,6 +1,6 @@
-# Community Activity Tracker - Deployment System
+# Cultivate - Deployment System
 
-This directory contains the production deployment system for the Community Activity Tracker application. The system uses Docker containers orchestrated by Docker Compose, with automated deployment scripts for streamlined operations.
+This directory contains the production deployment system for the Cultivate application. The system uses Docker containers orchestrated by Docker Compose, with automated deployment scripts for streamlined operations.
 
 ## Overview
 

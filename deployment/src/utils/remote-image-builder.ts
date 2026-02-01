@@ -493,7 +493,7 @@ export async function buildAllImagesRemote(
     sshClient,
     dockerfile: path.join(contextPath, 'Dockerfile.frontend'),
     context: contextPath,
-    imageName: 'cat_frontend',
+    imageName: 'cultivate_frontend',
     tag: version,
     verbose: true
   }, onProgress);
@@ -509,7 +509,7 @@ export async function buildAllImagesRemote(
     sshClient,
     dockerfile: path.join(contextPath, 'Dockerfile.backend'),
     context: contextPath,
-    imageName: 'cat_backend',
+    imageName: 'cultivate_backend',
     tag: version,
     verbose: true
   }, onProgress);
@@ -525,7 +525,7 @@ export async function buildAllImagesRemote(
     sshClient,
     dockerfile: path.join(contextPath, 'Dockerfile.database'),
     context: contextPath,
-    imageName: 'cat_database',
+    imageName: 'cultivate_database',
     tag: version,
     verbose: true
   }, onProgress);

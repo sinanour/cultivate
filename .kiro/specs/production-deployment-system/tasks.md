@@ -85,7 +85,7 @@ This implementation plan breaks down the production deployment system into discr
 - [x] 5. Implement database initialization scripts
   - [x] 5.1 Create init-db.sh for database setup
     - Write script to create apiuser database user
-    - Create community_tracker database with proper ownership
+    - Create cultivate database with proper ownership
     - Grant necessary privileges to apiuser
     - _Requirements: 3.1, 3.3_
   

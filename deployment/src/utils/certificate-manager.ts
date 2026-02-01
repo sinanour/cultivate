@@ -88,7 +88,7 @@ export async function prepareCertificates(config: CertificateConfig): Promise<bo
 export async function transferCertificates(
   sshClient: SSHClient,
   config: CertificateConfig,
-  remoteCertDir: string = '/opt/community-tracker/certs'
+  remoteCertDir: string = '/opt/cultivate/certs'
 ): Promise<boolean> {
   if (!config.enableHttps) {
     logger.info('HTTPS not enabled, skipping certificate transfer');
@@ -141,7 +141,7 @@ export async function transferCertificates(
  */
 export function generateNginxSslConfig(
   config: CertificateConfig,
-  remoteCertDir: string = '/opt/community-tracker/certs'
+  remoteCertDir: string = '/opt/cultivate/certs'
 ): string {
   if (!config.enableHttps) {
     return '';
@@ -187,7 +187,7 @@ export function generateNginxSslConfig(
 export async function updateNginxConfig(
   sshClient: SSHClient,
   config: CertificateConfig,
-  nginxConfigPath: string = '/opt/community-tracker/nginx.conf'
+  nginxConfigPath: string = '/opt/cultivate/nginx.conf'
 ): Promise<boolean> {
   try {
     logger.info('Updating Nginx configuration for HTTPS', { nginxConfigPath });
@@ -255,7 +255,7 @@ export async function updateNginxConfig(
  */
 export function generateDockerComposeVolumeConfig(
   config: CertificateConfig,
-  remoteCertDir: string = '/opt/community-tracker/certs'
+  remoteCertDir: string = '/opt/cultivate/certs'
 ): string {
   if (!config.enableHttps) {
     return '';
@@ -292,7 +292,7 @@ export function getCertificateConfigFromEnv(): CertificateConfig {
  */
 export async function reloadNginxConfig(
   sshClient: SSHClient,
-  containerName: string = 'cat_frontend'
+  containerName: string = 'cultivate_frontend'
 ): Promise<boolean> {
   try {
     logger.info('Reloading Nginx configuration', { containerName });
@@ -329,8 +329,8 @@ export async function reloadNginxConfig(
 export async function renewCertificates(
   sshClient: SSHClient,
   config: CertificateConfig,
-  remoteCertDir: string = '/opt/community-tracker/certs',
-  containerName: string = 'cat_frontend'
+  remoteCertDir: string = '/opt/cultivate/certs',
+  containerName: string = 'cultivate_frontend'
 ): Promise<boolean> {
   try {
     logger.info('Renewing certificates without container rebuild', {
