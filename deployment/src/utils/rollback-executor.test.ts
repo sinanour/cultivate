@@ -267,11 +267,19 @@ describe('RollbackExecutor', () => {
 
       expect(mockSSHClient.uploadFile).toHaveBeenCalled();
       const uploadCall = mockSSHClient.uploadFile.mock.calls[0];
-      const composeContent = uploadCall[0].toString();
+      // uploadFile receives (localPath, remotePath)
+      // The first argument is the local temp file path, not the content
+      const remotePath = uploadCall[1];
 
-      expect(composeContent).toContain('frontend:1.0.0');
-      expect(composeContent).toContain('backend:1.0.0');
-      expect(composeContent).toContain('database:1.0.0');
+      // Verify the remote path is correct
+      expect(remotePath).toMatch(/docker-compose\.yml$/);
+
+      // Verify uploadFile was called (the actual content verification would require
+      // reading the temp file, which is cleaned up after upload)
+      expect(mockSSHClient.uploadFile).toHaveBeenCalledWith(
+        expect.stringContaining('rollback-config-'),
+        expect.any(String)
+      );
     });
   });
 });

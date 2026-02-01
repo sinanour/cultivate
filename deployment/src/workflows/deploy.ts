@@ -422,10 +422,10 @@ async function deployConfiguration(
         throw new Error(`Local .env file not found: ${localEnvPath}. Please create it from deployment/config/.env.example`);
     }
 
-    // Generate docker-compose.yml with OS-appropriate paths
+    // Generate docker-compose.yml with OS-appropriate paths and configuration
     const tempDir = os.tmpdir();
     const composePath = path.join(tempDir, 'docker-compose.yml');
-    const composeContent = generateDockerComposeFile(version, deploymentPaths);
+    const composeContent = generateDockerComposeFile(version, deploymentPaths, config);
     await fs.writeFile(composePath, composeContent);
 
     // Transfer configuration files
@@ -446,15 +446,23 @@ async function deployConfiguration(
 }
 
 /**
- * Generate docker-compose.yml content with OS-appropriate paths
+ * Generate docker-compose.yml content with OS-appropriate paths and configuration
  * 
  * For socket volumes, we ALWAYS use Docker named volumes (not host paths)
  * because Unix domain sockets don't work on macOS filesystems mounted into Finch VM.
  * 
  * For data volumes, we use host paths on Linux for easier backup/management,
  * but named volumes on macOS to avoid filesystem boundary issues.
+ * 
+ * @param version - Deployment version for image tags
+ * @param deploymentPaths - OS-specific deployment paths
+ * @param config - Deployment configuration with port and certificate settings
  */
-function generateDockerComposeFile(version: string, deploymentPaths: DeploymentPathStrategy): string {
+function generateDockerComposeFile(
+    version: string,
+    deploymentPaths: DeploymentPathStrategy,
+    config: any
+): string {
     // For macOS, use named volumes for both data and socket
     // For Linux, use host path for data (easier backup) and named volume for socket
     const useNamedVolumes = deploymentPaths.targetOS === 'macos';
@@ -465,6 +473,18 @@ function generateDockerComposeFile(version: string, deploymentPaths: DeploymentP
 
     // Socket MUST always be a named volume (Unix sockets don't work on mounted filesystems)
     const dbSocketVolume = 'db_socket';
+
+    // Get port mappings from configuration
+    const httpPort = config.network?.httpPort || 80;
+    const httpsPort = config.network?.httpsPort || 443;
+
+    // Determine if HTTPS is enabled and certificates are provided
+    const enableHttps = config.network?.enableHttps && config.volumes?.certPath;
+
+    // Build certificate volume mount if HTTPS is enabled
+    const certVolumeMount = enableHttps
+        ? `      - ${config.volumes.certPath}:/etc/nginx/certs:ro\n`
+        : '';
 
     return `version: '3.8'
 
@@ -521,9 +541,10 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "80:80"
-      - "443:443"
-    environment:
+      - "${httpPort}:80"
+      - "${httpsPort}:443"
+    volumes:
+${certVolumeMount}    environment:
       - VITE_BACKEND_URL=/api/v1
     networks:
       - backend

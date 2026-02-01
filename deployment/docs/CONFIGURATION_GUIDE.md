@@ -51,14 +51,26 @@ npm run deploy -- user@production-host
 
 ```bash
 # HTTP port for web frontend
+# This port is mapped from the host to the container
+# Example: HTTP_PORT=8080 means the application is accessible at http://host:8080
 HTTP_PORT=80
 
 # HTTPS port for web frontend
+# This port is mapped from the host to the container
+# Example: HTTPS_PORT=1443 means the application is accessible at https://host:1443
 HTTPS_PORT=443
 
 # Enable HTTPS (requires certificates)
+# When true and CERT_PATH is set, certificates will be mounted into the frontend container
 ENABLE_HTTPS=false
 ```
+
+**Port Mapping Behavior:**
+- The configured ports are used in the docker-compose.yml port mappings
+- Format: `"${HTTP_PORT}:80"` and `"${HTTPS_PORT}:443"`
+- The left side (host port) uses your configured value
+- The right side (container port) is always 80 and 443
+- Example: `HTTP_PORT=8080` results in `"8080:80"` mapping
 
 ### Certificate Configuration
 
@@ -69,6 +81,48 @@ CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
 
 # Note: This is the path on the REMOTE host, not your local machine
 ```
+
+**Certificate Mounting Behavior:**
+- Certificates are only mounted when **both** `ENABLE_HTTPS=true` **and** `CERT_PATH` is set
+- If either condition is false, the certificate volume mount is omitted from docker-compose.yml
+- The certificate directory is mounted read-only into the frontend container at `/etc/nginx/certs`
+- Nginx configuration automatically uses certificates when they are present
+
+**Certificate Requirements:**
+- Certificates must exist on the remote host before deployment
+- The `CERT_PATH` directory should contain:
+  - `fullchain.pem` (or `cert.pem`)
+  - `privkey.pem` (or `key.pem`)
+- Certificates must be readable by the container user
+
+**Examples:**
+
+1. **HTTP only (no certificates):**
+   ```bash
+   HTTP_PORT=80
+   HTTPS_PORT=443
+   ENABLE_HTTPS=false
+   # CERT_PATH not set
+   ```
+   Result: No certificate volume mount, HTTP only
+
+2. **HTTPS with certificates:**
+   ```bash
+   HTTP_PORT=80
+   HTTPS_PORT=443
+   ENABLE_HTTPS=true
+   CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
+   ```
+   Result: Certificates mounted, both HTTP and HTTPS available
+
+3. **Custom ports with HTTPS:**
+   ```bash
+   HTTP_PORT=8080
+   HTTPS_PORT=1443
+   ENABLE_HTTPS=true
+   CERT_PATH=/etc/certs/
+   ```
+   Result: Application accessible at http://host:8080 and https://host:1443
 
 ### Backend API Configuration
 

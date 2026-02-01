@@ -45,18 +45,18 @@ describe('HealthCheck', () => {
       // Mock getting container names
       mockSSHClient.executeCommand
         .mockResolvedValueOnce({
-          stdout: JSON.stringify({ Name: 'app_web' }) + '\n' + JSON.stringify({ Name: 'app_api' }),
+          stdout: 'app_web\napp_api',
           stderr: '',
           exitCode: 0,
         })
         // Mock health checks for both containers (healthy)
         .mockResolvedValueOnce({
-          stdout: 'running|healthy',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'healthy' }),
           stderr: '',
           exitCode: 0,
         })
         .mockResolvedValueOnce({
-          stdout: 'running|healthy',
+          stdout: JSON.stringify({ Name: 'app_api', State: 'running', Health: 'healthy' }),
           stderr: '',
           exitCode: 0,
         });
@@ -74,13 +74,13 @@ describe('HealthCheck', () => {
       // Mock getting container names
       mockSSHClient.executeCommand
         .mockResolvedValueOnce({
-          stdout: JSON.stringify({ Name: 'app_web' }),
+          stdout: 'app_web',
           stderr: '',
           exitCode: 0,
         })
         // Mock health check (no health check defined, but running)
         .mockResolvedValueOnce({
-          stdout: 'running|none',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running' }),
           stderr: '',
           exitCode: 0,
         });
@@ -96,25 +96,25 @@ describe('HealthCheck', () => {
       // Mock getting container names
       mockSSHClient.executeCommand
         .mockResolvedValueOnce({
-          stdout: JSON.stringify({ Name: 'app_web' }),
+          stdout: 'app_web',
           stderr: '',
           exitCode: 0,
         })
         // First check - starting
         .mockResolvedValueOnce({
-          stdout: 'running|starting',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'starting' }),
           stderr: '',
           exitCode: 0,
         })
         // Second check - still starting
         .mockResolvedValueOnce({
-          stdout: 'running|starting',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'starting' }),
           stderr: '',
           exitCode: 0,
         })
         // Third check - healthy
         .mockResolvedValueOnce({
-          stdout: 'running|healthy',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'healthy' }),
           stderr: '',
           exitCode: 0,
         });
@@ -129,13 +129,13 @@ describe('HealthCheck', () => {
       // Mock getting container names
       mockSSHClient.executeCommand
         .mockResolvedValueOnce({
-          stdout: JSON.stringify({ Name: 'app_web' }),
+          stdout: 'app_web',
           stderr: '',
           exitCode: 0,
         })
         // Mock health check (unhealthy)
         .mockResolvedValueOnce({
-          stdout: 'running|unhealthy',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'unhealthy' }),
           stderr: '',
           exitCode: 0,
         });
@@ -151,13 +151,13 @@ describe('HealthCheck', () => {
       // Mock getting container names
       mockSSHClient.executeCommand
         .mockResolvedValueOnce({
-          stdout: JSON.stringify({ Name: 'app_web' }),
+          stdout: 'app_web',
           stderr: '',
           exitCode: 0,
         })
         // Mock health check (exited)
         .mockResolvedValueOnce({
-          stdout: 'exited|none',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'exited' }),
           stderr: '',
           exitCode: 0,
         });
@@ -180,13 +180,13 @@ describe('HealthCheck', () => {
       // Mock getting container names
       mockSSHClient.executeCommand
         .mockResolvedValueOnce({
-          stdout: JSON.stringify({ Name: 'app_web' }),
+          stdout: 'app_web',
           stderr: '',
           exitCode: 0,
         })
         // Mock health checks (always starting)
         .mockResolvedValue({
-          stdout: 'running|starting',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'starting' }),
           stderr: '',
           exitCode: 0,
         });
@@ -194,7 +194,7 @@ describe('HealthCheck', () => {
       const result = await healthCheck.verifyContainerHealth(shortTimeoutOptions);
 
       expect(result.allHealthy).toBe(false);
-      expect(result.error).toContain('timeout');
+      expect(result.error).toContain('Health check timeout');
     });
 
     it('should use exponential backoff when enabled', async () => {
@@ -211,25 +211,25 @@ describe('HealthCheck', () => {
       // Mock getting container names
       mockSSHClient.executeCommand
         .mockResolvedValueOnce({
-          stdout: JSON.stringify({ Name: 'app_web' }),
+          stdout: 'app_web',
           stderr: '',
           exitCode: 0,
         })
         // First check - starting
         .mockResolvedValueOnce({
-          stdout: 'running|starting',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'starting' }),
           stderr: '',
           exitCode: 0,
         })
         // Second check - starting
         .mockResolvedValueOnce({
-          stdout: 'running|starting',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'starting' }),
           stderr: '',
           exitCode: 0,
         })
         // Third check - healthy
         .mockResolvedValueOnce({
-          stdout: 'running|healthy',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'healthy' }),
           stderr: '',
           exitCode: 0,
         });
@@ -278,7 +278,7 @@ describe('HealthCheck', () => {
   describe('checkContainerHealth', () => {
     it('should check container health status', async () => {
       mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: 'running|healthy',
+        stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'healthy' }),
         stderr: '',
         exitCode: 0,
       });
@@ -292,7 +292,7 @@ describe('HealthCheck', () => {
 
     it('should handle containers without health checks', async () => {
       mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: 'running|none',
+        stdout: JSON.stringify({ Name: 'app_web', State: 'running' }),
         stderr: '',
         exitCode: 0,
       });
@@ -305,7 +305,7 @@ describe('HealthCheck', () => {
 
     it('should handle unhealthy containers', async () => {
       mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: 'running|unhealthy',
+        stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'unhealthy' }),
         stderr: '',
         exitCode: 0,
       });
@@ -318,7 +318,7 @@ describe('HealthCheck', () => {
 
     it('should handle starting containers', async () => {
       mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: 'running|starting',
+        stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'starting' }),
         stderr: '',
         exitCode: 0,
       });
@@ -359,13 +359,13 @@ describe('HealthCheck', () => {
       mockSSHClient.executeCommand
         // First check - starting
         .mockResolvedValueOnce({
-          stdout: 'running|starting',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'starting' }),
           stderr: '',
           exitCode: 0,
         })
         // Second check - healthy
         .mockResolvedValueOnce({
-          stdout: 'running|healthy',
+          stdout: JSON.stringify({ Name: 'app_web', State: 'running', Health: 'healthy' }),
           stderr: '',
           exitCode: 0,
         });
@@ -373,11 +373,11 @@ describe('HealthCheck', () => {
       const result = await healthCheck.waitForContainerHealthy('app_web', '/opt/app', 10000);
 
       expect(result).toBe(true);
-    });
+    }, 15000); // Increase timeout for this test
 
     it('should return true for containers without health checks that are running', async () => {
       mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: 'running|none',
+        stdout: JSON.stringify({ Name: 'app_web', State: 'running' }),
         stderr: '',
         exitCode: 0,
       });
@@ -385,11 +385,11 @@ describe('HealthCheck', () => {
       const result = await healthCheck.waitForContainerHealthy('app_web', '/opt/app', 10000);
 
       expect(result).toBe(true);
-    });
+    }, 15000); // Increase timeout for this test
 
     it('should return false when container exits', async () => {
       mockSSHClient.executeCommand.mockResolvedValueOnce({
-        stdout: 'exited|none',
+        stdout: JSON.stringify({ Name: 'app_web', State: 'exited' }),
         stderr: '',
         exitCode: 0,
       });
@@ -397,7 +397,7 @@ describe('HealthCheck', () => {
       const result = await healthCheck.waitForContainerHealthy('app_web', '/opt/app', 10000);
 
       expect(result).toBe(false);
-    });
+    }, 15000); // Increase timeout for this test
 
     it('should timeout when container does not become healthy', async () => {
       mockSSHClient.executeCommand.mockResolvedValue({

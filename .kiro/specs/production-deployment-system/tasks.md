@@ -501,6 +501,32 @@ This implementation plan breaks down the production deployment system into discr
     - Document manual configuration options (symlinks, Lima mounts)
     - _Requirements: 8.9, 8.10_
 
+- [x] 24. Fix docker-compose.yml generation to use configuration values
+  - [x] 24.1 Update generateDockerComposeFile to accept configuration parameter
+    - Pass DeploymentConfiguration to generateDockerComposeFile function
+    - Use config.network.httpPort and config.network.httpsPort for port mappings
+    - Conditionally add certificate volume mount when config.volumes.certPath is set
+    - Use config.network.enableHttps to determine HTTPS configuration
+    - _Requirements: 1.2, 6.1, 6.2, 6.3, 11.1_
+  
+  - [x] 24.2 Update deployConfiguration to pass config to generateDockerComposeFile
+    - Modify deployConfiguration function to pass config parameter
+    - Ensure configuration values from .env file are used in compose generation
+    - _Requirements: 10.1, 10.2, 11.1_
+  
+  - [x] 24.3 Add tests for configuration-driven compose generation
+    - Test port mapping uses configured HTTP_PORT and HTTPS_PORT values
+    - Test certificate volume mount is added when CERT_PATH is configured
+    - Test certificate volume mount is omitted when CERT_PATH is not set
+    - Test HTTPS is enabled when ENABLE_HTTPS=true and CERT_PATH is set
+    - _Requirements: 1.2, 6.1, 6.2, 6.3_
+  
+  - [x] 24.4 Update documentation to reflect configuration behavior
+    - Document how HTTP_PORT and HTTPS_PORT affect port mappings
+    - Document how CERT_PATH and ENABLE_HTTPS work together
+    - Provide examples of different configuration scenarios
+    - _Requirements: 11.1, 11.2_
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP
