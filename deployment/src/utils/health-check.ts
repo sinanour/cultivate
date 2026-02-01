@@ -256,7 +256,7 @@ export class HealthCheck {
 
   /**
    * Checks the health status of a single container
-   * @param containerName Name of the container
+   * @param containerName Name of the container or service
    * @param workingDirectory Working directory containing docker-compose.yml
    * @returns Promise that resolves with container health status
    */
@@ -265,29 +265,89 @@ export class HealthCheck {
     workingDirectory: string
   ): Promise<Pick<ContainerHealthStatus, 'status' | 'state' | 'lastError'>> {
     try {
-      // Get container status using docker inspect
-      const cmd = `cd ${workingDirectory} && docker inspect --format='{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' ${containerName}`;
-      let result = await this.sshClient.executeCommand(cmd);
+      // First, get the actual container name from compose ps
+      const psCmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml ps --format json`;
+      let psResult = await this.sshClient.executeCommand(psCmd);
 
       // If permission denied, retry with sudo
-      if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
-        logger.debug('Docker permission denied, retrying with sudo');
-        const sudoCmd = cmd.replace(/docker inspect/g, 'sudo docker inspect');
-        result = await this.sshClient.executeCommand(sudoCmd);
+      if (psResult.exitCode !== 0 && psResult.stderr.includes('permission denied')) {
+        logger.debug('Container runtime permission denied, retrying with sudo');
+        const sudoCmd = `cd ${workingDirectory} && sudo ${this.composeCommand} -f docker-compose.yml ps --format json`;
+        psResult = await this.sshClient.executeCommand(sudoCmd);
       }
 
-      if (result.exitCode !== 0) {
+      if (psResult.exitCode !== 0) {
         return {
           status: 'unhealthy',
           state: 'unknown',
-          lastError: result.stderr || 'Failed to inspect container',
+          lastError: psResult.stderr || 'Failed to get container info',
         };
       }
 
-      const [state, healthStatus] = result.stdout.trim().split('|');
+      // Parse container info from compose ps output
+      const output = psResult.stdout.trim();
+      if (!output) {
+        return {
+          status: 'unhealthy',
+          state: 'unknown',
+          lastError: 'No container info available',
+        };
+      }
+
+      // Try parsing as JSON array first (Finch format)
+      let containers: any[] = [];
+      try {
+        const parsed = JSON.parse(output);
+        containers = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        // Parse as newline-delimited JSON (Docker format)
+        const lines = output.split('\n').filter(line => line.trim());
+        for (const line of lines) {
+          try {
+            containers.push(JSON.parse(line));
+          } catch (parseError) {
+            logger.warn(`Failed to parse container info line: ${line}`);
+          }
+        }
+      }
+
+      // Find the container matching the service name
+      const container = containers.find(c =>
+        (c.Service || c.service) === containerName ||
+        (c.Name || c.name) === containerName ||
+        (c.Name || c.name)?.includes(containerName)
+      );
+
+      if (!container) {
+        return {
+          status: 'unhealthy',
+          state: 'unknown',
+          lastError: `Container not found: ${containerName}`,
+        };
+      }
+
+      // Extract state and health from compose ps output
+      const state = (container.State || container.state || '').toLowerCase();
+      const health = container.Health || container.health || 'none';
+
+      // Map state to health status
+      let healthStatus: 'healthy' | 'unhealthy' | 'starting' | 'none' = 'none';
+
+      if (health === 'healthy') {
+        healthStatus = 'healthy';
+      } else if (health === 'unhealthy') {
+        healthStatus = 'unhealthy';
+      } else if (health === 'starting') {
+        healthStatus = 'starting';
+      } else if (state.includes('up') || state === 'running') {
+        // No health check defined, but container is running
+        healthStatus = 'none';
+      } else {
+        healthStatus = 'unhealthy';
+      }
 
       return {
-        status: healthStatus as 'healthy' | 'unhealthy' | 'starting' | 'none',
+        status: healthStatus,
         state: state || 'unknown',
       };
     } catch (error) {
@@ -301,19 +361,19 @@ export class HealthCheck {
   }
 
   /**
-   * Gets the names of all containers in the docker-compose project
+   * Gets the names of all services in the docker-compose project
    * @param workingDirectory Working directory containing docker-compose.yml
-   * @returns Promise that resolves with array of container names
+   * @returns Promise that resolves with array of service names
    */
   private async getContainerNames(workingDirectory: string): Promise<string[]> {
     try {
-      const cmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml ps --format json`;
+      const cmd = `cd ${workingDirectory} && ${this.composeCommand} -f docker-compose.yml ps --services`;
       let result = await this.sshClient.executeCommand(cmd);
 
       // If permission denied, retry with sudo
       if (result.exitCode !== 0 && result.stderr.includes('permission denied')) {
         logger.debug('Container runtime permission denied, retrying with sudo');
-        const sudoCmd = `cd ${workingDirectory} && sudo ${this.composeCommand} -f docker-compose.yml ps --format json`;
+        const sudoCmd = `cd ${workingDirectory} && sudo ${this.composeCommand} -f docker-compose.yml ps --services`;
         result = await this.sshClient.executeCommand(sudoCmd);
       }
 
@@ -322,23 +382,9 @@ export class HealthCheck {
         return [];
       }
 
-      // Parse JSON output (one JSON object per line)
-      const containerNames: string[] = [];
-      const lines = result.stdout.trim().split('\n').filter(line => line.trim());
-
-      for (const line of lines) {
-        try {
-          const data = JSON.parse(line);
-          const name = data.Name || data.name;
-          if (name) {
-            containerNames.push(name);
-          }
-        } catch (parseError) {
-          logger.warn(`Failed to parse container info: ${line}`);
-        }
-      }
-
-      return containerNames;
+      // Parse service names (one per line)
+      const serviceNames = result.stdout.trim().split('\n').filter(name => name.trim());
+      return serviceNames;
     } catch (error) {
       logger.error(`Error getting container names: ${error instanceof Error ? error.message : String(error)}`);
       return [];

@@ -296,17 +296,32 @@ export class RollbackExecutor {
   ): Promise<void> {
     this.log('Restoring previous configuration');
 
-    // In a production system, you would restore configuration from backup
-    // For now, we'll update the docker-compose.yml to use previous image versions
+    // Generate docker-compose.yml content for previous deployment
     const composeContent = this.generateComposeFile(previousState);
 
-    const remotePath = options.composePath || '/opt/cultivate/docker-compose.yml';
-    await this.sshClient.uploadFile(
-      composeContent,
-      remotePath
-    );
+    // Write content to a temporary file
+    const fs = await import('fs/promises');
+    const os = await import('os');
+    const path = await import('path');
 
-    this.log('Configuration restored successfully');
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'rollback-config-'));
+    const tempComposePath = path.join(tempDir, 'docker-compose.yml');
+
+    try {
+      await fs.writeFile(tempComposePath, composeContent, 'utf-8');
+
+      const remotePath = options.composePath || '/opt/cultivate/docker-compose.yml';
+      await this.sshClient.uploadFile(tempComposePath, remotePath);
+
+      this.log('Configuration restored successfully');
+    } finally {
+      // Clean up temp file
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        logger.warn(`Failed to clean up temp directory: ${cleanupError}`);
+      }
+    }
   }
 
   /**

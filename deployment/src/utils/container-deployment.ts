@@ -167,9 +167,9 @@ export class ContainerDeployment {
         startupTimeout - (Date.now() - startTime)
       );
 
-      // Capture logs from all containers
-      const containerNames = monitorResult.containers.map(c => c.name);
-      for (const name of containerNames) {
+      // Capture logs from all containers using service names
+      const serviceNames = await this.getContainerNames(options.workingDirectory);
+      for (const name of serviceNames) {
         const containerLogs = await this.captureContainerLogs(name, options.workingDirectory);
         logs.push(containerLogs);
       }
@@ -220,9 +220,22 @@ export class ContainerDeployment {
     while (Date.now() - startTime < timeout) {
       const containers = await this.getContainerStatus(workingDirectory);
 
-      // Check if all containers are running
-      const allRunning = containers.every(c => c.state === 'running');
-      const anyExited = containers.some(c => c.state === 'exited' || c.state === 'dead');
+      if (containers.length === 0) {
+        logger.warn('No containers found, waiting...');
+        await this.sleep(checkInterval);
+        continue;
+      }
+
+      // Log current container states for debugging
+      logger.debug(`Container states: ${containers.map(c => `${c.name}=${c.state}`).join(', ')}`);
+
+      // Check if all containers are running (handle both "running" and "up" states)
+      const allRunning = containers.every(c =>
+        c.state === 'running' || c.state.startsWith('up')
+      );
+      const anyExited = containers.some(c =>
+        c.state === 'exited' || c.state === 'dead' || c.state.includes('exit')
+      );
 
       if (anyExited) {
         logger.error('One or more containers exited during startup');
@@ -242,7 +255,9 @@ export class ContainerDeployment {
       }
 
       // Log progress
-      const runningCount = containers.filter(c => c.state === 'running').length;
+      const runningCount = containers.filter(c =>
+        c.state === 'running' || c.state.startsWith('up')
+      ).length;
       logger.info(`Container startup progress: ${runningCount}/${containers.length} running`);
 
       // Wait before next check
@@ -274,19 +289,36 @@ export class ContainerDeployment {
         return [];
       }
 
-      // Parse JSON output (one JSON object per line)
-      const containers: ContainerStatus[] = [];
-      const lines = result.stdout.trim().split('\n').filter(line => line.trim());
+      const output = result.stdout.trim();
+      if (!output) {
+        logger.debug('No container status output received');
+        return [];
+      }
 
+      logger.debug(`Container status output: ${output.substring(0, 500)}${output.length > 500 ? '...' : ''}`);
+
+      // Parse JSON output - handle both array format and newline-delimited format
+      const containers: ContainerStatus[] = [];
+
+      // Try parsing as a JSON array first (Finch format)
+      try {
+        const parsed = JSON.parse(output);
+        if (Array.isArray(parsed)) {
+          for (const data of parsed) {
+            containers.push(this.parseContainerData(data));
+          }
+          return containers;
+        }
+      } catch {
+        // Not a JSON array, try line-by-line parsing
+      }
+
+      // Parse as newline-delimited JSON (Docker format)
+      const lines = output.split('\n').filter(line => line.trim());
       for (const line of lines) {
         try {
           const data = JSON.parse(line);
-          containers.push({
-            name: data.Name || data.name || 'unknown',
-            state: data.State || data.state || 'unknown',
-            health: data.Health || data.health || 'none',
-            uptime: data.Status || data.status || 'unknown',
-          });
+          containers.push(this.parseContainerData(data));
         } catch (parseError) {
           logger.warn(`Failed to parse container status line: ${line}`);
         }
@@ -297,6 +329,29 @@ export class ContainerDeployment {
       logger.error(`Error getting container status: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
+  }
+
+  /**
+   * Parses container data from JSON output, handling different field name formats
+   * @param data Raw container data from compose ps
+   * @returns Normalized container status
+   */
+  private parseContainerData(data: any): ContainerStatus {
+    // Handle different field name formats (capitalized vs lowercase)
+    const name = data.Name || data.name || data.Service || data.service || 'unknown';
+    const state = data.State || data.state || data.Status || data.status || 'unknown';
+    const health = data.Health || data.health || 'none';
+    const uptime = data.Status || data.status || data.Uptime || data.uptime || 'unknown';
+
+    // Normalize state to lowercase for consistent comparison
+    const normalizedState = state.toLowerCase();
+
+    return {
+      name,
+      state: normalizedState,
+      health,
+      uptime,
+    };
   }
 
   /**

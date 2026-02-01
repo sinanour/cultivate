@@ -2,3 +2,4 @@
 .vscode/*
 !.vscode/extensions.json
 /web-frontend/.env
+/deployment/config/.certs/

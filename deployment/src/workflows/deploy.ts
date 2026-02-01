@@ -179,7 +179,17 @@ export async function deployWorkflow(
         if (sshClient && sshClient.isConnected()) {
             try {
                 log('Initiating failure handling and rollback...');
-                await handleDeploymentFailure(sshClient, options, stateManager);
+                // Try to get compose command and deployment paths for failure handling
+                let composeCmd: string | undefined;
+                let depPaths: DeploymentPathStrategy | undefined;
+                try {
+                    const { composeCommand: cmd, deploymentPaths: paths } = await checkAndInstallDependencies(sshClient, options);
+                    composeCmd = cmd;
+                    depPaths = paths;
+                } catch (depError) {
+                    logger.warn('Failed to get deployment info for failure handling, will use defaults');
+                }
+                await handleDeploymentFailure(sshClient, options, stateManager, composeCmd, depPaths);
                 log('Rollback completed');
             } catch (rollbackError) {
                 const rollbackMessage = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
@@ -384,35 +394,15 @@ async function buildAndTransferImages(
  * Deploy configuration files to target host
  */
 async function deployConfiguration(
-    _options: DeploymentOptions,
+    options: DeploymentOptions,
     sshClient: SSHClient,
     version: string,
     deploymentPaths: DeploymentPathStrategy
 ): Promise<any> {
     logger.info('Deploying configuration...');
 
-    // Create default configuration using deployment paths
-    const config = ConfigValidator.applyDefaults({
-        network: {
-            httpPort: 80,
-            httpsPort: 443,
-            enableHttps: false
-        },
-        volumes: {
-            dataPath: path.join(deploymentPaths.volumePath, 'db_data'),
-            socketPath: path.join(deploymentPaths.volumePath, 'db_socket')
-        },
-        environment: {
-            nodeEnv: 'production',
-            databaseUrl: `postgresql://apiuser@localhost/cultivate?host=${path.join(deploymentPaths.volumePath, 'db_socket')}`,
-            backendPort: 3000
-        },
-        security: {
-            apiUserUid: 1001,
-            apiUserGid: 1001,
-            socketPermissions: '0770'
-        }
-    });
+    // Use the configuration from options (which should be loaded from deployment/config/.env)
+    const config = options.config;
 
     // Validate configuration
     const validation = ConfigValidator.validateConfiguration(config);
@@ -420,22 +410,29 @@ async function deployConfiguration(
         throw new Error(`Configuration validation failed: ${validation.errors.join(', ')}`);
     }
 
-    // Generate .env file
-    const tempDir = await os.tmpdir();
-    const envPath = path.join(tempDir, '.env');
-    await ConfigTransfer.writeEnvFile(config, envPath);
+    // Use the actual .env file from deployment/config/.env
+    const localEnvPath = path.resolve(options.buildOptions.contextPath, 'deployment/config/.env');
+    const fs = await import('fs/promises');
+
+    // Verify local .env file exists
+    try {
+        await fs.access(localEnvPath);
+        logger.info(`Using local .env file: ${localEnvPath}`);
+    } catch (err) {
+        throw new Error(`Local .env file not found: ${localEnvPath}. Please create it from deployment/config/.env.example`);
+    }
 
     // Generate docker-compose.yml with OS-appropriate paths
+    const tempDir = os.tmpdir();
     const composePath = path.join(tempDir, 'docker-compose.yml');
     const composeContent = generateDockerComposeFile(version, deploymentPaths);
-    const fs = await import('fs/promises');
     await fs.writeFile(composePath, composeContent);
 
     // Transfer configuration files
     const configTransfer = new ConfigTransfer(sshClient);
     const transferResult = await configTransfer.transferConfiguration({
         composeFilePath: composePath,
-        envFilePath: envPath,
+        envFilePath: localEnvPath,  // Use actual local .env file
         targetDir: deploymentPaths.configPath,
         setPermissions: true
     });
@@ -555,12 +552,47 @@ volumes:
 async function handleDeploymentFailure(
     sshClient: SSHClient,
     _options: DeploymentOptions,
-    stateManager: DeploymentStateManager
+    stateManager: DeploymentStateManager,
+    composeCommand?: string,
+    deploymentPaths?: DeploymentPathStrategy
 ): Promise<void> {
     logger.info('Handling deployment failure...');
 
-    const containerDeployment = new ContainerDeployment(sshClient);
-    const healthCheck = new HealthCheck(sshClient, 'docker-compose'); // Will be overridden in actual deployment
+    // Detect compose command if not provided
+    let finalComposeCommand = composeCommand;
+    if (!finalComposeCommand) {
+        try {
+            const composeResult = await detectComposeCommand(sshClient);
+            finalComposeCommand = composeResult.command;
+        } catch (error) {
+            logger.warn('Failed to detect compose command, using default docker-compose');
+            finalComposeCommand = 'docker-compose';
+        }
+    }
+
+    // Get deployment paths if not provided
+    let finalDeploymentPaths = deploymentPaths;
+    if (!finalDeploymentPaths) {
+        try {
+            const osDetector = new OSDetector(sshClient);
+            const osInfo = await osDetector.detectOS();
+            const username = getUsername(_options.sshConfig?.username);
+            finalDeploymentPaths = getDeploymentPaths(osInfo, username);
+        } catch (error) {
+            logger.warn('Failed to get deployment paths, using default /opt/cultivate');
+            finalDeploymentPaths = {
+                targetOS: 'linux',
+                deploymentBasePath: '/opt/cultivate',
+                configPath: '/opt/cultivate/config',
+                logPath: '/var/log/cultivate',
+                volumePath: '/opt/cultivate/volumes',
+                vmAccessible: true
+            };
+        }
+    }
+
+    const containerDeployment = new ContainerDeployment(sshClient, finalComposeCommand);
+    const healthCheck = new HealthCheck(sshClient, finalComposeCommand);
     const failureDetection = new FailureDetection(sshClient, containerDeployment, healthCheck);
     const diagnosticCapture = new DiagnosticCapture(sshClient, containerDeployment);
     const imageTransfer = new ImageTransfer();
@@ -582,7 +614,7 @@ async function handleDeploymentFailure(
     );
 
     const result = await failureHandler.handleFailure({
-        workingDirectory: '/opt/cultivate',
+        workingDirectory: finalDeploymentPaths.configPath,
         rollbackOptions: {
             targetHost: _options.targetHost,
             sshConfig: {
@@ -591,7 +623,7 @@ async function handleDeploymentFailure(
                 privateKeyPath: _options.sshConfig?.privateKeyPath,
                 timeout: _options.sshConfig?.timeout || 30000
             },
-            composePath: '/opt/cultivate/docker-compose.yml',
+            composePath: path.join(finalDeploymentPaths.configPath, 'docker-compose.yml'),
             verifyHealth: true
         },
         autoRollback: true,

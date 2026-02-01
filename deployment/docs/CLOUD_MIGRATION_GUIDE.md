@@ -1823,7 +1823,7 @@ If migration fails, have a rollback plan:
 
 ## Conclusion
 
-Migrating the Cultivate to cloud platforms is straightforward due to the cloud-compatible architecture. The key steps are:
+Migrating Cultivate to cloud platforms is straightforward due to the cloud-compatible architecture. The key steps are:
 
 1. **Choose your platform** based on requirements, cost, and expertise
 2. **Follow the platform-specific migration guide** in this document

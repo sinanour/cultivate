@@ -11,6 +11,7 @@
 import { Command } from 'commander';
 import * as path from 'path';
 import { createLogger } from './utils/logger.js';
+import { ConfigLoader } from './utils/config-loader.js';
 import { deployWorkflow } from './workflows/deploy.js';
 import { rollbackWorkflow } from './workflows/rollback.js';
 import type { DeploymentOptions, BuildOptions } from './types/deployment.js';
@@ -57,6 +58,13 @@ async function main(): Promise<void> {
                     logger.debug('Verbose mode enabled');
                 }
 
+                // Load configuration from .env file
+                const configPath = path.resolve(process.cwd(), options.config);
+                logger.info(`Loading configuration from ${configPath}`);
+
+                const config = await ConfigLoader.loadWithDefaults(configPath);
+                logger.debug('Configuration loaded', { config });
+
                 // Build deployment options
                 const buildOptions: BuildOptions = {
                     buildMode: options.buildMode as 'local' | 'remote',
@@ -65,7 +73,7 @@ async function main(): Promise<void> {
                     buildArgs: {}
                 };
 
-                const deploymentOptions: Partial<DeploymentOptions> = {
+                const deploymentOptions: DeploymentOptions = {
                     targetHost: options.target,
                     sshConfig: {
                         username: options.user,
@@ -74,12 +82,13 @@ async function main(): Promise<void> {
                         timeout: 30000
                     },
                     buildOptions,
+                    config,  // Use loaded configuration
                     rollback: false,
                     stateFilePath: options.stateFile
                 };
 
                 // Execute deployment workflow
-                const result = await deployWorkflow(deploymentOptions as DeploymentOptions);
+                const result = await deployWorkflow(deploymentOptions);
 
                 if (result.success) {
                     logger.info('Deployment completed successfully', {
