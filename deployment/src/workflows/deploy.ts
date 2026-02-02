@@ -42,6 +42,7 @@ import {
     getUsername,
     type DeploymentPathStrategy
 } from '../utils/deployment-paths.js';
+import { FinchNetworkConfig, type PortForwardConfig } from '../utils/finch-network-config.js';
 import * as path from 'path';
 import * as os from 'os';
 
@@ -158,6 +159,11 @@ export async function deployWorkflow(
         }
 
         log('All health checks passed');
+
+        // Check for macOS port forwarding configuration
+        if (deploymentPaths.targetOS === 'macos') {
+            await checkMacOSPortForwarding(sshClient, config, log);
+        }
 
         // Update deployment state to active
         await stateManager.updateStatus('active');
@@ -705,4 +711,56 @@ function generateVersion(): string {
     const second = String(now.getSeconds()).padStart(2, '0');
 
     return `${year}.${month}.${day}-${hour}${minute}${second}`;
+}
+
+/**
+ * Check macOS port forwarding configuration and warn if needed
+ */
+async function checkMacOSPortForwarding(
+    sshClient: SSHClient,
+    config: any,
+    log: (message: string) => void
+): Promise<void> {
+    logger.info('Checking macOS port forwarding configuration...');
+
+    try {
+        const finchNetworkConfig = new FinchNetworkConfig(sshClient);
+
+        // Build port forward configs from deployment config
+        const ports: PortForwardConfig[] = [];
+
+        if (config.network?.httpPort) {
+            ports.push({
+                guestPort: 80,
+                hostIP: '0.0.0.0',
+                hostPort: config.network.httpPort
+            });
+        }
+
+        if (config.network?.httpsPort && config.network?.enableHttps) {
+            ports.push({
+                guestPort: 443,
+                hostIP: '0.0.0.0',
+                hostPort: config.network.httpsPort
+            });
+        }
+
+        const result = await finchNetworkConfig.checkPortForwarding(ports);
+
+        if (!result.configured) {
+            log('');
+            log('⚠️  WARNING: Finch Port Forwarding Not Configured');
+            log('');
+            log('The application is deployed but may only be accessible on localhost.');
+            log('To make it accessible from external machines, configure Lima port forwarding.');
+            log('');
+            log(finchNetworkConfig.getConfigurationInstructions(ports));
+            log('');
+        } else {
+            log('✓ Finch port forwarding is configured correctly');
+        }
+    } catch (err) {
+        logger.warn(`Failed to check port forwarding: ${err instanceof Error ? err.message : String(err)}`);
+        // Don't fail deployment if port forwarding check fails
+    }
 }

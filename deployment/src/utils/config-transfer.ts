@@ -213,8 +213,8 @@ export class ConfigTransfer {
   }
 
   /**
-   * Transfers certificate files to the remote host
-   * @param certPath Local certificates directory
+   * Transfers certificate files to the remote host (recursively)
+   * @param certPath Local certificates directory or file
    * @param remoteCertDir Remote certificates directory
    * @returns Promise that resolves with array of transfer results
    */
@@ -231,21 +231,9 @@ export class ConfigTransfer {
       const stats = fs.statSync(certPath);
 
       if (stats.isDirectory()) {
-        // Transfer all certificate files in directory
-        const files = fs.readdirSync(certPath);
-        const certFiles = files.filter(f => 
-          f.endsWith('.pem') || 
-          f.endsWith('.crt') || 
-          f.endsWith('.key') ||
-          f.endsWith('.cert')
-        );
-
-        for (const file of certFiles) {
-          const localFilePath = path.join(certPath, file);
-          const remoteFilePath = path.join(remoteCertDir, file);
-          const result = await this.transferFile(localFilePath, remoteFilePath);
-          results.push(result);
-        }
+        // Transfer all certificate files in directory recursively
+        const recursiveResults = await this.transferCertificatesRecursive(certPath, remoteCertDir);
+        results.push(...recursiveResults);
       } else {
         // Transfer single certificate file
         const fileName = path.basename(certPath);
@@ -266,6 +254,57 @@ export class ConfigTransfer {
         success: false,
         error: errorMessage,
       }];
+    }
+  }
+
+  /**
+   * Recursively transfers certificate files from a directory
+   * @param localDir Local directory path
+   * @param remoteDir Remote directory path
+   * @returns Promise that resolves with array of transfer results
+   */
+  private async transferCertificatesRecursive(
+    localDir: string,
+    remoteDir: string
+  ): Promise<FileTransferResult[]> {
+    const results: FileTransferResult[] = [];
+
+    try {
+      const entries = fs.readdirSync(localDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const localPath = path.join(localDir, entry.name);
+        const remotePath = path.join(remoteDir, entry.name);
+
+        if (entry.isDirectory()) {
+          // Ensure remote subdirectory exists
+          await this.ensureRemoteDirectory(remotePath);
+
+          // Recursively transfer files in subdirectory
+          const subResults = await this.transferCertificatesRecursive(localPath, remotePath);
+          results.push(...subResults);
+        } else if (entry.isFile()) {
+          // Check if file is a certificate file
+          const isCertFile =
+            entry.name.endsWith('.pem') ||
+            entry.name.endsWith('.crt') ||
+            entry.name.endsWith('.key') ||
+            entry.name.endsWith('.cert');
+
+          if (isCertFile) {
+            const result = await this.transferFile(localPath, remotePath);
+            results.push(result);
+          } else {
+            logger.debug(`Skipping non-certificate file: ${entry.name}`);
+          }
+        }
+      }
+
+      return results;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logger.error(`Recursive certificate transfer failed: ${errorMessage}`);
+      throw err;
     }
   }
 

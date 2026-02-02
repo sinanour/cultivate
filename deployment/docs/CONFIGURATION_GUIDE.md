@@ -94,6 +94,8 @@ CERT_PATH=./config/certs
 - The `CERT_PATH` in `.env` refers to the **local path** on your build machine
 - Certificates are transferred to `{configPath}/certs` on the remote host
 - The docker-compose.yml automatically mounts the remote certificate directory
+- **Certificate directories are transferred recursively**, preserving subdirectory structure
+- This allows organizing certificates in subdirectories (e.g., separate folders per domain)
 
 **Certificate Mounting Behavior:**
 - Certificates are only mounted when **both** `ENABLE_HTTPS=true` **and** `CERT_PATH` is set
@@ -107,6 +109,7 @@ CERT_PATH=./config/certs
   - `fullchain.pem` (or `cert.pem`)
   - `privkey.pem` (or `key.pem`)
 - Certificates are transferred with appropriate permissions (keys: 0600, certs: 0644)
+- Subdirectories are preserved during transfer, allowing nested organization
 
 **Local Certificate Paths:**
 
@@ -417,6 +420,41 @@ ssh user@host
 ls -la /opt/cultivate/config/certs/  # Linux
 ls -la ~/cultivate/config/certs/     # macOS
 ```
+
+### Ports Only Accessible on Localhost (macOS with Finch)
+
+**Symptom:** Application accessible at `http://localhost:8080` on the macOS host but not from external machines at `http://hostname:8080`
+
+**Cause:** Finch's Lima VM only forwards ports to localhost (127.0.0.1) by default, even when docker-compose specifies `0.0.0.0`
+
+**Solution:** Configure Lima to forward ports to all interfaces
+
+Edit `~/.finch/finch.yaml` on the macOS target host:
+
+```yaml
+# Add or modify the portForwards section
+portForwards:
+  - guestSocket: /var/run/docker.sock
+    hostSocket: /Users/{{.User}}/.finch/finch.sock
+  # Add explicit port forwards for your application
+  - guestPort: 80
+    hostIP: "0.0.0.0"
+    hostPort: 8080
+  - guestPort: 443
+    hostIP: "0.0.0.0"
+    hostPort: 1443
+```
+
+Then restart Finch VM:
+
+```bash
+finch vm stop
+finch vm start
+```
+
+**Note:** This is a Finch/Lima limitation. The deployment system correctly specifies `0.0.0.0` in docker-compose.yml, but Lima's network configuration must also be updated for external access.
+
+For more details, see: [macOS Deployment Guide](MACOS_DEPLOYMENT.md)
 
 ## Environment-Specific Configurations
 

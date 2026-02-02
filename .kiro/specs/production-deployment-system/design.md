@@ -926,6 +926,8 @@ LOG_PATH=/var/log/cultivate
 - Mounted as read-only volumes when HTTPS enabled
 - Support for Let's Encrypt or custom certificates
 - Renewal handled independently of container lifecycle
+- Certificate directories are transferred recursively, preserving subdirectory structure
+- Supports nested certificate organization (e.g., separate subdirectories per domain)
 
 ### Component 5: Database Initialization
 

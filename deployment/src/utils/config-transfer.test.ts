@@ -278,6 +278,70 @@ describe('ConfigTransfer', () => {
       expect(results[0].remotePath).toBe('/remote/certs/cert.pem');
     });
 
+    it('should transfer certificate files recursively from nested directories', async () => {
+      // Create nested directory structure
+      const certDir = path.join(tempDir, 'certs');
+      const subDir1 = path.join(certDir, 'subdomain1');
+      const subDir2 = path.join(certDir, 'subdomain2');
+      const nestedDir = path.join(subDir1, 'nested');
+
+      fs.mkdirSync(certDir);
+      fs.mkdirSync(subDir1);
+      fs.mkdirSync(subDir2);
+      fs.mkdirSync(nestedDir);
+
+      // Create certificate files at different levels
+      fs.writeFileSync(path.join(certDir, 'root-cert.pem'), 'root cert');
+      fs.writeFileSync(path.join(certDir, 'root-key.pem'), 'root key');
+      fs.writeFileSync(path.join(subDir1, 'sub1-cert.pem'), 'sub1 cert');
+      fs.writeFileSync(path.join(subDir1, 'sub1-key.key'), 'sub1 key');
+      fs.writeFileSync(path.join(subDir2, 'sub2-cert.crt'), 'sub2 cert');
+      fs.writeFileSync(path.join(nestedDir, 'nested-cert.cert'), 'nested cert');
+      fs.writeFileSync(path.join(certDir, 'readme.txt'), 'readme'); // Should be ignored
+
+      mockSSHClient.executeCommand.mockImplementation(async (cmd: string) => {
+        if (cmd.startsWith('stat')) {
+          // Return appropriate file sizes for verification
+          if (cmd.includes('root-cert.pem')) return { stdout: '9', stderr: '', exitCode: 0 };
+          if (cmd.includes('root-key.pem')) return { stdout: '8', stderr: '', exitCode: 0 };
+          if (cmd.includes('sub1-cert.pem')) return { stdout: '9', stderr: '', exitCode: 0 };
+          if (cmd.includes('sub1-key.key')) return { stdout: '8', stderr: '', exitCode: 0 };
+          if (cmd.includes('sub2-cert.crt')) return { stdout: '9', stderr: '', exitCode: 0 };
+          if (cmd.includes('nested-cert.cert')) return { stdout: '11', stderr: '', exitCode: 0 };
+        }
+        return { stdout: '', stderr: '', exitCode: 0 };
+      });
+      mockSSHClient.uploadFile.mockResolvedValue(undefined);
+
+      const results = await configTransfer.transferCertificates(certDir, '/remote/certs');
+
+      // Should transfer 6 certificate files (not readme.txt)
+      expect(results.length).toBe(6);
+      expect(results.every(r => r.success)).toBe(true);
+
+      // Verify correct remote paths with subdirectories preserved
+      const remotePaths = results.map(r => r.remotePath).sort();
+      expect(remotePaths).toEqual([
+        '/remote/certs/root-cert.pem',
+        '/remote/certs/root-key.pem',
+        '/remote/certs/subdomain1/nested/nested-cert.cert',
+        '/remote/certs/subdomain1/sub1-cert.pem',
+        '/remote/certs/subdomain1/sub1-key.key',
+        '/remote/certs/subdomain2/sub2-cert.crt',
+      ].sort());
+
+      // Verify subdirectories were created
+      expect(mockSSHClient.executeCommand).toHaveBeenCalledWith(
+        expect.stringContaining('mkdir -p /remote/certs/subdomain1')
+      );
+      expect(mockSSHClient.executeCommand).toHaveBeenCalledWith(
+        expect.stringContaining('mkdir -p /remote/certs/subdomain2')
+      );
+      expect(mockSSHClient.executeCommand).toHaveBeenCalledWith(
+        expect.stringContaining('mkdir -p /remote/certs/subdomain1/nested')
+      );
+    });
+
     it('should handle certificate transfer errors', async () => {
       const certDir = path.join(tempDir, 'certs');
       fs.mkdirSync(certDir);

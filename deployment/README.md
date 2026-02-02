@@ -36,7 +36,9 @@ deployment/
 - Docker Compose (or Finch with built-in compose support)
 - SSH access to target deployment hosts
 
-**Note:** The deployment script automatically detects whether Docker or Finch is available and uses the appropriate commands. See `FINCH_SUPPORT.md` for details on using Finch.
+**macOS Production Hosts:** If deploying to macOS, you must configure Finch port forwarding for external access. See [macOS Port Forwarding Setup](#macos-port-forwarding-setup) below.
+
+**Note:** The deployment script automatically detects whether Docker or Finch is available and uses the appropriate commands.
 
 ## Installation
 
@@ -59,6 +61,60 @@ npm start -- deploy <target-host>
 # Rollback to previous deployment
 npm start -- rollback <target-host>
 ```
+
+## macOS Port Forwarding Setup
+
+**⚠️ IMPORTANT for macOS Production Hosts**
+
+If you're deploying to a macOS host, Finch's Lima VM only forwards ports to localhost by default. To make your application accessible from external machines, you must configure port forwarding **before deployment**.
+
+### Quick Setup
+
+Run this script on the macOS target host:
+
+```bash
+# Transfer the script to the macOS host
+scp deployment/scripts/configure-finch-ports.sh user@macos-host:~/
+
+# SSH to the macOS host
+ssh user@macos-host
+
+# Run the configuration script with your ports
+./configure-finch-ports.sh 8080 1443
+
+# Or use default ports (80, 443)
+./configure-finch-ports.sh
+```
+
+The script will:
+1. Backup your existing Finch configuration
+2. Configure port forwarding to 0.0.0.0 (all interfaces)
+3. Restart the Finch VM
+4. Verify the configuration
+
+### Manual Setup
+
+Alternatively, edit `~/.finch/finch.yaml` on the macOS host:
+
+```yaml
+portForwards:
+  - guestSocket: /var/run/docker.sock
+    hostSocket: /Users/{{.User}}/.finch/finch.sock
+  - guestPort: 80
+    hostIP: "0.0.0.0"
+    hostPort: 8080
+  - guestPort: 443
+    hostIP: "0.0.0.0"
+    hostPort: 1443
+```
+
+Then restart: `finch vm stop && finch vm start`
+
+### Why This Is Needed
+
+Finch runs containers in a Lima VM. By default, Lima only forwards ports to 127.0.0.1 (localhost), even when docker-compose specifies 0.0.0.0. The deployment system correctly configures docker-compose.yml, but Lima's network configuration must also be updated.
+
+**For complete details, see:** [docs/MACOS_DEPLOYMENT.md](docs/MACOS_DEPLOYMENT.md)
 
 ## Development
 

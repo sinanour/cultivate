@@ -2,7 +2,80 @@
 
 ## Overview
 
-Deploying to macOS targets requires special consideration due to how Finch (the container runtime for macOS) operates. This guide explains the filesystem boundary constraints and how the deployment system handles them automatically.
+Deploying to macOS targets requires special consideration due to how Finch (the container runtime for macOS) operates. This guide explains two critical issues and their solutions:
+
+1. **Filesystem Boundary**: Finch VM only mounts certain directories
+2. **Port Forwarding**: Finch VM only forwards ports to localhost by default
+
+## Critical Issue: Port Forwarding on macOS
+
+### The Problem
+
+**Even though the deployment system correctly configures docker-compose.yml with `0.0.0.0` port bindings, Finch's Lima VM only forwards ports to localhost (127.0.0.1) by default.**
+
+This means:
+- ✅ Application accessible from macOS host: `http://localhost:8080`
+- ❌ Application NOT accessible from external machines: `http://hostname:8080`
+
+### The Solution
+
+**Before deploying to a macOS production host, configure Lima port forwarding.**
+
+#### Quick Fix: Run the Configuration Script
+
+We provide a script that automatically configures Finch port forwarding:
+
+```bash
+# On the macOS target host, run:
+./deployment/scripts/configure-finch-ports.sh 8080 1443
+
+# Or with default ports (80, 443):
+./deployment/scripts/configure-finch-ports.sh
+```
+
+This script will:
+1. ✅ Backup your existing Finch configuration
+2. ✅ Configure port forwarding to 0.0.0.0
+3. ✅ Restart the Finch VM to apply changes
+4. ✅ Verify the configuration
+
+#### Manual Configuration
+
+If you prefer to configure manually, edit `~/.finch/finch.yaml`:
+
+```yaml
+# Add or modify the portForwards section
+portForwards:
+  - guestSocket: /var/run/docker.sock
+    hostSocket: /Users/{{.User}}/.finch/finch.sock
+  # HTTP port - bind to all interfaces
+  - guestPort: 80
+    hostIP: "0.0.0.0"
+    hostPort: 8080
+  # HTTPS port - bind to all interfaces
+  - guestPort: 443
+    hostIP: "0.0.0.0"
+    hostPort: 1443
+```
+
+Then restart Finch VM:
+
+```bash
+finch vm stop
+finch vm start
+```
+
+### Verification
+
+After configuration, verify external access:
+
+```bash
+# From another machine on the network:
+curl http://macos-hostname:8080
+
+# Or from the macOS host itself:
+curl http://$(hostname):8080
+```
 
 ## The Finch VM Filesystem Boundary
 
@@ -113,6 +186,63 @@ If you need to use custom paths, ensure they're under VM-mounted directories:
 1. Check that you're using the latest deployment script
 2. Verify the deployment paths are under `/Users`
 3. Check the deployment logs for path validation errors
+
+### Ports Only Accessible on Localhost (127.0.0.1)
+
+**Symptom**: Application is accessible from the macOS host at `http://localhost:8080` but not from external machines at `http://hostname:8080`
+
+**Cause**: Finch's Lima VM only forwards ports to localhost by default, even when docker-compose specifies `0.0.0.0`
+
+**Solution**: Configure Lima to forward ports to all interfaces
+
+#### Option 1: Configure Lima Port Forwarding (Recommended)
+
+Edit `~/.finch/finch.yaml` on the target macOS host:
+
+```yaml
+# Add or modify the portForwards section
+portForwards:
+  - guestSocket: /var/run/docker.sock
+    hostSocket: /Users/{{.User}}/.finch/finch.sock
+  # Add explicit port forwards for your application
+  - guestPort: 80
+    hostIP: "0.0.0.0"
+    hostPort: 8080
+  - guestPort: 443
+    hostIP: "0.0.0.0"
+    hostPort: 1443
+```
+
+Then restart Finch VM:
+
+```bash
+finch vm stop
+finch vm start
+```
+
+#### Option 2: Use SSH Port Forwarding
+
+If you can't modify Lima configuration, use SSH port forwarding:
+
+```bash
+# On a machine that can access the macOS host
+ssh -L 8080:localhost:8080 user@macos-host.local
+ssh -L 1443:localhost:1443 user@macos-host.local
+```
+
+#### Option 3: Use Nginx Reverse Proxy on Host
+
+Install Nginx on the macOS host to proxy to the Finch VM:
+
+```bash
+# Install Nginx on macOS
+brew install nginx
+
+# Configure Nginx to proxy to localhost:8080
+# Edit /opt/homebrew/etc/nginx/nginx.conf
+```
+
+**Note**: This is a Finch/Lima limitation, not a Docker Compose issue. The deployment system correctly specifies `0.0.0.0` in the compose file, but Lima's network configuration overrides this.
 
 ### Using /opt Paths on macOS (Advanced)
 
