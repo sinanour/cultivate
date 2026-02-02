@@ -67,20 +67,33 @@ ENABLE_HTTPS=false
 
 **Port Mapping Behavior:**
 - The configured ports are used in the docker-compose.yml port mappings
-- Format: `"${HTTP_PORT}:80"` and `"${HTTPS_PORT}:443"`
+- Format: `"0.0.0.0:${HTTP_PORT}:80"` and `"0.0.0.0:${HTTPS_PORT}:443"`
+- Ports are explicitly bound to `0.0.0.0` for public accessibility (not just localhost)
 - The left side (host port) uses your configured value
 - The right side (container port) is always 80 and 443
-- Example: `HTTP_PORT=8080` results in `"8080:80"` mapping
+- Example: `HTTP_PORT=8080` results in `"0.0.0.0:8080:80"` mapping
+
+**Public Accessibility:**
+- Ports are bound to `0.0.0.0` (all network interfaces), not `127.0.0.1` (localhost only)
+- This allows external access to the application from other machines
+- Ensure your firewall allows traffic on the configured ports
 
 ### Certificate Configuration
 
 ```bash
-# Path to SSL certificates on the TARGET HOST
-# (certificates must exist on the remote host before deployment)
-CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
+# Path to SSL certificates on the LOCAL BUILD MACHINE
+# Certificates will be automatically transferred to the remote host during deployment
+CERT_PATH=./config/certs
 
-# Note: This is the path on the REMOTE host, not your local machine
+# Note: This path is relative to deployment/config/ on your LOCAL machine
+# Absolute paths are also supported
 ```
+
+**Certificate Transfer Behavior:**
+- Certificates are **automatically transferred** from your local machine to the remote host during deployment
+- The `CERT_PATH` in `.env` refers to the **local path** on your build machine
+- Certificates are transferred to `{configPath}/certs` on the remote host
+- The docker-compose.yml automatically mounts the remote certificate directory
 
 **Certificate Mounting Behavior:**
 - Certificates are only mounted when **both** `ENABLE_HTTPS=true` **and** `CERT_PATH` is set
@@ -89,11 +102,31 @@ CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
 - Nginx configuration automatically uses certificates when they are present
 
 **Certificate Requirements:**
-- Certificates must exist on the remote host before deployment
+- Certificates must exist on your **local machine** at the `CERT_PATH` location before deployment
 - The `CERT_PATH` directory should contain:
   - `fullchain.pem` (or `cert.pem`)
   - `privkey.pem` (or `key.pem`)
-- Certificates must be readable by the container user
+- Certificates are transferred with appropriate permissions (keys: 0600, certs: 0644)
+
+**Local Certificate Paths:**
+
+Relative path (recommended):
+```bash
+CERT_PATH=./config/certs
+# Resolves to: /path/to/cultivate/deployment/config/certs
+```
+
+Absolute path:
+```bash
+CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
+# Uses the exact path specified
+```
+
+**Remote Certificate Location:**
+
+After deployment, certificates are located at:
+- **Linux:** `/opt/cultivate/config/certs/`
+- **macOS:** `/Users/username/cultivate/config/certs/`
 
 **Examples:**
 
@@ -104,23 +137,23 @@ CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
    ENABLE_HTTPS=false
    # CERT_PATH not set
    ```
-   Result: No certificate volume mount, HTTP only
+   Result: No certificate transfer, no volume mount, HTTP only
 
 2. **HTTPS with certificates:**
    ```bash
    HTTP_PORT=80
    HTTPS_PORT=443
    ENABLE_HTTPS=true
-   CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
+   CERT_PATH=./config/certs
    ```
-   Result: Certificates mounted, both HTTP and HTTPS available
+   Result: Certificates transferred and mounted, both HTTP and HTTPS available
 
 3. **Custom ports with HTTPS:**
    ```bash
    HTTP_PORT=8080
    HTTPS_PORT=1443
    ENABLE_HTTPS=true
-   CERT_PATH=/etc/certs/
+   CERT_PATH=./config/certs
    ```
    Result: Application accessible at http://host:8080 and https://host:1443
 
@@ -222,13 +255,18 @@ cat >> deployment/config/.env << 'EOF'
 HTTP_PORT=80
 HTTPS_PORT=443
 ENABLE_HTTPS=true
-CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
+CERT_PATH=./config/certs  # Local path - certificates will be transferred automatically
 NODE_ENV=production
 CORS_ORIGIN=https://yourdomain.com
 SRP_ROOT_ADMIN_EMAIL=admin@yourdomain.com
 SRP_ROOT_ADMIN_PASSWORD=$(openssl rand -base64 32)
 JWT_SECRET=$(openssl rand -base64 48)
 EOF
+
+# Place your certificates in the local directory
+mkdir -p deployment/config/certs
+cp /path/to/your/fullchain.pem deployment/config/certs/
+cp /path/to/your/privkey.pem deployment/config/certs/
 ```
 
 ### 3. Deploy
@@ -355,6 +393,31 @@ CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
 2. Redeploy to restart containers with new secrets
 3. Check remote `.env` file to confirm transfer
 
+### Certificates Not Working
+
+**Symptom:** HTTPS not available or certificate errors
+
+**Cause:** Certificates not found locally or not transferred
+
+**Solution:**
+1. Verify certificates exist at the local `CERT_PATH` location
+2. Check that both `ENABLE_HTTPS=true` and `CERT_PATH` are set
+3. Verify certificate files are named correctly (fullchain.pem, privkey.pem)
+4. Check deployment logs for certificate transfer errors
+5. SSH to remote host and verify certificates at `{configPath}/certs/`
+
+**Example:**
+```bash
+# Check local certificates
+ls -la deployment/config/certs/
+# Should show: fullchain.pem, privkey.pem
+
+# After deployment, check remote certificates
+ssh user@host
+ls -la /opt/cultivate/config/certs/  # Linux
+ls -la ~/cultivate/config/certs/     # macOS
+```
+
 ## Environment-Specific Configurations
 
 ### Development
@@ -372,7 +435,7 @@ VERBOSE=true
 NODE_ENV=staging
 CORS_ORIGIN=https://staging.yourdomain.com
 ENABLE_HTTPS=true
-CERT_PATH=/etc/letsencrypt/live/staging.yourdomain.com/
+CERT_PATH=./config/certs  # Local certificates, transferred automatically
 ```
 
 ### Production
@@ -381,7 +444,7 @@ CERT_PATH=/etc/letsencrypt/live/staging.yourdomain.com/
 NODE_ENV=production
 CORS_ORIGIN=https://yourdomain.com
 ENABLE_HTTPS=true
-CERT_PATH=/etc/letsencrypt/live/yourdomain.com/
+CERT_PATH=./config/certs  # Local certificates, transferred automatically
 JWT_SECRET=<strong-random-secret>
 SRP_ROOT_ADMIN_PASSWORD=<strong-random-password>
 ```

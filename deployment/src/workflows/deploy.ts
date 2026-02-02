@@ -430,9 +430,40 @@ async function deployConfiguration(
 
     // Transfer configuration files
     const configTransfer = new ConfigTransfer(sshClient);
+
+    // Determine local certificate path if HTTPS is enabled
+    let localCertPath: string | undefined;
+    if (config.network?.enableHttps && config.volumes?.certPath) {
+        // The CERT_PATH in .env is relative to deployment/config/ or absolute
+        const certPathFromEnv = config.volumes.certPath;
+
+        // Resolve the path relative to the deployment/config directory
+        if (path.isAbsolute(certPathFromEnv)) {
+            localCertPath = certPathFromEnv;
+        } else {
+            localCertPath = path.resolve(
+                options.buildOptions.contextPath,
+                'deployment',
+                certPathFromEnv
+            );
+        }
+
+        logger.info(`Certificate path resolved: ${localCertPath}`);
+
+        // Verify certificates exist locally
+        try {
+            await fs.access(localCertPath);
+            logger.info('Local certificates found, will transfer to remote host');
+        } catch (err) {
+            logger.warn(`Local certificates not found at ${localCertPath}, skipping certificate transfer`);
+            localCertPath = undefined;
+        }
+    }
+
     const transferResult = await configTransfer.transferConfiguration({
         composeFilePath: composePath,
         envFilePath: localEnvPath,  // Use actual local .env file
+        certPath: localCertPath,    // Transfer certificates if available
         targetDir: deploymentPaths.configPath,
         setPermissions: true
     });
@@ -482,8 +513,10 @@ function generateDockerComposeFile(
     const enableHttps = config.network?.enableHttps && config.volumes?.certPath;
 
     // Build certificate volume mount if HTTPS is enabled
+    // Certificates are transferred to {configPath}/certs on the remote host
+    const remoteCertPath = path.join(deploymentPaths.configPath, 'certs');
     const certVolumeMount = enableHttps
-        ? `      - ${config.volumes.certPath}:/etc/nginx/certs:ro\n`
+        ? `      - ${remoteCertPath}:/etc/nginx/certs:ro\n`
         : '';
 
     return `version: '3.8'
@@ -541,8 +574,8 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "${httpPort}:80"
-      - "${httpsPort}:443"
+      - "0.0.0.0:${httpPort}:80"
+      - "0.0.0.0:${httpsPort}:443"
     volumes:
 ${certVolumeMount}    environment:
       - VITE_BACKEND_URL=/api/v1
