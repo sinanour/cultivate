@@ -1032,27 +1032,45 @@ export class GeographicAreaService {
 
         const children = await this.geographicAreaRepository.findChildren(id);
 
-        // Filter out denied children if user has geographic restrictions
+        // Apply authorization filtering for users with geographic restrictions
         let filteredChildren = children;
         if (userId && userRole !== 'ADMINISTRATOR') {
             const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
 
             if (authInfo.hasGeographicRestrictions) {
-                // Only include children that are in the authorized list
-                filteredChildren = children.filter(child => authInfo.authorizedAreaIds.includes(child.id));
+                // CRITICAL: Implement ancestral lineage filtering
+                // Users should only see children that are in the direct ancestral lineage
+                // of areas they have FULL access to
+
+                // Get all areas the user has FULL access to (from authorizedAreaIds)
+                const fullAccessAreaIds = authInfo.authorizedAreaIds;
+
+                // For each FULL access area, get its complete ancestor chain
+                const ancestralLineageIds = new Set<string>();
+
+                for (const fullAccessAreaId of fullAccessAreaIds) {
+                    const ancestors = await this.geographicAreaRepository.findAncestors(fullAccessAreaId);
+                    ancestors.forEach(ancestor => ancestralLineageIds.add(ancestor.id));
+                    // Also include the FULL access area itself
+                    ancestralLineageIds.add(fullAccessAreaId);
+                }
+
+                // Filter children to only include those in the ancestral lineage
+                // This ensures users maintain read-only access to their complete ancestral path
+                filteredChildren = children.filter(child => ancestralLineageIds.has(child.id));
             }
         }
 
-        // If a geographic area filter is active, determine the relationship between
-        // the filter and the parent being expanded
+        // If a geographic area filter is active (global filter context), apply additional filtering
+        // This is separate from authorization filtering and further narrows results
         if (geographicAreaId && geographicAreaId !== id) {
             // Check if the parent being expanded is an ancestor of the filtered area
             const filterAncestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
             const filterAncestorIds = new Set(filterAncestors.map(a => a.id));
 
             if (filterAncestorIds.has(id)) {
-            // Parent is an ancestor of the filter (filter is below parent)
-            // Only show children in the filtered area's lineage
+                // Parent is an ancestor of the filter (filter is below parent)
+                // Only show children in the filtered area's lineage
                 const ancestorIds = new Set(filterAncestors.map(a => a.id));
                 ancestorIds.add(geographicAreaId); // Include the filtered area itself
 
@@ -1081,27 +1099,45 @@ export class GeographicAreaService {
         // Get all children first
         const allChildren = await this.geographicAreaRepository.findChildren(id);
 
-        // Filter out denied children if user has geographic restrictions
+        // Apply authorization filtering for users with geographic restrictions
         let filteredChildren = allChildren;
         if (userId && userRole !== 'ADMINISTRATOR') {
             const authInfo = await this.geographicAuthorizationService.getAuthorizationInfo(userId);
 
             if (authInfo.hasGeographicRestrictions) {
-                // Only include children that are in the authorized list
-                filteredChildren = allChildren.filter(child => authInfo.authorizedAreaIds.includes(child.id));
+                // CRITICAL: Implement ancestral lineage filtering
+                // Users should only see children that are in the direct ancestral lineage
+                // of areas they have FULL access to
+
+                // Get all areas the user has FULL access to (from authorizedAreaIds)
+                const fullAccessAreaIds = authInfo.authorizedAreaIds;
+
+                // For each FULL access area, get its complete ancestor chain
+                const ancestralLineageIds = new Set<string>();
+
+                for (const fullAccessAreaId of fullAccessAreaIds) {
+                    const ancestors = await this.geographicAreaRepository.findAncestors(fullAccessAreaId);
+                    ancestors.forEach(ancestor => ancestralLineageIds.add(ancestor.id));
+                    // Also include the FULL access area itself
+                    ancestralLineageIds.add(fullAccessAreaId);
+                }
+
+                // Filter children to only include those in the ancestral lineage
+                // This ensures users maintain read-only access to their complete ancestral path
+                filteredChildren = allChildren.filter(child => ancestralLineageIds.has(child.id));
             }
         }
 
-        // If a geographic area filter is active, determine the relationship between
-        // the filter and the parent being expanded
+        // If a geographic area filter is active (global filter context), apply additional filtering
+        // This is separate from authorization filtering and further narrows results
         if (geographicAreaId && geographicAreaId !== id) {
             // Check if the parent being expanded is an ancestor of the filtered area
             const filterAncestors = await this.geographicAreaRepository.findAncestors(geographicAreaId);
             const filterAncestorIds = new Set(filterAncestors.map(a => a.id));
 
             if (filterAncestorIds.has(id)) {
-            // Parent is an ancestor of the filter (filter is below parent)
-            // Only show children in the filtered area's lineage
+                // Parent is an ancestor of the filter (filter is below parent)
+                // Only show children in the filtered area's lineage
                 const ancestorIds = new Set(filterAncestors.map(a => a.id));
                 ancestorIds.add(geographicAreaId); // Include the filtered area itself
 

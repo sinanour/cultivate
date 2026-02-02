@@ -303,6 +303,24 @@ The Backend API package provides the RESTful API service that implements all bus
 63. THE children endpoint SHALL include both ancestors of the filtered area AND the filtered area itself in the result set when the parent being expanded is an ancestor of the filter
 64. WHEN a user has a global filter set to a high-level area and expands a descendant of that area, THE API SHALL return ALL children of the descendant (since all children are within the filtered scope)
 65. THE children endpoint SHALL determine the relationship between the filter and the parent being expanded to decide whether to apply ancestral lineage filtering or return all children
+66. WHEN a user with geographic authorization restrictions has read-only access to an ancestor area, THE API SHALL maintain that read-only access when fetching children of that ancestor
+67. WHEN a user with geographic authorization restrictions expands an ancestor area to fetch its children, THE API SHALL return only the children that are in the direct ancestral lineage of areas the user has FULL access to
+68. WHEN a user has FULL access to a city and read-only access to its parent county (as an ancestor), THE API SHALL allow the user to fetch the county's children
+69. WHEN fetching children of a county where the user has read-only access (as an ancestor), THE API SHALL return only the cities that are in the direct ancestral lineage of areas the user has FULL access to
+70. THE API SHALL NOT return sibling cities or other children of the county that are not in the user's authorized ancestral lineage
+71. WHEN a user has FULL access to "City A" which is in "County X" → "State Y" → "Country Z", and the user expands "State Y" to fetch its children, THE API SHALL return only "County X" (not other counties in the state)
+72. WHEN a user has FULL access to multiple cities in different counties within the same state, and the user expands that state, THE API SHALL return all counties that contain at least one city the user has FULL access to
+73. THE ancestral lineage filtering SHALL apply recursively at each level of the hierarchy to maintain consistent read-only access to the complete path from root to authorized areas
+74. WHEN applying authorization filtering to children endpoints, THE API SHALL distinguish between areas the user has FULL access to (can filter by) and areas the user has READ_ONLY access to (can navigate through)
+75. THE API SHALL ensure that users with geographic authorization restrictions can always navigate their complete ancestral lineage from root to their authorized areas, even when that lineage is viewed as "children" of higher-level ancestors the children endpoint, THE API SHALL return only children that exist in the ancestor set of the filtered area
+58. WHEN geographicAreaId parameter is not provided to the children endpoint, THE API SHALL return all children of the parent area (subject to authorization filtering)
+59. WHEN geographicAreaId parameter equals the parent ID being expanded, THE API SHALL return all children of that parent (no ancestral lineage filtering needed)
+60. THE children endpoint filtering SHALL enable filtered tree views to show only the relevant branch of the hierarchy when a global filter is active
+61. WHEN a user has a global filter set to a leaf node and expands a top-level area, THE API SHALL return only the child that is the direct ancestor of the filtered leaf node
+62. WHEN a user has a global filter set to an area and expands the parent of that area, THE API SHALL return the filtered area itself (since it is a direct child of the parent being expanded)
+63. THE children endpoint SHALL include both ancestors of the filtered area AND the filtered area itself in the result set when the parent being expanded is an ancestor of the filter
+64. WHEN a user has a global filter set to a high-level area and expands a descendant of that area, THE API SHALL return ALL children of the descendant (since all children are within the filtered scope)
+65. THE children endpoint SHALL determine the relationship between the filter and the parent being expanded to decide whether to apply ancestral lineage filtering or return all children
 
 ### Requirement 6: Analyze Community Engagement
 

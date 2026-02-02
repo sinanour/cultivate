@@ -1773,7 +1773,7 @@ The original implementation incorrectly included siblings and their descendants 
     - Update route handlers to pass req.user.id to service methods
     - _Requirements: 25.4, 25.13, 25.14, 25.18, 25.22, 25.26, 25.30_
 
-  - [ ] 33.21 Enforce geographic authorization on nested resource endpoints
+  - [x] 33.21 Enforce geographic authorization on nested resource endpoints
     - Update ParticipantService.getParticipantActivities() to call getParticipantById() first (validates parent participant authorization)
     - Update ParticipantService.getAddressHistory() to call getParticipantById() first (validates parent participant authorization)
     - Update ParticipantService.getParticipantPopulations() to call getParticipantById() first (validates parent participant authorization)
@@ -1782,11 +1782,20 @@ The original implementation incorrectly included siblings and their descendants 
     - Update VenueService.getVenueActivities() to call getVenueById() first (validates parent venue authorization)
     - Update VenueService.getVenueParticipants() to call getVenueById() first (validates parent venue authorization)
     - Update GeographicAreaService.getChildren() to call getGeographicAreaById() first (validates parent area authorization)
+    - **CRITICAL: Implement ancestral lineage filtering for getChildren() when user has authorization restrictions:**
+      - After validating parent area authorization, check if user has geographic restrictions
+      - If user has restrictions, get all areas the user has FULL access to
+      - For each FULL access area, fetch its complete ancestor chain
+      - Filter the children list to only include children that are ancestors of at least one FULL access area
+      - This ensures users maintain read-only access to their complete ancestral lineage
+      - Example: User has FULL access to "Vancouver" → should see "Metro Vancouver" when expanding "British Columbia", but NOT other counties
+      - Apply this filtering BEFORE applying any global filter (geographicAreaId parameter)
+      - For administrators and unrestricted users, return all children without filtering
     - Update GeographicAreaService.getAncestors() to call getGeographicAreaById() first (validates parent area authorization)
     - Update GeographicAreaService.getVenues() to call getGeographicAreaById() first (validates parent area authorization)
     - Update GeographicAreaService.getStatistics() to call getGeographicAreaById() first (validates parent area authorization)
     - Ensure all nested endpoint route handlers pass userId to service methods
-    - _Requirements: 25.31, 25.32, 25.33, 25.34, 25.35, 25.36, 25.37, 25.38, 25.39, 25.40, 25.41_
+    - _Requirements: 25.31, 25.32, 25.33, 25.34, 25.35, 25.36, 25.37, 25.38, 25.39, 25.40, 25.41, 5B.66, 5B.67, 5B.68, 5B.69, 5B.70, 5B.71, 5B.72, 5B.73, 5B.74, 5B.75_
 
   - [ ] 33.22 Implement administrator bypass for geographic authorization
     - Update GeographicAuthorizationService.evaluateAccess() to accept optional userRole parameter
