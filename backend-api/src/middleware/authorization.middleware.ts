@@ -11,6 +11,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.ADMINISTRATOR]: ['read', 'write', 'admin'],
   [UserRole.EDITOR]: ['read', 'write'],
   [UserRole.READ_ONLY]: ['read'],
+  [UserRole.PII_RESTRICTED]: ['read'], // PII_RESTRICTED has read-only access
 };
 
 export class AuthorizationMiddleware {

@@ -1,4 +1,4 @@
-export type UserRole = 'ADMINISTRATOR' | 'EDITOR' | 'READ_ONLY';
+export type UserRole = 'ADMINISTRATOR' | 'EDITOR' | 'READ_ONLY' | 'PII_RESTRICTED';
 
 export interface User {
     id: string;

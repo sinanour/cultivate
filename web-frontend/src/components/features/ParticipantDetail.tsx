@@ -17,6 +17,8 @@ import { ParticipantPopulationService } from '../../services/api/population.serv
 import { AddressHistoryTable } from './AddressHistoryTable';
 import { AddressHistoryForm } from './AddressHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../hooks/useAuth';
+import { ParticipantDisplay } from '../common/ParticipantDisplay';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
@@ -25,6 +27,7 @@ export function ParticipantDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
@@ -204,7 +207,10 @@ export function ParticipantDetail() {
             }
           >
             <SpaceBetween direction="horizontal" size="xs" alignItems="center">
-              <span>{participant.name}</span>
+              <ParticipantDisplay
+                participant={participant}
+                currentUserRole={user?.role || 'READ_ONLY'}
+              />
               {populations.map((pp) => (
                 <Badge key={pp.id} color="blue">
                   {pp.population?.name || 'Unknown'}
@@ -270,26 +276,29 @@ export function ParticipantDetail() {
         </ColumnLayout>
       </Container>
 
-      <AddressHistoryTable
-        addressHistory={addressHistory}
-        onEdit={handleEditAddress}
-        onDelete={handleDeleteAddress}
-        loading={isLoadingHistory}
-        header={
-          <Header
-            variant="h3"
-            actions={
-              canEdit() && (
-                <ResponsiveButton mobileIcon="add-plus" onClick={handleAddAddress}>
-                  Add Address History
-                </ResponsiveButton>
-              )
-            }
-          >
-            Address History
-          </Header>
-        }
-      />
+      {/* Hide address history for PII_RESTRICTED users (home addresses are PII) */}
+      {user?.role !== 'PII_RESTRICTED' && (
+        <AddressHistoryTable
+          addressHistory={addressHistory}
+          onEdit={handleEditAddress}
+          onDelete={handleDeleteAddress}
+          loading={isLoadingHistory}
+          header={
+            <Header
+              variant="h3"
+              actions={
+                canEdit() && (
+                  <ResponsiveButton mobileIcon="add-plus" onClick={handleAddAddress}>
+                    Add Address History
+                  </ResponsiveButton>
+                )
+              }
+            >
+              Address History
+            </Header>
+          }
+        />
+      )}
 
       <Table
         wrapLines={false}

@@ -19,6 +19,8 @@ import { AssignmentForm } from './AssignmentForm';
 import { ActivityVenueHistoryTable } from './ActivityVenueHistoryTable';
 import { ActivityVenueHistoryForm } from './ActivityVenueHistoryForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../hooks/useAuth';
+import { ParticipantDisplay } from '../common/ParticipantDisplay';
 import { formatDate } from '../../utils/date.utils';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
 import { ResponsiveButton } from '../common/ResponsiveButton';
@@ -27,6 +29,7 @@ export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
@@ -371,14 +374,26 @@ export function ActivityDetail() {
           {
             id: 'participant',
             header: 'Participant',
-            cell: (item) => (
-              <>
-                <Link href={`/participants/${item.participantId}`}>
-                  {item.participant?.name || 'Unknown'}
-                </Link>
-                {renderPopulationBadges(item.participant?.populations)}
-              </>
-            ),
+            cell: (item) => {
+              // For PII_RESTRICTED users, show participant ID if name is null
+              const displayContent = item.participant ? (
+                <ParticipantDisplay
+                  participant={item.participant}
+                  currentUserRole={user?.role || 'READ_ONLY'}
+                />
+              ) : (
+                user?.role === 'PII_RESTRICTED' ? item.participantId : 'Unknown'
+              );
+
+              return (
+                <>
+                  <Link href={`/participants/${item.participantId}`}>
+                    {displayContent}
+                  </Link>
+                  {item.participant && renderPopulationBadges(item.participant.populations)}
+                </>
+              );
+            },
           },
           {
             id: 'email',

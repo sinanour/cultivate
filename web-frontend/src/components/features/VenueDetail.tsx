@@ -14,6 +14,8 @@ import Badge from '@cloudscape-design/components/badge';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../hooks/useAuth';
+import { VenueDisplay } from '../common/VenueDisplay';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { formatDate } from '../../utils/date.utils';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
@@ -24,6 +26,7 @@ export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
+  const { user } = useAuth();
   const [deleteError, setDeleteError] = useState('');
 
   const { data: venue, isLoading, error } = useQuery({
@@ -121,7 +124,10 @@ export function VenueDetail() {
               </SpaceBetween>
             }
           >
-            {venue.name}
+            <VenueDisplay
+              venue={venue}
+              currentUserRole={user?.role || 'READ_ONLY'}
+            />
           </Header>
         }
       >
@@ -200,38 +206,41 @@ export function VenueDetail() {
         }
       />
 
-      <Table
-        wrapLines={false}
-        header={<Header variant="h3">Participants with Home Address Here</Header>}
-        columnDefinitions={[
-          {
-            id: 'name',
-            header: 'Name',
-            cell: (item) => (
-              <>
-                <Link href={`/participants/${item.id}`}>
-                  {item.name || 'Unknown'}
-                </Link>
-                {renderPopulationBadges(item.populations)}
-              </>
-            ),
-          },
-          {
-            id: 'email',
-            header: 'Email',
-            cell: (item) => item.email || '-',
-          },
-        ]}
-        items={participants}
-        empty={
-          <Box textAlign="center" color="inherit">
-            <b>No participants</b>
-            <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-              No participants have this venue as their home address.
+      {/* Hide participant associations for PII_RESTRICTED users (home addresses are PII) */}
+      {user?.role !== 'PII_RESTRICTED' && (
+        <Table
+          wrapLines={false}
+          header={<Header variant="h3">Participants with Home Address Here</Header>}
+          columnDefinitions={[
+            {
+              id: 'name',
+              header: 'Name',
+              cell: (item) => (
+                <>
+                  <Link href={`/participants/${item.id}`}>
+                    {item.name || 'Unknown'}
+                  </Link>
+                  {renderPopulationBadges(item.populations)}
+                </>
+              ),
+            },
+            {
+              id: 'email',
+              header: 'Email',
+              cell: (item) => item.email || '-',
+            },
+          ]}
+          items={participants}
+          empty={
+            <Box textAlign="center" color="inherit">
+              <b>No participants</b>
+              <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+                No participants have this venue as their home address.
+              </Box>
             </Box>
-          </Box>
-        }
-      />
+          }
+        />
+      )}
     </SpaceBetween>
   );
 }

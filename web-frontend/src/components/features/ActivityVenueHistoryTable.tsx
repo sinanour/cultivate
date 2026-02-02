@@ -8,6 +8,8 @@ import {
 } from '@cloudscape-design/components';
 import { formatDate } from '../../utils/date.utils';
 import { ResponsiveButton } from '../common/ResponsiveButton';
+import { VenueDisplay } from '../common/VenueDisplay';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ActivityVenueHistoryRecord {
   id: string;
@@ -39,6 +41,7 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
   loading = false,
   header,
 }) => {
+  const { user } = useAuth();
 
   // Sort by effective start date in reverse chronological order (most recent first)
   // Null dates (activity start) are treated using activityStartDate for sorting
@@ -58,16 +61,28 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
         {
           id: 'venue',
           header: 'Venue',
-          cell: (item: ActivityVenueHistoryRecord) => (
-            <SpaceBetween direction="horizontal" size="xs">
-              <Link href={`/venues/${item.venueId}`}>
-                {item.venue?.name || 'Unknown Venue'}
-              </Link>
-              {sortedHistory.indexOf(item) === 0 && (
-                <Badge color="green">Current</Badge>
-              )}
-            </SpaceBetween>
-          ),
+          cell: (item: ActivityVenueHistoryRecord) => {
+            // For PII_RESTRICTED users, show venue ID if name is null
+            const displayContent = item.venue ? (
+              <VenueDisplay
+                venue={item.venue}
+                currentUserRole={user?.role || 'READ_ONLY'}
+              />
+            ) : (
+              user?.role === 'PII_RESTRICTED' ? item.venueId : 'Unknown Venue'
+            );
+
+            return (
+              <SpaceBetween direction="horizontal" size="xs">
+                <Link href={`/venues/${item.venueId}`}>
+                  {displayContent}
+                </Link>
+                {sortedHistory.indexOf(item) === 0 && (
+                  <Badge color="green">Current</Badge>
+                )}
+              </SpaceBetween>
+            );
+          },
           sortingField: 'venue.name',
         },
         {

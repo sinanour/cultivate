@@ -35,4 +35,15 @@ describe('formatDate', () => {
         expect(formatDate('2024-03-15T10:30:00.123Z')).toBe('2024-03-15');
         expect(formatDate('2024-03-15T10:30:00.999999Z')).toBe('2024-03-15');
     });
+
+    it('should handle Date objects', () => {
+        expect(formatDate(new Date('2024-03-15T10:30:00Z'))).toBe('2024-03-15');
+        expect(formatDate(new Date('2024-12-31T23:59:59Z'))).toBe('2024-12-31');
+    });
+
+    it('should handle invalid inputs gracefully', () => {
+        expect(formatDate({} as any)).toBe('');
+        expect(formatDate(123 as any)).toBe('');
+        expect(formatDate(true as any)).toBe('');
+    });
 });

@@ -35,10 +35,12 @@ import { MapDataService } from './services/map-data.service';
 import { SyncService } from './services/sync.service';
 import { GeocodingService } from './services/geocoding.service';
 import { GeographicAuthorizationService } from './services/geographic-authorization.service';
+import { PIIRedactionService } from './services/pii-redaction.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
 import { AuditLoggingMiddleware } from './middleware/audit-logging.middleware';
+import { PIIRedactionMiddleware } from './middleware/pii-redaction.middleware';
 import {
   authRateLimiter,
   smartRateLimiter,
@@ -88,6 +90,7 @@ const auditLogRepository = new AuditLogRepository(prisma);
 const userGeographicAuthorizationRepository = new UserGeographicAuthorizationRepository(prisma);
 
 // Initialize services
+const piiRedactionService = new PIIRedactionService();
 const geographicAuthorizationService = new GeographicAuthorizationService(
   userGeographicAuthorizationRepository,
   geographicAreaRepository,
@@ -138,6 +141,7 @@ const geocodingService = new GeocodingService();
 const authMiddleware = new AuthMiddleware(authService, userRepository);
 const authorizationMiddleware = new AuthorizationMiddleware();
 const auditLoggingMiddleware = new AuditLoggingMiddleware(auditLogRepository);
+const piiRedactionMiddleware = new PIIRedactionMiddleware(piiRedactionService);
 
 // Initialize routes
 const authRoutes = new AuthRoutes(authService, authMiddleware, auditLoggingMiddleware);
@@ -207,6 +211,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Add rate limit headers to all responses
 app.use(addRateLimitHeaders);
+
+// Apply PII redaction middleware to all routes (must be before route handlers)
+app.use(piiRedactionMiddleware.intercept());
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

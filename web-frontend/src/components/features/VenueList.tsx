@@ -13,11 +13,13 @@ import type { PropertyFilterProps } from '@cloudscape-design/components/property
 import type { Venue } from '../../types';
 import { VenueService } from '../../services/api/venue.service';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../hooks/useAuth';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
 import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { ResponsiveButton } from '../common/ResponsiveButton';
+import { VenueDisplay } from '../common/VenueDisplay';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 
@@ -28,6 +30,7 @@ export function VenueList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
+  const { user } = useAuth();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
@@ -303,7 +306,8 @@ export function VenueList() {
   };
 
   const handleDelete = async (venue: Venue) => {
-    if (window.confirm(`Are you sure you want to delete "${venue.name}"?`)) {
+    const displayName = user?.role === 'PII_RESTRICTED' ? venue.address : venue.name;
+    if (window.confirm(`Are you sure you want to delete "${displayName}"?`)) {
       deleteMutation.mutate(venue.id);
     }
   };
@@ -413,7 +417,10 @@ export function VenueList() {
             header: 'Name',
             cell: (item) => (
               <Link href={`/venues/${item.id}`}>
-                {item.name}
+                <VenueDisplay
+                  venue={item}
+                  currentUserRole={user?.role || 'READ_ONLY'}
+                />
               </Link>
             ),
             sortingField: 'name',
@@ -437,26 +444,29 @@ export function VenueList() {
           {
             id: 'actions',
             header: 'Actions',
-            cell: (item) => (
-              <Box>
-                {canEdit() && (
-                  <Button
-                    variant="inline-link"
-                    iconName="edit"
-                    onClick={() => handleEdit(item)}
-                    ariaLabel={`Edit ${item.name}`}
-                  />
-                )}
-                {canDelete() && (
-                  <Button
-                    variant="inline-link"
-                    iconName="remove"
-                    onClick={() => handleDelete(item)}
-                    ariaLabel={`Remove ${item.name}`}
-                  />
-                )}
-              </Box>
-            ),
+            cell: (item) => {
+              const displayName = user?.role === 'PII_RESTRICTED' ? item.address : item.name;
+              return (
+                <Box>
+                  {canEdit() && (
+                    <Button
+                      variant="inline-link"
+                      iconName="edit"
+                      onClick={() => handleEdit(item)}
+                      ariaLabel={`Edit ${displayName}`}
+                    />
+                  )}
+                  {canDelete() && (
+                    <Button
+                      variant="inline-link"
+                      iconName="remove"
+                      onClick={() => handleDelete(item)}
+                      ariaLabel={`Remove ${displayName}`}
+                    />
+                  )}
+                </Box>
+              );
+            },
           },
         ]}
         items={paginatedVenues}

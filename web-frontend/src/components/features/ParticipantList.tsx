@@ -14,11 +14,13 @@ import type { Participant } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { PopulationService } from '../../services/api/population.service';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../hooks/useAuth';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
 import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { ResponsiveButton } from '../common/ResponsiveButton';
+import { ParticipantDisplay } from '../common/ParticipantDisplay';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
@@ -30,6 +32,7 @@ export function ParticipantList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { canCreate, canEdit, canDelete } = usePermissions();
+  const { user } = useAuth();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
@@ -339,7 +342,8 @@ export function ParticipantList() {
   };
 
   const handleDelete = async (participant: Participant) => {
-    if (window.confirm(`Are you sure you want to delete "${participant.name}"?`)) {
+    const displayName = user?.role === 'PII_RESTRICTED' ? participant.id : participant.name;
+    if (window.confirm(`Are you sure you want to delete "${displayName}"?`)) {
       deleteMutation.mutate(participant.id);
     }
   };
@@ -440,7 +444,10 @@ export function ParticipantList() {
             cell: (item) => (
               <>
                 <Link href={`/participants/${item.id}`}>
-                  {item.name}
+                  <ParticipantDisplay
+                    participant={item}
+                    currentUserRole={user?.role || 'READ_ONLY'}
+                  />
                 </Link>
                 {renderPopulationBadges(item.populations)}
               </>
@@ -461,26 +468,29 @@ export function ParticipantList() {
           {
             id: 'actions',
             header: 'Actions',
-            cell: (item) => (
-              <Box>
-                {canEdit() && (
-                  <Button
-                    variant="inline-link"
-                    iconName="edit"
-                    onClick={() => handleEdit(item)}
-                    ariaLabel={`Edit ${item.name}`}
-                  />
-                )}
-                {canDelete() && (
-                  <Button
-                    variant="inline-link"
-                    iconName="remove"
-                    onClick={() => handleDelete(item)}
-                    ariaLabel={`Remove ${item.name}`}
-                  />
-                )}
-              </Box>
-            ),
+            cell: (item) => {
+              const displayName = user?.role === 'PII_RESTRICTED' ? item.id : item.name;
+              return (
+                <Box>
+                  {canEdit() && (
+                    <Button
+                      variant="inline-link"
+                      iconName="edit"
+                      onClick={() => handleEdit(item)}
+                      ariaLabel={`Edit ${displayName}`}
+                    />
+                  )}
+                  {canDelete() && (
+                    <Button
+                      variant="inline-link"
+                      iconName="remove"
+                      onClick={() => handleDelete(item)}
+                      ariaLabel={`Remove ${displayName}`}
+                    />
+                  )}
+                </Box>
+              );
+            },
           },
         ]}
         items={paginatedParticipants}

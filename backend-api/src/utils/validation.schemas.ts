@@ -70,8 +70,8 @@ export const UserCreateSchema = z.object({
   displayName: z.string().min(1).max(200).optional(),
   email: z.string().email('Invalid email format'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  role: z.enum(['ADMINISTRATOR', 'EDITOR', 'READ_ONLY'], {
-    errorMap: () => ({ message: 'Role must be ADMINISTRATOR, EDITOR, or READ_ONLY' }),
+  role: z.enum(['ADMINISTRATOR', 'EDITOR', 'READ_ONLY', 'PII_RESTRICTED'], {
+    errorMap: () => ({ message: 'Role must be ADMINISTRATOR, EDITOR, READ_ONLY, or PII_RESTRICTED' }),
   }),
   authorizationRules: z.array(z.object({
     geographicAreaId: z.string().uuid(),
@@ -83,8 +83,8 @@ export const UserUpdateSchema = z.object({
   displayName: z.string().min(1).max(200).nullable().optional(),
   email: z.string().email('Invalid email format').optional(),
   password: z.string().min(8, 'Password must be at least 8 characters').optional(),
-  role: z.enum(['ADMINISTRATOR', 'EDITOR', 'READ_ONLY'], {
-    errorMap: () => ({ message: 'Role must be ADMINISTRATOR, EDITOR, or READ_ONLY' }),
+  role: z.enum(['ADMINISTRATOR', 'EDITOR', 'READ_ONLY', 'PII_RESTRICTED'], {
+    errorMap: () => ({ message: 'Role must be ADMINISTRATOR, EDITOR, READ_ONLY, or PII_RESTRICTED' }),
   }).optional(),
 });
 

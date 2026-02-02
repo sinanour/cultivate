@@ -30,6 +30,7 @@ enum UserRole {
   ADMINISTRATOR
   EDITOR
   READ_ONLY
+  PII_RESTRICTED
 }
 
 // User Geographic Authorization model for granular geographic access control

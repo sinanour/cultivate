@@ -210,6 +210,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
     { label: 'Administrator', value: 'ADMINISTRATOR' },
     { label: 'Editor', value: 'EDITOR' },
     { label: 'Read Only', value: 'READ_ONLY' },
+    { label: 'PII Restricted', value: 'PII_RESTRICTED' },
   ];
 
   const createMutation = useMutation({
