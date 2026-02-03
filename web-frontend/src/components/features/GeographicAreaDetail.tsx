@@ -14,7 +14,9 @@ import Badge from '@cloudscape-design/components/badge';
 import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../hooks/useAuth';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { VenueDisplay } from '../common/VenueDisplay';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { formatDate } from '../../utils/date.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
@@ -23,6 +25,7 @@ export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
+  const { user } = useAuth();
   const { setGeographicAreaFilter } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
 
@@ -233,7 +236,10 @@ export function GeographicAreaDetail() {
             header: 'Name',
             cell: (item) => (
               <Link href={`/venues/${item.id}`}>
-                {item.name || 'Unknown'}
+                <VenueDisplay
+                  venue={item}
+                  currentUserRole={user?.role || 'READ_ONLY'}
+                />
               </Link>
             ),
           },
