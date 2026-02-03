@@ -611,6 +611,26 @@ This implementation plan covers the React-based web application built with TypeS
     - Add delete button with confirmation dialog
     - _Requirements: 6A.9, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
+  - [x] 8.3a Add map preview to VenueDetail component
+    - Check if venue has non-null latitude and longitude coordinates
+    - When coordinates are present, render interactive map preview in CloudScape Container
+    - Position map container below venue details pane and above "Associated Activities" pane
+    - Use Leaflet or Mapbox GL JS (same library as VenueFormMapView) for map rendering
+    - Display venue location as a non-draggable marker on the map
+    - Center map on venue's coordinates with zoom level 15 for street-level view
+    - Allow users to zoom and pan the map for geographic context
+    - Set map height to 400px for preview purposes
+    - When venue has null latitude or longitude, completely hide the map preview container
+    - Use consistent map styling with VenueFormMapView for visual continuity
+    - _Requirements: 6A.9b, 6A.9c, 6A.9d, 6A.9e, 6A.9f_
+
+  - [ ]* 8.3b Write property tests for venue detail map preview
+    - **Property 49a: Venue Detail Map Preview Display with Coordinates**
+    - **Property 49b: Venue Detail Map Preview Positioning**
+    - **Property 49c: Venue Detail Map Preview Marker Display**
+    - **Property 49d: Venue Detail Map Preview Hidden Without Coordinates**
+    - **Validates: Requirements 6A.9b, 6A.9c, 6A.9d, 6A.9e, 6A.9f**
+
   - [ ]* 8.4 Write property test for venue detail view
     - **Property 49: Venue Detail View Completeness**
     - **Validates: Requirements 6A.9**

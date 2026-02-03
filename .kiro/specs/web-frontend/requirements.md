@@ -440,6 +440,11 @@ The Web Frontend package provides a responsive React-based web application that 
 8. THE Web_App SHALL allow optional fields for latitude, longitude, and venue type
 9. THE Web_App SHALL display a detail view showing venue information, associated activities, and participants using it as their current home address
 9a. WHEN displaying participants on a venue detail page, THE Web_App SHALL only show participants whose most recent address history record is at this venue
+9b. WHEN a venue has non-null latitude and longitude coordinates, THE Web_App SHALL display an interactive map preview on the venue detail page
+9c. THE map preview SHALL be positioned in its own container below the venue details pane and above the "Associated Activities" pane
+9d. THE map preview SHALL display the venue location as a marker on the map
+9e. THE map preview SHALL be centered on the venue's coordinates with an appropriate zoom level (e.g., zoom level 15)
+9f. WHEN a venue has null latitude or longitude coordinates, THE Web_App SHALL NOT display the map preview container on the venue detail page
 10. WHEN deleting a venue, THE Web_App SHALL prevent deletion if activities or participants reference it
 11. WHEN deleting a venue, THE Web_App SHALL display an error message explaining which entities reference it
 

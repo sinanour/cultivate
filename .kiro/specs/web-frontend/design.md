@@ -556,6 +556,16 @@ src/
 - Displays error message when deletion fails
 - Hides edit and delete buttons when user has READ_ONLY role
 - Shows edit and delete buttons when user has EDITOR or ADMINISTRATOR role
+- **Map Preview Display:**
+  - When venue has non-null latitude and longitude coordinates, displays interactive map preview
+  - Positions map preview in its own CloudScape Container below venue details pane and above "Associated Activities" pane
+  - Renders map using Leaflet or Mapbox GL JS (same library as VenueFormMapView)
+  - Displays venue location as a non-draggable marker on the map
+  - Centers map on venue's coordinates with zoom level 15 for street-level view
+  - Allows users to zoom and pan the map for context
+  - Sets map height to reasonable size (e.g., 400px) for preview purposes
+  - When venue has null latitude or longitude, completely hides the map preview container
+  - Uses consistent map styling with VenueFormMapView for visual continuity
 - Lists all activities associated with the venue (current and historical) with activity names hyperlinked to /activities/:id
 - Lists all participants with this venue as their current home address (most recent address history) with participant names hyperlinked to /participants/:id
 - Displays population badges beside each participant name using CloudScape Badge component

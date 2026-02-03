@@ -19,6 +19,7 @@ import { VenueDisplay } from '../common/VenueDisplay';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { formatDate } from '../../utils/date.utils';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
+import { VenueDetailMapPreview } from './VenueDetailMapPreview';
 import { BreadcrumbGroup, type BreadcrumbGroupProps } from '@cloudscape-design/components';
 import type { GeographicArea } from '../../types';
 
@@ -170,6 +171,13 @@ export function VenueDetail() {
           </div>
         </ColumnLayout>
       </Container>
+
+      {/* Map Preview - only shown when coordinates are available */}
+      {venue.latitude !== null && venue.longitude !== null && (
+        <Container header={<Header variant="h3">Location</Header>}>
+          <VenueDetailMapPreview latitude={venue.latitude as number} longitude={venue.longitude as number} />
+        </Container>
+      )}
 
       <Table
         wrapLines={false}
