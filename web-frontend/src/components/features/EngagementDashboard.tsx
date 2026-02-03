@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
@@ -40,6 +40,8 @@ import { generateEngagementSummaryFilename } from '../../utils/csv-filename.util
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import type { AreaType } from '../../types';
 import { ResponsiveButton } from '../common/ResponsiveButton';
+import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
+import { invalidatePageCaches, getDashboardQueryKeys } from '../../utils/cache-invalidation.utils';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -119,6 +121,7 @@ interface EngagementDashboardProps {
 
 export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: EngagementDashboardProps = {}) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   
   // Initialize state from URL parameters
@@ -1087,8 +1090,23 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
     ? activitiesByTypeChartData 
     : activitiesByCategoryChartData;
 
+  // Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    // Invalidate caches
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getDashboardQueryKeys('engagement'),
+      clearLocalStorage: false // Preserve filter selections
+    });
+
+    // Re-run the report with current filters
+    if (triggerFilterUpdate.current) {
+      triggerFilterUpdate.current();
+    }
+  }, [queryClient]);
+
   return (
-    <SpaceBetween size="l">
+    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
+      <SpaceBetween size="l">
       {/* Filters Section */}
       <Container
         header={<Header variant="h3">Filters and Grouping</Header>}
@@ -1840,5 +1858,6 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
         )}
       </Container>
     </SpaceBetween>
+    </PullToRefreshWrapper>
   );
 }

@@ -55,6 +55,7 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Population_Badge**: A visual indicator displayed beside a participant's name showing which populations they belong to, enabling quick identification of participant demographics
 - **Additional_Participant_Count**: An optional positive integer field on activities that represents approximate attendance beyond individually tracked participants, used for high-level participation tracking in large gatherings
 - **Run_Report_Pattern**: A user interface pattern where data visualization pages render in an empty state by default and require explicit user action (clicking a "Run Report" button) to fetch and display data based on selected filters and grouping criteria
+- **Pull_To_Refresh**: A mobile-friendly gesture where users can pull down on a page to trigger a refresh of the current view, clearing all cached data and forcing a re-fetch from the backend
 
 ## Requirements
 
@@ -70,6 +71,33 @@ The Web Frontend package provides a responsive React-based web application that 
 4. THE Web_App SHALL be responsive and work on screen sizes from 768px to 1920px width
 5. THE Web_App SHALL follow CloudScape design patterns and guidelines
 6. THE Web_App SHALL provide a consistent look and feel across all pages
+
+### Requirement 1A: Pull-to-Refresh Functionality
+
+**User Story:** As a mobile user, I want to pull down on any page to refresh the content, so that I can easily update the data without needing to find and click a refresh button.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL implement pull-to-refresh functionality on all pages
+2. WHEN a user performs a pull-down gesture on a page, THE Web_App SHALL display a visual indicator (loading spinner or refresh icon) at the top of the page
+3. WHEN the pull-down gesture is released, THE Web_App SHALL trigger a refresh of the current page's data
+4. WHEN a refresh is triggered via pull-to-refresh, THE Web_App SHALL invalidate all React Query caches for the current page's data
+5. WHEN a refresh is triggered via pull-to-refresh, THE Web_App SHALL NOT clear authentication tokens (accessToken, refreshToken, user) from localStorage
+6. WHEN a refresh is triggered via pull-to-refresh, THE Web_App SHALL preserve the user's logged-in state and NOT force a logout
+7. WHEN a refresh is triggered via pull-to-refresh, THE Web_App SHALL force a re-fetch of all data from the backend API
+8. THE Web_App SHALL display a loading indicator during the refresh operation
+9. WHEN the refresh operation completes successfully, THE Web_App SHALL hide the loading indicator and display the updated data
+10. WHEN the refresh operation fails, THE Web_App SHALL display an error message and hide the loading indicator
+11. THE Web_App SHALL prevent pull-to-refresh from triggering when the page is scrolled down (only trigger when at the top of the page)
+12. THE Web_App SHALL provide smooth animations during the pull-to-refresh gesture for a native-like experience
+13. THE Web_App SHALL work on both touch-enabled devices (mobile, tablet) and desktop browsers with touch screens
+14. THE Web_App SHALL NOT interfere with normal scrolling behavior when pull-to-refresh is not triggered
+15. THE Web_App SHALL respect the user's scroll position after refresh completes (return to top or maintain position based on page type)
+16. WHEN pull-to-refresh is triggered on list pages (participants, activities, venues, geographic areas), THE Web_App SHALL reset pagination to the first page
+17. WHEN pull-to-refresh is triggered on detail pages, THE Web_App SHALL re-fetch the entity details and all related data
+18. WHEN pull-to-refresh is triggered on dashboard pages, THE Web_App SHALL clear all chart data and re-run the current report with existing filters
+19. THE Web_App SHALL NOT implement pull-to-refresh on the map view page due to fundamental gesture conflicts with map panning, zooming, and marker interactions
+20. ON pages with interactive maps or similar gesture-based components, THE Web_App MAY omit pull-to-refresh to preserve optimal user experience for the primary interaction
 
 ### Requirement 2: Configuration UI
 

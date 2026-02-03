@@ -20,8 +20,10 @@ import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
 import { ResponsiveButton } from '../common/ResponsiveButton';
+import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
+import { invalidatePageCaches, getListPageQueryKeys } from '../../utils/cache-invalidation.utils';
 import styles from './GeographicAreaList.module.scss';
 
 const BATCH_SIZE = 100;
@@ -107,7 +109,7 @@ export function GeographicAreaList() {
   }, []);
 
   // Fetch initial geographic areas with depth=1 (top-level + immediate children)
-  const { data: geographicAreasResponse, isLoading } = useQuery({
+  const { data: geographicAreasResponse, isLoading, refetch } = useQuery({
     queryKey: ['geographicAreas', selectedGeographicAreaId, 'depth-1'],
     queryFn: () => GeographicAreaService.getGeographicAreas(
       undefined,  // page
@@ -646,9 +648,27 @@ export function GeographicAreaList() {
     };
   };
 
+  // Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    // Invalidate caches (but preserve auth tokens)
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getListPageQueryKeys('geographic-areas'),
+      clearLocalStorage: false // Don't clear localStorage to preserve auth
+    });
+
+    // Reset tree state
+    setChildrenCache(new Map());
+    setBatchLoadingState({});
+    setExpandedItems([]);
+
+    // Trigger refetch through React Query
+    await refetch();
+  }, [queryClient, refetch]);
+
   return (
-    <>
-      <SpaceBetween size="l">
+    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
+      <>
+        <SpaceBetween size="l">
         {deleteError ? (
           <Alert
             key="error-alert"
@@ -767,5 +787,6 @@ export function GeographicAreaList() {
         onDismiss={() => setShowImportResults(false)}
       />
     </>
+    </PullToRefreshWrapper>
   );
 }

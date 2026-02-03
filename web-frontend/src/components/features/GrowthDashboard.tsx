@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -26,6 +26,8 @@ import {
   type GroupingDimension as FilterGroupingDimension 
 } from '../common/FilterGroupingPanel';
 import type { TimePeriod } from '../../utils/constants';
+import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
+import { invalidatePageCaches, getDashboardQueryKeys } from '../../utils/cache-invalidation.utils';
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -66,6 +68,7 @@ interface GrowthDashboardProps {
 }
 
 export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: GrowthDashboardProps = {}) {
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
 
@@ -537,8 +540,23 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
     });
   })();
 
+  // Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    // Invalidate caches
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getDashboardQueryKeys('growth'),
+      clearLocalStorage: false // Preserve filter selections
+    });
+
+    // Re-run the report with current filters
+    if (triggerFilterUpdate.current) {
+      triggerFilterUpdate.current();
+    }
+  }, [queryClient]);
+
   return (
-    <SpaceBetween size="l">
+    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
+      <SpaceBetween size="l">
       {/* Filters Section */}
       <Container
         header={
@@ -796,5 +814,6 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
         )}
       </Container>
     </SpaceBetween>
+    </PullToRefreshWrapper>
   );
 }

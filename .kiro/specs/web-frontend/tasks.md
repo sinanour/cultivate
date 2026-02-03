@@ -73,6 +73,100 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 43c: Sticky Header Content Clearance**
     - **Validates: Requirements 13.9, 13.10, 13.11**
 
+- [x] 2A. Implement pull-to-refresh functionality
+  - [x] 2A.1 Install and configure pull-to-refresh library
+    - Research and select appropriate pull-to-refresh library (e.g., react-simple-pull-to-refresh, react-pull-to-refresh, or custom implementation)
+    - Install selected library or dependencies for custom implementation
+    - Configure library with appropriate thresholds and animations
+    - _Requirements: 1A.1, 1A.11_
+
+  - [x] 2A.2 Create usePullToRefresh custom hook
+    - Create reusable hook that wraps pull-to-refresh functionality
+    - Accept onRefresh callback as parameter
+    - Handle gesture detection (pull-down at top of page)
+    - Manage loading state during refresh
+    - Provide visual feedback (loading spinner/icon)
+    - Return refresh state and trigger function
+    - _Requirements: 1A.2, 1A.3, 1A.7, 1A.10, 1A.11, 1A.13_
+
+  - [x] 2A.3 Implement cache invalidation logic
+    - Create utility function to invalidate React Query caches for current page
+    - Implement IndexedDB cache clearing for page-specific data
+    - Implement localStorage clearing for page-specific data
+    - Ensure all cached resources are cleared before re-fetch
+    - _Requirements: 1A.4, 1A.5, 1A.6_
+
+  - [x] 2A.4 Integrate pull-to-refresh into list pages
+    - Add pull-to-refresh to ParticipantList component
+    - Add pull-to-refresh to ActivityList component
+    - Add pull-to-refresh to VenueList component
+    - Add pull-to-refresh to GeographicAreaList component
+    - Add pull-to-refresh to ConfigurationPage (wraps all configuration lists)
+    - Add pull-to-refresh to UsersPage (wraps UserList)
+    - When refresh triggered, reset pagination to first page
+    - When refresh triggered, invalidate list data cache
+    - When refresh triggered, re-fetch first batch of data
+    - Preserve authentication tokens (never clear auth from localStorage)
+    - _Requirements: 1A.1, 1A.5, 1A.6, 1A.15_
+
+  - [x] 2A.5 Integrate pull-to-refresh into detail pages
+    - Add pull-to-refresh to ParticipantDetail component
+    - Add pull-to-refresh to ActivityDetail component
+    - Add pull-to-refresh to VenueDetail component
+    - Add pull-to-refresh to GeographicAreaDetail component
+    - When refresh triggered, invalidate entity cache
+    - When refresh triggered, re-fetch entity details and all related data
+    - _Requirements: 1A.1, 1A.16_
+
+  - [x] 2A.6 Integrate pull-to-refresh into dashboard pages
+    - Add pull-to-refresh to EngagementDashboard component
+    - Add pull-to-refresh to GrowthDashboard component
+    - When refresh triggered, clear all chart data caches
+    - When refresh triggered, re-run current report with existing filters
+    - Maintain current filter and grouping selections after refresh
+    - _Requirements: 1A.1, 1A.17_
+
+  - [x] 2A.7 Integrate pull-to-refresh into MapView
+    - Decision: Pull-to-refresh NOT implemented on map view page
+    - Reason: Fundamental gesture conflicts with map panning, zooming, and marker interactions
+    - Alternative: Users can refresh by changing filters or using browser refresh
+    - Note: Interactive maps require touch gestures that conflict with pull-to-refresh
+    - _Requirements: 1A.19, 1A.20_
+
+  - [x] 2A.8 Implement error handling for pull-to-refresh
+    - Display error message when refresh fails
+    - Hide loading indicator on error
+    - Allow user to retry refresh after error
+    - Log errors for debugging
+    - _Requirements: 1A.9_
+
+  - [x] 2A.9 Implement scroll position management
+    - Detect when user is at top of page (enable pull-to-refresh)
+    - Disable pull-to-refresh when page is scrolled down
+    - Determine appropriate scroll position after refresh (top vs maintain)
+    - For list pages: return to top after refresh
+    - For detail pages: maintain scroll position after refresh
+    - _Requirements: 1A.10, 1A.14_
+
+  - [x] 2A.10 Add touch and desktop support
+    - Ensure pull-to-refresh works on touch-enabled mobile devices
+    - Ensure pull-to-refresh works on touch-enabled tablets
+    - Ensure pull-to-refresh works on desktop browsers with touch screens
+    - Test gesture recognition across different devices
+    - _Requirements: 1A.12_
+
+  - [ ]* 2A.11 Write property tests for pull-to-refresh
+    - **Property 270: Pull-to-Refresh Gesture Detection**
+    - **Property 271: Pull-to-Refresh Visual Indicator**
+    - **Property 272: Pull-to-Refresh Cache Invalidation**
+    - **Property 273: Pull-to-Refresh Data Re-fetch**
+    - **Property 274: Pull-to-Refresh Error Handling**
+    - **Property 275: Pull-to-Refresh Scroll Position Detection**
+    - **Property 276: Pull-to-Refresh List Page Pagination Reset**
+    - **Property 277: Pull-to-Refresh Dashboard Filter Preservation**
+    - **Property 278: Pull-to-Refresh Map State Preservation**
+    - **Validates: Requirements 1A.1, 1A.2, 1A.3, 1A.4, 1A.5, 1A.6, 1A.7, 1A.8, 1A.9, 1A.10, 1A.11, 1A.12, 1A.13, 1A.14, 1A.15, 1A.16, 1A.17, 1A.18**
+
 - [x] 3. Implement authentication system
   - [x] 3.1 Create authentication service
     - Implement login API call (returns access token with 15 min expiry, refresh token with 7 day expiry)

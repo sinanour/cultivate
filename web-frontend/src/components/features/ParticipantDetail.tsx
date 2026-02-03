@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
@@ -20,8 +20,10 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
 import { ParticipantDisplay } from '../common/ParticipantDisplay';
 import { ResponsiveButton } from '../common/ResponsiveButton';
+import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
+import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
 
 export function ParticipantDetail() {
   const { id } = useParams<{ id: string }>();
@@ -34,25 +36,25 @@ export function ParticipantDetail() {
   const [editingAddress, setEditingAddress] = useState<ParticipantAddressHistory | undefined>();
   const [error, setError] = useState('');
 
-  const { data: participant, isLoading, error: loadError } = useQuery({
+  const { data: participant, isLoading, error: loadError, refetch } = useQuery({
     queryKey: ['participant', id],
     queryFn: () => ParticipantService.getParticipant(id!),
     enabled: !!id,
   });
 
-  const { data: addressHistory = [], isLoading: isLoadingHistory } = useQuery({
+  const { data: addressHistory = [], isLoading: isLoadingHistory, refetch: refetchAddressHistory } = useQuery({
     queryKey: ['participantAddressHistory', id],
     queryFn: () => ParticipantAddressHistoryService.getAddressHistory(id!),
     enabled: !!id,
   });
 
-  const { data: activities = [], isLoading: isLoadingActivities } = useQuery({
+  const { data: activities = [], isLoading: isLoadingActivities, refetch: refetchActivities } = useQuery({
     queryKey: ['participantActivities', id],
     queryFn: () => ParticipantService.getParticipantActivities(id!),
     enabled: !!id,
   });
 
-  const { data: populations = [] } = useQuery({
+  const { data: populations = [], refetch: refetchPopulations } = useQuery({
     queryKey: ['participantPopulations', id],
     queryFn: () => ParticipantPopulationService.getParticipantPopulations(id!),
     enabled: !!id,
@@ -156,8 +158,28 @@ export function ParticipantDetail() {
 
   const existingDates = addressHistory.map(h => h.effectiveFrom);
 
+  // Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    if (!id) return;
+
+    // Invalidate caches
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getDetailPageQueryKeys('participant', id),
+      clearLocalStorage: false // Don't clear localStorage on detail pages
+    });
+
+    // Trigger refetch
+    await Promise.all([
+      refetch(),
+      refetchAddressHistory(),
+      refetchActivities(),
+      refetchPopulations()
+    ]);
+  }, [id, queryClient, refetch, refetchAddressHistory, refetchActivities, refetchPopulations]);
+
   return (
-    <SpaceBetween size="l">
+    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
+      <SpaceBetween size="l">
       {error && (
         <Alert
           type="error"
@@ -373,5 +395,6 @@ export function ParticipantDetail() {
         loading={createAddressMutation.isPending || updateAddressMutation.isPending}
       />
     </SpaceBetween>
+    </PullToRefreshWrapper>
   );
 }

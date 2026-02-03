@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
@@ -24,6 +24,8 @@ import { ParticipantDisplay } from '../common/ParticipantDisplay';
 import { formatDate } from '../../utils/date.utils';
 import { renderPopulationBadges } from '../../utils/population-badge.utils';
 import { ResponsiveButton } from '../common/ResponsiveButton';
+import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
+import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
 
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -36,19 +38,19 @@ export function ActivityDetail() {
   const [isVenueFormOpen, setIsVenueFormOpen] = useState(false);
   const [error, setError] = useState('');
 
-  const { data: activity, isLoading, error: loadError } = useQuery({
+  const { data: activity, isLoading, error: loadError, refetch } = useQuery({
     queryKey: ['activity', id],
     queryFn: () => ActivityService.getActivity(id!),
     enabled: !!id,
   });
 
-  const { data: assignments = [] } = useQuery({
+  const { data: assignments = [], refetch: refetchAssignments } = useQuery({
     queryKey: ['activity-participants', id],
     queryFn: () => ActivityService.getActivityParticipants(id!),
     enabled: !!id,
   });
 
-  const { data: venueHistory = [], isLoading: isLoadingVenues } = useQuery({
+  const { data: venueHistory = [], isLoading: isLoadingVenues, refetch: refetchVenueHistory } = useQuery({
     queryKey: ['activity-venues', id],
     queryFn: () => ActivityService.getActivityVenues(id!),
     enabled: !!id,
@@ -167,6 +169,24 @@ export function ActivityDetail() {
     await addVenueMutation.mutateAsync(data);
   };
 
+  // Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    if (!id) return;
+
+    // Invalidate caches
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getDetailPageQueryKeys('activity', id),
+      clearLocalStorage: false
+    });
+
+    // Trigger refetch of all queries
+    await Promise.all([
+      refetch(),
+      refetchAssignments(),
+      refetchVenueHistory()
+    ]);
+  }, [id, queryClient, refetch, refetchAssignments, refetchVenueHistory]);
+
   if (isLoading) {
     return (
       <Box textAlign="center" padding="xxl">
@@ -186,7 +206,8 @@ export function ActivityDetail() {
   const existingDates = venueHistory.map(v => v.effectiveFrom);
 
   return (
-    <SpaceBetween size="l">
+    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
+      <SpaceBetween size="l">
       {error && (
         <Alert
           type="error"
@@ -454,5 +475,6 @@ export function ActivityDetail() {
         loading={addVenueMutation.isPending}
       />
     </SpaceBetween>
+    </PullToRefreshWrapper>
   );
 }

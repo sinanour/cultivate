@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -22,37 +22,59 @@ import { renderPopulationBadges } from '../../utils/population-badge.utils';
 import { VenueDetailMapPreview } from './VenueDetailMapPreview';
 import { BreadcrumbGroup, type BreadcrumbGroupProps } from '@cloudscape-design/components';
 import type { GeographicArea } from '../../types';
+import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
+import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
 
 export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = useState('');
 
-  const { data: venue, isLoading, error } = useQuery({
+  const { data: venue, isLoading, error, refetch } = useQuery({
     queryKey: ['venue', id],
     queryFn: () => VenueService.getVenue(id!),
     enabled: !!id,
   });
 
-  const { data: activities = [] } = useQuery({
+  const { data: activities = [], refetch: refetchActivities } = useQuery({
     queryKey: ['venueActivities', id],
     queryFn: () => VenueService.getVenueActivities(id!),
     enabled: !!id,
   });
 
-  const { data: participants = [] } = useQuery({
+  const { data: participants = [], refetch: refetchParticipants } = useQuery({
     queryKey: ['venueParticipants', id],
     queryFn: () => VenueService.getVenueParticipants(id!),
     enabled: !!id,
   });
 
-  const { data: ancestors = [] } = useQuery({
+  const { data: ancestors = [], refetch: refetchAncestors } = useQuery({
     queryKey: ['geographicAreaAncestors', venue?.geographicAreaId],
     queryFn: () => GeographicAreaService.getAncestors(venue!.geographicAreaId),
     enabled: !!venue?.geographicAreaId,
   });
+
+  // Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    if (!id) return;
+
+    // Invalidate caches
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getDetailPageQueryKeys('venue', id),
+      clearLocalStorage: false
+    });
+
+    // Trigger refetch of all queries
+    await Promise.all([
+      refetch(),
+      refetchActivities(),
+      refetchParticipants(),
+      refetchAncestors()
+    ]);
+  }, [id, queryClient, refetch, refetchActivities, refetchParticipants, refetchAncestors]);
 
   if (isLoading) {
     return (
@@ -76,7 +98,8 @@ export function VenueDetail() {
     hierarchyItems.push(venue.geographicArea);
   }
   return (
-    <SpaceBetween size="l">
+    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
+      <SpaceBetween size="l">
       {deleteError && (
         <Alert
           type="error"
@@ -250,5 +273,6 @@ export function VenueDetail() {
         />
       )}
     </SpaceBetween>
+    </PullToRefreshWrapper>
   );
 }

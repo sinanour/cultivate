@@ -36,6 +36,10 @@ The frontend communicates with the Backend API package for data persistence and 
 - Service Worker for asset caching and offline detection
 - Custom sync queue for pending operations during offline periods
 
+**Mobile Gestures:**
+- Pull-to-refresh library (e.g., react-simple-pull-to-refresh or react-pull-to-refresh) for mobile-friendly data refreshing
+- Touch event handling for gesture detection and smooth animations
+
 **Build and Development:**
 - Vite for module bundling and hot module replacement
 - TypeScript for compile-time type checking
@@ -139,6 +143,84 @@ src/
 - Renders navigation items based on user role
 - Hides admin-only sections from non-administrators
 - Maintains navigation state across route changes
+
+#### 2A. Pull-to-Refresh System
+
+**Design Overview**
+- Implements pull-to-refresh gesture across all pages for mobile-friendly data refreshing
+- Uses a third-party React library (e.g., react-simple-pull-to-refresh) or custom implementation
+- Provides consistent refresh behavior with page-specific cache invalidation strategies
+- Integrates with React Query for cache management and re-fetching
+
+**PullToRefreshWrapper**
+- Reusable wrapper component using `react-simple-pull-to-refresh` library
+- Provides CloudScape Spinner for loading indicators
+- Configurable pull thresholds (80px trigger, 120px max distance)
+- Supports disabled state for conditional rendering
+- **Gesture Exclusion**: Accepts `excludeSelector` prop to specify CSS selectors for elements where pull-to-refresh should be disabled
+- When touch starts on an excluded element (detected via `element.closest(excludeSelector)`), pull-to-refresh is temporarily disabled
+- Prevents gesture conflicts with interactive components like maps, carousels, or swipeable elements
+- Uses touch event listeners (touchstart, touchend) to track gesture origin
+- Automatically re-enables after touch ends
+
+**Cache Invalidation Strategy**
+- **React Query Cache**: Uses `queryClient.invalidateQueries()` to invalidate page-specific queries
+- **IndexedDB**: Clears page-specific tables using Dexie.js API (not yet implemented)
+- **localStorage**: Never clears authentication tokens (accessToken, refreshToken, user) to maintain logged-in state
+- **Selective Invalidation**: Only clears caches relevant to the current page to avoid unnecessary data loss
+- **Auth Preservation**: Authentication state is always preserved during pull-to-refresh to prevent forced logouts
+
+**Page-Specific Refresh Behavior**
+
+**List Pages (Participants, Activities, Venues, Geographic Areas):**
+- Invalidates list data query cache
+- Resets pagination state to page 1
+- Clears batched loading state (loaded count, cancelled state)
+- Re-fetches first batch of data (100 items)
+- Maintains current filter selections from FilterGroupingPanel
+- Preserves authentication state (never clears auth tokens)
+- Returns scroll position to top after refresh
+
+**Detail Pages (Participant, Activity, Venue, Geographic Area):**
+- Invalidates entity detail query cache
+- Invalidates related data caches (activities, participants, address history, etc.)
+- Re-fetches entity details and all related data
+- Preserves authentication state (never clears auth tokens)
+- Maintains current scroll position after refresh
+
+**Dashboard Pages (Engagement, Growth):**
+- Invalidates all chart data query caches
+- Clears any cached analytics results
+- Re-runs current report with existing filter and grouping selections
+- Maintains filter, grouping, and time period selections
+- Preserves authentication state (never clears auth tokens)
+- Returns scroll position to top after refresh
+
+**Map View:**
+- Pull-to-refresh is NOT implemented on the map view page due to fundamental gesture conflicts with map panning
+- Interactive maps require touch gestures for panning, zooming, and marker interaction
+- Pull-to-refresh gestures would interfere with these core map interactions
+- Users can refresh map data by changing filters or using browser refresh
+- Alternative: Consider adding a manual refresh button in the header if needed
+
+**Error Handling**
+- Displays user-friendly error message using CloudScape Alert when refresh fails
+- Hides loading indicator on error
+- Provides retry option through standard pull-to-refresh gesture
+- Logs errors to console for debugging
+
+**Technical Implementation**
+- Uses touch event listeners (touchstart, touchmove, touchend) or library wrapper
+- Calculates pull distance and threshold (e.g., 80px) to trigger refresh
+- Applies CSS transforms for smooth pull animation
+- Prevents default scroll behavior during pull gesture
+- Restores normal scrolling after gesture completes
+- Handles edge cases: rapid gestures, interrupted gestures, concurrent refreshes
+
+**Accessibility Considerations**
+- Provides keyboard alternative for refresh (e.g., Ctrl+R or dedicated refresh button)
+- Announces refresh status to screen readers using aria-live regions
+- Ensures pull-to-refresh doesn't interfere with assistive technology navigation
 
 #### 3. Activity Configuration Management
 
@@ -4477,6 +4559,60 @@ interface ImportError {
 *For any* entity reference selector, when the refresh button is clicked, a loading indicator should be displayed on the button during the reload operation and restored to normal state after completion.
 
 **Validates: Requirements 17A.21, 17A.22**
+
+### Property 270: Pull-to-Refresh Gesture Detection
+
+*For any* page in the application, when a user performs a pull-down gesture at the top of the page, the pull-to-refresh mechanism should detect the gesture and trigger a refresh operation.
+
+**Validates: Requirements 1A.1, 1A.2, 1A.3, 1A.10**
+
+### Property 271: Pull-to-Refresh Visual Indicator
+
+*For any* pull-to-refresh operation, a visual indicator (loading spinner or refresh icon) should be displayed at the top of the page during the pull gesture and throughout the refresh operation.
+
+**Validates: Requirements 1A.2, 1A.7, 1A.11**
+
+### Property 272: Pull-to-Refresh Cache Invalidation
+
+*For any* pull-to-refresh operation, all React Query caches related to the current page should be invalidated, but authentication tokens (accessToken, refreshToken, user) in localStorage should be preserved to maintain the user's logged-in state.
+
+**Validates: Requirements 1A.4, 1A.5, 1A.6**
+
+### Property 273: Pull-to-Refresh Data Re-fetch
+
+*For any* pull-to-refresh operation, after cache invalidation completes, the application should force a re-fetch of all data from the backend API for the current page.
+
+**Validates: Requirements 1A.6, 1A.8**
+
+### Property 274: Pull-to-Refresh Error Handling
+
+*For any* pull-to-refresh operation that fails, the application should display an error message, hide the loading indicator, and allow the user to retry the refresh.
+
+**Validates: Requirements 1A.9**
+
+### Property 275: Pull-to-Refresh Scroll Position Detection
+
+*For any* page, pull-to-refresh should only be enabled when the user is at the top of the page (scrollTop === 0), and should be disabled when the page is scrolled down.
+
+**Validates: Requirements 1A.10, 1A.13**
+
+### Property 276: Pull-to-Refresh List Page Pagination Reset
+
+*For any* list page (participants, activities, venues, geographic areas), when pull-to-refresh is triggered, the pagination should reset to the first page and the first batch of data should be re-fetched.
+
+**Validates: Requirements 1A.15**
+
+### Property 277: Pull-to-Refresh Dashboard Filter Preservation
+
+*For any* dashboard page (engagement, growth), when pull-to-refresh is triggered, all chart data caches should be cleared and the current report should be re-run with the existing filter and grouping selections preserved.
+
+**Validates: Requirements 1A.17**
+
+### Property 278: Pull-to-Refresh Map State Preservation
+
+*For any* map view, when pull-to-refresh is triggered, all marker caches should be cleared and markers should be re-fetched for the current viewport bounds and filters, while maintaining the current map mode, filters, and viewport position.
+
+**Validates: Requirements 1A.18**
 
 ## Testing Strategy
 

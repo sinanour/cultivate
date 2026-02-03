@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -20,6 +20,8 @@ import { VenueDisplay } from '../common/VenueDisplay';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { formatDate } from '../../utils/date.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
+import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
+import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
 
 export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
@@ -27,37 +29,58 @@ export function GeographicAreaDetail() {
   const { canEdit } = usePermissions();
   const { user } = useAuth();
   const { setGeographicAreaFilter } = useGlobalGeographicFilter();
+  const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = useState('');
 
-  const { data: geographicArea, isLoading, error } = useQuery({
+  const { data: geographicArea, isLoading, error, refetch } = useQuery({
     queryKey: ['geographicArea', id],
     queryFn: () => GeographicAreaService.getGeographicArea(id!),
     enabled: !!id,
   });
 
-  const { data: children = [] } = useQuery({
+  const { data: children = [], refetch: refetchChildren } = useQuery({
     queryKey: ['geographicAreaChildren', id],
     queryFn: () => GeographicAreaService.getChildren(id!),
     enabled: !!id,
   });
 
-  const { data: ancestors = [] } = useQuery({
+  const { data: ancestors = [], refetch: refetchAncestors } = useQuery({
     queryKey: ['geographicAreaAncestors', id],
     queryFn: () => GeographicAreaService.getAncestors(id!),
     enabled: !!id,
   });
 
-  const { data: venues = [] } = useQuery({
+  const { data: venues = [], refetch: refetchVenues } = useQuery({
     queryKey: ['geographicAreaVenues', id],
     queryFn: () => GeographicAreaService.getVenues(id!),
     enabled: !!id,
   });
 
-  const { data: statistics } = useQuery({
+  const { data: statistics, refetch: refetchStatistics } = useQuery({
     queryKey: ['geographicAreaStatistics', id],
     queryFn: () => GeographicAreaService.getStatistics(id!),
     enabled: !!id,
   });
+
+  // Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    if (!id) return;
+
+    // Invalidate caches
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getDetailPageQueryKeys('geographic-area', id),
+      clearLocalStorage: false
+    });
+
+    // Trigger refetch of all queries
+    await Promise.all([
+      refetch(),
+      refetchChildren(),
+      refetchAncestors(),
+      refetchVenues(),
+      refetchStatistics()
+    ]);
+  }, [id, queryClient, refetch, refetchChildren, refetchAncestors, refetchVenues, refetchStatistics]);
 
   if (isLoading) {
     return (
@@ -87,7 +110,8 @@ export function GeographicAreaDetail() {
   ];
 
   return (
-    <SpaceBetween size="l">
+    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
+      <SpaceBetween size="l">
       {deleteError && (
         <Alert
           type="error"
@@ -276,5 +300,6 @@ export function GeographicAreaDetail() {
         }
       />
     </SpaceBetween>
+    </PullToRefreshWrapper>
   );
 }

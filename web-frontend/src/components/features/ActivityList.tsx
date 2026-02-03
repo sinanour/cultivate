@@ -23,8 +23,10 @@ import { ImportResultsModal } from '../common/ImportResultsModal';
 import { ProgressIndicator } from '../common/ProgressIndicator';
 import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { ResponsiveButton } from '../common/ResponsiveButton';
+import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
+import { invalidatePageCaches, getListPageQueryKeys } from '../../utils/cache-invalidation.utils';
 
 const ITEMS_PER_PAGE = 10;
 const BATCH_SIZE = 100;
@@ -450,8 +452,30 @@ export function ActivityList() {
   const loadedCount = allActivities.length;
   const hasActiveFilters = propertyFilterQuery.tokens.length > 0 || dateRange !== null;
 
+  // Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    // Invalidate caches (but preserve auth tokens)
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getListPageQueryKeys('activities'),
+      clearLocalStorage: false // Don't clear localStorage to preserve auth
+    });
+
+    // Reset pagination and batched loading state
+    setAllActivities([]);
+    currentBatchPageRef.current = 1;
+    setTotalCount(0);
+    setHasMorePages(true);
+    setIsCancelled(false);
+    setCurrentPageIndex(1);
+    isFetchingRef.current = false;
+
+    // Trigger initial batch fetch
+    await fetchNextBatch();
+  }, [queryClient, fetchNextBatch]);
+
   return (
-    <SpaceBetween size="l">
+    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
+      <SpaceBetween size="l">
       {deleteError && (
         <Alert
           type="error"
@@ -674,5 +698,6 @@ export function ActivityList() {
         onDismiss={() => setShowImportResults(false)}
       />
     </SpaceBetween>
+    </PullToRefreshWrapper>
   );
 }
