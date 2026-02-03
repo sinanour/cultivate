@@ -24,6 +24,7 @@ export class PopulationRoutes {
         this.router.get(
             '/populations',
             this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireAuthenticated(),
             this.getAllPopulations.bind(this)
         );
 

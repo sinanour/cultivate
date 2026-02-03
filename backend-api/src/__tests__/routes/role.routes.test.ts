@@ -36,6 +36,7 @@ describe('RoleRoutes', () => {
 
         mockAuthzMiddleware.requireAuthenticated = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
         mockAuthzMiddleware.requireEditor = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
+        mockAuthzMiddleware.requireAdmin = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());
 
         // Mock audit logging middleware
         mockAuditMiddleware.logEntityModification = jest.fn().mockReturnValue((_req: any, _res: any, next: any) => next());

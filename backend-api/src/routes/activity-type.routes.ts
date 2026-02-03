@@ -25,7 +25,7 @@ export class ActivityTypeRoutes {
   }
 
   private initializeRoutes() {
-    // GET /api/activity-types - List all activity types
+    // GET /api/activity-types - List all activity types (all authenticated users)
     this.router.get(
       '/',
       this.authMiddleware.authenticate(),
@@ -33,32 +33,32 @@ export class ActivityTypeRoutes {
       this.getAll.bind(this)
     );
 
-    // POST /api/activity-types - Create activity type
+    // POST /api/activity-types - Create activity type (admin only)
     this.router.post(
       '/',
       this.authMiddleware.authenticate(),
-      this.authorizationMiddleware.requireEditor(),
+      this.authorizationMiddleware.requireAdmin(),
       ValidationMiddleware.validateBody(ActivityTypeCreateSchema),
       this.auditLoggingMiddleware.logEntityModification('ACTIVITY_TYPE'),
       this.create.bind(this)
     );
 
-    // PUT /api/activity-types/:id - Update activity type
+    // PUT /api/activity-types/:id - Update activity type (admin only)
     this.router.put(
       '/:id',
       this.authMiddleware.authenticate(),
-      this.authorizationMiddleware.requireEditor(),
+      this.authorizationMiddleware.requireAdmin(),
       ValidationMiddleware.validateParams(UuidParamSchema),
       ValidationMiddleware.validateBody(ActivityTypeUpdateSchema),
       this.auditLoggingMiddleware.logEntityModification('ACTIVITY_TYPE'),
       this.update.bind(this)
     );
 
-    // DELETE /api/activity-types/:id - Delete activity type
+    // DELETE /api/activity-types/:id - Delete activity type (admin only)
     this.router.delete(
       '/:id',
       this.authMiddleware.authenticate(),
-      this.authorizationMiddleware.requireEditor(),
+      this.authorizationMiddleware.requireAdmin(),
       ValidationMiddleware.validateParams(UuidParamSchema),
       this.auditLoggingMiddleware.logEntityModification('ACTIVITY_TYPE'),
       this.delete.bind(this)

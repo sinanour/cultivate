@@ -25,7 +25,7 @@ export class ActivityCategoryRoutes {
     }
 
     private initializeRoutes() {
-        // GET /api/v1/activity-categories - List all activity categories
+        // GET /api/v1/activity-categories - List all activity categories (all authenticated users)
         this.router.get(
             '/',
             this.authMiddleware.authenticate(),
@@ -33,7 +33,7 @@ export class ActivityCategoryRoutes {
             this.getAll.bind(this)
         );
 
-        // GET /api/v1/activity-categories/:id - Get activity category by ID
+        // GET /api/v1/activity-categories/:id - Get activity category by ID (all authenticated users)
         this.router.get(
             '/:id',
             this.authMiddleware.authenticate(),
@@ -42,32 +42,32 @@ export class ActivityCategoryRoutes {
             this.getById.bind(this)
         );
 
-        // POST /api/v1/activity-categories - Create activity category
+        // POST /api/v1/activity-categories - Create activity category (admin only)
         this.router.post(
             '/',
             this.authMiddleware.authenticate(),
-            this.authorizationMiddleware.requireEditor(),
+            this.authorizationMiddleware.requireAdmin(),
             ValidationMiddleware.validateBody(ActivityCategoryCreateSchema),
             this.auditLoggingMiddleware.logEntityModification('ACTIVITY_CATEGORY'),
             this.create.bind(this)
         );
 
-        // PUT /api/v1/activity-categories/:id - Update activity category
+        // PUT /api/v1/activity-categories/:id - Update activity category (admin only)
         this.router.put(
             '/:id',
             this.authMiddleware.authenticate(),
-            this.authorizationMiddleware.requireEditor(),
+            this.authorizationMiddleware.requireAdmin(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             ValidationMiddleware.validateBody(ActivityCategoryUpdateSchema),
             this.auditLoggingMiddleware.logEntityModification('ACTIVITY_CATEGORY'),
             this.update.bind(this)
         );
 
-        // DELETE /api/v1/activity-categories/:id - Delete activity category
+        // DELETE /api/v1/activity-categories/:id - Delete activity category (admin only)
         this.router.delete(
             '/:id',
             this.authMiddleware.authenticate(),
-            this.authorizationMiddleware.requireEditor(),
+            this.authorizationMiddleware.requireAdmin(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             this.auditLoggingMiddleware.logEntityModification('ACTIVITY_CATEGORY'),
             this.delete.bind(this)

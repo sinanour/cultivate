@@ -21,6 +21,7 @@ export class RoleRoutes {
     }
 
     private initializeRoutes() {
+        // GET /api/roles - List all roles (all authenticated users)
         this.router.get(
             '/',
             this.authMiddleware.authenticate(),
@@ -31,7 +32,7 @@ export class RoleRoutes {
         this.router.post(
             '/',
             this.authMiddleware.authenticate(),
-            this.authorizationMiddleware.requireEditor(),
+            this.authorizationMiddleware.requireAdmin(),
             ValidationMiddleware.validateBody(RoleCreateSchema),
             this.auditLoggingMiddleware.logEntityModification('ROLE'),
             this.create.bind(this)
@@ -40,7 +41,7 @@ export class RoleRoutes {
         this.router.put(
             '/:id',
             this.authMiddleware.authenticate(),
-            this.authorizationMiddleware.requireEditor(),
+            this.authorizationMiddleware.requireAdmin(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             ValidationMiddleware.validateBody(RoleUpdateSchema),
             this.auditLoggingMiddleware.logEntityModification('ROLE'),
@@ -50,7 +51,7 @@ export class RoleRoutes {
         this.router.delete(
             '/:id',
             this.authMiddleware.authenticate(),
-            this.authorizationMiddleware.requireEditor(),
+            this.authorizationMiddleware.requireAdmin(),
             ValidationMiddleware.validateParams(UuidParamSchema),
             this.auditLoggingMiddleware.logEntityModification('ROLE'),
             this.delete.bind(this)

@@ -50,7 +50,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'configuration',
-        element: <ConfigurationPage />,
+        element: (
+          <ProtectedRoute requiredRole="ADMINISTRATOR">
+            <ConfigurationPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'participants',
