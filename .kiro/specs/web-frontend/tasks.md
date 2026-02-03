@@ -517,7 +517,12 @@ This implementation plan covers the React-based web application built with TypeS
 
 - [x] 8. Implement venue management UI
   - [x] 8.1 Create VenueList component with batched incremental loading
-    - Display table with name, address, and geographic area
+    - Display table with name, address, geographic area, and venue type
+    - Include venue type column in the table
+    - When venue has a venue type specified, render it as CloudScape Badge component
+    - Use green color badge for PRIVATE_RESIDENCE venue type
+    - Use medium severity color (orange/warning) badge for PUBLIC_BUILDING venue type
+    - Leave venue type cell blank when venue type is null
     - Use CloudScape Table with batched pagination (100 items per batch)
     - Implement batched loading: fetch venues in batches of 100 using pagination
     - Render table rows incrementally as each batch is fetched
@@ -539,13 +544,15 @@ This implementation plan covers the React-based web application built with TypeS
     - Render geographic area name as hyperlink to /geographic-areas/:id
     - Implement search via /venues/search?q= endpoint, sort, and filter
     - Support optional pagination
-    - _Requirements: 6A.1, 6A.1a, 6A.2, 6A.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.20, 26A.21, 26A.22, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
+    - _Requirements: 6A.1, 6A.1a, 6A.1b, 6A.1c, 6A.1d, 6A.1e, 6A.1f, 6A.2, 6A.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.20, 26A.21, 26A.22, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
 
   - [ ]* 8.2 Write property tests for venue list and search
     - **Property 44: Venue List Display**
     - **Property 45: Venue Search Functionality**
     - **Property 54a: Venue List Geographic Area Hyperlink**
-    - **Validates: Requirements 6A.1, 6A.1a, 6A.2**
+    - **Property 54b: Venue Type Badge Display**
+    - **Property 54c: Venue Type Badge Colors**
+    - **Validates: Requirements 6A.1, 6A.1a, 6A.1b, 6A.1c, 6A.1d, 6A.1e, 6A.1f, 6A.2**
 
   - [x] 8.1a Integrate FilterGroupingPanel into VenueList
     - Import FilterGroupingPanel component
@@ -757,13 +764,18 @@ This implementation plan covers the React-based web application built with TypeS
     - Display full hierarchy path using /geographic-areas/:id/ancestors endpoint
     - List child areas from /geographic-areas/:id/children endpoint
     - List associated venues from /geographic-areas/:id/venues endpoint
+    - When displaying associated venues list, include venue type column
+    - When venue has a venue type specified, render it as CloudScape Badge component
+    - Use green color badge for PRIVATE_RESIDENCE venue type
+    - Use medium severity color (orange/warning) badge for PUBLIC_BUILDING venue type
+    - Leave venue type cell blank when venue type is null
     - Show statistics from /geographic-areas/:id/statistics endpoint
     - Add primary edit button that navigates to /geographic-areas/:id/edit
     - Add delete button with confirmation dialog
     - Add "Apply Filter" button in header section
     - When "Apply Filter" button clicked, update global geographic area filter to current area using setGeographicAreaFilter from GlobalGeographicFilterContext
     - When "Apply Filter" button clicked, navigate to geographic areas list page (/geographic-areas) where filter is applied
-    - _Requirements: 6B.8, 6B.11, 6B.19, 6B.19a, 6B.19b, 6B.19c, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
+    - _Requirements: 6B.8, 6B.11, 6B.19, 6B.19a, 6B.19b, 6B.19c, 6B.19d, 6B.19e, 6B.19f, 6B.19g, 6B.19h, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
   - [x] 9.3a Update GeographicAreaService to pass global filter to children endpoint
     - Update getChildren(id) method to accept optional geographicAreaId parameter

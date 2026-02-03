@@ -473,7 +473,12 @@ src/
 #### 8. Venue Management
 
 **VenueList**
-- Displays table of venues with name, address, and geographic area
+- Displays table of venues with name, address, geographic area, and venue type
+- Includes venue type column in the table
+- When venue has a venue type specified, renders it as CloudScape Badge component
+- Uses green color badge for PRIVATE_RESIDENCE venue type
+- Uses medium severity color (orange/warning) badge for PUBLIC_BUILDING venue type
+- Leaves venue type cell blank when venue type is null
 - Uses CloudScape Table with batched pagination (100 items per batch)
 - Fetches venues in batches and renders incrementally
 - Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
@@ -639,6 +644,11 @@ src/
 - Displays full hierarchy path from root to current area
 - Lists all child geographic areas
 - Lists all venues in the geographic area and all descendant areas (recursive aggregation)
+- When displaying the list of associated venues, includes a venue type column
+- When a venue has a venue type specified, renders it as CloudScape Badge component
+- Uses green color badge for PRIVATE_RESIDENCE venue type
+- Uses medium severity color (orange/warning) badge for PUBLIC_BUILDING venue type
+- Leaves venue type cell blank when venue type is null
 - Shows statistics (activity and participant counts) for the area and descendants (recursive aggregation)
 - **Note:** Venue list should recursively include venues from all child and descendant geographic areas, matching the recursive behavior of statistics
 

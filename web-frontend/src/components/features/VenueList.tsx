@@ -7,6 +7,7 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import Link from '@cloudscape-design/components/link';
+import Badge from '@cloudscape-design/components/badge';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
@@ -440,6 +441,22 @@ export function VenueList() {
                   {item.geographicArea.name}
                 </Link>
               ) : '-',
+          },
+          {
+            id: 'venueType',
+            header: 'Venue Type',
+            cell: (item) => {
+              if (!item.venueType) return '';
+
+              const badgeColor = item.venueType === 'PRIVATE_RESIDENCE' ? 'green' : 'severity-medium';
+              const badgeLabel = item.venueType === 'PRIVATE_RESIDENCE' ? 'Private Residence' : 'Public Building';
+
+              return (
+                <Badge color={badgeColor}>
+                  {badgeLabel}
+                </Badge>
+              );
+            },
           },
           {
             id: 'actions',

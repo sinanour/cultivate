@@ -423,8 +423,13 @@ The Web Frontend package provides a responsive React-based web application that 
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL display a list of all venues with name, address, and geographic area
+1. THE Web_App SHALL display a list of all venues with name, address, geographic area, and venue type
 1a. WHEN displaying venues in the list, THE Web_App SHALL render the geographic area name as a hyperlink to the geographic area detail page (/geographic-areas/:id)
+1b. WHEN displaying venues in the list, THE Web_App SHALL include a venue type column
+1c. WHEN a venue has a venue type specified, THE Web_App SHALL render the venue type as a CloudScape Badge component
+1d. WHEN the venue type is PRIVATE_RESIDENCE, THE Web_App SHALL render the badge with green color
+1e. WHEN the venue type is PUBLIC_BUILDING, THE Web_App SHALL render the badge with medium severity color (orange/warning color)
+1f. WHEN a venue does not have a venue type specified (null), THE Web_App SHALL leave the venue type cell blank
 2. THE Web_App SHALL provide search functionality to find venues by name or address
 3. THE Web_App SHALL provide sorting and filtering for the venue list
 4. THE Web_App SHALL provide a dedicated page to create new venues
@@ -469,6 +474,11 @@ The Web Frontend package provides a responsive React-based web application that 
 19a. THE Web_App SHALL provide an "Apply Filter" button on the geographic area detail page
 19b. WHEN the "Apply Filter" button is clicked, THE Web_App SHALL update the global geographic area filter to the current geographic area
 19c. WHEN the "Apply Filter" button is clicked, THE Web_App SHALL navigate the user to a relevant view (such as the geographic areas list or map view) where the filter is applied
+19d. WHEN displaying the list of associated venues on the geographic area detail page, THE Web_App SHALL include a venue type column
+19e. WHEN a venue in the associated venues list has a venue type specified, THE Web_App SHALL render the venue type as a CloudScape Badge component
+19f. WHEN the venue type is PRIVATE_RESIDENCE in the associated venues list, THE Web_App SHALL render the badge with green color
+19g. WHEN the venue type is PUBLIC_BUILDING in the associated venues list, THE Web_App SHALL render the badge with medium severity color (orange/warning color)
+19h. WHEN a venue in the associated venues list does not have a venue type specified (null), THE Web_App SHALL leave the venue type cell blank
 20. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
 21. WHEN deleting a geographic area, THE Web_App SHALL display an error message explaining which entities reference it
 22. THE Web_App SHALL display the full hierarchy path for each geographic area

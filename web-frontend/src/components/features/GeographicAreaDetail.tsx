@@ -248,6 +248,22 @@ export function GeographicAreaDetail() {
             header: 'Address',
             cell: (item) => item.address || '-',
           },
+          {
+            id: 'venueType',
+            header: 'Venue Type',
+            cell: (item) => {
+              if (!item.venueType) return '';
+
+              const badgeColor = item.venueType === 'PRIVATE_RESIDENCE' ? 'green' : 'severity-medium';
+              const badgeLabel = item.venueType === 'PRIVATE_RESIDENCE' ? 'Private Residence' : 'Public Building';
+
+              return (
+                <Badge color={badgeColor}>
+                  {badgeLabel}
+                </Badge>
+              );
+            },
+          },
         ]}
         items={venues}
         empty={
