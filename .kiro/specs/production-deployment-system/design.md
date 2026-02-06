@@ -61,10 +61,12 @@ The architecture separates concerns between application containers (web frontend
 
 **Web Frontend Container:**
 - Base: nginx:alpine or similar lightweight web server
-- Contents: Production-built React/Vite static assets
+- Contents: Production-built React/Vite static assets with content-hashed filenames
+- Build Process: Vite generates content-hashed filenames (e.g., `main.abc123.js`) for cache busting
 - Ports: 80 (HTTP), 443 (HTTPS - optional)
 - Volumes: Optional certificate mount for HTTPS
 - Network: Exposed to host, connected to internal Docker network
+- Caching Strategy: Long-term caching (1 year) for hashed assets, no-cache for index.html
 
 **Backend API Container:**
 - Base: node:lts-alpine
@@ -80,6 +82,42 @@ The architecture separates concerns between application containers (web frontend
 - Volumes: Socket volume (read/write), data volume (persistence)
 - Network: Internal Docker network only
 - Users: `apiuser` database user for peer authentication
+
+### Cache Busting Strategy
+
+**Problem:** Aggressive browser caching prevents users from seeing updated JavaScript/CSS after deployments, leading to stale code being served.
+
+**Solution:** Content-based cache busting using Vite's built-in hashing:
+
+1. **Build-Time Hashing:**
+   - Vite automatically generates content-based hashes for all JavaScript, CSS, and asset files
+   - Example: `main.js` → `main.abc123def.js` (hash changes when content changes)
+   - HTML files automatically reference the hashed filenames
+   - Configuration: `build.rollupOptions.output.entryFileNames` and `assetFileNames` in vite.config.ts
+
+2. **Nginx Caching Policy:**
+   - **Hashed assets** (JS, CSS, images, fonts): Long-term caching (1 year) with `Cache-Control: public, immutable`
+   - **index.html**: No caching with `Cache-Control: no-cache, no-store, must-revalidate`
+   - Rationale: Hashed filenames change when content changes, so long-term caching is safe
+   - index.html must always be fresh to reference the latest hashed assets
+
+3. **Deployment Flow:**
+   ```
+   1. Developer changes JavaScript code
+   2. Vite build generates new hash: main.abc123def.js → main.xyz789ghi.js
+   3. index.html updated to reference main.xyz789ghi.js
+   4. Deployment transfers new files to container
+   5. Browser fetches fresh index.html (no-cache)
+   6. Browser sees new filename main.xyz789ghi.js
+   7. Browser fetches new JavaScript (cache miss)
+   8. Old main.abc123def.js remains cached but is never requested
+   ```
+
+4. **Benefits:**
+   - Users always get the latest code immediately after deployment
+   - Optimal performance with long-term caching for unchanged assets
+   - No manual cache clearing or version query parameters needed
+   - Works seamlessly with CDNs and proxy caches
 
 ### Security Model
 

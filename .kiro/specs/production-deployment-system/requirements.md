@@ -208,3 +208,18 @@ This document specifies the requirements for a production deployment system that
 3. THE Deployment_System SHALL persist logs to the Target_Host for later analysis
 4. THE Docker_Compose_Configuration SHALL configure log rotation for container logs
 5. THE Deployment_Script SHALL provide a verbose mode for detailed diagnostic output
+
+### Requirement 16: Cache Busting for Static Assets
+
+**User Story:** As a developer, I want deployed code changes to be immediately available to users, so that browsers never serve stale JavaScript or CSS after a deployment.
+
+#### Acceptance Criteria
+
+1. THE Web_Frontend build process SHALL generate content-hashed filenames for all JavaScript and CSS assets
+2. WHEN a JavaScript or CSS file's content changes, THE build process SHALL generate a new filename with a different hash
+3. THE Web_Frontend build process SHALL automatically update HTML references to use the hashed filenames
+4. THE nginx configuration SHALL serve JavaScript and CSS files with long-term cache headers (1 year expiration)
+5. THE nginx configuration SHALL serve the index.html file with no-cache headers to ensure it's always fresh
+6. WHEN a deployment completes, THE Deployment_System SHALL verify that new asset filenames are present in the built output
+7. THE build process SHALL apply content hashing to all imported assets (images, fonts, etc.) referenced in JavaScript and CSS
+8. THE Deployment_System documentation SHALL explain how cache busting works and why long-term caching is safe with content hashing
