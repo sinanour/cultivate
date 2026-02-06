@@ -430,6 +430,47 @@ This implementation plan breaks down the production deployment system into discr
     - Test rollback with missing previous deployment
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
 
+- [x] 25. Implement cache busting for static assets
+  - [x] 25.1 Configure Vite for content-hashed filenames
+    - Update web-frontend/vite.config.ts to enable content hashing
+    - Configure build.rollupOptions.output.entryFileNames with hash pattern
+    - Configure build.rollupOptions.output.assetFileNames with hash pattern
+    - Configure build.rollupOptions.output.chunkFileNames with hash pattern
+    - Test that build generates hashed filenames (e.g., main.abc123.js)
+    - _Requirements: 16.1, 16.2, 16.3, 16.7_
+  
+  - [x] 25.2 Update nginx configuration for cache busting
+    - Modify deployment/dockerfiles/nginx.conf to add no-cache headers for index.html
+    - Add location block for index.html with Cache-Control: no-cache, no-store, must-revalidate
+    - Keep existing long-term caching (1 year) for hashed assets (JS, CSS, images, fonts)
+    - Verify nginx serves index.html with no-cache headers
+    - Verify nginx serves hashed assets with long-term cache headers
+    - _Requirements: 16.4, 16.5_
+  
+  - [x] 25.3 Test cache busting behavior
+    - Build frontend with initial code
+    - Note generated asset filenames (e.g., main.abc123.js)
+    - Make a code change in JavaScript
+    - Rebuild frontend
+    - Verify new asset filenames have different hashes (e.g., main.xyz789.js)
+    - Verify index.html references new hashed filenames
+    - Deploy to test environment
+    - Verify browser fetches new assets after deployment
+    - _Requirements: 16.1, 16.2, 16.3, 16.6_
+  
+  - [ ]* 25.4 Add deployment verification for cache busting
+    - Update deployment script to log generated asset filenames
+    - Add verification step that checks for hashed filenames in build output
+    - Warn if assets don't have content hashes
+    - _Requirements: 16.6_
+  
+  - [x] 25.5 Document cache busting strategy
+    - Add section to deployment documentation explaining cache busting
+    - Explain why long-term caching is safe with content hashing
+    - Document the deployment flow with cache busting
+    - Provide troubleshooting guide for cache issues
+    - _Requirements: 16.8_
+
 - [x] 21. Final checkpoint - Complete system verification
   - Run all unit tests and property tests
   - Run all integration tests
