@@ -130,6 +130,25 @@ export function ParticipantDetail() {
     }
   };
 
+  // Pull-to-refresh handler - MUST be defined before any conditional returns
+  const handlePullToRefresh = useCallback(async () => {
+    if (!id) return;
+
+    // Invalidate caches
+    await invalidatePageCaches(queryClient, {
+      queryKeys: getDetailPageQueryKeys('participant', id),
+      clearLocalStorage: false // Don't clear localStorage on detail pages
+    });
+
+    // Trigger refetch
+    await Promise.all([
+      refetch(),
+      refetchAddressHistory(),
+      refetchActivities(),
+      refetchPopulations()
+    ]);
+  }, [id, queryClient, refetch, refetchAddressHistory, refetchActivities, refetchPopulations]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PLANNED': return 'blue';
@@ -157,25 +176,6 @@ export function ParticipantDetail() {
   }
 
   const existingDates = addressHistory.map(h => h.effectiveFrom);
-
-  // Pull-to-refresh handler
-  const handlePullToRefresh = useCallback(async () => {
-    if (!id) return;
-
-    // Invalidate caches
-    await invalidatePageCaches(queryClient, {
-      queryKeys: getDetailPageQueryKeys('participant', id),
-      clearLocalStorage: false // Don't clear localStorage on detail pages
-    });
-
-    // Trigger refetch
-    await Promise.all([
-      refetch(),
-      refetchAddressHistory(),
-      refetchActivities(),
-      refetchPopulations()
-    ]);
-  }, [id, queryClient, refetch, refetchAddressHistory, refetchActivities, refetchPopulations]);
 
   return (
     <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
