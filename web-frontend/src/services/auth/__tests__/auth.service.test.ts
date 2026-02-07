@@ -101,6 +101,11 @@ describe('AuthService', () => {
             localStorage.setItem('authTokens', JSON.stringify({ accessToken: 'token', refreshToken: 'refresh' }));
             localStorage.setItem('authUser', JSON.stringify({ id: '1', name: 'Test' }));
 
+            // Mock fetch for logout API call
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: true,
+            });
+
             AuthService.logout();
 
             expect(localStorage.getItem('authTokens')).toBeNull();
@@ -115,6 +120,11 @@ describe('AuthService', () => {
             localStorage.setItem('globalGeographicAreaFilter', 'area-123');
             localStorage.setItem('someOtherKey', 'should-remain');
 
+            // Mock fetch for logout API call
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: true,
+            });
+
             AuthService.logout();
 
             // Auth-related items should be cleared
@@ -128,7 +138,25 @@ describe('AuthService', () => {
         });
 
         it('should handle empty localStorage gracefully', () => {
+            // Mock fetch for logout API call
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: true,
+            });
+
             expect(() => AuthService.logout()).not.toThrow();
+        });
+
+        it('should clear sessionStorage', () => {
+            sessionStorage.setItem('tempData', 'should-be-cleared');
+
+            // Mock fetch for logout API call
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: true,
+            });
+
+            AuthService.logout();
+
+            expect(sessionStorage.length).toBe(0);
         });
     });
 
@@ -168,10 +196,16 @@ describe('AuthService', () => {
                 refreshToken: 'refresh-token',
             }));
 
-            (global.fetch as any).mockResolvedValueOnce({
-                ok: false,
-                json: async () => ({ message: 'Invalid token' }),
-            });
+            // Mock failed refresh
+            (global.fetch as any)
+                .mockResolvedValueOnce({
+                    ok: false,
+                    json: async () => ({ message: 'Invalid token' }),
+                })
+                // Mock logout API call
+                .mockResolvedValueOnce({
+                    ok: true,
+                });
 
             await expect(AuthService.refreshToken()).rejects.toThrow('Token refresh failed');
 

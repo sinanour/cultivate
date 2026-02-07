@@ -74,7 +74,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = () => {
-    // Clear localStorage and tokens
+    // Clear localStorage and sessionStorage
     AuthService.logout();
     
     // Clear React Query cache to remove all user-specific cached data
@@ -83,6 +83,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Clear component state
     setUser(null);
     setTokens(null);
+
+    // CRITICAL: Perform hard navigation to force complete page reload
+    // This clears all JavaScript state and prevents mobile browsers from
+    // preserving cached data across user sessions
+    // Using window.location.href instead of React Router navigate()
+    // ensures a full page reload and complete state reset
+    window.location.href = '/login';
   };
 
   const refreshToken = async () => {

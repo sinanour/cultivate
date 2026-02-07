@@ -41,6 +41,15 @@ export class AuthService {
     }
 
     static logout(): void {
+        // Call backend logout endpoint to invalidate refresh token
+        // Don't await - we want to clear client state immediately
+        fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include',
+        }).catch((error) => {
+            console.error('Logout API call failed:', error);
+        });
+
         // Clear tokens from localStorage
         localStorage.removeItem(this.TOKEN_KEY);
         localStorage.removeItem(this.USER_KEY);
@@ -61,8 +70,11 @@ export class AuthService {
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
 
-        // Clear React Query cache (will be called from AuthContext with queryClient reference)
-        // This is handled in AuthContext.logout() which calls this method
+        // Clear all sessionStorage
+        sessionStorage.clear();
+
+        // React Query cache clearing is handled in AuthContext.logout()
+        // Hard navigation is handled in AuthContext.logout()
     }
 
     static async refreshToken(): Promise<AuthTokens> {

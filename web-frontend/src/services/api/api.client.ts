@@ -4,6 +4,11 @@ import { geographicFilterEvents } from '../../utils/geographic-filter-events';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api/v1';
 
+// Diagnostic cache busting - can be enabled via environment variable
+// Set VITE_ENABLE_CACHE_BUSTING=true to add timestamp query parameters to all API requests
+// This helps diagnose if caching is the root cause of stale data issues
+const ENABLE_CACHE_BUSTING = import.meta.env.VITE_ENABLE_CACHE_BUSTING === 'true';
+
 export class ApiClient {
     static getBaseURL(): string {
         return API_BASE_URL;
@@ -79,10 +84,22 @@ export class ApiClient {
         return body as T;
     }
 
+    private static addCacheBuster(url: string): string {
+        if (ENABLE_CACHE_BUSTING) {
+            const separator = url.includes('?') ? '&' : '?';
+            const bustedUrl = `${url}${separator}_t=${Date.now()}`;
+            console.log('[Cache Buster] Request:', bustedUrl);
+            return bustedUrl;
+        }
+        return url;
+    }
+
     static async get<T>(endpoint: string): Promise<T> {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const url = this.addCacheBuster(`${API_BASE_URL}${endpoint}`);
+        const response = await fetch(url, {
             method: 'GET',
             headers: await this.getHeaders(),
+            cache: 'no-store', // Never use cached responses
         });
 
         if (response.status === 401) {
@@ -99,10 +116,12 @@ export class ApiClient {
     }
 
     static async post<T>(endpoint: string, data: unknown): Promise<T> {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const url = this.addCacheBuster(`${API_BASE_URL}${endpoint}`);
+        const response = await fetch(url, {
             method: 'POST',
             headers: await this.getHeaders(),
             body: JSON.stringify(data),
+            cache: 'no-store', // Never use cached responses
         });
 
         if (response.status === 401) {
@@ -119,10 +138,12 @@ export class ApiClient {
     }
 
     static async put<T>(endpoint: string, data: unknown): Promise<T> {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const url = this.addCacheBuster(`${API_BASE_URL}${endpoint}`);
+        const response = await fetch(url, {
             method: 'PUT',
             headers: await this.getHeaders(),
             body: JSON.stringify(data),
+            cache: 'no-store', // Never use cached responses
         });
 
         if (response.status === 401) {
@@ -139,9 +160,11 @@ export class ApiClient {
     }
 
     static async delete<T>(endpoint: string): Promise<T> {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const url = this.addCacheBuster(`${API_BASE_URL}${endpoint}`);
+        const response = await fetch(url, {
             method: 'DELETE',
             headers: await this.getHeaders(),
+            cache: 'no-store', // Never use cached responses
         });
 
         if (response.status === 401) {

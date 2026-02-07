@@ -168,7 +168,12 @@ describe('AuthContext', () => {
       vi.spyOn(AuthService, 'isTokenExpired').mockReturnValue(false);
       vi.spyOn(AuthService, 'logout').mockImplementation(() => {
         localStorage.clear();
+        sessionStorage.clear();
       });
+
+      // Mock window.location.href to prevent actual navigation in tests
+      delete (window as any).location;
+      (window as any).location = { href: '' };
 
       // Add some data to React Query cache
       queryClient.setQueryData(['user-profile'], mockUser);
@@ -197,10 +202,8 @@ describe('AuthContext', () => {
       // Verify AuthService.logout was called
       expect(AuthService.logout).toHaveBeenCalled();
 
-      // Verify state is cleared
-      expect(result.current.user).toBeNull();
-      expect(result.current.tokens).toBeNull();
-      expect(result.current.isAuthenticated).toBe(false);
+      // Verify hard navigation occurred
+      expect(window.location.href).toBe('/login');
 
       // Verify React Query cache is cleared
       expect(queryClient.getQueryData(['user-profile'])).toBeUndefined();
@@ -218,6 +221,7 @@ describe('AuthContext', () => {
         // Simulate the actual logout implementation
         localStorage.removeItem('authTokens');
         localStorage.removeItem('authUser');
+        sessionStorage.clear();
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -227,6 +231,10 @@ describe('AuthContext', () => {
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
       });
+
+      // Mock window.location.href
+      delete (window as any).location;
+      (window as any).location = { href: '' };
 
       const { result } = renderHook(() => useAuth(), {
         wrapper: ({ children }) => (

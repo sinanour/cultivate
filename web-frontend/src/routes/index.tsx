@@ -28,6 +28,7 @@ const UsersPage = lazy(() => import('../pages/UsersPage'));
 const UserFormPage = lazy(() => import('../pages/UserFormPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
+const ServiceWorkerDebugPage = lazy(() => import('../pages/ServiceWorkerDebugPage'));
 
 export const router = createBrowserRouter([
   {
@@ -167,6 +168,10 @@ export const router = createBrowserRouter([
       {
         path: 'about',
         element: <AboutPage />,
+      },
+      {
+        path: 'debug/service-worker',
+        element: <ServiceWorkerDebugPage />,
       },
       {
         path: '*',

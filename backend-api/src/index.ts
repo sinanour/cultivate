@@ -41,6 +41,7 @@ import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
 import { AuditLoggingMiddleware } from './middleware/audit-logging.middleware';
 import { PIIRedactionMiddleware } from './middleware/pii-redaction.middleware';
+import { noCacheMiddleware } from './middleware/no-cache.middleware';
 import {
   authRateLimiter,
   smartRateLimiter,
@@ -211,6 +212,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Add rate limit headers to all responses
 app.use(addRateLimitHeaders);
+
+// CRITICAL: Apply no-cache middleware to all API routes
+// This prevents mobile browsers from caching authenticated API responses
+// and causing cross-user data leakage
+app.use('/api', noCacheMiddleware);
 
 // Apply PII redaction middleware to all routes (must be before route handlers)
 app.use(piiRedactionMiddleware.intercept());

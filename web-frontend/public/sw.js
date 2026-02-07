@@ -23,6 +23,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // CRITICAL: Never cache API requests to prevent cross-user data leakage
+  // API requests must always go to the network to ensure fresh, authenticated data
+  if (event.request.url.includes('/api/')) {
+    // Pass through to network without caching
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

@@ -155,8 +155,7 @@ export function AppLayout() {
               ],
               onItemClick: ({ detail }) => {
                 if (detail.id === 'logout') {
-                  logout();
-                  navigate('/login');
+                  logout(); // Hard navigation to /login is handled inside logout()
                 } else if (detail.id === 'profile') {
                   navigate('/profile');
                 }
