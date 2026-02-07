@@ -78,9 +78,22 @@ export default function DashboardPage() {
 
   // Filter quick links based on user role
   const quickLinks = allQuickLinks.filter(link => {
+    // Admin-only links
     if (link.adminOnly) {
       return user?.role === 'ADMINISTRATOR';
     }
+
+    // PII_RESTRICTED users can only access geographic areas and analytics (not map)
+    if (user?.role === 'PII_RESTRICTED') {
+      const allowedPaths = [
+        '/geographic-areas',
+        '/analytics/engagement',
+        '/analytics/growth',
+        '/about',
+      ];
+      return allowedPaths.includes(link.href);
+    }
+
     return true;
   });
 

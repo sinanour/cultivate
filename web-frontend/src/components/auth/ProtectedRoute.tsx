@@ -6,9 +6,10 @@ import type { UserRole } from '../../types';
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: UserRole;
+  allowedRoles?: UserRole[];
 }
 
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRole, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
@@ -23,9 +24,13 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return <Navigate to={`/login?redirect=${encodeURIComponent(redirectUrl)}`} replace />;
   }
 
+  // Check single required role (backward compatibility)
   if (requiredRole && user?.role !== requiredRole) {
-    // For now, just redirect to dashboard if user doesn't have required role
-    // In a real app, you might show an error page
+    return <Navigate to="/" replace />;
+  }
+
+  // Check allowed roles array
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 

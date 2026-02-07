@@ -53,13 +53,13 @@ export function GeographicAreaDetail() {
   const { data: venues = [], refetch: refetchVenues } = useQuery({
     queryKey: ['geographicAreaVenues', id],
     queryFn: () => GeographicAreaService.getVenues(id!),
-    enabled: !!id,
+    enabled: !!id && user?.role !== 'PII_RESTRICTED', // Don't fetch for PII_RESTRICTED
   });
 
   const { data: statistics, refetch: refetchStatistics } = useQuery({
     queryKey: ['geographicAreaStatistics', id],
     queryFn: () => GeographicAreaService.getStatistics(id!),
-    enabled: !!id,
+    enabled: !!id && user?.role !== 'PII_RESTRICTED', // Don't fetch for PII_RESTRICTED
   });
 
   // Pull-to-refresh handler
@@ -251,54 +251,57 @@ export function GeographicAreaDetail() {
         />
       )}
 
-      <Table
-        wrapLines={false}
-        header={<Header variant="h3">Venues in This Area</Header>}
-        columnDefinitions={[
-          {
-            id: 'name',
-            header: 'Name',
-            cell: (item) => (
-              <Link href={`/venues/${item.id}`}>
-                <VenueDisplay
-                  venue={item}
-                  currentUserRole={user?.role || 'READ_ONLY'}
-                />
-              </Link>
-            ),
-          },
-          {
-            id: 'address',
-            header: 'Address',
-            cell: (item) => item.address || '-',
-          },
-          {
-            id: 'venueType',
-            header: 'Venue Type',
-            cell: (item) => {
-              if (!item.venueType) return '';
+        {/* Hide venues list for PII_RESTRICTED users */}
+        {user?.role !== 'PII_RESTRICTED' && (
+          <Table
+            wrapLines={false}
+            header={<Header variant="h3">Venues in This Area</Header>}
+            columnDefinitions={[
+              {
+                id: 'name',
+                header: 'Name',
+                cell: (item) => (
+                  <Link href={`/venues/${item.id}`}>
+                    <VenueDisplay
+                      venue={item}
+                      currentUserRole={user?.role || 'READ_ONLY'}
+                    />
+                  </Link>
+                ),
+              },
+              {
+                id: 'address',
+                header: 'Address',
+                cell: (item) => item.address || '-',
+              },
+              {
+                id: 'venueType',
+                header: 'Venue Type',
+                cell: (item) => {
+                  if (!item.venueType) return '';
 
-              const badgeColor = item.venueType === 'PRIVATE_RESIDENCE' ? 'green' : 'severity-medium';
-              const badgeLabel = item.venueType === 'PRIVATE_RESIDENCE' ? 'Private Residence' : 'Public Building';
+                  const badgeColor = item.venueType === 'PRIVATE_RESIDENCE' ? 'green' : 'severity-medium';
+                  const badgeLabel = item.venueType === 'PRIVATE_RESIDENCE' ? 'Private Residence' : 'Public Building';
 
-              return (
-                <Badge color={badgeColor}>
-                  {badgeLabel}
-                </Badge>
-              );
-            },
-          },
-        ]}
-        items={venues}
-        empty={
-          <Box textAlign="center" color="inherit">
-            <b>No venues</b>
-            <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-              No venues are in this geographic area.
-            </Box>
-          </Box>
-        }
-      />
+                  return (
+                    <Badge color={badgeColor}>
+                      {badgeLabel}
+                    </Badge>
+                  );
+                },
+              },
+            ]}
+            items={venues}
+            empty={
+              <Box textAlign="center" color="inherit">
+                <b>No venues</b>
+                <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+                  No venues are in this geographic area.
+                </Box>
+              </Box>
+            }
+          />
+        )}
     </SpaceBetween>
     </PullToRefreshWrapper>
   );

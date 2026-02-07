@@ -59,51 +59,99 @@ export const router = createBrowserRouter([
       },
       {
         path: 'participants',
-        element: <ParticipantsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <ParticipantsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'participants/new',
-        element: <ParticipantFormPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <ParticipantFormPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'participants/:id/edit',
-        element: <ParticipantFormPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <ParticipantFormPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'participants/:id',
-        element: <ParticipantDetailPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <ParticipantDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'activities',
-        element: <ActivitiesPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <ActivitiesPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'activities/new',
-        element: <ActivityFormPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <ActivityFormPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'activities/:id/edit',
-        element: <ActivityFormPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <ActivityFormPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'activities/:id',
-        element: <ActivityDetailPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <ActivityDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'venues',
-        element: <VenuesPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <VenuesPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'venues/new',
-        element: <VenueFormPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <VenueFormPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'venues/:id/edit',
-        element: <VenueFormPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <VenueFormPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'venues/:id',
-        element: <VenueDetailPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <VenueDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'geographic-areas',
@@ -123,7 +171,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'map',
-        element: <MapViewPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
+            <MapViewPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'analytics/engagement',

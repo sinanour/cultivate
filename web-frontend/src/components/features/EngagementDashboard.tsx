@@ -1122,6 +1122,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
           onRegisterTrigger={(trigger) => { triggerFilterUpdate.current = trigger; }}
           isLoading={isLoading}
           hideUpdateButton={true}
+            suppressVenueOptions={user?.role === 'PII_RESTRICTED'}
         />
       </Container>
 
@@ -1198,47 +1199,59 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
                 // Render hyperlinks for specific dimensions
                 if (dimension === GroupingDimension.ACTIVITY_CATEGORY) {
                   if (idValue) {
-                    return (
-                      <Link 
-                        href={`/configuration`}
-                        onFollow={(e) => {
-                          e.preventDefault();
-                          navigate('/configuration');
-                        }}
-                      >
-                        {nameValue}
-                      </Link>
-                    );
+                    // Only link to configuration for administrators
+                    if (user?.role === 'ADMINISTRATOR') {
+                      return (
+                        <Link
+                          href={`/configuration`}
+                          onFollow={(e) => {
+                            e.preventDefault();
+                            navigate('/configuration');
+                          }}
+                        >
+                          {nameValue}
+                        </Link>
+                      );
+                    }
+                    return nameValue;
                   }
                   return nameValue || '-';
                 } else if (dimension === GroupingDimension.ACTIVITY_TYPE) {
                   if (idValue) {
-                    return (
-                      <Link 
-                        href={`/configuration`}
-                        onFollow={(e) => {
-                          e.preventDefault();
-                          navigate('/configuration');
-                        }}
-                      >
-                        {nameValue}
-                      </Link>
-                    );
+                    // Only link to configuration for administrators
+                    if (user?.role === 'ADMINISTRATOR') {
+                      return (
+                        <Link
+                          href={`/configuration`}
+                          onFollow={(e) => {
+                            e.preventDefault();
+                            navigate('/configuration');
+                          }}
+                        >
+                          {nameValue}
+                        </Link>
+                      );
+                    }
+                    return nameValue;
                   }
                   return nameValue || '-';
                 } else if (dimension === GroupingDimension.VENUE) {
                   if (idValue) {
-                    return (
-                      <Link 
-                        href={`/venues/${idValue}`}
-                        onFollow={(e) => {
-                          e.preventDefault();
-                          navigate(`/venues/${idValue}`);
-                        }}
-                      >
-                        {nameValue}
-                      </Link>
-                    );
+                    // Only link to venues for non-PII_RESTRICTED users
+                    if (user?.role !== 'PII_RESTRICTED') {
+                      return (
+                        <Link
+                          href={`/venues/${idValue}`}
+                          onFollow={(e) => {
+                            e.preventDefault();
+                            navigate(`/venues/${idValue}`);
+                          }}
+                        >
+                          {nameValue}
+                        </Link>
+                      );
+                    }
+                    return nameValue;
                   }
                   return nameValue || '-';
                 } else if (dimension === GroupingDimension.GEOGRAPHIC_AREA) {
@@ -1279,47 +1292,59 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
                     // Render hyperlinks for specific dimensions
                     if (dimension === GroupingDimension.ACTIVITY_CATEGORY) {
                       if (idValue) {
-                        return (
-                          <Link 
-                            href={`/configuration`}
-                            onFollow={(e) => {
-                              e.preventDefault();
-                              navigate('/configuration');
-                            }}
-                          >
-                            {nameValue}
-                          </Link>
-                        );
+                        // Only link to configuration for administrators
+                        if (user?.role === 'ADMINISTRATOR') {
+                          return (
+                            <Link
+                              href={`/configuration`}
+                              onFollow={(e) => {
+                                e.preventDefault();
+                                navigate('/configuration');
+                              }}
+                            >
+                              {nameValue}
+                            </Link>
+                          );
+                        }
+                        return nameValue;
                       }
                       return nameValue || '-';
                     } else if (dimension === GroupingDimension.ACTIVITY_TYPE) {
                       if (idValue) {
-                        return (
-                          <Link 
-                            href={`/configuration`}
-                            onFollow={(e) => {
-                              e.preventDefault();
-                              navigate('/configuration');
-                            }}
-                          >
-                            {nameValue}
-                          </Link>
-                        );
+                        // Only link to configuration for administrators
+                        if (user?.role === 'ADMINISTRATOR') {
+                          return (
+                            <Link
+                              href={`/configuration`}
+                              onFollow={(e) => {
+                                e.preventDefault();
+                                navigate('/configuration');
+                              }}
+                            >
+                              {nameValue}
+                            </Link>
+                          );
+                        }
+                        return nameValue;
                       }
                       return nameValue || '-';
                     } else if (dimension === GroupingDimension.VENUE) {
                       if (idValue) {
-                        return (
-                          <Link 
-                            href={`/venues/${idValue}`}
-                            onFollow={(e) => {
-                              e.preventDefault();
-                              navigate(`/venues/${idValue}`);
-                            }}
-                          >
-                            {nameValue}
-                          </Link>
-                        );
+                        // Only link to venues for non-PII_RESTRICTED users
+                        if (user?.role !== 'PII_RESTRICTED') {
+                          return (
+                            <Link
+                              href={`/venues/${idValue}`}
+                              onFollow={(e) => {
+                                e.preventDefault();
+                                navigate(`/venues/${idValue}`);
+                              }}
+                            >
+                              {nameValue}
+                            </Link>
+                          );
+                        }
+                        return nameValue;
                       }
                       return nameValue || '-';
                     } else if (dimension === GroupingDimension.GEOGRAPHIC_AREA) {

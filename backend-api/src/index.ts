@@ -221,6 +221,9 @@ app.use('/api', noCacheMiddleware);
 // Apply PII redaction middleware to all routes (must be before route handlers)
 app.use(piiRedactionMiddleware.intercept());
 
+// Apply PII_RESTRICTED access check globally (works with optional auth)
+app.use('/api/v1', authMiddleware.optionalAuthenticate(), authorizationMiddleware.checkPIIRestrictedAccess());
+
 // Health check endpoint
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', message: 'API is running' });
@@ -233,6 +236,7 @@ app.get('/api/v1/docs/openapi.json', (_req, res) => {
 });
 
 // API Routes (v1)
+// Note: PII_RESTRICTED access check is applied globally above via optionalAuthenticate
 app.use('/api/v1/auth', authRateLimiter, authRoutes.getRouter());
 app.use('/api/v1/users', smartRateLimiter, userRoutes.getRouter());
 app.use('/api/v1/users', smartRateLimiter, geographicAuthorizationRoutes.router);

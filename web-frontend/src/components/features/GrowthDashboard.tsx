@@ -18,6 +18,7 @@ import { activityCategoryService } from '../../services/api/activity-category.se
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { VenueService } from '../../services/api/venue.service';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
+import { useAuth } from '../../hooks/useAuth';
 import { InteractiveLegend, useInteractiveLegend, type LegendItem } from '../common/InteractiveLegend';
 import { 
   FilterGroupingPanel, 
@@ -71,6 +72,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+  const { user } = useAuth();
 
   // Initialize state from URL parameters
   const [period, setPeriod] = useState<TimePeriod>(() => {
@@ -592,6 +594,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
             onRegisterTrigger={(trigger) => { triggerFilterUpdate.current = trigger; }}
             isLoading={isLoading}
             hideUpdateButton={true}
+              suppressVenueOptions={user?.role === 'PII_RESTRICTED'}
           />
         </SpaceBetween>
       </Container>

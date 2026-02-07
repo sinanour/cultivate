@@ -4,6 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { GrowthDashboard } from '../GrowthDashboard';
 import { AnalyticsService } from '../../../services/api/analytics.service';
+import { AuthProvider } from '../../../contexts/AuthContext';
+
+// Mock user for AuthProvider
+const mockUser = {
+  id: 'test-user-id',
+  email: 'test@example.com',
+  role: 'ADMINISTRATOR' as const,
+  displayName: 'Test User',
+};
 
 // Mock the AnalyticsService
 vi.mock('../../../services/api/analytics.service', () => ({
@@ -44,6 +53,28 @@ vi.mock('../../../hooks/useGlobalGeographicFilter', () => ({
   }),
 }));
 
+// Helper to wrap component with all required providers
+const renderWithProviders = (component: React.ReactElement, queryClient: QueryClient) => {
+  return render(
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider
+          value={{
+            user: mockUser,
+            isAuthenticated: true,
+            isLoading: false,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refreshToken: vi.fn(),
+          }}
+        >
+          {component}
+        </AuthProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
+  );
+};
+
 describe('GrowthDashboard - Race Condition Fix', () => {
   let queryClient: QueryClient;
 
@@ -67,12 +98,9 @@ describe('GrowthDashboard - Race Condition Fix', () => {
 
     (AnalyticsService.getGrowthMetrics as any).mockResolvedValue(mockResponse);
 
-    const { rerender } = render(
-      <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          <GrowthDashboard runReportTrigger={0} />
-        </QueryClientProvider>
-      </BrowserRouter>
+    const { rerender } = renderWithProviders(
+      <GrowthDashboard runReportTrigger={0} />,
+      queryClient
     );
 
     // Initially, no API calls should be made (hasRunReport is false)
@@ -82,7 +110,18 @@ describe('GrowthDashboard - Race Condition Fix', () => {
     rerender(
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
-          <GrowthDashboard runReportTrigger={1} />
+          <AuthProvider
+            value={{
+              user: mockUser,
+              isAuthenticated: true,
+              isLoading: false,
+              login: vi.fn(),
+              logout: vi.fn(),
+              refreshToken: vi.fn(),
+            }}
+          >
+            <GrowthDashboard runReportTrigger={1} />
+          </AuthProvider>
         </QueryClientProvider>
       </BrowserRouter>
     );
@@ -111,12 +150,9 @@ describe('GrowthDashboard - Race Condition Fix', () => {
 
     (AnalyticsService.getGrowthMetrics as any).mockResolvedValue(mockResponse);
 
-    const { rerender } = render(
-      <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          <GrowthDashboard runReportTrigger={1} />
-        </QueryClientProvider>
-      </BrowserRouter>
+    renderWithProviders(
+      <GrowthDashboard runReportTrigger={1} />,
+      queryClient
     );
 
     // Wait for the initial query

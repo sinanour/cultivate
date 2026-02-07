@@ -44,38 +44,64 @@ export function AppLayout() {
   };
 
   // CloudScape accepts React elements in text property despite TypeScript types
-  const baseNavigationItems: SideNavigationProps['items'] = [
-    // @ts-ignore - CloudScape handles React elements in text property
-    { type: 'link', text: createMenuItem('Home', '/home.svg'), href: '/' },
-    { type: 'divider' },
-    {
-      type: 'section',
-      text: 'Management',
-      items: [
-        // @ts-ignore - CloudScape handles React elements in text property
-        { type: 'link', text: createMenuItem('Geographic Areas', 'globe'), href: '/geographic-areas' },
+  // Filter navigation items based on user role
+  const getBaseNavigationItems = (): SideNavigationProps['items'] => {
+    const isPIIRestricted = user?.role === 'PII_RESTRICTED';
+
+    const managementItems: any[] = [
+      // @ts-ignore - CloudScape handles React elements in text property
+      { type: 'link', text: createMenuItem('Geographic Areas', 'globe'), href: '/geographic-areas' },
+    ];
+
+    // Add venue, participants, and activities only for non-PII_RESTRICTED users
+    if (!isPIIRestricted) {
+      managementItems.push(
         // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Venues', 'location-pin'), href: '/venues' },
         // @ts-ignore - CloudScape handles React elements in text property
         { type: 'link', text: createMenuItem('Participants', 'user-profile'), href: '/participants' },
         // @ts-ignore - CloudScape handles React elements in text property
-        { type: 'link', text: createMenuItem('Activities', 'group'), href: '/activities' },
-      ],
-    },
-    { type: 'divider' },
-    {
-      type: 'section',
-      text: 'Analytics',
-      items: [
+        { type: 'link', text: createMenuItem('Activities', 'group'), href: '/activities' }
+      );
+    }
+
+    const analyticsItems: any[] = [];
+
+    // Add map view only for non-PII_RESTRICTED users
+    if (!isPIIRestricted) {
+      analyticsItems.push(
         // @ts-ignore - CloudScape handles React elements in text property
-        { type: 'link', text: createMenuItem('Map View', 'map'), href: '/map' },
-        // @ts-ignore - CloudScape handles React elements in text property
-        { type: 'link', text: createMenuItem('Engagement', 'gen-ai'), href: '/analytics/engagement' },
-        // @ts-ignore - CloudScape handles React elements in text property
-        { type: 'link', text: createMenuItem('Growth', 'expand'), href: '/analytics/growth' },
-      ],
-    },
-  ];
+        { type: 'link', text: createMenuItem('Map View', 'map'), href: '/map' }
+      );
+    }
+
+    // Add engagement and growth for all users
+    analyticsItems.push(
+      // @ts-ignore - CloudScape handles React elements in text property
+      { type: 'link', text: createMenuItem('Engagement', 'gen-ai'), href: '/analytics/engagement' },
+      // @ts-ignore - CloudScape handles React elements in text property
+      { type: 'link', text: createMenuItem('Growth', 'expand'), href: '/analytics/growth' }
+    );
+
+    return [
+      // @ts-ignore - CloudScape handles React elements in text property
+      { type: 'link', text: createMenuItem('Home', '/home.svg'), href: '/' },
+      { type: 'divider' },
+      {
+        type: 'section',
+        text: 'Management',
+        items: managementItems,
+      },
+      { type: 'divider' },
+      {
+        type: 'section',
+        text: 'Analytics',
+        items: analyticsItems,
+      },
+    ] as SideNavigationProps['items'];
+  };
+
+  const baseNavigationItems = getBaseNavigationItems();
 
   // Add Administration section for administrators
   const navigationItems: SideNavigationProps['items'] = user?.role === 'ADMINISTRATOR'

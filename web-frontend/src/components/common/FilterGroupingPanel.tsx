@@ -64,6 +64,7 @@ export interface FilterGroupingPanelProps {
   onUpdate: (state: FilterGroupingState) => void;
   isLoading?: boolean;
   disablePopulationFilter?: boolean;
+  suppressVenueOptions?: boolean; // Hide venue grouping and filtering for PII_RESTRICTED
   urlParamPrefix?: string;
   hideUpdateButton?: boolean; // Hide Update button for Run Report pattern
   onInitialResolutionComplete?: () => void; // Callback when URL filters are resolved
@@ -81,6 +82,7 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
   onUpdate,
   isLoading = false,
   disablePopulationFilter = false,
+  suppressVenueOptions = false,
   urlParamPrefix = 'filter_',
   hideUpdateButton = false,
   onInitialResolutionComplete,
@@ -290,13 +292,20 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
     return dateRangeChanged || filterTokensChanged || groupingChanged;
   }, [dateRange, filterQuery, grouping, lastAppliedState]);
 
-  // Filter out population property if disabled
+  // Filter out population and venue properties if disabled/suppressed
   const activeFilterProperties = useMemo(() => {
+    let filtered = filterProperties;
+
     if (disablePopulationFilter) {
-      return filterProperties.filter((prop) => prop.key !== 'population');
+      filtered = filtered.filter((prop) => prop.key !== 'population');
     }
-    return filterProperties;
-  }, [filterProperties, disablePopulationFilter]);
+
+    if (suppressVenueOptions) {
+      filtered = filtered.filter((prop) => prop.key !== 'venue');
+    }
+
+    return filtered;
+  }, [filterProperties, disablePopulationFilter, suppressVenueOptions]);
 
   // Lazy loading handler with debouncing
   const handleLoadItems: PropertyFilterProps['onLoadItems'] = ({ detail }) => {
@@ -468,19 +477,21 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
     }
   }, [onRegisterTrigger, handleUpdate]);
 
-  // Convert groupingDimensions to Multiselect options
-  const multiselectOptions: MultiselectProps.Option[] = groupingDimensions.map((dim) => ({
-    value: dim.value,
-    label: dim.label,
-  }));
+  // Convert groupingDimensions to Multiselect options (filter out venue if suppressed)
+  const multiselectOptions: MultiselectProps.Option[] = groupingDimensions
+    .filter((dim) => !suppressVenueOptions || dim.value !== 'venue')
+    .map((dim) => ({
+      value: dim.value,
+      label: dim.label,
+    }));
 
-  // Convert groupingDimensions to SegmentedControl options
-  const segmentedControlOptions: SegmentedControlProps.Option[] = groupingDimensions.map(
-    (dim) => ({
+  // Convert groupingDimensions to SegmentedControl options (filter out venue if suppressed)
+  const segmentedControlOptions: SegmentedControlProps.Option[] = groupingDimensions
+    .filter((dim) => !suppressVenueOptions || dim.value !== 'venue')
+    .map((dim) => ({
       id: dim.value,
       text: dim.label,
-    })
-  );
+    }));
 
   return (
     <div className={isMobile ? styles.mobileLayout : styles.desktopLayout}>

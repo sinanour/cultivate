@@ -1,6 +1,7 @@
+import request from 'supertest';
+import app from '../../index';
 import { getPrismaClient } from '../../utils/prisma.client';
 import { UserRole } from '@prisma/client';
-import { PIIRedactionService } from '../../services/pii-redaction.service';
 import { AuthService } from '../../services/auth.service';
 import { UserRepository } from '../../repositories/user.repository';
 import * as bcrypt from 'bcrypt';
@@ -8,16 +9,17 @@ import * as bcrypt from 'bcrypt';
 const prisma = getPrismaClient();
 
 describe('PII_RESTRICTED Role Integration Tests', () => {
-    let piiRedactionService: PIIRedactionService;
     let authService: AuthService;
     let userRepository: UserRepository;
     let testParticipantId: string;
     let testVenueId: string;
+    let testActivityId: string;
     let testGeographicAreaId: string;
-    let piiRestrictedUserId: string;
+    let testActivityTypeId: string;
+    let piiRestrictedToken: string;
+    let adminToken: string;
 
     beforeAll(async () => {
-        piiRedactionService = new PIIRedactionService();
         userRepository = new UserRepository(prisma);
         authService = new AuthService(userRepository);
 
@@ -55,9 +57,24 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
         });
         testParticipantId = participant.id;
 
+        // Get activity type for test activity
+        const activityType = await prisma.activityType.findFirst();
+        testActivityTypeId = activityType!.id;
+
+        // Create test activity
+        const activity = await prisma.activity.create({
+            data: {
+                name: 'Test Activity PII',
+                activityTypeId: testActivityTypeId,
+                startDate: new Date(),
+                status: 'PLANNED',
+            },
+        });
+        testActivityId = activity.id;
+
         // Create PII_RESTRICTED user
         const piiRestrictedPasswordHash = await bcrypt.hash('pii123', 10);
-        const piiRestrictedUser = await prisma.user.create({
+        await prisma.user.create({
             data: {
                 email: 'pii.integration@test.com',
                 passwordHash: piiRestrictedPasswordHash,
@@ -65,121 +82,276 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
                 displayName: 'PII Restricted User',
             },
         });
-        piiRestrictedUserId = piiRestrictedUser.id;
+
+        // Create admin user for comparison
+        const adminPasswordHash = await bcrypt.hash('admin123', 10);
+        await prisma.user.create({
+            data: {
+                email: 'admin.pii.test@test.com',
+                passwordHash: adminPasswordHash,
+                role: UserRole.ADMINISTRATOR,
+                displayName: 'Admin User',
+            },
+        });
+
+        // Get tokens
+        const piiTokens = await authService.login({
+            email: 'pii.integration@test.com',
+            password: 'pii123',
+        });
+        piiRestrictedToken = piiTokens.accessToken;
+
+        const adminTokens = await authService.login({
+            email: 'admin.pii.test@test.com',
+            password: 'admin123',
+        });
+        adminToken = adminTokens.accessToken;
     });
 
     afterAll(async () => {
         // Clean up test data
+        await prisma.activity.deleteMany({ where: { name: { contains: 'Test Activity PII' } } });
         await prisma.participant.deleteMany({ where: { email: { contains: 'pii.test@example.com' } } });
         await prisma.venue.deleteMany({ where: { name: { contains: 'Test Community Center PII' } } });
         await prisma.geographicArea.deleteMany({ where: { name: { contains: 'Test Area PII' } } });
         await prisma.user.deleteMany({ where: { email: { contains: 'pii.integration@test.com' } } });
+        await prisma.user.deleteMany({ where: { email: { contains: 'admin.pii.test@test.com' } } });
     });
 
     describe('JWT Token Generation', () => {
         it('should include PII_RESTRICTED role in JWT token', async () => {
-            const tokens = await authService.login({
-                email: 'pii.integration@test.com',
-                password: 'pii123',
-            });
-
-            expect(tokens.accessToken).toBeDefined();
-            expect(tokens.user.role).toBe(UserRole.PII_RESTRICTED);
-
-            // Verify token payload contains role
-            const payload = authService.validateAccessToken(tokens.accessToken);
+            const payload = authService.validateAccessToken(piiRestrictedToken);
             expect(payload.role).toBe(UserRole.PII_RESTRICTED);
         });
     });
 
-    describe('User Role Persistence', () => {
-        it('should persist PII_RESTRICTED role in database', async () => {
-            const user = await userRepository.findById(piiRestrictedUserId);
-            expect(user).toBeDefined();
-            expect(user?.role).toBe(UserRole.PII_RESTRICTED);
+    describe('Participant API Complete Blocking', () => {
+        it('should block GET /api/v1/participants for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/participants')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
+        });
+
+        it('should block GET /api/v1/participants/:id for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get(`/api/v1/participants/${testParticipantId}`)
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
+        });
+
+        it('should allow GET /api/v1/participants for ADMINISTRATOR', async () => {
+            const response = await request(app)
+                .get('/api/v1/participants')
+                .set('Authorization', `Bearer ${adminToken}`);
+
+            expect(response.status).toBe(200);
         });
     });
 
-    describe('Participant Data Redaction', () => {
-        it('should redact all PII fields for PII_RESTRICTED role', async () => {
-            const participant = await prisma.participant.findUnique({
-                where: { id: testParticipantId },
-            });
+    describe('Venue API Complete Blocking', () => {
+        it('should block GET /api/v1/venues for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/venues')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
 
-            const redacted = piiRedactionService.redactParticipant(participant, UserRole.PII_RESTRICTED);
-
-            expect(redacted.id).toBe(testParticipantId);
-            expect(redacted.name).toBeNull();
-            expect(redacted.email).toBeNull();
-            expect(redacted.phone).toBeNull();
-            expect(redacted.notes).toBeNull();
-            expect(redacted.dateOfBirth).toBeNull();
-            expect(redacted.nickname).toBeNull();
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
         });
 
-        it('should not redact participant for other roles', async () => {
-            const participant = await prisma.participant.findUnique({
-                where: { id: testParticipantId },
-            });
+        it('should block GET /api/v1/venues/:id for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get(`/api/v1/venues/${testVenueId}`)
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
 
-            const adminResult = piiRedactionService.redactParticipant(participant, UserRole.ADMINISTRATOR);
-            expect(adminResult.name).toBe('John Doe PII Test');
-
-            const editorResult = piiRedactionService.redactParticipant(participant, UserRole.EDITOR);
-            expect(editorResult.name).toBe('John Doe PII Test');
-
-            const readOnlyResult = piiRedactionService.redactParticipant(participant, UserRole.READ_ONLY);
-            expect(readOnlyResult.name).toBe('John Doe PII Test');
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
         });
     });
 
-    describe('Venue Data Redaction', () => {
-        it('should redact venue name for PII_RESTRICTED role', async () => {
-            const venue = await prisma.venue.findUnique({
-                where: { id: testVenueId },
-            });
+    describe('Activity API Complete Blocking', () => {
+        it('should block GET /api/v1/activities for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/activities')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
 
-            const redacted = piiRedactionService.redactVenue(venue, UserRole.PII_RESTRICTED);
-
-            expect(redacted.id).toBe(testVenueId);
-            expect(redacted.name).toBeNull();
-            expect(redacted.address).toBe('123 Test Street');
-            expect(redacted.geographicAreaId).toBe(testGeographicAreaId);
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
         });
 
-        it('should preserve non-PII venue fields for PII_RESTRICTED role', async () => {
-            const venue = await prisma.venue.findUnique({
-                where: { id: testVenueId },
-            });
+        it('should block GET /api/v1/activities/:id for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get(`/api/v1/activities/${testActivityId}`)
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
 
-            const redacted = piiRedactionService.redactVenue(venue, UserRole.PII_RESTRICTED);
-
-            expect(redacted.latitude).toBeDefined();
-            expect(redacted.longitude).toBeDefined();
-            expect(redacted.geographicAreaId).toBe(testGeographicAreaId);
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
         });
     });
 
-    describe('Non-PII Resource Access', () => {
-        it('should not redact geographic areas', async () => {
-            const geographicArea = await prisma.geographicArea.findUnique({
-                where: { id: testGeographicAreaId },
-            });
+    describe('Map API Complete Blocking', () => {
+        it('should block GET /api/v1/map/activities for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/map/activities')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
 
-            const result = piiRedactionService.redactResponse(geographicArea, UserRole.PII_RESTRICTED);
-
-            expect(result.name).toBe('Test Area PII');
-            expect(result.areaType).toBe('CITY');
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
         });
 
-        it('should not redact activity types', async () => {
-            const activityTypes = await prisma.activityType.findMany({ take: 1 });
-            expect(activityTypes.length).toBeGreaterThan(0);
+        it('should block GET /api/v1/map/venues for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/map/venues')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
 
-            const result = piiRedactionService.redactResponse(activityTypes[0], UserRole.PII_RESTRICTED);
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
+        });
 
-            expect(result.name).toBeDefined();
-            expect(result.name).not.toBeNull();
+        it('should block GET /api/v1/map/participant-homes for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/map/participant-homes')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
+        });
+    });
+
+    describe('Geographic Area Read-Only Access', () => {
+        it('should allow GET /api/v1/geographic-areas for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/geographic-areas')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.success).toBe(true);
+        });
+
+        it('should allow GET /api/v1/geographic-areas/:id for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get(`/api/v1/geographic-areas/${testGeographicAreaId}`)
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.success).toBe(true);
+        });
+
+        it('should block GET /api/v1/geographic-areas/:id/venues for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get(`/api/v1/geographic-areas/${testGeographicAreaId}/venues`)
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
+        });
+
+        it('should block GET /api/v1/geographic-areas/:id/statistics for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get(`/api/v1/geographic-areas/${testGeographicAreaId}/statistics`)
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error.code).toBe('ENDPOINT_ACCESS_DENIED');
+        });
+
+        it('should block POST /api/v1/geographic-areas for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .post('/api/v1/geographic-areas')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`)
+                .send({
+                    name: 'New Area',
+                    areaType: 'NEIGHBOURHOOD',
+                });
+
+            expect(response.status).toBe(403);
+        });
+    });
+
+    describe('Analytics Access with Venue Restrictions', () => {
+        it('should allow GET /api/v1/analytics/engagement without venue grouping', async () => {
+            const response = await request(app)
+                .get('/api/v1/analytics/engagement')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`)
+                .query({ startDate: '2024-01-01T00:00:00Z', endDate: '2024-12-31T23:59:59Z' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.success).toBe(true);
+        });
+
+        it('should block venue grouping in engagement analytics', async () => {
+            const response = await request(app)
+                .get('/api/v1/analytics/engagement')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`)
+                .query({ groupBy: 'venue' });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error.code).toBe('INVALID_GROUPING_PARAMETER');
+            expect(response.body.error.message).toContain('Venue grouping is not allowed');
+        });
+
+        it('should block venue filtering in engagement analytics', async () => {
+            const response = await request(app)
+                .get('/api/v1/analytics/engagement')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`)
+                .query({ venueIds: testVenueId });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error.code).toBe('INVALID_FILTER_PARAMETER');
+            expect(response.body.error.message).toContain('Venue filtering is not allowed');
+        });
+
+        it('should allow GET /api/v1/analytics/growth without venue filtering', async () => {
+            const response = await request(app)
+                .get('/api/v1/analytics/growth')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`)
+                .query({ period: 'MONTH' });
+
+            expect(response.status).toBe(200);
+            expect(response.body.success).toBe(true);
+        });
+
+        it('should block venue filtering in growth analytics', async () => {
+            const response = await request(app)
+                .get('/api/v1/analytics/growth')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`)
+                .query({ period: 'MONTH', venueIds: testVenueId });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error.code).toBe('INVALID_FILTER_PARAMETER');
+        });
+    });
+
+    describe('Configuration Read-Only Access', () => {
+        it('should allow GET /api/v1/activity-categories for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/activity-categories')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.success).toBe(true);
+        });
+
+        it('should allow GET /api/v1/activity-types for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .get('/api/v1/activity-types')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.success).toBe(true);
+        });
+
+        it('should block POST /api/v1/activity-categories for PII_RESTRICTED', async () => {
+            const response = await request(app)
+                .post('/api/v1/activity-categories')
+                .set('Authorization', `Bearer ${piiRestrictedToken}`)
+                .send({ name: 'New Category' });
+
+            expect(response.status).toBe(403);
         });
     });
 });
