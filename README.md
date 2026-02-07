@@ -1,4 +1,4 @@
-# Cultivate - Cultivate
+# Cultivate
 
 Welcome to Cultivate, a comprehensive system for tracking and managing community-building activities. Whether you're organizing study circles, children's classes, devotional gatherings, or other community programs, Cultivate helps you stay organized and understand your community's growth.
 
