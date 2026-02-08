@@ -259,7 +259,7 @@ export default function LoginPage() {
                       </Box>
                     }
                   >
-                    <div style={{ paddingTop: 6 }}><Button iconName="status-info" variant="link" /></div>
+                    <div style={{ paddingTop: 6 }}><Button iconName="status-info" variant="link" formAction="none" /></div>
                   </Popover>
                 </SpaceBetween>
               </Form>
