@@ -300,4 +300,113 @@ describe('AuthService', () => {
             expect(result).toBe(true);
         });
     });
+
+    describe('requestPasswordReset', () => {
+        it('should call correct endpoint with email', async () => {
+            const mockResponse = {
+                success: true,
+                message: 'If the email exists, a password reset link has been sent.',
+            };
+
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: true,
+                json: async () => mockResponse,
+            });
+
+            const result = await AuthService.requestPasswordReset('user@example.com');
+
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining('/auth/request-password-reset'),
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: 'user@example.com' }),
+                })
+            );
+
+            expect(result.success).toBe(true);
+            expect(result.message).toBe('If the email exists, a password reset link has been sent.');
+        });
+
+        it('should handle error responses', async () => {
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: false,
+                json: async () => ({ message: 'Server error' }),
+            });
+
+            await expect(
+                AuthService.requestPasswordReset('user@example.com')
+            ).rejects.toThrow('Server error');
+        });
+
+        it('should handle network errors', async () => {
+            (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+
+            await expect(
+                AuthService.requestPasswordReset('user@example.com')
+            ).rejects.toThrow('Network error');
+        });
+    });
+
+    describe('resetPassword', () => {
+        it('should call correct endpoint with token and password', async () => {
+            const mockResponse = {
+                success: true,
+                message: 'Password has been reset successfully',
+            };
+
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: true,
+                json: async () => mockResponse,
+            });
+
+            const result = await AuthService.resetPassword('test-token', 'newPassword123');
+
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining('/auth/reset-password'),
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ token: 'test-token', newPassword: 'newPassword123' }),
+                })
+            );
+
+            expect(result.success).toBe(true);
+            expect(result.message).toBe('Password has been reset successfully');
+        });
+
+        it('should handle invalid token error', async () => {
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: false,
+                json: async () => ({ message: 'Invalid or expired reset token' }),
+            });
+
+            await expect(
+                AuthService.resetPassword('invalid-token', 'newPassword123')
+            ).rejects.toThrow('Invalid or expired reset token');
+        });
+
+        it('should handle network errors', async () => {
+            (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+
+            await expect(
+                AuthService.resetPassword('test-token', 'newPassword123')
+            ).rejects.toThrow('Network error');
+        });
+
+        it('should handle server errors', async () => {
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: false,
+                json: async () => ({ message: 'Internal server error' }),
+            });
+
+            await expect(
+                AuthService.resetPassword('test-token', 'newPassword123')
+            ).rejects.toThrow('Internal server error');
+        });
+    });
 });

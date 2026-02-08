@@ -3,7 +3,7 @@ import { AuthService } from '../services/auth.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { AuditLoggingMiddleware } from '../middleware/audit-logging.middleware';
 import { ValidationMiddleware } from '../middleware/validation.middleware';
-import { LoginSchema, RefreshTokenSchema } from '../utils/validation.schemas';
+import { LoginSchema, RefreshTokenSchema, RequestPasswordResetSchema, ResetPasswordSchema } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
 
 export class AuthRoutes {
@@ -45,6 +45,20 @@ export class AuthRoutes {
 
         // GET /api/auth/me - Get current user information
         this.router.get('/me', this.authMiddleware.authenticate(), this.getCurrentUser.bind(this));
+
+        // POST /api/auth/request-password-reset - Request password reset email
+        this.router.post(
+            '/request-password-reset',
+            ValidationMiddleware.validateBody(RequestPasswordResetSchema),
+            this.requestPasswordReset.bind(this)
+        );
+
+        // POST /api/auth/reset-password - Reset password with token
+        this.router.post(
+            '/reset-password',
+            ValidationMiddleware.validateBody(ResetPasswordSchema),
+            this.resetPassword.bind(this)
+        );
     }
 
     /**
@@ -144,6 +158,59 @@ export class AuthRoutes {
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while fetching user information',
+                details: {},
+            });
+        }
+    }
+
+    /**
+     * POST /api/auth/request-password-reset
+     * Request a password reset email
+     */
+    private async requestPasswordReset(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { email } = req.body;
+            await this.authService.requestPasswordReset(email);
+
+            // Always return success (even if email doesn't exist)
+            res.status(200).json({
+                success: true,
+                message: 'If the email exists, a password reset link has been sent.',
+            });
+        } catch (error) {
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while processing your request',
+                details: {},
+            });
+        }
+    }
+
+    /**
+     * POST /api/auth/reset-password
+     * Reset password using token
+     */
+    private async resetPassword(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { token, newPassword } = req.body;
+            await this.authService.resetPassword(token, newPassword);
+
+            res.status(200).json({
+                success: true,
+                message: 'Password has been reset successfully',
+            });
+        } catch (error) {
+            if (error instanceof Error && error.message.includes('Invalid or expired')) {
+                return res.status(401).json({
+                    code: 'INVALID_TOKEN',
+                    message: 'Invalid or expired reset token',
+                    details: {},
+                });
+            }
+
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while resetting your password',
                 details: {},
             });
         }

@@ -196,4 +196,44 @@ export class AuthService {
             return null;
         }
     }
+
+    /**
+     * Request a password reset email
+     */
+    static async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+        const response = await fetch(`${API_BASE_URL}/auth/request-password-reset`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Password reset request failed' }));
+            throw new Error(error.message || 'Password reset request failed');
+        }
+
+        return await response.json();
+    }
+
+    /**
+     * Reset password using token
+     */
+    static async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+        const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token, newPassword }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Password reset failed' }));
+            throw new Error(error.message || 'Password reset failed');
+        }
+
+        return await response.json();
+    }
 }

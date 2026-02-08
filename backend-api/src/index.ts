@@ -20,6 +20,7 @@ import { AssignmentRepository } from './repositories/assignment.repository';
 import { AuditLogRepository } from './repositories/audit-log.repository';
 import { UserGeographicAuthorizationRepository } from './repositories/user-geographic-authorization.repository';
 import { AuthService } from './services/auth.service';
+import { EmailService } from './services/email.service';
 import { UserService } from './services/user.service';
 import { ActivityCategoryService } from './services/activity-category.service';
 import { ActivityTypeService } from './services/activity-type.service';
@@ -98,7 +99,8 @@ const geographicAuthorizationService = new GeographicAuthorizationService(
   userRepository,
   auditLogRepository
 );
-const authService = new AuthService(userRepository, geographicAuthorizationService);
+const emailService = new EmailService();
+const authService = new AuthService(userRepository, geographicAuthorizationService, emailService);
 const userService = new UserService(userRepository, userGeographicAuthorizationRepository, prisma);
 const activityCategoryService = new ActivityCategoryService(activityCategoryRepository);
 const activityTypeService = new ActivityTypeService(activityTypeRepository, activityCategoryRepository);

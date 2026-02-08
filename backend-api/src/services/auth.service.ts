@@ -7,8 +7,10 @@ import {
     AuthTokens,
     RefreshTokenPayload,
     UserInfo,
+    PasswordResetTokenPayload,
 } from '../types/auth.types';
 import { GeographicAuthorizationService } from './geographic-authorization.service';
+import { EmailService } from './email.service';
 
 export class AuthService {
     private readonly SALT_ROUNDS = 10;
@@ -18,7 +20,8 @@ export class AuthService {
 
     constructor(
         private userRepository: UserRepository,
-        private geographicAuthorizationService?: GeographicAuthorizationService
+        private geographicAuthorizationService?: GeographicAuthorizationService,
+        private emailService?: EmailService
     ) { }
 
     async hashPassword(password: string): Promise<string> {
@@ -166,5 +169,72 @@ export class AuthService {
         } catch (error) {
             throw new Error('Invalid or expired token');
         }
+    }
+
+    /**
+     * Generate a password reset token
+     * Token expires in 15 minutes and has no API access except password reset
+     */
+    generatePasswordResetToken(payload: PasswordResetTokenPayload): string {
+        return jwt.sign(payload, this.JWT_SECRET, {
+            expiresIn: '15m', // Short-lived token
+        } as jwt.SignOptions);
+    }
+
+    /**
+     * Generate a password reset token for the given email
+     * Returns true for both existing and non-existing emails (silent failure)
+     */
+    async requestPasswordReset(email: string): Promise<boolean> {
+        const user = await this.userRepository.findByEmail(email);
+
+        // Silent failure for non-existent emails (prevent enumeration)
+        if (!user) {
+            return true; // Return success without doing anything
+        }
+
+        // Generate short-lived token with minimal scope
+        const resetToken = this.generatePasswordResetToken({
+            email: user.email,
+            userId: user.id,
+            purpose: 'password_reset',
+        });
+
+        // Send email with reset link
+        if (this.emailService) {
+            await this.emailService.sendPasswordResetEmail(user.email, resetToken);
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate password reset token and update password
+     */
+    async resetPassword(token: string, newPassword: string): Promise<void> {
+        // Verify token
+        let payload: PasswordResetTokenPayload;
+        try {
+            payload = this.verifyToken<PasswordResetTokenPayload>(token);
+        } catch (error) {
+            throw new Error('Invalid or expired reset token');
+        }
+
+        // Verify token purpose
+        if (payload.purpose !== 'password_reset') {
+            throw new Error('Invalid token type');
+        }
+
+        // Get user from token (not from request parameter)
+        const user = await this.userRepository.findByEmail(payload.email);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // Hash new password
+        const passwordHash = await this.hashPassword(newPassword);
+
+        // Update password
+        await this.userRepository.update(user.id, { passwordHash });
     }
 }

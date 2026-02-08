@@ -38,3 +38,11 @@ export interface UserInfo {
     createdAt: Date;
     updatedAt: Date;
 }
+
+export interface PasswordResetTokenPayload {
+    email: string;
+    userId: string;
+    purpose: 'password_reset';
+    iat?: number; // Issued at (added by JWT)
+    exp?: number; // Expiration (added by JWT)
+}

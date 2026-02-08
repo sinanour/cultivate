@@ -42,6 +42,15 @@ export class AuthMiddleware {
               try {
                   const payload = this.authService.validateAccessToken(token);
 
+                  // CRITICAL: Reject password reset tokens for regular API access
+                  if ('purpose' in payload && (payload as any).purpose === 'password_reset') {
+                      return res.status(403).json({
+                          code: 'FORBIDDEN',
+                          message: 'Password reset tokens cannot be used for API access',
+                          details: {},
+                      });
+                  }
+
                   // Validate that the user still exists in the database
                   const user = await this.userRepository.findById(payload.userId);
                   if (!user) {

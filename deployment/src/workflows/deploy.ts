@@ -564,6 +564,13 @@ services:
       - JWT_SECRET=\${JWT_SECRET:-change-this-in-production}
       - JWT_ACCESS_TOKEN_EXPIRY=\${JWT_ACCESS_TOKEN_EXPIRY:-15m}
       - JWT_REFRESH_TOKEN_EXPIRY=\${JWT_REFRESH_TOKEN_EXPIRY:-7d}
+      - SMTP_HOST=\${SMTP_HOST}
+      - SMTP_PORT=\${SMTP_PORT:-587}
+      - SMTP_SECURE=\${SMTP_SECURE:-false}
+      - SMTP_USER=\${SMTP_USER}
+      - SMTP_PASSWORD=\${SMTP_PASSWORD}
+      - SMTP_FROM_ADDRESS=\${SMTP_FROM_ADDRESS}
+      - FRONTEND_URL=\${FRONTEND_URL}
     networks:
       - backend
     healthcheck:

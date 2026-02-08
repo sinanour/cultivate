@@ -19,6 +19,16 @@ export const RefreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+// Password reset schemas
+export const RequestPasswordResetSchema = z.object({
+  email: z.string().email('Invalid email format'),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
 // Activity Category schemas
 export const ActivityCategoryCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be at most 100 characters'),
@@ -707,6 +717,8 @@ export const ParticipantAddressHistoryUpdateSchema = z.object({
 
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
+export type RequestPasswordResetInput = z.infer<typeof RequestPasswordResetSchema>;
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type ActivityCategoryCreateInput = z.infer<typeof ActivityCategoryCreateSchema>;
 export type ActivityCategoryUpdateInput = z.infer<typeof ActivityCategoryUpdateSchema>;
 export type ActivityTypeCreateInput = z.infer<typeof ActivityTypeCreateSchema>;

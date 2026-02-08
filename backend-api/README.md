@@ -131,6 +131,60 @@ Once the server is running, API documentation is available at:
 - Swagger UI: `http://localhost:3000/api/docs`
 - OpenAPI Spec: `http://localhost:3000/api/docs/openapi.json`
 
+## Email Service Configuration
+
+The forgot password feature requires SMTP configuration for sending password reset emails. Add the following environment variables to your `.env` file:
+
+```bash
+# Email Service Configuration
+SMTP_HOST="smtp.example.com"          # SMTP server hostname
+SMTP_PORT="587"                        # SMTP server port (587 for STARTTLS, 465 for SSL)
+SMTP_SECURE="false"                    # Use TLS (true for port 465, false for port 587)
+SMTP_USER="your-email@example.com"    # SMTP authentication username
+SMTP_PASSWORD="your-app-password"     # SMTP authentication password
+SMTP_FROM_ADDRESS="noreply@example.com" # Sender email address
+FRONTEND_URL="http://localhost:5173"  # Frontend URL for password reset links
+```
+
+### Common Email Provider Examples
+
+**Gmail:**
+- Host: `smtp.gmail.com`
+- Port: `587`
+- Secure: `false`
+- Note: Use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password
+
+**Microsoft Exchange/Outlook:**
+- Host: `smtp-mail.outlook.com` or `smtp.office365.com`
+- Port: `587`
+- Secure: `false`
+
+**Yahoo Mail:**
+- Host: `smtp.mail.yahoo.com`
+- Port: `587`
+- Secure: `false`
+- Note: Use an [App Password](https://help.yahoo.com/kb/generate-third-party-passwords-sln15241.html)
+
+**SendGrid:**
+- Host: `smtp.sendgrid.net`
+- Port: `587`
+- Secure: `false`
+- User: `apikey`
+- Password: Your SendGrid API key
+
+**AWS SES:**
+- Host: `email-smtp.[region].amazonaws.com` (e.g., `email-smtp.us-east-1.amazonaws.com`)
+- Port: `587`
+- Secure: `false`
+- User/Password: SMTP credentials from IAM
+
+### Security Notes
+
+- Always use app-specific passwords for Gmail and Yahoo (not your account password)
+- Store SMTP credentials securely and never commit them to version control
+- Use environment variables for all sensitive configuration
+- Consider using a dedicated email service (SendGrid, AWS SES) for production
+
 ## Scripts
 
 - `npm run dev` - Start development server with hot reload
