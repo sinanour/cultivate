@@ -1,15 +1,15 @@
-import React from 'react';
+import React from "react";
 import {
   Table,
   Box,
   Badge,
   Link,
   SpaceBetween,
-} from '@cloudscape-design/components';
-import { formatDate } from '../../utils/date.utils';
-import { ResponsiveButton } from '../common/ResponsiveButton';
-import { VenueDisplay } from '../common/VenueDisplay';
-import { useAuth } from '../../hooks/useAuth';
+  Button,
+} from "@cloudscape-design/components";
+import { formatDate } from "../../utils/date.utils";
+import { VenueDisplay } from "../common/VenueDisplay";
+import { useAuth } from "../../hooks/useAuth";
 
 interface ActivityVenueHistoryRecord {
   id: string;
@@ -34,7 +34,9 @@ interface ActivityVenueHistoryTableProps {
   header?: React.ReactNode;
 }
 
-export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps> = ({
+export const ActivityVenueHistoryTable: React.FC<
+  ActivityVenueHistoryTableProps
+> = ({
   venueHistory,
   activityStartDate,
   onDelete,
@@ -46,8 +48,8 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
   // Sort by effective start date in reverse chronological order (most recent first)
   // Null dates (activity start) are treated using activityStartDate for sorting
   const sortedHistory = [...venueHistory].sort((a, b) => {
-    const dateA = a.effectiveFrom || activityStartDate || '';
-    const dateB = b.effectiveFrom || activityStartDate || '';
+    const dateA = a.effectiveFrom || activityStartDate || "";
+    const dateB = b.effectiveFrom || activityStartDate || "";
     if (!dateA && !dateB) return 0;
     if (!dateA) return 1;
     if (!dateB) return -1;
@@ -59,42 +61,45 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
       header={header}
       columnDefinitions={[
         {
-          id: 'venue',
-          header: 'Venue',
+          id: "venue",
+          header: "Venue",
           cell: (item: ActivityVenueHistoryRecord) => {
             // For PII_RESTRICTED users, show venue ID if name is null
             const displayContent = item.venue ? (
               <VenueDisplay
                 venue={item.venue}
-                currentUserRole={user?.role || 'READ_ONLY'}
+                currentUserRole={user?.role || "READ_ONLY"}
               />
+            ) : user?.role === "PII_RESTRICTED" ? (
+              item.venueId
             ) : (
-              user?.role === 'PII_RESTRICTED' ? item.venueId : 'Unknown Venue'
+              "Unknown Venue"
             );
 
             return (
               <SpaceBetween direction="horizontal" size="xs">
-                <Link href={`/venues/${item.venueId}`}>
-                  {displayContent}
-                </Link>
+                <Link href={`/venues/${item.venueId}`}>{displayContent}</Link>
                 {sortedHistory.indexOf(item) === 0 && (
                   <Badge color="green">Current</Badge>
                 )}
               </SpaceBetween>
             );
           },
-          sortingField: 'venue.name',
+          sortingField: "venue.name",
         },
         {
-          id: 'address',
-          header: 'Address',
-          cell: (item: ActivityVenueHistoryRecord) => item.venue?.address || 'N/A',
+          id: "address",
+          header: "Address",
+          cell: (item: ActivityVenueHistoryRecord) =>
+            item.venue?.address || "N/A",
         },
         {
-          id: 'effectiveFrom',
-          header: 'Effective From',
-          cell: (item: ActivityVenueHistoryRecord) => 
-            item.effectiveFrom ? formatDate(item.effectiveFrom) : (
+          id: "effectiveFrom",
+          header: "Effective From",
+          cell: (item: ActivityVenueHistoryRecord) =>
+            item.effectiveFrom ? (
+              formatDate(item.effectiveFrom)
+            ) : (
               <SpaceBetween direction="horizontal" size="xs">
                 <Badge color="blue">Since Activity Start</Badge>
                 {activityStartDate && (
@@ -104,18 +109,18 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
                 )}
               </SpaceBetween>
             ),
-          sortingField: 'effectiveFrom',
+          sortingField: "effectiveFrom",
         },
         {
-          id: 'actions',
-          header: 'Actions',
+          id: "actions",
+          header: "Actions",
           cell: (item: ActivityVenueHistoryRecord) => (
-            <ResponsiveButton
+            <Button
               variant="inline-link"
+              iconName="remove"
               onClick={() => onDelete(item.id)}
-            >
-              Remove
-            </ResponsiveButton>
+              ariaLabel="Remove"
+            />
           ),
         },
       ]}
@@ -125,7 +130,7 @@ export const ActivityVenueHistoryTable: React.FC<ActivityVenueHistoryTableProps>
       empty={
         <Box textAlign="center" color="inherit">
           <b>No venue history</b>
-          <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+          <Box padding={{ bottom: "s" }} variant="p" color="inherit">
             No venue history records found for this activity.
           </Box>
         </Box>
