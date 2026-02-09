@@ -14,6 +14,7 @@ import { ParticipantRoleService } from '../../services/api/participant-role.serv
 import { ParticipantRoleForm } from './ParticipantRoleForm';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function ParticipantRoleList() {
   const queryClient = useQueryClient();
@@ -21,6 +22,7 @@ export function ParticipantRoleList() {
   const [selectedRole, setSelectedRole] = useState<ParticipantRole | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<ParticipantRole | null>(null);
 
   const { data: roles = [], isLoading } = useQuery({
     queryKey: ['participantRoles'],
@@ -34,7 +36,7 @@ export function ParticipantRoleList() {
       setDeleteError('');
     },
     onError: (error: Error) => {
-      setDeleteError(error.message || 'Failed to delete role. It may be referenced by assignments.');
+      setDeleteError(error.message || 'Failed to remove role. It may be referenced by assignments.');
     },
   });
 
@@ -48,9 +50,14 @@ export function ParticipantRoleList() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (role: ParticipantRole) => {
-    if (window.confirm(`Are you sure you want to delete "${role.name}"?`)) {
-      deleteMutation.mutate(role.id);
+  const handleDelete = (role: ParticipantRole) => {
+    setConfirmDelete(role);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteMutation.mutate(confirmDelete.id);
+      setConfirmDelete(null);
     }
   };
 
@@ -174,6 +181,15 @@ export function ParticipantRoleList() {
           />
         )}
       </Modal>
+      <ConfirmationDialog
+        visible={confirmDelete !== null}
+        title="Remove Participant Role"
+        message={`Are you sure you want to remove "${confirmDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </SpaceBetween>
   );
 }

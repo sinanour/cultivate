@@ -27,6 +27,7 @@ import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 import { invalidatePageCaches, getListPageQueryKeys } from '../../utils/cache-invalidation.utils';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 const ITEMS_PER_PAGE = 10;
 const BATCH_SIZE = 100;
@@ -48,6 +49,7 @@ export function ActivityList() {
   const { canCreate, canEdit, canDelete } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<Activity | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -287,7 +289,7 @@ export function ActivityList() {
       setHasMorePages(true);
     },
     onError: (error: Error) => {
-      setDeleteError(error.message || 'Failed to delete activity.');
+      setDeleteError(error.message || 'Failed to remove activity.');
     },
   });
 
@@ -395,8 +397,13 @@ export function ActivityList() {
   };
 
   const handleDelete = async (activity: Activity) => {
-    if (window.confirm(`Are you sure you want to delete "${activity.name}"?`)) {
-      deleteMutation.mutate(activity.id);
+    setConfirmDelete(activity);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteMutation.mutate(confirmDelete.id);
+      setConfirmDelete(null);
     }
   };
 
@@ -697,6 +704,16 @@ export function ActivityList() {
         result={importResult}
         onDismiss={() => setShowImportResults(false)}
       />
+        <ConfirmationDialog
+          visible={confirmDelete !== null}
+          title="Remove Activity"
+          message={`Are you sure you want to remove "${confirmDelete?.name}"?`}
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
     </SpaceBetween>
     </PullToRefreshWrapper>
   );

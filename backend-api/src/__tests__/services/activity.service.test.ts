@@ -3,7 +3,6 @@ import { ActivityRepository } from '../../repositories/activity.repository';
 import { ActivityTypeRepository } from '../../repositories/activity-type.repository';
 import { ActivityVenueHistoryRepository } from '../../repositories/activity-venue-history.repository';
 import { VenueRepository } from '../../repositories/venue.repository';
-import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { ActivityStatus } from '@prisma/client';
 import { createMockPrismaClient, MockPrismaClient } from '../utils/mock-prisma';
@@ -15,7 +14,6 @@ describe('ActivityService', () => {
     let mockActivityTypeRepo: ActivityTypeRepository;
     let mockVenueHistoryRepo: ActivityVenueHistoryRepository;
     let mockVenueRepo: VenueRepository;
-    let mockGeographicAreaRepo: GeographicAreaRepository;
     let mockGeographicAuthService: jest.Mocked<GeographicAuthorizationService>;
 
     beforeEach(() => {
@@ -27,7 +25,6 @@ describe('ActivityService', () => {
         mockActivityTypeRepo = new ActivityTypeRepository(mockPrisma);
         mockVenueHistoryRepo = new ActivityVenueHistoryRepository(mockPrisma);
         mockVenueRepo = new VenueRepository(mockPrisma);
-        mockGeographicAreaRepo = new GeographicAreaRepository(mockPrisma);
 
         // Mock the GeographicAuthorizationService
         mockGeographicAuthService = {
@@ -45,7 +42,6 @@ describe('ActivityService', () => {
             mockVenueHistoryRepo,
             mockVenueRepo,
             mockPrisma,
-            mockGeographicAreaRepo,
             mockGeographicAuthService
         );
     });

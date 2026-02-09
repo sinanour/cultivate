@@ -13,6 +13,8 @@ import {
 import { AuthenticatedRequest } from '../types/express.types';
 import { generateCSVFilename } from '../utils/csv.utils';
 import { csvUpload } from '../middleware/upload.middleware';
+import { parsePaginationParams, QUERY_PARAMS } from '../utils/query-params.utils';
+import { extractAuthorizationContext } from '../utils/auth.utils';
 
 export class VenueRoutes {
     private router: Router;
@@ -108,18 +110,25 @@ export class VenueRoutes {
 
     private async getAll(req: AuthenticatedRequest & ParsedFilterRequest, res: Response) {
         try {
-            const page = req.query.page ? parseInt(req.query.page as string) : undefined;
-            const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-            const geographicAreaId = req.query.geographicAreaId as string | undefined;
+            // Parse pagination parameters
+            const { pagination, errors } = parsePaginationParams(req.query);
+            if (errors.length > 0) {
+                return res.status(400).json({
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid pagination parameters',
+                    details: { errors },
+                });
+            }
+
+            const geographicAreaId = req.query[QUERY_PARAMS.GEOGRAPHIC_AREA_ID] as string | undefined;
             // Removed legacy search parameter - use filter[name] or filter[address] instead
 
             // Extract parsed filter and fields from middleware
             const filter = req.parsedFilter;
             const fields = req.parsedFields;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit geographic area access
             if (geographicAreaId && hasGeographicRestrictions) {
@@ -133,10 +142,10 @@ export class VenueRoutes {
                 }
             }
 
-            if (page !== undefined || limit !== undefined) {
+            if (pagination.page !== undefined || pagination.limit !== undefined) {
                 const result = await this.venueService.getVenuesFlexible({
-                    page,
-                    limit,
+                    page: pagination.page,
+                    limit: pagination.limit,
                     geographicAreaId,
                     filter,
                     fields,
@@ -282,9 +291,8 @@ export class VenueRoutes {
 
     private async create(req: AuthenticatedRequest, res: Response) {
         try {
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             const venue = await this.venueService.createVenue(
                 req.body,
@@ -425,11 +433,10 @@ export class VenueRoutes {
 
     private async exportCSV(req: AuthenticatedRequest, res: Response) {
         try {
-            const geographicAreaId = req.query.geographicAreaId as string | undefined;
+            const geographicAreaId = req.query[QUERY_PARAMS.GEOGRAPHIC_AREA_ID] as string | undefined;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit geographic area access
             if (geographicAreaId && hasGeographicRestrictions) {

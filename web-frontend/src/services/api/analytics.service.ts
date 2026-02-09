@@ -122,7 +122,7 @@ export class AnalyticsService {
         if (params.startDate) queryParams.append('startDate', params.startDate);
         if (params.endDate) queryParams.append('endDate', params.endDate);
         if (params.page) queryParams.append('page', String(params.page));
-        if (params.pageSize) queryParams.append('pageSize', String(params.pageSize));
+        if (params.pageSize) queryParams.append('limit', String(params.pageSize));
 
         // Handle array parameters - append each value separately
         if (params.activityCategoryIds && params.activityCategoryIds.length > 0) {
@@ -230,7 +230,7 @@ export class AnalyticsService {
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         if (page !== undefined) params.append('page', page.toString());
-        if (pageSize !== undefined) params.append('pageSize', pageSize.toString());
+        if (pageSize !== undefined) params.append('limit', pageSize.toString());
 
         // Handle array parameters
         if (activityCategoryIds && activityCategoryIds.length > 0) {

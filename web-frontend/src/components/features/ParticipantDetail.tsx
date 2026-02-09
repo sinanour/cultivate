@@ -24,6 +24,7 @@ import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
 import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function ParticipantDetail() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +36,8 @@ export function ParticipantDetail() {
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<ParticipantAddressHistory | undefined>();
   const [error, setError] = useState('');
+  const [confirmDeleteParticipant, setConfirmDeleteParticipant] = useState(false);
+  const [confirmDeleteAddress, setConfirmDeleteAddress] = useState<string | null>(null);
 
   const { data: participant, isLoading, error: loadError, refetch } = useQuery({
     queryKey: ['participant', id],
@@ -99,7 +102,7 @@ export function ParticipantDetail() {
       setError('');
     },
     onError: (err: Error) => {
-      setError(err.message || 'Failed to delete address history');
+      setError(err.message || 'Failed to remove address history');
     },
   });
 
@@ -114,8 +117,13 @@ export function ParticipantDetail() {
   };
 
   const handleDeleteAddress = (recordId: string) => {
-    if (window.confirm('Are you sure you want to delete this address history record?')) {
-      deleteAddressMutation.mutate(recordId);
+    setConfirmDeleteAddress(recordId);
+  };
+
+  const handleConfirmDeleteAddress = () => {
+    if (confirmDeleteAddress) {
+      deleteAddressMutation.mutate(confirmDeleteAddress);
+      setConfirmDeleteAddress(null);
     }
   };
 
@@ -128,6 +136,17 @@ export function ParticipantDetail() {
     } else {
       await createAddressMutation.mutateAsync(data);
     }
+  };
+
+  const handleConfirmDeleteParticipant = () => {
+    ParticipantService.deleteParticipant(id!)
+      .then(() => {
+        navigate('/participants');
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to remove participant');
+      });
+    setConfirmDeleteParticipant(false);
   };
 
   // Pull-to-refresh handler - MUST be defined before any conditional returns
@@ -202,17 +221,7 @@ export function ParticipantDetail() {
                       Edit
                     </ResponsiveButton>
                     <ResponsiveButton 
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this participant? This action cannot be undone.')) {
-                          ParticipantService.deleteParticipant(id!)
-                            .then(() => {
-                              navigate('/participants');
-                            })
-                            .catch((err) => {
-                              setError(err.message || 'Failed to delete participant');
-                            });
-                        }
-                      }}
+                      onClick={() => setConfirmDeleteParticipant(true)}
                     >
                       Remove
                     </ResponsiveButton>
@@ -394,6 +403,30 @@ export function ParticipantDetail() {
         existingDates={existingDates}
         loading={createAddressMutation.isPending || updateAddressMutation.isPending}
       />
+
+        {/* Remove Participant Confirmation */}
+<ConfirmationDialog
+  visible={confirmDeleteParticipant}
+          title="Remove Participant"
+          message="Are you sure you want to remove this participant? This action cannot be undone."
+          confirmLabel="Remove"
+  cancelLabel="Cancel"
+  variant="destructive"
+  onConfirm={handleConfirmDeleteParticipant}
+  onCancel={() => setConfirmDeleteParticipant(false)}
+/>
+
+        {/* Remove Address History Confirmation */}
+<ConfirmationDialog
+  visible={confirmDeleteAddress !== null}
+          title="Remove Address History"
+          message="Are you sure you want to remove this address history record?"
+          confirmLabel="Remove"
+  cancelLabel="Cancel"
+  variant="destructive"
+  onConfirm={handleConfirmDeleteAddress}
+  onCancel={() => setConfirmDeleteAddress(null)}
+/>
     </SpaceBetween>
     </PullToRefreshWrapper>
   );

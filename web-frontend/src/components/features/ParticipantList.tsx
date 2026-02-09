@@ -33,6 +33,7 @@ import {
   invalidatePageCaches,
   getListPageQueryKeys,
 } from "../../utils/cache-invalidation.utils";
+import { ConfirmationDialog } from "../common/ConfirmationDialog";
 
 const ITEMS_PER_PAGE = 10;
 const BATCH_SIZE = 100;
@@ -44,6 +45,7 @@ export function ParticipantList() {
   const { user } = useAuth();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<Participant | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -257,7 +259,7 @@ export function ParticipantList() {
       setHasMorePages(true);
     },
     onError: (error: Error) => {
-      setDeleteError(error.message || "Failed to delete participant.");
+      setDeleteError(error.message || "Failed to remove participant.");
     },
   });
 
@@ -380,10 +382,13 @@ export function ParticipantList() {
   };
 
   const handleDelete = async (participant: Participant) => {
-    const displayName =
-      user?.role === "PII_RESTRICTED" ? participant.id : participant.name;
-    if (window.confirm(`Are you sure you want to delete "${displayName}"?`)) {
-      deleteMutation.mutate(participant.id);
+    setConfirmDelete(participant);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteMutation.mutate(confirmDelete.id);
+      setConfirmDelete(null);
     }
   };
 
@@ -694,6 +699,16 @@ export function ParticipantList() {
           visible={showImportResults}
           result={importResult}
           onDismiss={() => setShowImportResults(false)}
+        />
+        <ConfirmationDialog
+          visible={confirmDelete !== null}
+          title="Remove Participant"
+          message={`Are you sure you want to remove "${confirmDelete ? (user?.role === "PII_RESTRICTED" ? confirmDelete.id : confirmDelete.name) : ''}"?`}
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(null)}
         />
       </SpaceBetween>
     </PullToRefreshWrapper>

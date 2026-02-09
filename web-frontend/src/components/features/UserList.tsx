@@ -37,7 +37,7 @@ export function UserList() {
       setUserToDelete(null);
     },
     onError: (err: Error) => {
-      const message = err.message || 'Failed to delete user';
+      const message = err.message || 'Failed to remove user';
       setError(message);
       showError(message);
       setShowDeleteConfirmation(false);
@@ -154,7 +154,7 @@ export function UserList() {
                     variant="inline-link" 
                     iconName="remove"
                     onClick={() => handleDeleteClick(item)}
-                    ariaLabel={`Delete ${getDisplayName(item)}`}
+                    ariaLabel={`Remove ${getDisplayName(item)}`}
                   />
                 </Box>
               ),
@@ -188,11 +188,11 @@ export function UserList() {
         />
       </SpaceBetween>
 
-      {/* Delete Confirmation Modal */}
+      {/* Remove Confirmation Modal */}
       <Modal
         visible={showDeleteConfirmation}
         onDismiss={handleCancelDelete}
-        header="Delete User"
+        header="Remove User"
         footer={
           <Box float="right">
             <SpaceBetween direction="horizontal" size="xs">
@@ -204,13 +204,13 @@ export function UserList() {
                 onClick={handleConfirmDelete}
                 loading={deleteMutation.isPending}
               >
-                Delete
+                Remove
               </Button>
             </SpaceBetween>
           </Box>
         }
       >
-        Are you sure you want to delete user <strong>{userToDelete ? getDisplayName(userToDelete) : ''}</strong>? 
+        Are you sure you want to remove user <strong>{userToDelete ? getDisplayName(userToDelete) : ''}</strong>? 
         This action cannot be undone.
       </Modal>
     </>

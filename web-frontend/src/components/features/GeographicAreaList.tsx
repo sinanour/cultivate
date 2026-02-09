@@ -29,6 +29,7 @@ import {
   invalidatePageCaches,
   getListPageQueryKeys,
 } from "../../utils/cache-invalidation.utils";
+import { ConfirmationDialog } from "../common/ConfirmationDialog";
 import styles from "./GeographicAreaList.module.scss";
 
 const BATCH_SIZE = 100;
@@ -58,6 +59,7 @@ export function GeographicAreaList() {
   const { canCreate, canEdit, canDelete } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<GeographicArea | null>(null);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -189,7 +191,7 @@ export function GeographicAreaList() {
     onError: (error: Error) => {
       setDeleteError(
         error.message ||
-          "Failed to delete geographic area. It may be referenced by venues or child areas.",
+        "Failed to remove geographic area. It may be referenced by venues or child areas.",
       );
     },
   });
@@ -514,8 +516,13 @@ export function GeographicAreaList() {
   };
 
   const handleDelete = async (area: GeographicArea) => {
-    if (window.confirm(`Are you sure you want to delete "${area.name}"?`)) {
-      deleteMutation.mutate(area.id);
+    setConfirmDelete(area);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteMutation.mutate(confirmDelete.id);
+      setConfirmDelete(null);
     }
   };
 
@@ -868,6 +875,16 @@ export function GeographicAreaList() {
           visible={showImportResults}
           result={importResult}
           onDismiss={() => setShowImportResults(false)}
+        />
+        <ConfirmationDialog
+          visible={confirmDelete !== null}
+          title="Remove Geographic Area"
+          message={`Are you sure you want to remove "${confirmDelete?.name}"?`}
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(null)}
         />
       </>
     </PullToRefreshWrapper>

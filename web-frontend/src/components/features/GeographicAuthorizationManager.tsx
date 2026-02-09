@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { geographicAuthorizationService } from '../../services/api/geographic-authorization.service';
 import { GeographicAuthorizationForm } from './GeographicAuthorizationForm';
 import { useNotification } from '../../hooks/useNotification';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 interface GeographicAuthorizationManagerProps {
   userId: string;
@@ -29,6 +30,7 @@ export function GeographicAuthorizationManager({
   onDismiss,
 }: GeographicAuthorizationManagerProps) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const { showSuccess, showError } = useNotification();
   const queryClient = useQueryClient();
 
@@ -75,13 +77,18 @@ export function GeographicAuthorizationManager({
       showSuccess('Authorization rule deleted successfully');
     },
     onError: (error: any) => {
-      showError(error.response?.data?.message || 'Failed to delete authorization rule');
+      showError(error.response?.data?.message || 'Failed to remove authorization rule');
     },
   });
 
   const handleDelete = (authId: string) => {
-    if (window.confirm('Are you sure you want to delete this authorization rule?')) {
-      deleteMutation.mutate(authId);
+    setConfirmDelete(authId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteMutation.mutate(confirmDelete);
+      setConfirmDelete(null);
     }
   };
 
@@ -303,6 +310,18 @@ export function GeographicAuthorizationManager({
         visible={showAddForm}
         onDismiss={() => setShowAddForm(false)}
         onSuccess={handleAddSuccess}
+      />
+
+      {/* Remove Confirmation Dialog */}
+      <ConfirmationDialog
+        visible={confirmDelete !== null}
+        title="Remove Authorization Rule"
+        message="Are you sure you want to remove this authorization rule?"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(null)}
       />
     </>
   );

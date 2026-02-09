@@ -17,7 +17,7 @@ describe('VenueService', () => {
         mockVenueRepo = new VenueRepository(null as any) as jest.Mocked<VenueRepository>;
         mockGeoRepo = new GeographicAreaRepository(null as any) as jest.Mocked<GeographicAreaRepository>;
         mockGeographicAuthService = new GeographicAuthorizationService(null as any, null as any, null as any) as jest.Mocked<GeographicAuthorizationService>;
-        service = new VenueService(mockVenueRepo, mockGeoRepo, mockGeographicAuthService);
+        service = new VenueService(mockVenueRepo, mockGeoRepo, mockGeographicAuthService, null as any);
         jest.clearAllMocks();
     });
 

@@ -1,13 +1,11 @@
 import { ParticipantService } from '../../services/participant.service';
 import { ParticipantRepository } from '../../repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from '../../repositories/participant-address-history.repository';
-import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { PrismaClient } from '@prisma/client';
 
 jest.mock('../../repositories/participant.repository');
 jest.mock('../../repositories/participant-address-history.repository');
-jest.mock('../../repositories/geographic-area.repository');
 jest.mock('../../services/geographic-authorization.service');
 jest.mock('@prisma/client');
 
@@ -15,14 +13,12 @@ describe('ParticipantService', () => {
     let service: ParticipantService;
     let mockParticipantRepo: jest.Mocked<ParticipantRepository>;
     let mockAddressHistoryRepo: jest.Mocked<ParticipantAddressHistoryRepository>;
-    let mockGeographicAreaRepo: jest.Mocked<GeographicAreaRepository>;
     let mockGeographicAuthService: jest.Mocked<GeographicAuthorizationService>;
     let mockPrisma: jest.Mocked<PrismaClient>;
 
     beforeEach(() => {
         mockParticipantRepo = new ParticipantRepository(null as any) as jest.Mocked<ParticipantRepository>;
         mockAddressHistoryRepo = new ParticipantAddressHistoryRepository(null as any) as jest.Mocked<ParticipantAddressHistoryRepository>;
-        mockGeographicAreaRepo = new GeographicAreaRepository(null as any) as jest.Mocked<GeographicAreaRepository>;
         mockGeographicAuthService = new GeographicAuthorizationService(null as any, null as any, null as any) as jest.Mocked<GeographicAuthorizationService>;
 
         const mockTx = {
@@ -46,7 +42,7 @@ describe('ParticipantService', () => {
 
         const mockAssignmentRepo = {} as any;
 
-        service = new ParticipantService(mockParticipantRepo, mockAddressHistoryRepo, mockAssignmentRepo, mockPrisma, mockGeographicAreaRepo, mockGeographicAuthService);
+        service = new ParticipantService(mockParticipantRepo, mockAddressHistoryRepo, mockAssignmentRepo, mockPrisma, mockGeographicAuthService);
         jest.clearAllMocks();
     });
 

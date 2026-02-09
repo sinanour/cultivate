@@ -60,9 +60,9 @@ describe('Individual Resource Access Authorization', () => {
 
         // Initialize services
         geoAuthService = new GeographicAuthorizationService(userGeoAuthRepo, geoAreaRepo, userRepo, auditLogRepo);
-        participantService = new ParticipantService(participantRepo, addressHistoryRepo, assignmentRepo, prisma, geoAreaRepo, geoAuthService);
-        activityService = new ActivityService(activityRepo, activityTypeRepo, venueHistoryRepo, venueRepo, prisma, geoAreaRepo, geoAuthService);
-        venueService = new VenueService(venueRepo, geoAreaRepo, geoAuthService);
+        participantService = new ParticipantService(participantRepo, addressHistoryRepo, assignmentRepo, prisma, geoAuthService);
+        activityService = new ActivityService(activityRepo, activityTypeRepo, venueHistoryRepo, venueRepo, prisma, geoAuthService);
+        venueService = new VenueService(venueRepo, geoAreaRepo, geoAuthService, prisma);
         geographicAreaService = new GeographicAreaService(geoAreaRepo, prisma, geoAuthService);
 
         // Create test users

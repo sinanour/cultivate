@@ -42,7 +42,6 @@ describe('Map Data Temporal Filtering', () => {
         );
         mapDataService = new MapDataService(
             prisma,
-            geographicAreaRepository,
             geoAuthService
         );
 

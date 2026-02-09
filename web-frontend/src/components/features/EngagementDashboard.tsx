@@ -685,7 +685,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
   }, [metrics]);
 
   // Separate query for geographic breakdown
-  const { data: geographicBreakdownResponse } = useQuery({
+  const { data: geographicBreakdownResponse, isFetching: isGeographicBreakdownFetching } = useQuery({
     queryKey: ['geographicBreakdown', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, geoBreakdownPage, geoBreakdownPageSize, runReportTrigger],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
@@ -725,7 +725,8 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
       // Extract filters from PropertyFilter tokens (convert labels to UUIDs)
       // Support multiple values per property (OR logic within dimension)
       // Tokens now contain comma-separated values, so we need to split them
-      const activityCategoryLabels = propertyFilterQuery.tokens
+      // IMPORTANT: Use appliedFilterQuery (not propertyFilterQuery) to ensure consistency with main query
+      const activityCategoryLabels = appliedFilterQuery.tokens
         .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
         .flatMap(t => extractValuesFromToken(t));
       const activityCategoryIds = activityCategoryLabels.map(label => getUuidFromLabel(label)).filter(Boolean) as string[];
@@ -761,16 +762,28 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
     placeholderData: (previousData) => previousData, // Prevent flicker by keeping stale data visible while fetching
   });
   
-  const geographicBreakdown = geographicBreakdownResponse?.data || [];
-  const geographicBreakdownPagination = geographicBreakdownResponse?.pagination;
+  // Track when geographic breakdown data actually changes (not just fetching)
+  // This counter increments when new data arrives, forcing chart to update
+  const [geoDataVersion, setGeoDataVersion] = useState(0);
+  const prevGeoDataRef = useRef<typeof geographicBreakdownResponse | undefined>(undefined);
 
-  // Sync frontend page state with backend's clamped page number
-  // If backend returns a different page (due to clamping), update frontend state
   useEffect(() => {
-    if (geographicBreakdownPagination && geographicBreakdownPagination.page !== geoBreakdownPage) {
-      setGeoBreakdownPage(geographicBreakdownPagination.page);
+    // Only increment version when data actually changes (not just when fetching starts)
+    if (!isGeographicBreakdownFetching && geographicBreakdownResponse !== prevGeoDataRef.current) {
+      prevGeoDataRef.current = geographicBreakdownResponse;
+      setGeoDataVersion(v => v + 1);
     }
-  }, [geographicBreakdownPagination, geoBreakdownPage]);
+  }, [geographicBreakdownResponse, isGeographicBreakdownFetching]);
+
+  // Memoize geographic breakdown data to ensure chart updates when data changes
+  // Include geoDataVersion to force update when new data arrives
+  const geographicBreakdown = useMemo(() => {
+    return geographicBreakdownResponse?.data || [];
+  }, [geographicBreakdownResponse?.data, geoDataVersion]);
+
+  const geographicBreakdownPagination = useMemo(() => {
+    return geographicBreakdownResponse?.pagination;
+  }, [geographicBreakdownResponse?.pagination]);
 
   // Handler for Run Report button (triggered by parent via runReportTrigger prop)
   useEffect(() => {
@@ -1483,12 +1496,11 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
                   { label: '25 records', value: '25' },
                   { label: '50 records', value: '50' },
                   { label: '100 records', value: '100' },
-                  { label: '200 records', value: '200' },
                 ]}
                 disabled={isLoading}
               />
               
-              {metrics.pagination && metrics.pagination.totalPages > 1 && (
+                {metrics.pagination && (
                 <Pagination
                   currentPageIndex={currentPage}
                   pagesCount={metrics.pagination.totalPages}
@@ -1748,7 +1760,24 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
       <Container header={renderHeaderWithLoading('Geographic Breakdown')}>
         {renderWithLoadingState(
           geographicBreakdown && geographicBreakdown.length > 0 ? (
-            <>
+            <div style={{ position: 'relative' }}>
+              {/* Loading overlay when fetching new page */}
+              {isGeographicBreakdownFetching && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 10,
+                }}>
+                  <Spinner size="large" />
+                </div>
+              )}
               <InteractiveLegend
                 chartId="geographic-breakdown"
                 series={geographicBreakdownLegendItems}
@@ -1841,7 +1870,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
             </ResponsiveContainer>
             
             {/* Pagination controls for geographic breakdown */}
-            {geographicBreakdownPagination && geographicBreakdownPagination.totalPages > 1 && (
+              {geographicBreakdownPagination && (
               <Box margin={{ top: 's' }}>
                 <SpaceBetween size="s" direction="horizontal" alignItems="center">
                   <Box>
@@ -1873,8 +1902,8 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
                 </SpaceBetween>
               </Box>
             )}
-          </>
-        ) : (
+            </div>
+          ) : (
           <Box textAlign="center" padding="l">
             <b>No geographic breakdown data available</b>
           </Box>

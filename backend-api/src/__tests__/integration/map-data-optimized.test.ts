@@ -31,7 +31,7 @@ describe('Map Data Optimized Implementation', () => {
             geographicAreaRepository,
             userRepository
         );
-        mapDataService = new MapDataService(prisma, geographicAreaRepository, geoAuthService);
+        mapDataService = new MapDataService(prisma, geoAuthService);
 
         // Create test data
         const user = await prisma.user.create({

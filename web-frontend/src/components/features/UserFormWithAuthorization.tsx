@@ -23,6 +23,7 @@ import { geographicAuthorizationService } from '../../services/api/geographic-au
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeographicAuthorizationForm } from './GeographicAuthorizationForm';
 import { useNotification } from '../../hooks/useNotification';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 interface UserFormWithAuthorizationProps {
   user: User | null;
@@ -58,12 +59,13 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
   
   // Local state for authorization rules (both new users and pending changes for existing users)
   const [localAuthRules, setLocalAuthRules] = useState<AuthorizationRuleWithMetadata[]>([]);
-  const [deletedRuleIds, setDeletedRuleIds] = useState<string[]>([]); // Track rules to delete on submit
+  const [deletedRuleIds, setDeletedRuleIds] = useState<string[]>([]); // Track rules to remove on submit
   
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
   const [showAddAuthForm, setShowAddAuthForm] = useState(false);
+  const [confirmDeleteRuleId, setConfirmDeleteRuleId] = useState<string | null>(null);
 
   // Track initial values for dirty state detection
   const [initialFormState, setInitialFormState] = useState<{
@@ -399,17 +401,22 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
   };
 
   const handleDeleteRule = (ruleId: string) => {
-    if (window.confirm('Are you sure you want to delete this authorization rule?')) {
-      const rule = localAuthRules.find(r => r.id === ruleId);
+    setConfirmDeleteRuleId(ruleId);
+  };
+
+  const handleConfirmDeleteRule = () => {
+    if (confirmDeleteRuleId) {
+      const rule = localAuthRules.find(r => r.id === confirmDeleteRuleId);
       
       if (rule?.isPending) {
         // Remove pending rule from local state
-        setLocalAuthRules(localAuthRules.filter(r => r.id !== ruleId));
+        setLocalAuthRules(localAuthRules.filter(r => r.id !== confirmDeleteRuleId));
       } else {
         // Mark existing rule for deletion (will be deleted on submit)
-        setDeletedRuleIds([...deletedRuleIds, ruleId]);
-        setLocalAuthRules(localAuthRules.filter(r => r.id !== ruleId));
+        setDeletedRuleIds([...deletedRuleIds, confirmDeleteRuleId]);
+        setLocalAuthRules(localAuthRules.filter(r => r.id !== confirmDeleteRuleId));
       }
+      setConfirmDeleteRuleId(null);
     }
   };
 
@@ -735,6 +742,18 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
       >
         You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
       </Modal>
+
+      {/* Remove Authorization Rule Confirmation */}
+      <ConfirmationDialog
+        visible={confirmDeleteRuleId !== null}
+        title="Remove Authorization Rule"
+        message="Are you sure you want to remove this authorization rule?"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={handleConfirmDeleteRule}
+        onCancel={() => setConfirmDeleteRuleId(null)}
+      />
     </form>
   );
 }

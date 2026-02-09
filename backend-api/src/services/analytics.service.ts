@@ -9,6 +9,7 @@ import {
     DimensionKeys,
 } from '../utils/constants';
 import { GeographicBreakdownQueryBuilder, GeographicBreakdownFilters, PaginationParams as GeoBreakdownPaginationParams } from './analytics/geographic-breakdown-query-builder';
+import { GeographicFilteringService } from './geographic-filtering.service';
 
 export { TimePeriod, DateGranularity, GroupingDimension };
 
@@ -165,6 +166,7 @@ export interface AnalyticsFilters {
 
 export class AnalyticsService {
     private geographicBreakdownQueryBuilder: GeographicBreakdownQueryBuilder;
+    private geographicFilteringService: GeographicFilteringService;
 
     constructor(
         private prisma: PrismaClient,
@@ -172,61 +174,7 @@ export class AnalyticsService {
         private geographicAuthorizationService?: GeographicAuthorizationService
     ) {
         this.geographicBreakdownQueryBuilder = new GeographicBreakdownQueryBuilder(prisma);
-    }
-
-    /**
-     * Determines the effective geographic area IDs to filter by, considering:
-     * 1. Explicit geographicAreaId parameter (if provided, validate authorization)
-     * 2. Implicit filtering based on user's authorized areas (if user has restrictions)
-     * 3. No filtering (if user has no restrictions and no explicit filter)
-     * 
-     * IMPORTANT: authorizedAreaIds already includes descendants and excludes DENY rules.
-     * Do NOT expand descendants again during implicit filtering.
-     */
-    private async getEffectiveGeographicAreaIds(
-        explicitGeographicAreaIds: string | string[] | undefined,
-        authorizedAreaIds: string[],
-        hasGeographicRestrictions: boolean
-    ): Promise<string[] | undefined> {
-        // Convert single value to array for uniform processing
-        const areaIdsArray = explicitGeographicAreaIds
-            ? (Array.isArray(explicitGeographicAreaIds) ? explicitGeographicAreaIds : [explicitGeographicAreaIds])
-            : undefined;
-
-        // If explicit filter provided
-        if (areaIdsArray && areaIdsArray.length > 0) {
-            // Validate user has access to all areas
-            if (hasGeographicRestrictions) {
-                const allAuthorized = areaIdsArray.every(id => authorizedAreaIds.includes(id));
-                if (!allAuthorized) {
-                    throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access one or more of the specified geographic areas');
-                }
-            }
-
-            // Expand each area to include descendants using batch processing
-            const descendantIds = await this.geographicAreaRepository.findBatchDescendants(areaIdsArray);
-            const allExpandedIds = new Set<string>([...areaIdsArray, ...descendantIds]);
-
-            const allPotentialIds = Array.from(allExpandedIds);
-
-            // If user has geographic restrictions, filter to only authorized areas
-            if (hasGeographicRestrictions) {
-                return allPotentialIds.filter(id => authorizedAreaIds.includes(id));
-            }
-
-            // No restrictions - return all descendants
-            return allPotentialIds;
-        }
-
-        // No explicit filter - apply implicit filtering if user has restrictions
-        if (hasGeographicRestrictions) {
-            // IMPORTANT: authorizedAreaIds already has descendants expanded and DENY rules applied
-            // Do NOT expand descendants again, as this would re-add denied areas
-            return authorizedAreaIds;
-        }
-
-        // No restrictions and no explicit filter - return undefined (no filtering)
-        return undefined;
+        this.geographicFilteringService = new GeographicFilteringService(prisma);
     }
 
     async getEngagementMetrics(
@@ -253,7 +201,7 @@ export class AnalyticsService {
         }
 
         // Determine effective geographic area IDs
-        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+        const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIdsForAnalytics(
             geographicAreaIds,
             authorizedAreaIds,
             hasGeographicRestrictions
@@ -926,7 +874,7 @@ export class AnalyticsService {
         } = filters;
 
         // Determine effective geographic area IDs
-        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+        const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIdsForAnalytics(
             geographicAreaIds,
             authorizedAreaIds,
             hasGeographicRestrictions
@@ -1158,7 +1106,7 @@ export class AnalyticsService {
         } = filters;
 
         // Determine effective geographic area IDs
-        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+        const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIdsForAnalytics(
             geographicAreaIds,
             authorizedAreaIds,
             hasGeographicRestrictions
@@ -1679,7 +1627,7 @@ export class AnalyticsService {
         if (geographicAreaIds && geographicAreaIds.length > 0) {
             // Validate each provided geographic area
             for (const areaId of geographicAreaIds) {
-                const effectiveIds = await this.getEffectiveGeographicAreaIds(
+                const effectiveIds = await this.geographicFilteringService.getEffectiveGeographicAreaIdsForAnalytics(
                     areaId,
                     authorizedAreaIds,
                     hasGeographicRestrictions
@@ -1700,7 +1648,7 @@ export class AnalyticsService {
             }
         } else if (hasGeographicRestrictions) {
             // No explicit geographic filter, but user has restrictions - apply implicit filtering
-            const effectiveIds = await this.getEffectiveGeographicAreaIds(
+            const effectiveIds = await this.geographicFilteringService.getEffectiveGeographicAreaIdsForAnalytics(
                 undefined,
                 authorizedAreaIds,
                 hasGeographicRestrictions

@@ -58,18 +58,16 @@ describe('Flexible Filtering Integration Tests', () => {
             addressHistoryRepository,
             assignmentRepository,
             prisma,
-            geographicAreaRepository,
             geoAuthService
         );
 
-        venueService = new VenueService(venueRepository, geographicAreaRepository, geoAuthService);
+        venueService = new VenueService(venueRepository, geographicAreaRepository, geoAuthService, prisma);
         activityService = new ActivityService(
             activityRepository,
             activityTypeRepository,
             activityVenueHistoryRepository,
             venueRepository,
             prisma,
-            geographicAreaRepository,
             geoAuthService
         );
 

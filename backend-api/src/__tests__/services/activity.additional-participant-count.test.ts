@@ -34,7 +34,6 @@ describe('ActivityService - Additional Participant Count', () => {
             venueHistoryRepository,
             venueRepository,
             mockPrisma,
-            geographicAreaRepository,
             geographicAuthorizationService
         );
     });

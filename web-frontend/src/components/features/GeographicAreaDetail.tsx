@@ -22,6 +22,7 @@ import { formatDate } from '../../utils/date.utils';
 import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,7 @@ export function GeographicAreaDetail() {
   const { setGeographicAreaFilter } = useGlobalGeographicFilter();
   const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data: geographicArea, isLoading, error, refetch } = useQuery({
     queryKey: ['geographicArea', id],
@@ -98,6 +100,17 @@ export function GeographicAreaDetail() {
     );
   }
 
+  const handleConfirmDelete = () => {
+    GeographicAreaService.deleteGeographicArea(id!)
+      .then(() => {
+        navigate('/geographic-areas');
+      })
+      .catch((err) => {
+        setDeleteError(err.message || 'Failed to remove geographic area');
+      });
+    setConfirmDelete(false);
+  };
+
   const breadcrumbItems = [
     ...[...ancestors].reverse().map((ancestor) => ({
       text: ancestor.name,
@@ -145,17 +158,7 @@ export function GeographicAreaDetail() {
                     </ResponsiveButton>
                     <ResponsiveButton
                       mobileIcon="remove" 
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this geographic area? This action cannot be undone.')) {
-                          GeographicAreaService.deleteGeographicArea(id!)
-                            .then(() => {
-                              navigate('/geographic-areas');
-                            })
-                            .catch((err) => {
-                              setDeleteError(err.message || 'Failed to delete geographic area');
-                            });
-                        }
-                      }}
+                      onClick={() => setConfirmDelete(true)}
                     >
                       Remove
                     </ResponsiveButton>
@@ -302,6 +305,16 @@ export function GeographicAreaDetail() {
             }
           />
         )}
+        <ConfirmationDialog
+          visible={confirmDelete}
+          title="Remove Geographic Area"
+          message="Are you sure you want to remove this geographic area? This action cannot be undone."
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
     </SpaceBetween>
     </PullToRefreshWrapper>
   );

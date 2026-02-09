@@ -52,7 +52,6 @@ describe('Map Data Coordinate-Based Filtering', () => {
         );
         mapDataService = new MapDataService(
             prisma,
-            geographicAreaRepository,
             geoAuthService
         );
 

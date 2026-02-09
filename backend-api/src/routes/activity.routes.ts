@@ -15,6 +15,8 @@ import {
 import { AuthenticatedRequest } from '../types/express.types';
 import { generateCSVFilename } from '../utils/csv.utils';
 import { csvUpload } from '../middleware/upload.middleware';
+import { QUERY_PARAMS } from '../utils/query-params.utils';
+import { extractAuthorizationContext } from '../utils/auth.utils';
 
 export class ActivityRoutes {
     private router: Router;
@@ -123,8 +125,9 @@ export class ActivityRoutes {
             const {
                 page,
                 limit,
-                geographicAreaId
             } = req.query as any;
+
+            const geographicAreaId = req.query[QUERY_PARAMS.GEOGRAPHIC_AREA_ID] as string | undefined;
 
             // Removed legacy parameters: activityTypeIds, activityCategoryIds, status, populationIds, startDate, endDate
             // Use filter[activityTypeId], filter[status], filter[populationIds], filter[startDate], filter[endDate] instead
@@ -133,9 +136,8 @@ export class ActivityRoutes {
             const filter = req.parsedFilter;
             const fields = req.parsedFields;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit geographic area access
             if (geographicAreaId && hasGeographicRestrictions) {
@@ -431,9 +433,8 @@ export class ActivityRoutes {
             const { venueId, effectiveFrom } = req.body;
             const effectiveDate = effectiveFrom ? new Date(effectiveFrom) : null;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             const association = await this.activityService.associateVenue(
                 id,
@@ -502,11 +503,10 @@ export class ActivityRoutes {
 
     private async exportCSV(req: AuthenticatedRequest, res: Response) {
         try {
-            const geographicAreaId = req.query.geographicAreaId as string | undefined;
+            const geographicAreaId = req.query[QUERY_PARAMS.GEOGRAPHIC_AREA_ID] as string | undefined;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit geographic area access
             if (geographicAreaId && hasGeographicRestrictions) {

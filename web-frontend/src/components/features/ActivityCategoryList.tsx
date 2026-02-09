@@ -12,10 +12,12 @@ import { ActivityCategoryForm } from './ActivityCategoryForm';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { useNotification } from '../../hooks/useNotification';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function ActivityCategoryList() {
     const [selectedCategory, setSelectedCategory] = useState<ActivityCategory | null>(null);
     const [isFormVisible, setIsFormVisible] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<ActivityCategory | null>(null);
     const { showNotification } = useNotification();
     const { canEdit } = usePermissions();
     const queryClient = useQueryClient();
@@ -32,7 +34,7 @@ export function ActivityCategoryList() {
             showNotification('success', 'Activity category deleted successfully');
         },
         onError: (error: any) => {
-            const message = error.response?.data?.message || 'Failed to delete activity category';
+            const message = error.response?.data?.message || 'Failed to remove activity category';
             showNotification('error', message);
         },
     });
@@ -47,9 +49,14 @@ export function ActivityCategoryList() {
         setIsFormVisible(true);
     };
 
-    const handleDelete = async (category: ActivityCategory) => {
-        if (window.confirm(`Are you sure you want to delete "${category.name}"?`)) {
-            deleteMutation.mutate(category.id);
+    const handleDelete = (category: ActivityCategory) => {
+        setConfirmDelete(category);
+    };
+
+    const handleConfirmDelete = () => {
+        if (confirmDelete) {
+            deleteMutation.mutate(confirmDelete.id);
+            setConfirmDelete(null);
         }
     };
 
@@ -154,6 +161,16 @@ export function ActivityCategoryList() {
                     }}
                 />
             )}
+
+            <ConfirmationDialog
+                visible={confirmDelete !== null}
+                title="Remove Activity Category"
+                message={`Are you sure you want to remove "${confirmDelete?.name}"? This action cannot be undone.`}
+                confirmLabel="Remove"
+                variant="destructive"
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setConfirmDelete(null)}
+            />
         </>
     );
 }

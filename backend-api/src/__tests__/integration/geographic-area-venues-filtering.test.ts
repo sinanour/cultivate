@@ -49,7 +49,6 @@ describe('Geographic Area Filtering with DENY Rules', () => {
             addressHistoryRepo,
             assignmentRepo,
             prisma,
-            geoAreaRepo,
             geoAuthService
         );
 

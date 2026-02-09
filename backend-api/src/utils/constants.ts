@@ -149,3 +149,28 @@ export const DATE_FORMAT = {
     ISO_DATE: 'YYYY-MM-DD',
     ISO_DATETIME: 'YYYY-MM-DDTHH:mm:ss.SSSZ',
 } as const;
+
+// Query Parameter Keys
+export const QUERY_PARAMS = {
+    // Pagination
+    PAGE: 'page',
+    LIMIT: 'limit',
+
+    // Filtering
+    GEOGRAPHIC_AREA_ID: 'geographicAreaId',
+    DEPTH: 'depth',
+
+    // Grouping and Analytics
+    GROUP_BY: 'groupBy',
+    START_DATE: 'startDate',
+    END_DATE: 'endDate',
+    TIME_PERIOD: 'timePeriod',
+    GRANULARITY: 'granularity',
+
+    // Sorting
+    SORT_BY: 'sortBy',
+    SORT_ORDER: 'sortOrder',
+} as const;
+
+// Type for query parameter keys
+export type QueryParamKey = typeof QUERY_PARAMS[keyof typeof QUERY_PARAMS];

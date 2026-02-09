@@ -30,7 +30,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
         const userRepo = new UserRepository(prisma);
         const authRepo = new UserGeographicAuthorizationRepository(prisma);
         geoAuthService = new GeographicAuthorizationService(authRepo, geoAreaRepo, userRepo);
-        mapDataService = new MapDataService(prisma, geoAreaRepo, geoAuthService);
+        mapDataService = new MapDataService(prisma, geoAuthService);
 
         // Clean up any existing test data from previous runs
         // Must delete in correct order to respect foreign key constraints

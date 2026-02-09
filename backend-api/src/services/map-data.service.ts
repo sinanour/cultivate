@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { GeographicAreaRepository } from '../repositories/geographic-area.repository';
 import { GeographicAuthorizationService, AccessLevel } from './geographic-authorization.service';
 import { ActivityStatus } from '../utils/constants';
 import { ActivityMarkerQueryBuilder } from '../utils/activity-marker-query-builder';
@@ -7,6 +6,7 @@ import {
     ParticipantHomeMarkerQueryBuilder,
     ParticipantHomeMarkerRow
 } from '../utils/participant-home-marker-query-builder';
+import { GeographicFilteringService } from './geographic-filtering.service';
 
 export interface PaginationMetadata {
     page: number;
@@ -95,11 +95,14 @@ export interface BoundingBox {
 }
 
 export class MapDataService {
+    private geographicFilteringService: GeographicFilteringService;
+
     constructor(
         private prisma: PrismaClient,
-        private geographicAreaRepository: GeographicAreaRepository,
         private geoAuthService: GeographicAuthorizationService
-    ) { }
+    ) {
+        this.geographicFilteringService = new GeographicFilteringService(prisma);
+    }
 
     /**
      * Get lightweight activity marker data for map rendering with pagination
@@ -116,10 +119,14 @@ export class MapDataService {
         const effectiveLimit = Math.min(limit, 100);
         const skip = (page - 1) * effectiveLimit;
 
+        // Get user's authorization info
+        const authInfo = await this.geoAuthService.getAuthorizationInfo(userId);
+
         // Get effective geographic area IDs based on authorization
-        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+        const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIdsForAnalytics(
             filters.geographicAreaIds,
-            userId
+            authInfo.authorizedAreaIds,
+            authInfo.hasGeographicRestrictions
         );
 
         // If user has restrictions and no authorized areas, return empty
@@ -464,10 +471,14 @@ export class MapDataService {
         const effectiveLimit = Math.min(limit, 100);
         const skip = (page - 1) * effectiveLimit;
 
+        // Get user's authorization info
+        const authInfo = await this.geoAuthService.getAuthorizationInfo(userId);
+
         // Get effective geographic area IDs based on authorization
-        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+        const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIdsForAnalytics(
             filters.geographicAreaIds,
-            userId
+            authInfo.authorizedAreaIds,
+            authInfo.hasGeographicRestrictions
         );
 
         // If user has restrictions and no authorized areas, return empty
@@ -572,39 +583,6 @@ export class MapDataService {
             address: venue.address,
             geographicAreaName: venue.geographicArea.name,
         };
-    }
-
-    /**
-     * Get effective geographic area IDs based on filters and authorization
-     */
-    private async getEffectiveGeographicAreaIds(
-        filterAreaIds: string[] | undefined,
-        userId: string
-    ): Promise<string[] | undefined> {
-        // Get user's authorized area IDs
-        const authInfo = await this.geoAuthService.getAuthorizationInfo(userId);
-
-        // If explicit filter provided
-        if (filterAreaIds && filterAreaIds.length > 0) {
-            // Expand to include descendants using batch processing
-            const descendants = await this.geographicAreaRepository.findBatchDescendants(filterAreaIds);
-            const expandedIds = new Set<string>([...filterAreaIds, ...descendants]);
-
-            // If user has restrictions, intersect with authorized areas
-            if (authInfo.hasGeographicRestrictions) {
-                const authorizedSet = new Set(authInfo.authorizedAreaIds);
-                return Array.from(expandedIds).filter(id => authorizedSet.has(id));
-            }
-
-            return Array.from(expandedIds);
-        }
-
-        // No explicit filter - apply implicit filtering
-        if (authInfo.hasGeographicRestrictions) {
-            return authInfo.authorizedAreaIds;
-        }
-
-        return undefined; // No filtering
     }
 
     /**

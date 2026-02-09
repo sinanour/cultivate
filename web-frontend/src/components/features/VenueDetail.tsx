@@ -24,6 +24,7 @@ import { BreadcrumbGroup, type BreadcrumbGroupProps } from '@cloudscape-design/c
 import type { GeographicArea } from '../../types';
 import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +33,7 @@ export function VenueDetail() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data: venue, isLoading, error, refetch } = useQuery({
     queryKey: ['venue', id],
@@ -92,6 +94,17 @@ export function VenueDetail() {
     );
   }
 
+  const handleConfirmDelete = () => {
+    VenueService.deleteVenue(id!)
+      .then(() => {
+        navigate('/venues');
+      })
+      .catch((err) => {
+        setDeleteError(err.message || 'Failed to remove venue');
+      });
+    setConfirmDelete(false);
+  };
+
   // Reverse ancestors to get correct order: most ancestral -> leaf node
   const hierarchyItems = [...ancestors].reverse();
   if (venue.geographicArea) {
@@ -122,17 +135,7 @@ export function VenueDetail() {
                     </ResponsiveButton>
                     <ResponsiveButton 
                       mobileIcon="remove"
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this venue? This action cannot be undone.')) {
-                          VenueService.deleteVenue(id!)
-                            .then(() => {
-                              navigate('/venues');
-                            })
-                            .catch((err) => {
-                              setDeleteError(err.message || 'Failed to delete venue');
-                            });
-                        }
-                      }}
+                      onClick={() => setConfirmDelete(true)}
                     >
                       Remove
                     </ResponsiveButton>
@@ -272,6 +275,16 @@ export function VenueDetail() {
           }
         />
       )}
+        <ConfirmationDialog
+          visible={confirmDelete}
+          title="Remove Venue"
+          message="Are you sure you want to remove this venue? This action cannot be undone."
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
     </SpaceBetween>
     </PullToRefreshWrapper>
   );

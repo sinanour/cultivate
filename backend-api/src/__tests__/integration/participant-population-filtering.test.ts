@@ -51,7 +51,6 @@ describe('Participant Population Filtering Integration Tests', () => {
       addressHistoryRepository,
       assignmentRepository,
       prisma,
-      geographicAreaRepository,
       geoAuthService
     );
 

@@ -392,7 +392,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
       await ParticipantAddressHistoryService.deleteAddressHistory(participant.id, addressId);
       setAddressHistory(prev => prev.filter(a => a.id !== addressId));
     } catch (err) {
-      setError('Failed to delete address history record');
+      setError('Failed to remove address history record');
     }
   };
 

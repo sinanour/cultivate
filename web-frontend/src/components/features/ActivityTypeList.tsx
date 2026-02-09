@@ -14,6 +14,7 @@ import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { ActivityTypeForm } from './ActivityTypeForm';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function ActivityTypeList() {
   const queryClient = useQueryClient();
@@ -21,6 +22,7 @@ export function ActivityTypeList() {
   const [selectedType, setSelectedType] = useState<ActivityType | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<ActivityType | null>(null);
 
   const { data: activityTypes = [], isLoading } = useQuery({
     queryKey: ['activityTypes'],
@@ -44,7 +46,7 @@ export function ActivityTypeList() {
       setDeleteError('');
     },
     onError: (error: Error) => {
-      setDeleteError(error.message || 'Failed to delete activity type. It may be referenced by activities.');
+      setDeleteError(error.message || 'Failed to remove activity type. It may be referenced by activities.');
     },
   });
 
@@ -58,9 +60,14 @@ export function ActivityTypeList() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (type: ActivityType) => {
-    if (window.confirm(`Are you sure you want to delete "${type.name}"?`)) {
-      deleteMutation.mutate(type.id);
+  const handleDelete = (type: ActivityType) => {
+    setConfirmDelete(type);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteMutation.mutate(confirmDelete.id);
+      setConfirmDelete(null);
     }
   };
 
@@ -190,6 +197,15 @@ export function ActivityTypeList() {
           />
         )}
       </Modal>
+      <ConfirmationDialog
+        visible={confirmDelete !== null}
+        title="Remove Activity Type"
+        message={`Are you sure you want to remove "${confirmDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </SpaceBetween>
   );
 }

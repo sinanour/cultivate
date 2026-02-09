@@ -13,11 +13,13 @@ import type { Population } from '../../types';
 import { PopulationForm } from './PopulationForm';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { useAuth } from '../../hooks/useAuth';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function PopulationList() {
   const [selectedPopulation, setSelectedPopulation] = useState<Population | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Population | null>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -47,13 +49,19 @@ export function PopulationList() {
     setIsFormVisible(true);
   };
 
-  const handleDelete = async (population: Population) => {
-    if (window.confirm(`Are you sure you want to delete "${population.name}"?`)) {
+  const handleDelete = (population: Population) => {
+    setConfirmDelete(population);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (confirmDelete) {
       try {
-        await deleteMutation.mutateAsync(population.id);
+        await deleteMutation.mutateAsync(confirmDelete.id);
+        setConfirmDelete(null);
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || 'Failed to delete population';
+        const errorMessage = error.response?.data?.message || 'Failed to remove population';
         alert(errorMessage);
+        setConfirmDelete(null);
       }
     }
   };
@@ -92,7 +100,7 @@ export function PopulationList() {
                     variant="inline-link" 
                     iconName="remove"
                     onClick={() => handleDelete(item)}
-                    ariaLabel={`Delete ${item.name}`}
+                    ariaLabel={`Remove ${item.name}`}
                   />
                 </Box>
               ) : null
@@ -137,6 +145,16 @@ export function PopulationList() {
           onClose={handleFormClose}
         />
       )}
+
+      <ConfirmationDialog
+        visible={confirmDelete !== null}
+        title="Remove Population"
+        message={`Are you sure you want to remove "${confirmDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </SpaceBetween>
   );
 }

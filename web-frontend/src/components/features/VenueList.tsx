@@ -25,6 +25,7 @@ import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 import { invalidatePageCaches, getListPageQueryKeys } from '../../utils/cache-invalidation.utils';
+import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 const ITEMS_PER_PAGE = 10;
 const BATCH_SIZE = 100;
@@ -36,6 +37,7 @@ export function VenueList() {
   const { user } = useAuth();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<Venue | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -201,7 +203,7 @@ export function VenueList() {
       setHasMorePages(true);
     },
     onError: (error: Error) => {
-      setDeleteError(error.message || 'Failed to delete venue. It may be referenced by activities or participants.');
+      setDeleteError(error.message || 'Failed to remove venue. It may be referenced by activities or participants.');
     },
   });
 
@@ -309,9 +311,13 @@ export function VenueList() {
   };
 
   const handleDelete = async (venue: Venue) => {
-    const displayName = user?.role === 'PII_RESTRICTED' ? venue.address : venue.name;
-    if (window.confirm(`Are you sure you want to delete "${displayName}"?`)) {
-      deleteMutation.mutate(venue.id);
+    setConfirmDelete(venue);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteMutation.mutate(confirmDelete.id);
+      setConfirmDelete(null);
     }
   };
 
@@ -614,6 +620,16 @@ export function VenueList() {
         result={importResult}
         onDismiss={() => setShowImportResults(false)}
       />
+        <ConfirmationDialog
+          visible={confirmDelete !== null}
+          title="Remove Venue"
+          message={`Are you sure you want to remove "${confirmDelete ? (user?.role === 'PII_RESTRICTED' ? confirmDelete.address : confirmDelete.name) : ''}"?`}
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
     </SpaceBetween>
     </PullToRefreshWrapper>
   );

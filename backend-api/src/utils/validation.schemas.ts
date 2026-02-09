@@ -305,7 +305,7 @@ export const EngagementQuerySchema = z.object({
   }),
   dateGranularity: z.nativeEnum(DateGranularity).optional(),
   page: z.coerce.number().int().positive().optional(),
-  pageSize: z.coerce.number().int().positive().max(1000).optional(),
+  limit: z.coerce.number().int().positive().max(1000).optional(),
 });
 
 // Optimized engagement query schema for the new endpoint
@@ -388,13 +388,13 @@ export const EngagementQueryOptimizedSchema = z.object({
     },
     z.number().int().positive('Page must be a positive integer').optional()
   ),
-  pageSize: z.preprocess(
+  limit: z.preprocess(
     (val) => {
       if (val === undefined || val === null) return undefined;
       const num = parseInt(String(val), 10);
       return isNaN(num) ? undefined : num;
     },
-    z.number().int().min(1, 'Page size must be at least 1').max(1000, 'Page size must not exceed 1000').optional()
+    z.number().int().min(1, 'Limit must be at least 1').max(1000, 'Limit must not exceed 1000').optional()
   ),
 });
 

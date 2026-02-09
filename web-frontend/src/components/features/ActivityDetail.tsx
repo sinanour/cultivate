@@ -30,6 +30,7 @@ import {
   getDetailPageQueryKeys,
 } from "../../utils/cache-invalidation.utils";
 import Button from "@cloudscape-design/components/button";
+import { ConfirmationDialog } from "../common/ConfirmationDialog";
 
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +42,10 @@ export function ActivityDetail() {
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [isVenueFormOpen, setIsVenueFormOpen] = useState(false);
   const [error, setError] = useState("");
+  const [confirmUpdateStatus, setConfirmUpdateStatus] = useState<string | null>(null);
+  const [confirmRemoveAssignment, setConfirmRemoveAssignment] = useState<string | null>(null);
+  const [confirmDeleteVenue, setConfirmDeleteVenue] = useState<string | null>(null);
+  const [confirmDeleteActivity, setConfirmDeleteActivity] = useState(false);
 
   const {
     data: activity,
@@ -128,12 +133,16 @@ export function ActivityDetail() {
       setError("");
     },
     onError: (err: Error) => {
-      setError(err.message || "Failed to delete venue association");
+      setError(err.message || "Failed to remove venue association");
     },
   });
 
   const handleUpdateStatus = (newStatus: string) => {
-    if (window.confirm(`Update activity status to ${newStatus}?`)) {
+    setConfirmUpdateStatus(newStatus);
+  };
+
+  const handleConfirmUpdateStatus = () => {
+    if (confirmUpdateStatus) {
       const updateData: {
         id: string;
         status: string;
@@ -142,12 +151,12 @@ export function ActivityDetail() {
         version: number;
       } = {
         id: activity!.id,
-        status: newStatus,
+        status: confirmUpdateStatus,
         version: activity!.version,
       };
 
       // When marking as COMPLETED or CANCELLED, implicitly set endDate to today if null
-      if (newStatus === "COMPLETED" || newStatus === "CANCELLED") {
+      if (confirmUpdateStatus === "COMPLETED" || confirmUpdateStatus === "CANCELLED") {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayISO = today.toISOString();
@@ -158,7 +167,7 @@ export function ActivityDetail() {
         }
 
         // For CANCELLED status, also set startDate to today if it's in the future
-        if (newStatus === "CANCELLED") {
+        if (confirmUpdateStatus === "CANCELLED") {
           const activityStartDate = new Date(activity!.startDate);
           if (activityStartDate > today) {
             updateData.startDate = todayISO;
@@ -167,12 +176,18 @@ export function ActivityDetail() {
       }
 
       updateStatusMutation.mutate(updateData);
+      setConfirmUpdateStatus(null);
     }
   };
 
   const handleRemoveAssignment = (participantId: string) => {
-    if (window.confirm("Remove this participant assignment?")) {
-      removeAssignmentMutation.mutate(participantId);
+    setConfirmRemoveAssignment(participantId);
+  };
+
+  const handleConfirmRemoveAssignment = () => {
+    if (confirmRemoveAssignment) {
+      removeAssignmentMutation.mutate(confirmRemoveAssignment);
+      setConfirmRemoveAssignment(null);
     }
   };
 
@@ -181,11 +196,25 @@ export function ActivityDetail() {
   };
 
   const handleDeleteVenue = (venueHistoryId: string) => {
-    if (
-      window.confirm("Are you sure you want to remove this venue association?")
-    ) {
-      deleteVenueMutation.mutate(venueHistoryId);
+    setConfirmDeleteVenue(venueHistoryId);
+  };
+
+  const handleConfirmDeleteVenue = () => {
+    if (confirmDeleteVenue) {
+      deleteVenueMutation.mutate(confirmDeleteVenue);
+      setConfirmDeleteVenue(null);
     }
+  };
+
+  const handleConfirmDeleteActivity = () => {
+    ActivityService.deleteActivity(id!)
+      .then(() => {
+        navigate("/activities");
+      })
+      .catch((err) => {
+        setError(err.message || "Failed to remove activity");
+      });
+    setConfirmDeleteActivity(false);
   };
 
   const handleSubmitVenue = async (data: {
@@ -281,23 +310,7 @@ export function ActivityDetail() {
                         Edit
                       </ResponsiveButton>
                       <ResponsiveButton
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "Are you sure you want to delete this activity? This action cannot be undone.",
-                            )
-                          ) {
-                            ActivityService.deleteActivity(id!)
-                              .then(() => {
-                                navigate("/activities");
-                              })
-                              .catch((err) => {
-                                setError(
-                                  err.message || "Failed to delete activity",
-                                );
-                              });
-                          }
-                        }}
+                        onClick={() => setConfirmDeleteActivity(true)}
                       >
                         Remove
                       </ResponsiveButton>
@@ -512,6 +525,54 @@ export function ActivityDetail() {
           onSubmit={handleSubmitVenue}
           existingDates={existingDates}
           loading={addVenueMutation.isPending}
+        />
+
+        {/* Update Status Confirmation */}
+        <ConfirmationDialog
+          visible={confirmUpdateStatus !== null}
+          title="Update Activity Status"
+          message={`Update activity status to ${confirmUpdateStatus}?`}
+          confirmLabel="Update"
+          cancelLabel="Cancel"
+          variant="normal"
+          onConfirm={handleConfirmUpdateStatus}
+          onCancel={() => setConfirmUpdateStatus(null)}
+        />
+
+        {/* Remove Assignment Confirmation */}
+        <ConfirmationDialog
+          visible={confirmRemoveAssignment !== null}
+          title="Remove Assignment"
+          message="Remove this participant assignment?"
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmRemoveAssignment}
+          onCancel={() => setConfirmRemoveAssignment(null)}
+        />
+
+        {/* Remove Venue Association Confirmation */}
+        <ConfirmationDialog
+          visible={confirmDeleteVenue !== null}
+          title="Remove Venue Association"
+          message="Are you sure you want to remove this venue association?"
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDeleteVenue}
+          onCancel={() => setConfirmDeleteVenue(null)}
+        />
+
+        {/* Remove Activity Confirmation */}
+        <ConfirmationDialog
+          visible={confirmDeleteActivity}
+          title="Remove Activity"
+          message="Are you sure you want to remove this activity? This action cannot be undone."
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDeleteActivity}
+          onCancel={() => setConfirmDeleteActivity(false)}
         />
       </SpaceBetween>
     </PullToRefreshWrapper>

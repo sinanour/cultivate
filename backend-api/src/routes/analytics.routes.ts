@@ -10,6 +10,8 @@ import { EngagementQuerySchema, EngagementQueryOptimizedSchema, GrowthQuerySchem
 import { AuthenticatedRequest } from '../types/express.types';
 import { ErrorCode, HttpStatus, GroupingDimension } from '../utils/constants';
 import { PrismaClient } from '@prisma/client';
+import { extractAuthorizationContext } from '../utils/auth.utils';
+import { parsePaginationParams } from '../utils/query-params.utils';
 
 export class AnalyticsRoutes {
     private router: Router;
@@ -95,9 +97,8 @@ export class AnalyticsRoutes {
                 dateGranularity
             } = req.query;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit geographic area access
             if (geographicAreaIds && hasGeographicRestrictions) {
@@ -160,13 +161,21 @@ export class AnalyticsRoutes {
                 venueIds,
                 populationIds,
                 groupBy,
-                page,
-                pageSize
             } = req.query;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
+
+            // Parse pagination parameters (using 'limit' instead of 'pageSize')
+            const { pagination, errors: paginationErrors } = parsePaginationParams(req.query);
+            if (paginationErrors.length > 0) {
+                res.status(400).json({
+                    code: ErrorCode.VALIDATION_ERROR,
+                    message: 'Invalid pagination parameters',
+                    details: { errors: paginationErrors },
+                });
+                return;
+            }
 
             // Validate explicit geographic area access
             if (geographicAreaIds && hasGeographicRestrictions) {
@@ -194,12 +203,6 @@ export class AnalyticsRoutes {
                 }
             }
 
-            // Parse pagination parameters
-            const paginationParams = {
-                page: page ? parseInt(page as string, 10) : undefined,
-                pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
-            };
-
             const filters = {
                 startDate: startDate ? new Date(startDate as string) : undefined,
                 endDate: endDate ? new Date(endDate as string) : undefined,
@@ -215,7 +218,10 @@ export class AnalyticsRoutes {
                 filters,
                 authorizedAreaIds,
                 hasGeographicRestrictions,
-                paginationParams
+                {
+                    page: pagination.page || 1,
+                    pageSize: pagination.limit || 100
+                }
             );
 
             res.status(HttpStatus.OK).json({ success: true, data: wireFormat });
@@ -253,9 +259,8 @@ export class AnalyticsRoutes {
                 groupBy
             } = req.query;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit geographic area access
             if (geographicAreaIds && hasGeographicRestrictions) {
@@ -319,9 +324,8 @@ export class AnalyticsRoutes {
                 populationIds
             } = req.query;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit parent geographic area access if provided
             if (parentGeographicAreaId && hasGeographicRestrictions) {
@@ -336,24 +340,13 @@ export class AnalyticsRoutes {
                 }
             }
 
-            // Extract pagination parameters
-            const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
-            const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : undefined;
-
-            // Validate pagination parameters
-            if (page !== undefined && (isNaN(page) || page < 1)) {
+            // Parse pagination parameters (using 'limit' instead of 'pageSize')
+            const { pagination, errors: paginationErrors } = parsePaginationParams(req.query);
+            if (paginationErrors.length > 0) {
                 res.status(400).json({
                     code: 'VALIDATION_ERROR',
-                    message: 'Invalid pagination: page must be a positive integer',
-                    details: {},
-                });
-                return;
-            }
-            if (pageSize !== undefined && (isNaN(pageSize) || pageSize < 1 || pageSize > 1000)) {
-                res.status(400).json({
-                    code: 'VALIDATION_ERROR',
-                    message: 'Invalid pagination: pageSize must be between 1 and 1000',
-                    details: {},
+                    message: 'Invalid pagination parameters',
+                    details: { errors: paginationErrors },
                 });
                 return;
             }
@@ -367,7 +360,9 @@ export class AnalyticsRoutes {
                 populationIds: populationIds as string[] | undefined,
             };
 
-            const pagination = (page !== undefined || pageSize !== undefined) ? { page, pageSize } : undefined;
+            const paginationForService = (pagination.page !== undefined || pagination.limit !== undefined)
+                ? { page: pagination.page, pageSize: pagination.limit }
+                : undefined;
 
             const result = await this.analyticsService.getGeographicBreakdown(
                 parentGeographicAreaId as string | undefined,
@@ -375,7 +370,7 @@ export class AnalyticsRoutes {
                 authorizedAreaIds,
                 hasGeographicRestrictions,
                 req.user?.userId,
-                pagination
+                paginationForService
             );
             res.status(HttpStatus.OK).json({ success: true, ...result });
         } catch (error) {
@@ -410,8 +405,8 @@ export class AnalyticsRoutes {
             const { startDate, endDate, groupBy, geographicAreaIds, activityCategoryIds, activityTypeIds, venueIds, populationIds } = req.query;
 
             // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit geographic area access
             if (geographicAreaIds && hasGeographicRestrictions) {
@@ -473,9 +468,8 @@ export class AnalyticsRoutes {
                 populationIds
             } = req.query;
 
-            // Extract authorization info from request
-            const authorizedAreaIds = req.user?.authorizedAreaIds || [];
-            const hasGeographicRestrictions = req.user?.hasGeographicRestrictions || false;
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
 
             // Validate explicit geographic area access
             if (geographicAreaIds && hasGeographicRestrictions) {

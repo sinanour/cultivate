@@ -115,18 +115,16 @@ const participantService = new ParticipantService(
   addressHistoryRepository,
   assignmentRepository,
   prisma,
-  geographicAreaRepository,
   geographicAuthorizationService
 );
 const geographicAreaService = new GeographicAreaService(geographicAreaRepository, prisma, geographicAuthorizationService);
-const venueService = new VenueService(venueRepository, geographicAreaRepository, geographicAuthorizationService);
+const venueService = new VenueService(venueRepository, geographicAreaRepository, geographicAuthorizationService, prisma);
 const activityService = new ActivityService(
   activityRepository,
   activityTypeRepository,
   activityVenueHistoryRepository,
   venueRepository,
   prisma,
-  geographicAreaRepository,
   geographicAuthorizationService
 );
 const assignmentService = new AssignmentService(
@@ -136,7 +134,7 @@ const assignmentService = new AssignmentService(
   roleRepository
 );
 const analyticsService = new AnalyticsService(prisma, geographicAreaRepository, geographicAuthorizationService);
-const mapDataService = new MapDataService(prisma, geographicAreaRepository, geographicAuthorizationService);
+const mapDataService = new MapDataService(prisma, geographicAuthorizationService);
 const syncService = new SyncService(prisma);
 const geocodingService = new GeocodingService();
 

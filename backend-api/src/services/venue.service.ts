@@ -9,6 +9,8 @@ import { VenueImportSchema } from '../utils/validation.schemas';
 import { AppError } from '../types/errors.types';
 import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
 import { transformParticipantResponses } from '../utils/participant.utils';
+import { GeographicFilteringService } from './geographic-filtering.service';
+import { PrismaClient } from '@prisma/client';
 
 export interface CreateVenueInput {
     name: string;
@@ -41,56 +43,15 @@ export interface FlexibleVenueQuery {
 }
 
 export class VenueService {
+    private geographicFilteringService: GeographicFilteringService;
+
     constructor(
         private venueRepository: VenueRepository,
         private geographicAreaRepository: GeographicAreaRepository,
-        private geographicAuthorizationService: GeographicAuthorizationService
-    ) { }
-
-    /**
-     * Determines the effective geographic area IDs to filter by, considering:
-     * 1. Explicit geographicAreaId parameter (if provided, validate authorization)
-     * 2. Implicit filtering based on user's authorized areas (if user has restrictions)
-     * 3. No filtering (if user has no restrictions and no explicit filter)
-     * 
-     * IMPORTANT: authorizedAreaIds already includes descendants and excludes DENY rules.
-     * Do NOT expand descendants again during implicit filtering.
-     */
-    private async getEffectiveGeographicAreaIds(
-        explicitGeographicAreaId: string | undefined,
-        authorizedAreaIds: string[],
-        hasGeographicRestrictions: boolean
-    ): Promise<string[] | undefined> {
-        // If explicit filter provided
-        if (explicitGeographicAreaId) {
-            // Validate user has access to this area
-            if (hasGeographicRestrictions && !authorizedAreaIds.includes(explicitGeographicAreaId)) {
-                throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to access this geographic area');
-            }
-
-            // Expand to include descendants
-            const descendantIds = await this.geographicAreaRepository.findBatchDescendants([explicitGeographicAreaId]);
-            const allAreaIds = [explicitGeographicAreaId, ...descendantIds];
-
-            // If user has geographic restrictions, filter descendants to only include authorized areas
-            // This ensures DENY rules are respected even when an explicit filter is provided
-            if (hasGeographicRestrictions) {
-                return allAreaIds.filter(id => authorizedAreaIds.includes(id));
-            }
-
-            // No restrictions - return all descendants
-            return allAreaIds;
-        }
-
-        // No explicit filter - apply implicit filtering if user has restrictions
-        if (hasGeographicRestrictions) {
-            // IMPORTANT: authorizedAreaIds already has descendants expanded and DENY rules applied
-            // Do NOT expand descendants again, as this would re-add denied areas
-            return authorizedAreaIds;
-        }
-
-        // No restrictions and no explicit filter - return undefined (no filtering)
-        return undefined;
+        private geographicAuthorizationService: GeographicAuthorizationService,
+        prisma: PrismaClient
+    ) {
+        this.geographicFilteringService = new GeographicFilteringService(prisma);
     }
 
     async getAllVenues(
@@ -100,8 +61,8 @@ export class VenueService {
     ): Promise<Venue[]> {
         // Removed legacy search parameter - use filter API instead
 
-        // Determine effective geographic area IDs
-        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+        // Determine effective geographic area IDs using shared service
+        const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIds(
             geographicAreaId,
             authorizedAreaIds,
             hasGeographicRestrictions
@@ -139,8 +100,8 @@ export class VenueService {
             }
         }
 
-        // Determine effective geographic area IDs
-        const effectiveAreaIds = await this.getEffectiveGeographicAreaIds(
+        // Determine effective geographic area IDs using shared service
+        const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIds(
             geographicAreaId,
             authorizedAreaIds,
             hasGeographicRestrictions

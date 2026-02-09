@@ -27,7 +27,7 @@ async function runBenchmark() {
     geographicAreaRepository,
     userRepository
   );
-  const mapDataService = new MapDataService(prisma, geographicAreaRepository, geoAuthService);
+  const mapDataService = new MapDataService(prisma, geoAuthService);
 
   // Get or create test user
   const testUser = await prisma.user.findFirst({

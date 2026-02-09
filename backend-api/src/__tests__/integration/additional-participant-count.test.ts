@@ -40,7 +40,6 @@ describe('Additional Participant Count Integration', () => {
       venueHistoryRepository,
       venueRepository,
       prisma,
-      geographicAreaRepository,
       geographicAuthorizationService
     );
 
