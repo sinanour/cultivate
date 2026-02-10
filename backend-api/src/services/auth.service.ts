@@ -107,6 +107,14 @@ export class AuthService {
             throw new Error('User not found');
         }
 
+            // Validate refresh token against lastInvalidationTimestamp
+            if (user.lastInvalidationTimestamp && payload.iat) {
+                const tokenIssuedAt = new Date(payload.iat * 1000); // Convert Unix timestamp to Date
+                if (tokenIssuedAt < user.lastInvalidationTimestamp) {
+                    throw new Error('Token has been invalidated');
+                }
+            }
+
             // Get authorization info for JWT token
             let authorizedAreaIds: string[] = [];
             let readOnlyAreaIds: string[] = [];
@@ -236,5 +244,21 @@ export class AuthService {
 
         // Update password
         await this.userRepository.update(user.id, { passwordHash });
+    }
+
+    /**
+     * Invalidate all tokens for a user by updating lastInvalidationTimestamp
+     * This forces re-authentication on all devices
+     */
+    async invalidateTokens(userId: string): Promise<void> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // Update lastInvalidationTimestamp to current time
+        await this.userRepository.update(userId, {
+            lastInvalidationTimestamp: new Date(),
+        });
     }
 }

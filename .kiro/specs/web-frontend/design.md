@@ -1167,6 +1167,20 @@ src/
 - Supports restrictedMode prop for user self-profile editing
 - When restrictedMode is true: hides email field (read-only display), hides role selector (read-only display), hides geographic authorization section, shows editable display name, shows password change interface with current password validation
 - When isSelfProfile is true: requires currentPassword when newPassword is provided, adds confirmPassword field, validates password confirmation matches
+- **Admin Security Section (Edit Mode Only):**
+  - Displays "Security" section below geographic authorization management section on edit page only
+  - Section NOT displayed on user creation page (/users/new)
+  - Provides "Log Out User from All Devices" button using CloudScape Button with variant="normal"
+  - Includes descriptive help text explaining the action will force the user to re-authenticate on all devices
+  - Help text indicates this is useful for compromised accounts or lost devices
+  - When button is clicked, displays confirmation dialog with user's display name or email
+  - Confirmation dialog explains the action and consequences
+  - When administrator confirms, calls POST /api/v1/auth/invalidate-tokens/:userId endpoint
+  - Displays loading indicator on button during API request
+  - Disables button while request is in progress
+  - On success: displays success notification and remains on edit page (does NOT logout administrator)
+  - On error: displays error message
+  - Section only visible to administrators
 
 **ProfilePage**
 - Dedicated page for user self-profile management at route /profile

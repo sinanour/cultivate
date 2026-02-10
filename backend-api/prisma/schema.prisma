@@ -17,12 +17,14 @@ model User {
   email                     String                       @unique
   passwordHash              String
   role                      UserRole
+  lastInvalidationTimestamp DateTime?
   createdAt                 DateTime                     @default(now())
   updatedAt                 DateTime                     @updatedAt
   auditLogs                 AuditLog[]
   geographicAuthorizations  UserGeographicAuthorization[] @relation("UserAuthorizations")
   createdAuthorizations     UserGeographicAuthorization[] @relation("AuthorizationCreator")
 
+  @@index([lastInvalidationTimestamp])
   @@map("users")
 }
 

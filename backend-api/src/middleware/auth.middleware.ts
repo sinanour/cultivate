@@ -61,6 +61,18 @@ export class AuthMiddleware {
                       });
                   }
 
+                  // Validate token against lastInvalidationTimestamp
+                  if (user.lastInvalidationTimestamp && payload.iat) {
+                      const tokenIssuedAt = new Date(payload.iat * 1000); // Convert Unix timestamp to Date
+                      if (tokenIssuedAt < user.lastInvalidationTimestamp) {
+                          return res.status(401).json({
+                              code: 'TOKEN_INVALIDATED',
+                              message: 'Token has been invalidated. Please log in again.',
+                              details: {},
+                          });
+                      }
+                  }
+
                   req.user = payload;
 
                   // Extract authorization info from token payload
@@ -109,6 +121,15 @@ export class AuthMiddleware {
                   // Validate that the user still exists in the database
                   const user = await this.userRepository.findById(payload.userId);
                   if (user) {
+                      // Validate token against lastInvalidationTimestamp
+                      if (user.lastInvalidationTimestamp && payload.iat) {
+                          const tokenIssuedAt = new Date(payload.iat * 1000);
+                          if (tokenIssuedAt < user.lastInvalidationTimestamp) {
+                              // Token is invalidated, skip authentication
+                              return next();
+                          }
+                      }
+
                       req.user = payload;
 
                       // Extract authorization info from token payload

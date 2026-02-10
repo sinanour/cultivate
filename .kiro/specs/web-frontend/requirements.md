@@ -1351,6 +1351,30 @@ The Web Frontend package provides a responsive React-based web application that 
 32. WHEN a user attempts to navigate away from the user form with unsaved changes, THE Web_App SHALL display a confirmation dialog
 33. THE Web_App SHALL hide user management from non-administrators
 
+### Requirement 18C: Admin Multi-Device Logout for Users
+
+**User Story:** As an administrator, I want to log out a specific user from all their devices, so that I can secure their account if it's been compromised or respond to security incidents.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display a "Security" section on the user edit page (/users/:id/edit) for administrators
+2. THE "Security" section SHALL be positioned below the geographic authorization management section
+3. THE "Security" section SHALL include a "Log Out User from All Devices" button
+4. THE "Log Out User from All Devices" button SHALL use CloudScape Button component with variant="normal"
+5. WHEN the "Log Out User from All Devices" button is clicked, THE Web_App SHALL display a confirmation dialog
+6. THE confirmation dialog SHALL explain that this action will invalidate all authorization tokens for the user and require them to log in again on all devices
+7. THE confirmation dialog SHALL display the user's display name or email to confirm which user will be affected
+8. WHEN the administrator confirms the action, THE Web_App SHALL call POST /api/v1/auth/invalidate-tokens/:userId endpoint with the user's ID
+9. WHEN the token invalidation API call succeeds, THE Web_App SHALL display a success notification
+10. WHEN the token invalidation API call succeeds, THE Web_App SHALL remain on the user edit page (do NOT logout the administrator)
+11. WHEN the token invalidation API call fails, THE Web_App SHALL display an error message
+12. THE Web_App SHALL disable the "Log Out User from All Devices" button while the API request is in progress
+13. THE Web_App SHALL display a loading indicator on the button during the API request
+14. THE "Security" section SHALL only be visible to administrators
+15. THE "Security" section SHALL NOT be visible on the user creation page (/users/new), only on the edit page
+16. THE Web_App SHALL include descriptive help text explaining that this action will force the user to re-authenticate on all devices
+17. THE help text SHALL indicate this is useful for responding to compromised accounts or lost devices
+
 ### Requirement 18A: User Self-Profile Management
 
 **User Story:** As any logged-in user, I want to view and edit my own profile information in the web interface, so that I can update my display name and password without requiring administrator assistance.

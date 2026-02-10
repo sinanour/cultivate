@@ -136,7 +136,7 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    const updateData: { displayName?: string | null; email?: string; passwordHash?: string; role?: UserRole } = {};
+    const updateData: { displayName?: string | null; email?: string; passwordHash?: string; role?: UserRole; lastInvalidationTimestamp?: Date } = {};
 
     // Update displayName if provided (including null to clear)
     if ('displayName' in data) {
@@ -164,6 +164,8 @@ export class UserService {
         throw new Error('Password must be at least 8 characters');
       }
       updateData.passwordHash = await bcrypt.hash(data.password, 10);
+      // Automatically invalidate all tokens when password changes
+      updateData.lastInvalidationTimestamp = new Date();
     }
 
     // Update role if provided
@@ -223,7 +225,7 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    const updateData: { displayName?: string | null; passwordHash?: string } = {};
+    const updateData: { displayName?: string | null; passwordHash?: string; lastInvalidationTimestamp?: Date } = {};
 
     // Update displayName if provided (including null to clear)
     if ('displayName' in data) {
@@ -254,6 +256,8 @@ export class UserService {
 
       // Hash new password
       updateData.passwordHash = await bcrypt.hash(data.newPassword, 10);
+      // Automatically invalidate all tokens when password changes
+      updateData.lastInvalidationTimestamp = new Date();
     }
 
     // Only update if there are changes

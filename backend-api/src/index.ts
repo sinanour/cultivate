@@ -273,10 +273,12 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Start server
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Server is running on port ${PORT}`);
-});
+// Start server only if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    // eslint-disable-next-line no-console
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
 
 export default app;

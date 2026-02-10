@@ -14,6 +14,7 @@ import ColumnLayout from '@cloudscape-design/components/column-layout';
 import Modal from '@cloudscape-design/components/modal';
 import type { User } from '../../types';
 import { UserService } from '../../services/api/user.service';
+import { AuthService } from '../../services/auth/auth.service';
 import { useNotification } from '../../hooks/useNotification';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate } from '../../utils/date.utils';
@@ -27,7 +28,7 @@ interface ProfileFormProps {
 export function ProfileForm({ user, onSuccess, onCancel }: ProfileFormProps) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useNotification();
-  const { updateUser } = useAuth();
+  const { updateUser, logout } = useAuth();
   
   const [displayName, setDisplayName] = useState(user.displayName || '');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -40,6 +41,7 @@ export function ProfileForm({ user, onSuccess, onCancel }: ProfileFormProps) {
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   const [showNavigationConfirmation, setShowNavigationConfirmation] = useState(false);
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
 
   // Track initial values for dirty state detection
   const initialValues = useMemo(() => ({
@@ -94,6 +96,25 @@ export function ProfileForm({ user, onSuccess, onCancel }: ProfileFormProps) {
       }
     },
   });
+
+  const logoutAllDevicesMutation = useMutation({
+    mutationFn: () => AuthService.invalidateAllTokens(),
+    onSuccess: () => {
+      showSuccess('All devices have been logged out successfully');
+      // Wait a moment for the user to see the success message, then logout
+      setTimeout(() => {
+        logout();
+      }, 1500);
+    },
+    onError: (error: any) => {
+      showError(error.message || 'Failed to log out of all devices');
+    },
+  });
+
+  const handleLogoutAllDevices = () => {
+    setShowLogoutConfirmation(false);
+    logoutAllDevicesMutation.mutate();
+  };
 
   const validate = (): boolean => {
     let isValid = true;
@@ -286,8 +307,61 @@ export function ProfileForm({ user, onSuccess, onCancel }: ProfileFormProps) {
               </ColumnLayout>
             </SpaceBetween>
           </Container>
+
+          <Container header={<Header variant="h2">Security</Header>}>
+            <SpaceBetween size="m">
+              <Box>
+                <Box variant="p" margin={{ bottom: 's' }}>
+                  Log out of all devices where you're currently signed in. This will invalidate all your authorization tokens and require you to log in again on all devices.
+                </Box>
+                <Box variant="p" color="text-status-info">
+                  Use this if you suspect unauthorized access to your account or have lost a device.
+                </Box>
+              </Box>
+
+              <Button
+                variant="normal"
+                onClick={() => setShowLogoutConfirmation(true)}
+                loading={logoutAllDevicesMutation.isPending}
+                disabled={logoutAllDevicesMutation.isPending}
+              >
+                Log Out of All Devices
+              </Button>
+            </SpaceBetween>
+          </Container>
         </SpaceBetween>
       </Form>
+
+      <Modal
+        visible={showLogoutConfirmation}
+        onDismiss={() => setShowLogoutConfirmation(false)}
+        header="Log Out of All Devices?"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="link" onClick={() => setShowLogoutConfirmation(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleLogoutAllDevices}
+                loading={logoutAllDevicesMutation.isPending}
+              >
+                Confirm
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        <SpaceBetween size="m">
+          <Box>
+            This will invalidate all your authorization tokens and require you to log in again on all devices.
+          </Box>
+          <Box color="text-status-warning">
+            Are you sure you want to continue?
+          </Box>
+        </SpaceBetween>
+      </Modal>
 
       <Modal
         visible={showNavigationConfirmation}

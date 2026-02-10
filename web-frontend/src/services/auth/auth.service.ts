@@ -236,4 +236,52 @@ export class AuthService {
 
         return await response.json();
     }
+
+    /**
+     * Invalidate all tokens for the current user across all devices
+     * Requires authentication
+     */
+    static async invalidateAllTokens(): Promise<void> {
+        const tokens = this.getStoredTokens();
+        if (!tokens?.accessToken) {
+            throw new Error('No access token available');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/auth/invalidate-tokens`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${tokens.accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Token invalidation failed' }));
+            throw new Error(error.message || 'Token invalidation failed');
+        }
+    }
+
+    /**
+     * Invalidate all tokens for a specific user (admin only)
+     * Requires authentication with admin role
+     */
+    static async invalidateUserTokens(userId: string): Promise<void> {
+        const tokens = this.getStoredTokens();
+        if (!tokens?.accessToken) {
+            throw new Error('No access token available');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/auth/invalidate-tokens/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${tokens.accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Token invalidation failed' }));
+            throw new Error(error.message || 'Token invalidation failed');
+        }
+    }
 }

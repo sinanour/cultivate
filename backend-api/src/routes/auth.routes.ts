@@ -59,6 +59,22 @@ export class AuthRoutes {
             ValidationMiddleware.validateBody(ResetPasswordSchema),
             this.resetPassword.bind(this)
         );
+
+        // POST /api/auth/invalidate-tokens - Invalidate all tokens for current user
+        this.router.post(
+            '/invalidate-tokens',
+            this.authMiddleware.authenticate(),
+            this.auditLoggingMiddleware.logEntityModification('USER'),
+            this.invalidateTokens.bind(this)
+        );
+
+        // POST /api/auth/invalidate-tokens/:userId - Invalidate all tokens for specified user (admin only)
+        this.router.post(
+            '/invalidate-tokens/:userId',
+            this.authMiddleware.authenticate(),
+            this.auditLoggingMiddleware.logEntityModification('USER'),
+            this.invalidateTokensForUser.bind(this)
+        );
     }
 
     /**
@@ -211,6 +227,85 @@ export class AuthRoutes {
             res.status(500).json({
                 code: 'INTERNAL_ERROR',
                 message: 'An error occurred while resetting your password',
+                details: {},
+            });
+        }
+    }
+
+    /**
+     * POST /api/auth/invalidate-tokens
+     * Invalidate all tokens for the current authenticated user
+     */
+    private async invalidateTokens(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (!req.user) {
+                return res.status(401).json({
+                    code: 'UNAUTHORIZED',
+                    message: 'User not authenticated',
+                    details: {},
+                });
+            }
+
+            await this.authService.invalidateTokens(req.user.userId);
+
+            res.status(200).json({
+                success: true,
+                message: 'All tokens have been invalidated successfully',
+            });
+        } catch (error) {
+            if (error instanceof Error && error.message === 'User not found') {
+                return res.status(404).json({
+                    code: 'USER_NOT_FOUND',
+                    message: 'User not found',
+                    details: {},
+                });
+            }
+
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while invalidating tokens',
+                details: {},
+            });
+        }
+    }
+
+    /**
+     * POST /api/auth/invalidate-tokens/:userId
+     * Invalidate all tokens for a specified user (admin only)
+     */
+    private async invalidateTokensForUser(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (!req.user) {
+                return res.status(401).json({
+                    code: 'UNAUTHORIZED',
+                    message: 'User not authenticated',
+                    details: {},
+                });
+            }
+
+            const { userId } = req.params;
+
+            // Non-administrators can only invalidate their own tokens
+            const targetUserId = req.user.role === 'ADMINISTRATOR' ? userId : req.user.userId;
+
+            await this.authService.invalidateTokens(targetUserId);
+
+            res.status(200).json({
+                success: true,
+                message: 'All tokens have been invalidated successfully',
+            });
+        } catch (error) {
+            if (error instanceof Error && error.message === 'User not found') {
+                return res.status(404).json({
+                    code: 'USER_NOT_FOUND',
+                    message: 'User not found',
+                    details: {},
+                });
+            }
+
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while invalidating tokens',
                 details: {},
             });
         }

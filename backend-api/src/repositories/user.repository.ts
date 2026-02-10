@@ -29,7 +29,7 @@ export class UserRepository {
 
   async update(
     id: string,
-    data: { displayName?: string | null; email?: string; passwordHash?: string; role?: UserRole }
+    data: { displayName?: string | null; email?: string; passwordHash?: string; role?: UserRole; lastInvalidationTimestamp?: Date }
   ): Promise<User> {
     return this.prisma.user.update({
       where: { id },

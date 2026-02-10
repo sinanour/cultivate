@@ -2237,8 +2237,8 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 98j: Profile Navigation Link Visibility**
     - **Validates: Requirements 18A.1, 18A.2, 18A.3, 18A.4, 18A.5, 18A.6, 18A.7, 18A.8, 18A.9, 18A.10, 18A.11, 18A.12, 18A.13, 18A.14, 18A.15, 18A.16, 18A.17, 18A.18, 18A.19, 18A.20, 18A.21, 18A.22, 18A.23, 18A.24, 18A.25, 18A.26, 18A.27, 18A.28, 18A.29, 18A.30, 18A.31, 18A.32, 18A.33, 18A.34, 18A.35**
 
-- [ ] 19B. Implement multi-device logout functionality
-  - [ ] 19B.1 Add "Log Out of All Devices" button to ProfilePage
+- [x] 19B. Implement multi-device logout functionality
+  - [x] 19B.1 Add "Log Out of All Devices" button to ProfilePage
     - Add new "Security" section to ProfilePage below password change section
     - Use CloudScape Container with Header component for section
     - Add "Log Out of All Devices" button using CloudScape Button with variant="normal"
@@ -2246,7 +2246,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Add descriptive help text explaining the action will invalidate all tokens across all devices
     - _Requirements: 18B.1, 18B.2, 18B.3, 18B.16_
 
-  - [ ] 19B.2 Implement confirmation dialog for multi-device logout
+  - [x] 19B.2 Implement confirmation dialog for multi-device logout
     - When "Log Out of All Devices" button is clicked, display CloudScape Modal confirmation dialog
     - Dialog title: "Log Out of All Devices?"
     - Dialog content: "This will invalidate all your authorization tokens and require you to log in again on all devices. Are you sure you want to continue?"
@@ -2255,14 +2255,14 @@ This implementation plan covers the React-based web application built with TypeS
     - When "Confirm" clicked, proceed with token invalidation
     - _Requirements: 18B.4, 18B.5_
 
-  - [ ] 19B.3 Add invalidateAllTokens method to AuthService
+  - [x] 19B.3 Add invalidateAllTokens method to AuthService
     - Create invalidateAllTokens() method in AuthService
     - Call POST /api/v1/auth/invalidate-tokens endpoint
     - Handle success and error responses
     - Return promise that resolves on success or rejects on error
     - _Requirements: 18B.6_
 
-  - [ ] 19B.4 Implement token invalidation flow in ProfilePage
+  - [x] 19B.4 Implement token invalidation flow in ProfilePage
     - When user confirms multi-device logout, call AuthService.invalidateAllTokens()
     - Display loading indicator on button during API request
     - Disable button while request is in progress
@@ -2271,7 +2271,7 @@ This implementation plan covers the React-based web application built with TypeS
     - On error: display error message and keep user logged in
     - _Requirements: 18B.6, 18B.7, 18B.13, 18B.14, 18B.15_
 
-  - [ ] 19B.5 Implement automatic logout after token invalidation
+  - [x] 19B.5 Implement automatic logout after token invalidation
     - After successful token invalidation, call existing logout functionality
     - Clear accessToken and refreshToken from localStorage
     - Clear user profile data from AuthContext state
@@ -2279,7 +2279,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Redirect to login page
     - _Requirements: 18B.8, 18B.9, 18B.10, 18B.11, 18B.12_
 
-  - [ ] 19B.6 Handle TOKEN_INVALIDATED errors globally
+  - [x] 19B.6 Handle TOKEN_INVALIDATED errors globally
     - Update API error interceptor to detect TOKEN_INVALIDATED error code (401)
     - When TOKEN_INVALIDATED error is received, immediately clear all authentication state
     - Redirect to login page without displaying error message to user
@@ -2297,7 +2297,7 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 295: TOKEN_INVALIDATED Global Error Handling**
     - **Validates: Requirements 18B.1, 18B.2, 18B.3, 18B.4, 18B.5, 18B.6, 18B.7, 18B.8, 18B.9, 18B.10, 18B.11, 18B.12, 18B.13, 18B.14, 18B.15, 18B.16, 18B.17, 18B.18**
 
-- [ ] 19C. Checkpoint - Verify multi-device logout functionality
+- [x] 19C. Checkpoint - Verify multi-device logout functionality
   - Test that "Log Out of All Devices" button appears on profile page
   - Test that confirmation dialog displays when button is clicked
   - Test that token invalidation API is called when confirmed
@@ -2312,6 +2312,46 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 175: Atomic User Creation with Authorization Rules**
     - **Property 176: User Form Navigation Guard**
     - **Validates: Requirements 18.6, 18.7, 18.8, 18.9, 18.10, 18.11, 18.12, 18.13, 18.14, 18.15, 18.29, 18.30, 18.31, 18.32**
+
+- [x] 20A. Add admin multi-device logout to user edit page
+  - [x] 20A.1 Add Security section to UserFormPage (edit mode only)
+    - Add new "Security" section to UserFormPage below geographic authorization management
+    - Only display section when in edit mode (not on /users/new)
+    - Use CloudScape Container with Header component
+    - Add descriptive help text explaining the action forces user to re-authenticate on all devices
+    - Indicate this is useful for compromised accounts or lost devices
+    - _Requirements: 18C.1, 18C.2, 18C.14, 18C.15, 18C.16, 18C.17_
+
+  - [x] 20A.2 Add "Log Out User from All Devices" button
+    - Add button using CloudScape Button with variant="normal"
+    - Position button within Security section
+    - Display user's display name or email in help text to clarify which user will be affected
+    - _Requirements: 18C.3, 18C.4, 18C.7_
+
+  - [x] 20A.3 Implement confirmation dialog for admin logout
+    - When button clicked, display CloudScape Modal confirmation dialog
+    - Dialog title: "Log Out [User Name] from All Devices?"
+    - Dialog content: explain action will invalidate all tokens for the user
+    - Display user's display name or email in dialog for confirmation
+    - Provide "Cancel" and "Confirm" buttons
+    - _Requirements: 18C.5, 18C.6, 18C.7_
+
+  - [x] 20A.4 Implement admin logout mutation
+    - Create mutation calling POST /api/v1/auth/invalidate-tokens/:userId with user's ID
+    - Display loading indicator on button during API request
+    - Disable button while request is in progress
+    - On success: display success notification and remain on edit page (do NOT logout administrator)
+    - On error: display error message
+    - _Requirements: 18C.8, 18C.9, 18C.10, 18C.11, 18C.12, 18C.13_
+
+  - [ ]* 20A.5 Write property tests for admin multi-device logout
+    - **Property 296: Admin Logout Button Display on Edit Page**
+    - **Property 297: Admin Logout Button Hidden on Create Page**
+    - **Property 298: Admin Logout Confirmation Dialog**
+    - **Property 299: Admin Logout API Call with User ID**
+    - **Property 300: Admin Remains Logged In After User Logout**
+    - **Property 301: Admin Logout Error Handling**
+    - **Validates: Requirements 18C.1, 18C.2, 18C.3, 18C.4, 18C.5, 18C.6, 18C.7, 18C.8, 18C.9, 18C.10, 18C.11, 18C.12, 18C.13, 18C.14, 18C.15, 18C.16, 18C.17**
 
 - [x] 19A. Implement About page
   - [x] 19A.1 Create AboutPage component

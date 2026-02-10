@@ -114,13 +114,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 46E: Root Administrator Role Assignment**
     - **Validates: Requirements 10.10, 10.11, 10.12, 10.13, 10.14**
 
-- [ ] 3A. Implement token invalidation system
-  - [ ] 3A.1 Create Prisma migration for lastInvalidationTimestamp field
+- [x] 3A. Implement token invalidation system
+  - [x] 3A.1 Create Prisma migration for lastInvalidationTimestamp field
     - Add lastInvalidationTimestamp DateTime field to User model (optional, nullable, defaults to null)
     - Add database index on lastInvalidationTimestamp for efficient queries
     - _Requirements: 10A.1, 10A.2, 10A.22_
 
-  - [ ] 3A.2 Update authentication middleware to validate token against invalidation timestamp
+  - [x] 3A.2 Update authentication middleware to validate token against invalidation timestamp
     - After decoding JWT token, query user's lastInvalidationTimestamp from database
     - Extract iat (issued-at) timestamp from JWT payload
     - Convert iat Unix timestamp to Date object
@@ -130,14 +130,14 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - When iat is equal to or later than lastInvalidationTimestamp, accept token
     - _Requirements: 10A.9, 10A.10, 10A.11, 10A.12, 10A.13_
 
-  - [ ] 3A.3 Create token invalidation service methods
+  - [x] 3A.3 Create token invalidation service methods
     - Add invalidateTokens(userId) method to AuthService
     - Update user's lastInvalidationTimestamp to current timestamp
     - Audit token invalidation event with action type TOKEN_INVALIDATION
     - When administrator invalidates tokens for another user, record both admin ID and target user ID in audit log
     - _Requirements: 10A.3, 10A.8, 10A.19, 10A.20_
 
-  - [ ] 3A.4 Create token invalidation routes
+  - [x] 3A.4 Create token invalidation routes
     - Add POST /api/v1/auth/invalidate-tokens route (all authenticated users)
     - Add POST /api/v1/auth/invalidate-tokens/:userId route (administrators only)
     - For non-admin requests, ignore userId parameter and use authenticated user's ID
@@ -148,14 +148,14 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - Apply admin authorization middleware to /:userId route
     - _Requirements: 10A.3, 10A.4, 10A.5, 10A.6, 10A.7_
 
-  - [ ] 3A.5 Update password change methods to invalidate tokens
+  - [x] 3A.5 Update password change methods to invalidate tokens
     - Update UserService.updateCurrentUserProfile() to set lastInvalidationTimestamp when newPassword is provided
     - Update UserService.updateUser() to set lastInvalidationTimestamp when password field is provided
     - Set lastInvalidationTimestamp to current timestamp during password update
     - Ensure timestamp update happens in same transaction as password update
     - _Requirements: 10A.14, 10A.15_
 
-  - [ ] 3A.6 Update token validation for refresh tokens
+  - [x] 3A.6 Update token validation for refresh tokens
     - Apply same lastInvalidationTimestamp validation to refresh token endpoint
     - When refresh token's iat is earlier than lastInvalidationTimestamp, return 401 Unauthorized
     - Require user to re-authenticate with credentials

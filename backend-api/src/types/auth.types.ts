@@ -12,6 +12,8 @@ export interface TokenPayload {
     authorizedAreaIds: string[];
     readOnlyAreaIds: string[];
     hasGeographicRestrictions: boolean;
+    iat?: number; // Issued at (added by JWT)
+    exp?: number; // Expiration (added by JWT)
 }
 
 export interface AuthTokens {
@@ -28,6 +30,8 @@ export interface AuthTokens {
 export interface RefreshTokenPayload {
     userId: string;
     tokenVersion?: number;
+    iat?: number; // Issued at (added by JWT)
+    exp?: number; // Expiration (added by JWT)
 }
 
 export interface UserInfo {

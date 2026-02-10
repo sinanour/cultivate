@@ -51,6 +51,15 @@ export class ApiClient {
         if (!response.ok) {
             const error: APIError = body || { code: 'UNKNOWN_ERROR', message: 'Request failed' };
 
+            // Check for token invalidation - immediately logout without showing error
+            if (response.status === 401 && error.code === 'TOKEN_INVALIDATED') {
+                // Clear all authentication state
+                AuthService.logout();
+                // Redirect to login
+                window.location.href = '/login';
+                throw new Error('Token invalidated');
+            }
+
             // Check for geographic authorization denial
             if (response.status === 403 && error.code === 'GEOGRAPHIC_AUTHORIZATION_DENIED') {
                 // Emit event to clear global geographic filter

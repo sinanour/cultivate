@@ -19,6 +19,7 @@ import Modal from '@cloudscape-design/components/modal';
 import Popover from '@cloudscape-design/components/popover';
 import type { User, UserRole } from '../../types';
 import { UserService } from '../../services/api/user.service';
+import { AuthService } from '../../services/auth/auth.service';
 import { geographicAuthorizationService } from '../../services/api/geographic-authorization.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { GeographicAuthorizationForm } from './GeographicAuthorizationForm';
@@ -66,6 +67,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
   const [error, setError] = useState('');
   const [showAddAuthForm, setShowAddAuthForm] = useState(false);
   const [confirmDeleteRuleId, setConfirmDeleteRuleId] = useState<string | null>(null);
+  const [showAdminLogoutConfirmation, setShowAdminLogoutConfirmation] = useState(false);
 
   // Track initial values for dirty state detection
   const [initialFormState, setInitialFormState] = useState<{
@@ -285,6 +287,24 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
       showError(err.message || 'Failed to update user');
     },
   });
+
+  const adminLogoutUserMutation = useMutation({
+    mutationFn: (userId: string) => AuthService.invalidateUserTokens(userId),
+    onSuccess: () => {
+      showSuccess('User has been logged out from all devices successfully');
+      setShowAdminLogoutConfirmation(false);
+    },
+    onError: (err: Error) => {
+      showError(err.message || 'Failed to log out user from all devices');
+      setShowAdminLogoutConfirmation(false);
+    },
+  });
+
+  const handleAdminLogoutUser = () => {
+    if (user) {
+      adminLogoutUserMutation.mutate(user.id);
+    }
+  };
 
   const validateEmail = (value: string): boolean => {
     const trimmed = value.trim();
@@ -708,6 +728,32 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
               </ColumnLayout>
             </Container>
           )}
+
+          {/* Security Section - Admin only, Edit mode only */}
+          {isEditMode && user && (
+            <Container header={<Header variant="h2">Security</Header>}>
+              <SpaceBetween size="m">
+                <Box>
+                  <Box variant="p" margin={{ bottom: 's' }}>
+                    Log out <strong>{user.displayName || user.email}</strong> from all devices. This will invalidate all their authorization tokens and require them to log in again on all devices.
+                  </Box>
+                  <Box variant="p" color="text-status-info">
+                    Use this if the user's account has been compromised or they have lost a device.
+                  </Box>
+                </Box>
+
+                <Button
+                  variant="normal"
+                  onClick={() => setShowAdminLogoutConfirmation(true)}
+                  loading={adminLogoutUserMutation.isPending}
+                  disabled={adminLogoutUserMutation.isPending}
+                  formAction="none"
+                >
+                  Log Out User from All Devices
+                </Button>
+              </SpaceBetween>
+            </Container>
+          )}
         </SpaceBetween>
       </Form>
 
@@ -754,6 +800,40 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
         onConfirm={handleConfirmDeleteRule}
         onCancel={() => setConfirmDeleteRuleId(null)}
       />
+
+      {/* Admin Logout User Confirmation */}
+      {isEditMode && user && (
+        <Modal
+          visible={showAdminLogoutConfirmation}
+          onDismiss={() => setShowAdminLogoutConfirmation(false)}
+          header={`Log Out ${user.displayName || user.email} from All Devices?`}
+          footer={
+            <Box float="right">
+              <SpaceBetween direction="horizontal" size="xs">
+                <Button variant="link" onClick={() => setShowAdminLogoutConfirmation(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleAdminLogoutUser}
+                  loading={adminLogoutUserMutation.isPending}
+                >
+                  Confirm
+                </Button>
+              </SpaceBetween>
+            </Box>
+          }
+        >
+          <SpaceBetween size="m">
+            <Box>
+              This will invalidate all authorization tokens for <strong>{user.displayName || user.email}</strong> and require them to log in again on all devices.
+            </Box>
+            <Box color="text-status-warning">
+              Are you sure you want to continue?
+            </Box>
+          </SpaceBetween>
+        </Modal>
+      )}
     </form>
   );
 }
