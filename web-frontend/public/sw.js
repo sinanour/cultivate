@@ -14,6 +14,8 @@ self.addEventListener('install', (event) => {
         return cache.addAll(urlsToCache);
       })
   );
+  // Force the waiting service worker to become the active service worker
+  self.skipWaiting();
 });
 
 // Fetch event - serve from cache when offline
@@ -27,6 +29,15 @@ self.addEventListener('fetch', (event) => {
   // API requests must always go to the network to ensure fresh, authenticated data
   if (event.request.url.includes('/api/')) {
     // Pass through to network without caching
+    return;
+  }
+
+  // CRITICAL: Never cache JavaScript chunks to prevent stale module errors
+  // Vite generates content-hashed filenames for chunks, and caching them causes
+  // "Failed to fetch dynamically imported module" errors after deployments
+  if (event.request.url.match(/\.(js|mjs)$/)) {
+    // Always fetch fresh JavaScript files
+    event.respondWith(fetch(event.request));
     return;
   }
 
@@ -73,4 +84,7 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  
+  // Take control of all clients immediately
+  return self.clients.claim();
 });
