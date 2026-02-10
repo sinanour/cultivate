@@ -2236,6 +2236,76 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 98i: Profile Restricted Mode Rendering**
     - **Property 98j: Profile Navigation Link Visibility**
     - **Validates: Requirements 18A.1, 18A.2, 18A.3, 18A.4, 18A.5, 18A.6, 18A.7, 18A.8, 18A.9, 18A.10, 18A.11, 18A.12, 18A.13, 18A.14, 18A.15, 18A.16, 18A.17, 18A.18, 18A.19, 18A.20, 18A.21, 18A.22, 18A.23, 18A.24, 18A.25, 18A.26, 18A.27, 18A.28, 18A.29, 18A.30, 18A.31, 18A.32, 18A.33, 18A.34, 18A.35**
+
+- [ ] 19B. Implement multi-device logout functionality
+  - [ ] 19B.1 Add "Log Out of All Devices" button to ProfilePage
+    - Add new "Security" section to ProfilePage below password change section
+    - Use CloudScape Container with Header component for section
+    - Add "Log Out of All Devices" button using CloudScape Button with variant="normal"
+    - Position button prominently within security section
+    - Add descriptive help text explaining the action will invalidate all tokens across all devices
+    - _Requirements: 18B.1, 18B.2, 18B.3, 18B.16_
+
+  - [ ] 19B.2 Implement confirmation dialog for multi-device logout
+    - When "Log Out of All Devices" button is clicked, display CloudScape Modal confirmation dialog
+    - Dialog title: "Log Out of All Devices?"
+    - Dialog content: "This will invalidate all your authorization tokens and require you to log in again on all devices. Are you sure you want to continue?"
+    - Provide "Cancel" and "Confirm" buttons in dialog
+    - When "Cancel" clicked, close dialog without action
+    - When "Confirm" clicked, proceed with token invalidation
+    - _Requirements: 18B.4, 18B.5_
+
+  - [ ] 19B.3 Add invalidateAllTokens method to AuthService
+    - Create invalidateAllTokens() method in AuthService
+    - Call POST /api/v1/auth/invalidate-tokens endpoint
+    - Handle success and error responses
+    - Return promise that resolves on success or rejects on error
+    - _Requirements: 18B.6_
+
+  - [ ] 19B.4 Implement token invalidation flow in ProfilePage
+    - When user confirms multi-device logout, call AuthService.invalidateAllTokens()
+    - Display loading indicator on button during API request
+    - Disable button while request is in progress
+    - On success: display success notification using CloudScape Flashbar
+    - After success notification, automatically trigger logout of current session
+    - On error: display error message and keep user logged in
+    - _Requirements: 18B.6, 18B.7, 18B.13, 18B.14, 18B.15_
+
+  - [ ] 19B.5 Implement automatic logout after token invalidation
+    - After successful token invalidation, call existing logout functionality
+    - Clear accessToken and refreshToken from localStorage
+    - Clear user profile data from AuthContext state
+    - Clear all React Query caches for user-specific data
+    - Redirect to login page
+    - _Requirements: 18B.8, 18B.9, 18B.10, 18B.11, 18B.12_
+
+  - [ ] 19B.6 Handle TOKEN_INVALIDATED errors globally
+    - Update API error interceptor to detect TOKEN_INVALIDATED error code (401)
+    - When TOKEN_INVALIDATED error is received, immediately clear all authentication state
+    - Redirect to login page without displaying error message to user
+    - Apply to all API requests (not just token invalidation)
+    - Ensures any API call with an invalidated token triggers automatic logout
+    - _Requirements: 18B.17, 18B.18_
+
+  - [ ]* 19B.7 Write property tests for multi-device logout
+    - **Property 289: Multi-Device Logout Button Display**
+    - **Property 290: Multi-Device Logout Confirmation Dialog**
+    - **Property 291: Token Invalidation API Call**
+    - **Property 292: Automatic Logout After Invalidation**
+    - **Property 293: Authentication State Clearing**
+    - **Property 294: Error Handling Without Logout**
+    - **Property 295: TOKEN_INVALIDATED Global Error Handling**
+    - **Validates: Requirements 18B.1, 18B.2, 18B.3, 18B.4, 18B.5, 18B.6, 18B.7, 18B.8, 18B.9, 18B.10, 18B.11, 18B.12, 18B.13, 18B.14, 18B.15, 18B.16, 18B.17, 18B.18**
+
+- [ ] 19C. Checkpoint - Verify multi-device logout functionality
+  - Test that "Log Out of All Devices" button appears on profile page
+  - Test that confirmation dialog displays when button is clicked
+  - Test that token invalidation API is called when confirmed
+  - Test that current session logs out after successful invalidation
+  - Test that TOKEN_INVALIDATED errors trigger automatic logout
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 20. Implement user management UI (admin only)
     - **Property 172: User Form Page Display**
     - **Property 173: User Display Name Validation**
     - **Property 174: User Authorization Rules Embedding**

@@ -191,6 +191,8 @@ POST   /api/v1/auth/login              -> Authenticate user
 POST   /api/v1/auth/logout             -> Invalidate token
 POST   /api/v1/auth/refresh            -> Refresh access token
 GET    /api/v1/auth/me                 -> Get current user
+POST   /api/v1/auth/invalidate-tokens  -> Invalidate all tokens for current user (all roles)
+POST   /api/v1/auth/invalidate-tokens/:userId -> Invalidate all tokens for specified user (admin only)
 
 // Documentation Routes
 GET    /api/v1/docs                    -> Swagger UI
@@ -214,7 +216,7 @@ Services implement business logic and coordinate operations:
 - **AnalyticsService**: Calculates comprehensive engagement and growth metrics with temporal analysis (activities/participants/participation at start/end of date range, activities started/completed/cancelled), includes additionalParticipantCount in participation totals but NOT in unique participant counts, attributes additional participants to "Participant" role for role distribution, supports multi-dimensional grouping (activity category, activity type, venue, geographic area, population, date with weekly/monthly/quarterly/yearly granularity), applies flexible filtering with OR logic within dimensions and AND logic across dimensions (array filters for activity category, activity type, venue, geographic area, population; range filter for dates), aggregates data hierarchically by specified dimensions, provides activity lifecycle event data (started/completed counts grouped by category or type with filter support including population filtering), calculates total participation (non-unique participant-activity associations) alongside unique participant counts, provides geographic breakdown analytics showing metrics for immediate children of a specified parent area (or top-level areas when no parent specified) with recursive aggregation of descendant data, supports growth metrics with multi-dimensional filtering (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) where multiple values within a dimension use OR logic and multiple dimensions use AND logic
 - **MapDataService**: Provides optimized map visualization data with lightweight marker endpoints, batched pagination (100 items per batch), and lazy-loaded popup content, returns minimal fields for fast marker rendering (coordinates and IDs only), supports incremental rendering through paginated responses with total count metadata, fetches detailed popup content on-demand when markers are clicked, supports all filtering dimensions (geographic area, activity category, activity type, venue, population, date range, status), applies geographic authorization filtering, excludes entities without coordinates from marker responses, groups participant homes by venue to avoid duplicate markers
 - **SyncService**: Processes batch sync operations, maps local to server IDs, handles conflicts
-- **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload
+- **AuthService**: Handles authentication, token generation, password hashing and validation, manages root administrator initialization from environment variables, includes authorized geographic area IDs in JWT token payload, validates token issued-at (iat) timestamp against user's lastInvalidationTimestamp, provides token invalidation functionality for multi-device logout, automatically updates lastInvalidationTimestamp on password changes
 - **GeographicAuthorizationService**: Manages user geographic authorization rules (CRUD operations), evaluates user access to geographic areas (deny-first logic), calculates effective authorized areas (including descendants and ancestors), validates geographic restrictions for create operations, provides authorization filtering for all data access, enforces authorization on individual resource access (GET by ID, PUT, DELETE), validates authorization for nested resource endpoints, provides authorization bypass for administrators, logs all authorization denials
 - **AuditService**: Logs user actions, stores audit records, logs geographic authorization rule changes
 
@@ -243,6 +245,9 @@ Repositories encapsulate Prisma database access:
 **Authentication Middleware**
 - Validates JWT tokens from Authorization header
 - Extracts user information and attaches to request
+- Queries user's lastInvalidationTimestamp from database
+- Compares token's iat (issued-at) timestamp with user's lastInvalidationTimestamp
+- Returns 401 with error code TOKEN_INVALIDATED if token was issued before lastInvalidationTimestamp
 - Returns 401 for missing or invalid tokens
 
 **Authorization Middleware**
@@ -1886,6 +1891,7 @@ The API uses Prisma to define the following database models:
 - email: String (unique)
 - passwordHash: String
 - role: Enum (ADMINISTRATOR, EDITOR, READ_ONLY)
+- lastInvalidationTimestamp: DateTime (optional, nullable, defaults to null, indexed)
 - createdAt: DateTime
 - updatedAt: DateTime
 - geographicAuthorizations: UserGeographicAuthorization[] (relation)
@@ -2168,6 +2174,86 @@ interface JWTPayload {
   exp: number;
 }
 ```
+
+**Token Invalidation Mechanism:**
+
+The system implements a token invalidation mechanism that allows users to revoke all authorization tokens across all devices:
+
+```typescript
+// User model includes lastInvalidationTimestamp field
+interface User {
+  id: string;
+  email: string;
+  passwordHash: string;
+  role: SystemRole;
+  lastInvalidationTimestamp: Date | null;  // Null = never invalidated
+  // ... other fields
+}
+
+// Authentication middleware validates token against invalidation timestamp
+async function validateToken(token: string): Promise<User> {
+  // Decode and verify JWT signature
+  const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
+  
+  // Fetch user from database
+  const user = await userRepository.findById(payload.sub);
+  if (!user) {
+    throw new UnauthorizedError('USER_NOT_FOUND');
+  }
+  
+  // Check if token was issued before last invalidation
+  if (user.lastInvalidationTimestamp) {
+    const tokenIssuedAt = new Date(payload.iat * 1000);  // Convert Unix timestamp to Date
+    if (tokenIssuedAt < user.lastInvalidationTimestamp) {
+      throw new UnauthorizedError('TOKEN_INVALIDATED');
+    }
+  }
+  
+  return user;
+}
+
+// Token invalidation service method
+async function invalidateAllTokens(userId: string, requestingUserId: string, requestingUserRole: string): Promise<void> {
+  // Non-administrators can only invalidate their own tokens
+  const targetUserId = (requestingUserRole === 'ADMINISTRATOR') ? userId : requestingUserId;
+  
+  // Update lastInvalidationTimestamp to current time
+  await userRepository.update(targetUserId, {
+    lastInvalidationTimestamp: new Date()
+  });
+  
+  // Audit the invalidation event
+  await auditService.log({
+    userId: requestingUserId,
+    actionType: 'TOKEN_INVALIDATION',
+    entityType: 'USER',
+    entityId: targetUserId,
+    details: {
+      invalidatedBy: requestingUserId,
+      invalidatedFor: targetUserId
+    }
+  });
+}
+
+// Automatic invalidation on password change
+async function updateUserPassword(userId: string, newPassword: string): Promise<void> {
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  
+  await userRepository.update(userId, {
+    passwordHash,
+    lastInvalidationTimestamp: new Date()  // Automatically invalidate all tokens
+  });
+}
+```
+
+**Design Rationale:**
+- **Database-Persisted Timestamp**: Storing lastInvalidationTimestamp in the database ensures invalidation persists across server restarts
+- **Null Default**: Null value indicates user has never invalidated tokens, avoiding unnecessary timestamp comparisons for most users
+- **iat Comparison**: Comparing JWT's iat (issued-at) timestamp with lastInvalidationTimestamp provides precise control over which tokens are invalidated
+- **Automatic Password Invalidation**: Updating lastInvalidationTimestamp on password changes ensures compromised credentials cannot be used even if attacker has existing tokens
+- **Administrator Override**: Administrators can invalidate tokens for any user, enabling security response to compromised accounts
+- **Self-Service**: Non-administrators can invalidate their own tokens for multi-device logout scenarios
+- **Indexed Field**: Database index on lastInvalidationTimestamp ensures fast token validation queries
 
 **Implicit Filtering:**
 

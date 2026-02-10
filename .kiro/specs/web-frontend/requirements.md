@@ -56,6 +56,8 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Additional_Participant_Count**: An optional positive integer field on activities that represents approximate attendance beyond individually tracked participants, used for high-level participation tracking in large gatherings
 - **Run_Report_Pattern**: A user interface pattern where data visualization pages render in an empty state by default and require explicit user action (clicking a "Run Report" button) to fetch and display data based on selected filters and grouping criteria
 - **Pull_To_Refresh**: A mobile-friendly gesture where users can pull down on a page to trigger a refresh of the current view, clearing all cached data and forcing a re-fetch from the backend
+- **Token_Invalidation**: A security mechanism that revokes all authorization tokens issued before a specific timestamp, forcing users to re-authenticate across all devices
+- **Multi_Device_Logout**: A user action that invalidates all authorization tokens for a user across all devices, requiring re-authentication on all sessions
 
 ## Requirements
 
@@ -1390,6 +1392,31 @@ The Web Frontend package provides a responsive React-based web application that 
 33. WHEN a user attempts to navigate away from the profile page with unsaved changes, THE Web_App SHALL display a confirmation dialog asking if they want to discard changes
 34. THE Web_App SHALL add a "My Profile" link to the user menu dropdown in the AppLayout header
 35. WHEN the "My Profile" link is clicked, THE Web_App SHALL navigate to /profile route
+
+### Requirement 18B: Multi-Device Logout UI
+
+**User Story:** As a user, I want to log out of all devices from my profile page, so that I can secure my account if I suspect unauthorized access or have lost a device.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display a "Log Out of All Devices" button on the profile page (/profile)
+2. THE "Log Out of All Devices" button SHALL be positioned prominently in a security section of the profile page
+3. THE "Log Out of All Devices" button SHALL use CloudScape Button component with variant="normal" or "primary"
+4. WHEN the "Log Out of All Devices" button is clicked, THE Web_App SHALL display a confirmation dialog explaining the action
+5. THE confirmation dialog SHALL explain that this action will invalidate all authorization tokens and require re-authentication on all devices
+6. WHEN the user confirms the action, THE Web_App SHALL call POST /api/v1/auth/invalidate-tokens endpoint
+7. WHEN the token invalidation API call succeeds, THE Web_App SHALL display a success notification
+8. AFTER the token invalidation API call succeeds, THE Web_App SHALL automatically log out the current browser session
+9. WHEN logging out after token invalidation, THE Web_App SHALL clear all authentication tokens from localStorage
+10. WHEN logging out after token invalidation, THE Web_App SHALL clear all user profile data from application state
+11. WHEN logging out after token invalidation, THE Web_App SHALL clear all React Query caches for user-specific data
+12. AFTER clearing all local state, THE Web_App SHALL redirect the user to the login page
+13. WHEN the token invalidation API call fails, THE Web_App SHALL display an error message and NOT log out the current session
+14. THE Web_App SHALL disable the "Log Out of All Devices" button while the API request is in progress
+15. THE Web_App SHALL display a loading indicator on the button during the API request
+16. THE "Log Out of All Devices" button SHALL be accessible to all authenticated users (ADMINISTRATOR, EDITOR, READ_ONLY)
+17. THE Web_App SHALL handle TOKEN_INVALIDATED errors (401) from the backend by immediately logging out and redirecting to login
+18. WHEN any API request returns TOKEN_INVALIDATED error, THE Web_App SHALL clear all authentication state and redirect to login without displaying an error message to the user
 
 ### Requirement 19: Optimistic Locking and Conflict Resolution
 

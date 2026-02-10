@@ -45,6 +45,8 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Dot_Notation**: A syntax for requesting nested relation fields in the fields parameter (e.g., activityType.name, activityType.activityCategory.name)
 - **Population_Badge**: A visual indicator displayed beside a participant's name showing which populations they belong to, enabling quick identification of participant demographics
 - **Additional_Participant_Count**: An optional positive integer field on activities that represents approximate attendance beyond individually tracked participants, used for high-level participation tracking in large gatherings
+- **Token_Invalidation**: A security mechanism that revokes all authorization tokens issued before a specific timestamp, forcing users to re-authenticate
+- **Last_Invalidation_Timestamp**: A persistent field in the User model that stores the most recent time when all tokens were invalidated for that user
 
 ## Requirements
 
@@ -532,6 +534,35 @@ The Backend API package provides the RESTful API service that implements all bus
 12. WHEN the database is seeded, THE API SHALL populate the users table with a root administrator user
 13. WHEN creating the root administrator user, THE API SHALL hash the password from SRP_ROOT_ADMIN_PASSWORD using bcrypt
 14. WHEN creating the root administrator user, THE API SHALL assign the ADMINISTRATOR system role
+
+### Requirement 10A: Token Invalidation and Multi-Device Logout
+
+**User Story:** As a user, I want to invalidate all my authorization tokens across all devices, so that I can secure my account if I suspect unauthorized access or want to force re-authentication on all sessions.
+
+#### Acceptance Criteria
+
+1. THE API SHALL add a lastInvalidationTimestamp field to the User model (DateTime, nullable, defaults to null)
+2. WHEN lastInvalidationTimestamp is null, THE API SHALL treat it as indicating the user has never invalidated any authorization tokens
+3. THE API SHALL provide a POST /api/v1/auth/invalidate-tokens endpoint that updates the lastInvalidationTimestamp for a user
+4. THE API SHALL provide a POST /api/v1/auth/invalidate-tokens/:userId endpoint that allows administrators to invalidate tokens for any user
+5. WHEN an administrator calls POST /api/v1/auth/invalidate-tokens/:userId, THE API SHALL update the lastInvalidationTimestamp for the specified user
+6. WHEN a non-administrator calls POST /api/v1/auth/invalidate-tokens, THE API SHALL update the lastInvalidationTimestamp for the authenticated user (ignore any userId parameter)
+7. WHEN a non-administrator calls POST /api/v1/auth/invalidate-tokens/:userId, THE API SHALL ignore the userId parameter and update the lastInvalidationTimestamp for the authenticated user instead
+8. WHEN updating lastInvalidationTimestamp, THE API SHALL set it to the current timestamp (DateTime.now())
+9. WHEN validating a JWT token in the authentication middleware, THE API SHALL extract the issued-at (iat) timestamp from the token
+10. WHEN validating a JWT token, THE API SHALL compare the token's iat timestamp with the user's lastInvalidationTimestamp
+11. WHEN the token's iat timestamp is earlier than the user's lastInvalidationTimestamp, THE API SHALL reject the token and return 401 Unauthorized with error code TOKEN_INVALIDATED
+12. WHEN the token's iat timestamp is equal to or later than the user's lastInvalidationTimestamp, THE API SHALL accept the token as valid (subject to other validation checks)
+13. WHEN a user's lastInvalidationTimestamp is null, THE API SHALL accept all tokens regardless of their iat timestamp (subject to other validation checks)
+14. WHEN a user changes their password via PUT /api/v1/users/me/profile, THE API SHALL automatically update the user's lastInvalidationTimestamp to the current timestamp
+15. WHEN an administrator changes a user's password via PUT /api/v1/users/:id, THE API SHALL automatically update that user's lastInvalidationTimestamp to the current timestamp
+16. WHEN lastInvalidationTimestamp is updated, THE API SHALL invalidate all access tokens and refresh tokens issued before the invalidation timestamp
+17. WHEN a user attempts to use an invalidated access token, THE API SHALL return 401 Unauthorized and require re-authentication
+18. WHEN a user attempts to use an invalidated refresh token, THE API SHALL return 401 Unauthorized and require re-authentication
+19. THE API SHALL audit token invalidation events in the audit log with action type TOKEN_INVALIDATION
+20. WHEN an administrator invalidates tokens for another user, THE API SHALL record both the administrator's ID and the target user's ID in the audit log
+21. THE API SHALL create a Prisma migration to add the lastInvalidationTimestamp field to the User table
+22. THE API SHALL ensure the lastInvalidationTimestamp field is indexed for efficient token validation queries
 
 ### Requirement 11: Authorize User Actions
 

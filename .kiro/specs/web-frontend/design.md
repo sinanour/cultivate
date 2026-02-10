@@ -1186,6 +1186,17 @@ src/
 - Clears password fields after successful password change
 - Implements navigation guard to detect unsaved changes
 - Displays confirmation dialog when user attempts to navigate away with unsaved changes
+- **Multi-Device Logout Section:**
+  - Displays "Security" section below password change section
+  - Provides "Log Out of All Devices" button using CloudScape Button with variant="normal"
+  - When button is clicked, displays confirmation dialog explaining the action will invalidate all tokens and require re-authentication on all devices
+  - When user confirms, calls POST /api/v1/auth/invalidate-tokens endpoint
+  - Displays loading indicator on button during API request
+  - Disables button while request is in progress
+  - On success: displays success notification, then automatically logs out current session
+  - On logout: clears all authentication tokens from localStorage, clears user profile data from state, clears React Query caches, redirects to login page
+  - On error: displays error message and does NOT log out current session
+  - Button accessible to all authenticated users (all roles)
 
 **GeographicAuthorizationForm**
 - Modal form for creating authorization rules (opened from UserFormPage)
