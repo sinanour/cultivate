@@ -14,12 +14,15 @@ import { PopulationForm } from './PopulationForm';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { useAuth } from '../../hooks/useAuth';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
 export function PopulationList() {
   const [selectedPopulation, setSelectedPopulation] = useState<Population | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Population | null>(null);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeSourcePopulation, setMergeSourcePopulation] = useState<Population | null>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -51,6 +54,11 @@ export function PopulationList() {
 
   const handleDelete = (population: Population) => {
     setConfirmDelete(population);
+  };
+
+  const handleMerge = (population: Population) => {
+    setMergeSourcePopulation(population);
+    setShowMergeModal(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -97,6 +105,12 @@ export function PopulationList() {
                     ariaLabel={`Edit ${item.name}`}
                   />
                   <Button 
+                    variant="inline-link" 
+                    iconName="shrink"
+                    onClick={() => handleMerge(item)}
+                    ariaLabel={`Merge ${item.name}`}
+                  />
+                  <Button
                     variant="inline-link" 
                     iconName="remove"
                     onClick={() => handleDelete(item)}
@@ -155,6 +169,25 @@ export function PopulationList() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      {/* Merge Initiation Modal */}
+      {mergeSourcePopulation && (
+        <MergeInitiationModal
+          entityType="population"
+          currentEntityId={mergeSourcePopulation.id}
+          currentEntityName={mergeSourcePopulation.name}
+          isOpen={showMergeModal}
+          onDismiss={() => {
+            setShowMergeModal(false);
+            setMergeSourcePopulation(null);
+          }}
+          onConfirm={() => {
+            setShowMergeModal(false);
+            setMergeSourcePopulation(null);
+            queryClient.invalidateQueries({ queryKey: ['populations'] });
+          }}
+        />
+      )}
     </SpaceBetween>
   );
 }

@@ -6,6 +6,10 @@ export class PopulationService {
         return ApiClient.get<Population[]>('/populations');
     }
 
+    static async getPopulationById(id: string): Promise<Population> {
+        return ApiClient.get<Population>(`/populations/${id}`);
+    }
+
     static async createPopulation(data: { name: string }): Promise<Population> {
         return ApiClient.post<Population>('/populations', data);
     }

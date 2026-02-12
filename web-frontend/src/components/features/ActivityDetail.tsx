@@ -31,6 +31,7 @@ import {
 } from "../../utils/cache-invalidation.utils";
 import Button from "@cloudscape-design/components/button";
 import { ConfirmationDialog } from "../common/ConfirmationDialog";
+import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +47,7 @@ export function ActivityDetail() {
   const [confirmRemoveAssignment, setConfirmRemoveAssignment] = useState<string | null>(null);
   const [confirmDeleteVenue, setConfirmDeleteVenue] = useState<string | null>(null);
   const [confirmDeleteActivity, setConfirmDeleteActivity] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   const {
     data: activity,
@@ -308,6 +310,12 @@ export function ActivityDetail() {
                         onClick={() => navigate(`/activities/${id}/edit`)}
                       >
                         Edit
+                      </ResponsiveButton>
+                      <ResponsiveButton
+                        mobileIcon="shrink"
+                        onClick={() => setShowMergeModal(true)}
+                      >
+                        Merge
                       </ResponsiveButton>
                       <ResponsiveButton
                         onClick={() => setConfirmDeleteActivity(true)}
@@ -574,6 +582,21 @@ export function ActivityDetail() {
           onConfirm={handleConfirmDeleteActivity}
           onCancel={() => setConfirmDeleteActivity(false)}
         />
+
+        {/* Merge Initiation Modal */}
+        {activity && showMergeModal && (
+          <MergeInitiationModal
+            entityType="activity"
+            currentEntityId={activity.id}
+            currentEntityName={activity.name}
+            isOpen={showMergeModal}
+            onDismiss={() => setShowMergeModal(false)}
+            onConfirm={() => {
+              setShowMergeModal(false);
+              refetch();
+            }}
+          />
+        )}
       </SpaceBetween>
     </PullToRefreshWrapper>
   );

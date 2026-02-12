@@ -77,6 +77,10 @@ export class VenueService {
     return ApiClient.get<Venue>(`/venues/${id}`);
   }
 
+    static async getVenueById(id: string): Promise<Venue> {
+        return ApiClient.get<Venue>(`/venues/${id}`);
+    }
+
     static async createVenue(data: CreateVenueData): Promise<Venue> {
         return ApiClient.post<Venue>('/venues', data);
     }

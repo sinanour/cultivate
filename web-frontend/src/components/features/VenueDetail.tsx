@@ -25,6 +25,7 @@ import type { GeographicArea } from '../../types';
 import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
 export function VenueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +35,7 @@ export function VenueDetail() {
   const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   const { data: venue, isLoading, error, refetch } = useQuery({
     queryKey: ['venue', id],
@@ -132,6 +134,9 @@ export function VenueDetail() {
                   <>
                     <ResponsiveButton variant="primary" onClick={() => navigate(`/venues/${id}/edit`)}>
                       Edit
+                    </ResponsiveButton>
+                    <ResponsiveButton mobileIcon="shrink" onClick={() => setShowMergeModal(true)}>
+                      Merge
                     </ResponsiveButton>
                     <ResponsiveButton 
                       mobileIcon="remove"
@@ -285,7 +290,22 @@ export function VenueDetail() {
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmDelete(false)}
         />
-    </SpaceBetween>
+
+        {/* Merge Initiation Modal */}
+        {venue && showMergeModal && (
+          <MergeInitiationModal
+            entityType="venue"
+            currentEntityId={venue.id}
+            currentEntityName={venue.name}
+            isOpen={showMergeModal}
+            onDismiss={() => setShowMergeModal(false)}
+            onConfirm={() => {
+              setShowMergeModal(false);
+              refetch();
+            }}
+          />
+        )}
+      </SpaceBetween>
     </PullToRefreshWrapper>
   );
 }

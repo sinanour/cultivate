@@ -93,6 +93,23 @@ export function ActivityList() {
   // Filter properties configuration with loadItems callbacks
   const filterProperties: FilterProperty[] = useMemo(() => [
     {
+      key: 'name',
+      propertyLabel: 'Name',
+      groupValuesLabel: 'Name values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        // For name filtering, we use the search text directly (no need to fetch from backend)
+        // The backend will handle partial matching on activity names
+        if (!filterText) return [];
+
+        return [{
+          propertyKey: 'name',
+          value: filterText, // Use the search text directly
+          label: filterText,
+        }];
+      },
+    },
+    {
       key: 'activityCategory',
       propertyLabel: 'Activity Category',
       groupValuesLabel: 'Activity Category values',
@@ -264,6 +281,15 @@ export function ActivityList() {
       params.filter!.populationIds = populationIds.join(',');
     }
     
+    // Name filter - use the search text directly (no UUID conversion needed)
+    const nameValues = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'name' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    if (nameValues.length > 0) {
+      // For name filtering, we use the first value (typically only one name filter at a time)
+      params.filter!.name = nameValues[0];
+    }
+
     // Date range - convert to ISO datetime format and add to filter
     if (dateRange?.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
       params.filter!.startDate = toISODateTime(dateRange.startDate, false);

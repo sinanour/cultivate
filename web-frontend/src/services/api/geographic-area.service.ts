@@ -90,7 +90,7 @@ export class GeographicAreaService {
   }
 
   static async getGeographicAreaById(id: string): Promise<GeographicArea> {
-    return this.getGeographicArea(id);
+    return ApiClient.get<GeographicArea>(`/geographic-areas/${id}`);
   }
 
   static async createGeographicArea(data: CreateGeographicAreaData): Promise<GeographicArea> {

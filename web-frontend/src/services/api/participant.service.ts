@@ -77,6 +77,10 @@ export class ParticipantService {
         const query = params.toString();
         return ApiClient.get<PaginatedResponse<Participant>>(`/participants${query ? `?${query}` : ''}`);
     }
+    static async getParticipantById(id: string): Promise<Participant> {
+        return ApiClient.get<Participant>(`/participants/${id}`);
+    }
+
 
     static async getParticipants(page?: number, limit?: number, geographicAreaId?: string | null): Promise<PaginatedResponse<Participant>> {
         // Delegate to flexible method for backward compatibility

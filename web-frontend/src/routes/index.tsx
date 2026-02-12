@@ -29,6 +29,7 @@ const UserFormPage = lazy(() => import('../pages/UserFormPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const ServiceWorkerDebugPage = lazy(() => import('../pages/ServiceWorkerDebugPage'));
+const ReconciliationPage = lazy(() => import('../pages/merge/ReconciliationPage'));
 
 export const router = createBrowserRouter([
   {
@@ -224,6 +225,14 @@ export const router = createBrowserRouter([
       {
         path: 'debug/service-worker',
         element: <ServiceWorkerDebugPage />,
+      },
+      {
+        path: 'merge/:entityType/reconcile',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR']}>
+            <ReconciliationPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: '*',

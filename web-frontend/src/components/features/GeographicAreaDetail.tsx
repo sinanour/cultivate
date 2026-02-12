@@ -23,6 +23,7 @@ import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
 import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
 import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
 export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,7 @@ export function GeographicAreaDetail() {
   const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   const { data: geographicArea, isLoading, error, refetch } = useQuery({
     queryKey: ['geographicArea', id],
@@ -155,6 +157,9 @@ export function GeographicAreaDetail() {
                   <>
                     <ResponsiveButton mobileIcon="edit" variant="primary" onClick={() => navigate(`/geographic-areas/${id}/edit`)}>
                       Edit
+                    </ResponsiveButton>
+                    <ResponsiveButton mobileIcon="shrink" onClick={() => setShowMergeModal(true)}>
+                      Merge
                     </ResponsiveButton>
                     <ResponsiveButton
                       mobileIcon="remove" 
@@ -315,7 +320,22 @@ export function GeographicAreaDetail() {
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmDelete(false)}
         />
-    </SpaceBetween>
+
+        {/* Merge Initiation Modal */}
+        {geographicArea && showMergeModal && (
+          <MergeInitiationModal
+            entityType="geographicArea"
+            currentEntityId={geographicArea.id}
+            currentEntityName={geographicArea.name}
+            isOpen={showMergeModal}
+            onDismiss={() => setShowMergeModal(false)}
+            onConfirm={() => {
+              setShowMergeModal(false);
+              refetch();
+            }}
+          />
+        )}
+      </SpaceBetween>
     </PullToRefreshWrapper>
   );
 }

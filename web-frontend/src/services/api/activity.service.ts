@@ -118,6 +118,10 @@ export class ActivityService {
     static async getActivity(id: string): Promise<Activity> {
         return ApiClient.get<Activity>(`/activities/${id}`);
     }
+    static async getActivityById(id: string): Promise<Activity> {
+        return ApiClient.get<Activity>(`/activities/${id}`);
+    }
+
 
     static async createActivity(data: CreateActivityData): Promise<Activity> {
         return ApiClient.post<Activity>('/activities', data);

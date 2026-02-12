@@ -15,6 +15,7 @@ import { ActivityTypeForm } from './ActivityTypeForm';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
 export function ActivityTypeList() {
   const queryClient = useQueryClient();
@@ -23,6 +24,8 @@ export function ActivityTypeList() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<ActivityType | null>(null);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeSourceType, setMergeSourceType] = useState<ActivityType | null>(null);
 
   const { data: activityTypes = [], isLoading } = useQuery({
     queryKey: ['activityTypes'],
@@ -62,6 +65,11 @@ export function ActivityTypeList() {
 
   const handleDelete = (type: ActivityType) => {
     setConfirmDelete(type);
+  };
+
+  const handleMerge = (type: ActivityType) => {
+    setMergeSourceType(type);
+    setShowMergeModal(true);
   };
 
   const handleConfirmDelete = () => {
@@ -126,12 +134,20 @@ export function ActivityTypeList() {
             cell: (item) => (
               <Box>
                 {canEdit() && (
-                  <Button
-                    variant="inline-link"
-                    iconName="edit"
-                    onClick={() => handleEdit(item)}
-                    ariaLabel={`Edit ${item.name}`}
-                  />
+                  <>
+                    <Button
+                      variant="inline-link"
+                      iconName="edit"
+                      onClick={() => handleEdit(item)}
+                      ariaLabel={`Edit ${item.name}`}
+                    />
+                    <Button
+                      variant="inline-link"
+                      iconName="shrink"
+                      onClick={() => handleMerge(item)}
+                      ariaLabel={`Merge ${item.name}`}
+                    />
+                  </>
                 )}
                 {canDelete() && !item.isPredefined && (
                   <Button
@@ -206,6 +222,25 @@ export function ActivityTypeList() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      {/* Merge Initiation Modal */}
+      {mergeSourceType && (
+        <MergeInitiationModal
+          entityType="activityType"
+          currentEntityId={mergeSourceType.id}
+          currentEntityName={mergeSourceType.name}
+          isOpen={showMergeModal}
+          onDismiss={() => {
+            setShowMergeModal(false);
+            setMergeSourceType(null);
+          }}
+          onConfirm={() => {
+            setShowMergeModal(false);
+            setMergeSourceType(null);
+            queryClient.invalidateQueries({ queryKey: ['activityTypes'] });
+          }}
+        />
+      )}
     </SpaceBetween>
   );
 }

@@ -6,6 +6,10 @@ export class ActivityTypeService {
         return ApiClient.get<ActivityType[]>('/activity-types');
     }
 
+    static async getActivityTypeById(id: string): Promise<ActivityType> {
+        return ApiClient.get<ActivityType>(`/activity-types/${id}`);
+    }
+
     static async createActivityType(data: { name: string; activityCategoryId: string }): Promise<ActivityType> {
         return ApiClient.post<ActivityType>('/activity-types', data);
     }

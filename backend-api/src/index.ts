@@ -64,6 +64,7 @@ import { SyncRoutes } from './routes/sync.routes';
 import { GeocodingRoutes } from './routes/geocoding.routes';
 import { GeographicAuthorizationRoutes } from './routes/geographic-authorization.routes';
 import { MapDataRoutes } from './routes/map-data.routes';
+import { MergeRoutes } from './routes/merge.routes';
 
 // Load environment variables
 dotenv.config();
@@ -199,6 +200,7 @@ const mapDataRoutes = new MapDataRoutes(
 );
 const syncRoutes = new SyncRoutes(syncService, authMiddleware, authorizationMiddleware);
 const geocodingRoutes = new GeocodingRoutes(geocodingService, authMiddleware, authorizationMiddleware);
+const mergeRoutes = new MergeRoutes(authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
 
 // Middleware
 app.use(
@@ -253,6 +255,7 @@ app.use('/api/v1/analytics', smartRateLimiter, analyticsRoutes.getRouter());
 app.use('/api/v1/map', smartRateLimiter, mapDataRoutes.getRouter());
 app.use('/api/v1/sync', smartRateLimiter, syncRoutes.getRouter());
 app.use('/api/v1/geocoding', smartRateLimiter, geocodingRoutes.getRouter());
+app.use('/api/v1', smartRateLimiter, mergeRoutes.getRouter());
 
 // 404 handler for undefined routes
 app.use(ErrorHandlerMiddleware.notFound());

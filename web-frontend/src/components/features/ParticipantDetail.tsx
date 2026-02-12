@@ -25,6 +25,7 @@ import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
 import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-invalidation.utils';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
 export function ParticipantDetail() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +39,7 @@ export function ParticipantDetail() {
   const [error, setError] = useState('');
   const [confirmDeleteParticipant, setConfirmDeleteParticipant] = useState(false);
   const [confirmDeleteAddress, setConfirmDeleteAddress] = useState<string | null>(null);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   const { data: participant, isLoading, error: loadError, refetch } = useQuery({
     queryKey: ['participant', id],
@@ -219,6 +221,9 @@ export function ParticipantDetail() {
                   <>
                     <ResponsiveButton variant="primary" onClick={() => navigate(`/participants/${id}/edit`)}>
                       Edit
+                    </ResponsiveButton>
+                    <ResponsiveButton mobileIcon="shrink" onClick={() => setShowMergeModal(true)}>
+                      Merge
                     </ResponsiveButton>
                     <ResponsiveButton 
                       onClick={() => setConfirmDeleteParticipant(true)}
@@ -417,17 +422,33 @@ export function ParticipantDetail() {
 />
 
         {/* Remove Address History Confirmation */}
-<ConfirmationDialog
-  visible={confirmDeleteAddress !== null}
+        <ConfirmationDialog
+          visible={confirmDeleteAddress !== null}
           title="Remove Address History"
           message="Are you sure you want to remove this address history record?"
           confirmLabel="Remove"
-  cancelLabel="Cancel"
-  variant="destructive"
-  onConfirm={handleConfirmDeleteAddress}
-  onCancel={() => setConfirmDeleteAddress(null)}
-/>
-    </SpaceBetween>
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={handleConfirmDeleteAddress}
+          onCancel={() => setConfirmDeleteAddress(null)}
+        />
+
+        {/* Merge Initiation Modal */}
+        {participant && showMergeModal && (
+          <MergeInitiationModal
+            entityType="participant"
+            currentEntityId={participant.id}
+            currentEntityName={participant.name}
+            isOpen={showMergeModal}
+            onDismiss={() => setShowMergeModal(false)}
+            onConfirm={() => {
+              setShowMergeModal(false);
+              // Refresh participant data after merge
+              refetch();
+            }}
+          />
+        )}
+      </SpaceBetween>
     </PullToRefreshWrapper>
   );
 }
