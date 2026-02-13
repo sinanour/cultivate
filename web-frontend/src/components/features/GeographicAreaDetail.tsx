@@ -12,6 +12,7 @@ import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
@@ -113,6 +114,28 @@ export function GeographicAreaDetail() {
     setConfirmDelete(false);
   };
 
+  // Build dropdown items for geographic area actions
+  const buildDropdownItems = () => {
+    return [
+      { id: "merge", text: "Merge", iconName: "shrink" as const },
+      { id: "delete", text: "Remove", iconName: "remove" as const }
+    ];
+  };
+
+  // Handle dropdown item clicks
+  const handleItemClick = (itemId: string) => {
+    switch (itemId) {
+      case "merge":
+        setShowMergeModal(true);
+        break;
+      case "delete":
+        setConfirmDelete(true);
+        break;
+      default:
+        console.warn(`Unknown action: ${itemId}`);
+    }
+  };
+
   const breadcrumbItems = [
     ...[...ancestors].reverse().map((ancestor) => ({
       text: ancestor.name,
@@ -142,6 +165,13 @@ export function GeographicAreaDetail() {
             variant="h2"
             actions={
               <SpaceBetween direction="horizontal" size="xs">
+                <ResponsiveButton
+                  onClick={() => navigate('/geographic-areas')}
+                  mobileIcon="arrow-left"
+                  mobileAriaLabel="Back to geographic areas list"
+                >
+                  Back to Geographic Areas
+                </ResponsiveButton>
                 <ResponsiveButton 
                   mobileIcon="filter" 
                   onClick={() => {
@@ -154,28 +184,17 @@ export function GeographicAreaDetail() {
                   Apply Filter
                 </ResponsiveButton>
                 {canEdit() && (
-                  <>
-                    <ResponsiveButton mobileIcon="edit" variant="primary" onClick={() => navigate(`/geographic-areas/${id}/edit`)}>
-                      Edit
-                    </ResponsiveButton>
-                    <ResponsiveButton mobileIcon="shrink" onClick={() => setShowMergeModal(true)}>
-                      Merge
-                    </ResponsiveButton>
-                    <ResponsiveButton
-                      mobileIcon="remove" 
-                      onClick={() => setConfirmDelete(true)}
-                    >
-                      Remove
-                    </ResponsiveButton>
-                  </>
+                  <ButtonDropdown
+                    variant="primary"
+                    mainAction={{
+                      text: "Edit",
+                      onClick: () => navigate(`/geographic-areas/${id}/edit`)
+                    }}
+                    items={buildDropdownItems()}
+                    onItemClick={({ detail }) => handleItemClick(detail.id)}
+                    ariaLabel="Geographic area actions"
+                  />
                 )}
-                <ResponsiveButton 
-                  onClick={() => navigate('/geographic-areas')}
-                  mobileIcon="arrow-left"
-                  mobileAriaLabel="Back to geographic areas list"
-                >
-                  Back to Geographic Areas
-                </ResponsiveButton>
               </SpaceBetween>
             }
           >

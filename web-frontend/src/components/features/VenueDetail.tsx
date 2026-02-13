@@ -11,6 +11,7 @@ import Link from '@cloudscape-design/components/link';
 import Spinner from '@cloudscape-design/components/spinner';
 import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -107,6 +108,28 @@ export function VenueDetail() {
     setConfirmDelete(false);
   };
 
+  // Build dropdown items for venue actions
+  const buildDropdownItems = () => {
+    return [
+      { id: "merge", text: "Merge", iconName: "shrink" as const },
+      { id: "delete", text: "Remove", iconName: "remove" as const }
+    ];
+  };
+
+  // Handle dropdown item clicks
+  const handleItemClick = (itemId: string) => {
+    switch (itemId) {
+      case "merge":
+        setShowMergeModal(true);
+        break;
+      case "delete":
+        setConfirmDelete(true);
+        break;
+      default:
+        console.warn(`Unknown action: ${itemId}`);
+    }
+  };
+
   // Reverse ancestors to get correct order: most ancestral -> leaf node
   const hierarchyItems = [...ancestors].reverse();
   if (venue.geographicArea) {
@@ -130,29 +153,25 @@ export function VenueDetail() {
             variant="h2"
             actions={
               <SpaceBetween direction="horizontal" size="xs">
-                {canEdit() && (
-                  <>
-                    <ResponsiveButton variant="primary" onClick={() => navigate(`/venues/${id}/edit`)}>
-                      Edit
-                    </ResponsiveButton>
-                    <ResponsiveButton mobileIcon="shrink" onClick={() => setShowMergeModal(true)}>
-                      Merge
-                    </ResponsiveButton>
-                    <ResponsiveButton 
-                      mobileIcon="remove"
-                      onClick={() => setConfirmDelete(true)}
-                    >
-                      Remove
-                    </ResponsiveButton>
-                  </>
-                )}
-                <ResponsiveButton 
+                <ResponsiveButton
                   onClick={() => navigate('/venues')}
                   mobileIcon="arrow-left"
                   mobileAriaLabel="Back to venues list"
                 >
                   Back to Venues
                 </ResponsiveButton>
+                {canEdit() && (
+                  <ButtonDropdown
+                    variant="primary"
+                    mainAction={{
+                      text: "Edit",
+                      onClick: () => navigate(`/venues/${id}/edit`)
+                    }}
+                    items={buildDropdownItems()}
+                    onItemClick={({ detail }) => handleItemClick(detail.id)}
+                    ariaLabel="Venue actions"
+                  />
+                )}
               </SpaceBetween>
             }
           >

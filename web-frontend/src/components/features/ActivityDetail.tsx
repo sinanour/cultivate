@@ -30,6 +30,7 @@ import {
   getDetailPageQueryKeys,
 } from "../../utils/cache-invalidation.utils";
 import Button from "@cloudscape-design/components/button";
+import ButtonDropdown from "@cloudscape-design/components/button-dropdown";
 import { ConfirmationDialog } from "../common/ConfirmationDialog";
 import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
@@ -226,6 +227,65 @@ export function ActivityDetail() {
     await addVenueMutation.mutateAsync(data);
   };
 
+  // Build dropdown items based on activity status
+  const buildDropdownItems = () => {
+    if (!activity) return [];
+
+    const items = [];
+
+    // Add lifecycle actions based on current status
+    if (activity.status !== 'COMPLETED') {
+      items.push({
+        id: "complete",
+        text: "Mark Complete",
+        iconName: "status-positive" as const
+      });
+    }
+    if (activity.status !== 'CANCELLED') {
+      items.push({
+        id: "cancel",
+        text: "Cancel Activity",
+        iconName: "status-negative" as const
+      });
+    }
+    if (activity.status !== 'ACTIVE') {
+      items.push({
+        id: "active",
+        text: "Set Active",
+        iconName: "status-in-progress" as const
+      });
+    }
+
+    // Add standard actions
+    items.push({ id: "merge", text: "Merge", iconName: "shrink" as const });
+    items.push({ id: "delete", text: "Remove", iconName: "remove" as const });
+
+    return items;
+  };
+
+  // Handle dropdown item clicks
+  const handleItemClick = (itemId: string) => {
+    switch (itemId) {
+      case "complete":
+        handleUpdateStatus("COMPLETED");
+        break;
+      case "cancel":
+        handleUpdateStatus("CANCELLED");
+        break;
+      case "active":
+        handleUpdateStatus("ACTIVE");
+        break;
+      case "merge":
+        setShowMergeModal(true);
+        break;
+      case "delete":
+        setConfirmDeleteActivity(true);
+        break;
+      default:
+        console.warn(`Unknown action: ${itemId}`);
+    }
+  };
+
   // Pull-to-refresh handler
   const handlePullToRefresh = useCallback(async () => {
     if (!id) return;
@@ -274,56 +334,6 @@ export function ActivityDetail() {
               variant="h2"
               actions={
                 <SpaceBetween direction="horizontal" size="xs">
-                  {canEdit() && (
-                    <SpaceBetween direction="horizontal" size="xs">
-                      {activity.status !== "COMPLETED" && (
-                        <ResponsiveButton
-                          onClick={() => handleUpdateStatus("COMPLETED")}
-                          loading={updateStatusMutation.isPending}
-                          mobileIcon="status-positive"
-                          mobileAriaLabel="Mark activity as complete"
-                        >
-                          Mark Complete
-                        </ResponsiveButton>
-                      )}
-                      {activity.status !== "CANCELLED" && (
-                        <ResponsiveButton
-                          onClick={() => handleUpdateStatus("CANCELLED")}
-                          loading={updateStatusMutation.isPending}
-                          mobileIcon="status-negative"
-                          mobileAriaLabel="Cancel this activity"
-                        >
-                          Cancel Activity
-                        </ResponsiveButton>
-                      )}
-                      {activity.status !== "ACTIVE" && (
-                        <ResponsiveButton
-                          mobileIcon="status-in-progress"
-                          onClick={() => handleUpdateStatus("ACTIVE")}
-                          loading={updateStatusMutation.isPending}
-                        >
-                          Set Active
-                        </ResponsiveButton>
-                      )}
-                      <ResponsiveButton
-                        variant="primary"
-                        onClick={() => navigate(`/activities/${id}/edit`)}
-                      >
-                        Edit
-                      </ResponsiveButton>
-                      <ResponsiveButton
-                        mobileIcon="shrink"
-                        onClick={() => setShowMergeModal(true)}
-                      >
-                        Merge
-                      </ResponsiveButton>
-                      <ResponsiveButton
-                        onClick={() => setConfirmDeleteActivity(true)}
-                      >
-                        Remove
-                      </ResponsiveButton>
-                    </SpaceBetween>
-                  )}
                   <ResponsiveButton
                     onClick={() => navigate("/activities")}
                     mobileIcon="arrow-left"
@@ -331,6 +341,18 @@ export function ActivityDetail() {
                   >
                     Back to Activities
                   </ResponsiveButton>
+                  {canEdit() && (
+                    <ButtonDropdown
+                      variant="primary"
+                      mainAction={{
+                        text: "Edit",
+                        onClick: () => navigate(`/activities/${id}/edit`)
+                      }}
+                      items={buildDropdownItems()}
+                      onItemClick={({ detail }) => handleItemClick(detail.id)}
+                      ariaLabel="Activity actions"
+                    />
+                  )}
                 </SpaceBetween>
               }
             >

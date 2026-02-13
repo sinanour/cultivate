@@ -11,6 +11,7 @@ import Alert from '@cloudscape-design/components/alert';
 import Table from '@cloudscape-design/components/table';
 import Link from '@cloudscape-design/components/link';
 import Badge from '@cloudscape-design/components/badge';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import { ParticipantService } from '../../services/api/participant.service';
 import { ParticipantAddressHistoryService } from '../../services/api/participant-address-history.service';
 import { ParticipantPopulationService } from '../../services/api/population.service';
@@ -151,6 +152,28 @@ export function ParticipantDetail() {
     setConfirmDeleteParticipant(false);
   };
 
+  // Build dropdown items for participant actions
+  const buildDropdownItems = () => {
+    return [
+      { id: "merge", text: "Merge", iconName: "shrink" as const },
+      { id: "delete", text: "Remove", iconName: "remove" as const }
+    ];
+  };
+
+  // Handle dropdown item clicks
+  const handleItemClick = (itemId: string) => {
+    switch (itemId) {
+      case "merge":
+        setShowMergeModal(true);
+        break;
+      case "delete":
+        setConfirmDeleteParticipant(true);
+        break;
+      default:
+        console.warn(`Unknown action: ${itemId}`);
+    }
+  };
+
   // Pull-to-refresh handler - MUST be defined before any conditional returns
   const handlePullToRefresh = useCallback(async () => {
     if (!id) return;
@@ -217,28 +240,25 @@ export function ParticipantDetail() {
             variant="h2"
             actions={
               <SpaceBetween direction="horizontal" size="xs">
-                {canEdit() && (
-                  <>
-                    <ResponsiveButton variant="primary" onClick={() => navigate(`/participants/${id}/edit`)}>
-                      Edit
-                    </ResponsiveButton>
-                    <ResponsiveButton mobileIcon="shrink" onClick={() => setShowMergeModal(true)}>
-                      Merge
-                    </ResponsiveButton>
-                    <ResponsiveButton 
-                      onClick={() => setConfirmDeleteParticipant(true)}
-                    >
-                      Remove
-                    </ResponsiveButton>
-                  </>
-                )}
-                <ResponsiveButton 
+                <ResponsiveButton
                   onClick={() => navigate('/participants')}
                   mobileIcon="arrow-left"
                   mobileAriaLabel="Back to participants list"
                 >
                   Back to Participants
                 </ResponsiveButton>
+                {canEdit() && (
+                  <ButtonDropdown
+                    variant="primary"
+                    mainAction={{
+                      text: "Edit",
+                      onClick: () => navigate(`/participants/${id}/edit`)
+                    }}
+                    items={buildDropdownItems()}
+                    onItemClick={({ detail }) => handleItemClick(detail.id)}
+                    ariaLabel="Participant actions"
+                  />
+                )}
               </SpaceBetween>
             }
           >
