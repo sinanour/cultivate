@@ -1,0 +1,4 @@
+/* Override CloudScape Cards component margins in reconciliation table */
+.reconciliation-table [class*="awsui_card-inner"] {
+  margin: 4px !important;
+}

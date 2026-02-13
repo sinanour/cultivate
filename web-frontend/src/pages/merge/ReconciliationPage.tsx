@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   ContentLayout,
   Container,
@@ -10,7 +10,7 @@ import {
   Spinner,
   Box,
   Table,
-  Icon,
+  Cards,
 } from '@cloudscape-design/components';
 import { MergeConfirmationDialog } from '../../components/merge/MergeConfirmationDialog';
 import { MergeService } from '../../services/api/merge.service';
@@ -20,6 +20,8 @@ import { VenueService } from '../../services/api/venue.service';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import type { Participant, Activity, Venue, GeographicArea } from '../../types';
+import { formatDate } from '../../utils/date.utils';
+import './ReconciliationPage.css';
 
 type ComplexEntityType = 'participant' | 'activity' | 'venue' | 'geographicArea';
 type ComplexEntity = Participant | Activity | Venue | GeographicArea;
@@ -45,8 +47,13 @@ export default function ReconciliationPage() {
   const { entityType } = useParams<{ entityType: ComplexEntityType }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as LocationState;
+  const [searchParams] = useSearchParams();
+  const locationState = location.state as LocationState | null;
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
+
+  // Try URL parameters first, then fall back to navigation state
+  const sourceId = searchParams.get('source') || locationState?.sourceId || '';
+  const destinationId = searchParams.get('destination') || locationState?.destinationId || '';
 
   const [sourceEntity, setSourceEntity] = useState<ComplexEntity | null>(null);
   const [destinationEntity, setDestinationEntity] = useState<ComplexEntity | null>(null);
@@ -58,8 +65,16 @@ export default function ReconciliationPage() {
 
   // Fetch source and destination entities
   useEffect(() => {
-    if (!state?.sourceId || !state?.destinationId || !entityType) {
-      setError('Missing required parameters');
+    // Validate entity type
+    if (!entityType) {
+      setError('Invalid entity type. Please restart the merge process from the entity detail page.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate source and destination IDs
+    if (!sourceId || !destinationId) {
+      setError('This page must be accessed through the merge workflow. Please return to the entity detail page and click "Merge" to start the process.');
       setIsLoading(false);
       return;
     }
@@ -68,8 +83,8 @@ export default function ReconciliationPage() {
       try {
         setIsLoading(true);
         const [source, destination] = await Promise.all([
-          fetchEntity(entityType, state.sourceId, selectedGeographicAreaId),
-          fetchEntity(entityType, state.destinationId, selectedGeographicAreaId),
+          fetchEntity(entityType, sourceId, selectedGeographicAreaId),
+          fetchEntity(entityType, destinationId, selectedGeographicAreaId),
         ]);
 
         setSourceEntity(source);
@@ -97,7 +112,7 @@ export default function ReconciliationPage() {
     };
 
     fetchEntities();
-  }, [state, entityType, selectedGeographicAreaId]);
+  }, [sourceId, destinationId, entityType, selectedGeographicAreaId, searchParams, locationState]);
 
   const handleCheckboxChange = (fieldName: string, selection: 'source' | 'destination') => {
     setFieldSelections(prev => {
@@ -134,10 +149,10 @@ export default function ReconciliationPage() {
         }
       });
 
-      await executeMerge(entityType, state.destinationId, state.sourceId, reconciledFields, selectedGeographicAreaId);
+      await executeMerge(entityType, destinationId, sourceId, reconciledFields, selectedGeographicAreaId);
 
       // Navigate back to destination entity detail page
-      navigate(getDetailPagePath(entityType, state.destinationId), {
+      navigate(getDetailPagePath(entityType, destinationId), {
         state: { message: 'Records merged successfully' },
       });
     } catch (err: any) {
@@ -192,6 +207,11 @@ export default function ReconciliationPage() {
       const option = field.options.find((opt: any) => opt.value === value);
       return option?.label || String(value);
     }
+
+    if (field.type === 'date') {
+      return formatDate(value);
+    }
+
     return String(value);
   };
 
@@ -220,11 +240,14 @@ export default function ReconciliationPage() {
           </Alert>
 
           <Table
+            className="reconciliation-table"
             columnDefinitions={[
               {
                 id: 'field',
                 header: 'Field',
-                cell: (item: ReconciliationTableItem) => item.fieldLabel,
+                cell: (item: ReconciliationTableItem) => (
+                  <Box variant='h3' display='block' padding={{ vertical: 's' }}>{item.fieldLabel}</Box>
+                ),
                 width: 200,
               },
               {
@@ -236,25 +259,22 @@ export default function ReconciliationPage() {
                   const isSelected = item.selectedValue === 'source';
 
                   return (
-                    <div
-                      onClick={() => handleCheckboxChange(item.fieldName, 'source')}
-                      style={{
-                        cursor: 'pointer',
-                        padding: '12px',
-                        border: isSelected ? '2px solid #0972d3' : '1px solid #d5dbdb',
-                        borderRadius: '8px',
-                        backgroundColor: isSelected ? '#f0f8ff' : '#ffffff',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <SpaceBetween size="xs" direction="horizontal" alignItems="center">
-                        {isSelected && (
-                          <Icon name="check" variant="success" size="medium" />
-                        )}
-                        <span style={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
-                          {displayValue || <em>(empty)</em>}
-                        </span>
-                      </SpaceBetween>
+                    <div onClick={() => handleCheckboxChange(item.fieldName, 'source')}>
+                      <Cards
+                        selectedItems={(isSelected) ? [displayValue] : []}
+                        cardDefinition={{
+                          header: ((i: string) => (
+                            <div style={{ fontWeight: 'normal', cursor: 'pointer' }}>{i || "–"}</div>
+                          ))
+                        }}
+                        cardsPerRow={[{
+                          cards: 1
+                        }]}
+                        entireCardClickable
+                        items={[displayValue]}
+                        selectionType="multi"
+                      >
+                      </Cards>
                     </div>
                   );
                 },
@@ -268,26 +288,22 @@ export default function ReconciliationPage() {
                   const isSelected = item.selectedValue === 'destination';
 
                   return (
-                    <div
-                      onClick={() => handleCheckboxChange(item.fieldName, 'destination')}
-                      style={{
-                        cursor: 'pointer',
-                        padding: '12px',
-                        border: isSelected ? '2px solid #0972d3' : '1px solid #d5dbdb',
-                        borderRadius: '8px',
-                        backgroundColor: isSelected ? '#f0f8ff' : '#ffffff',
-                        transition: 'all 0.2s ease',
+                    <Cards
+                      onSelectionChange={() => handleCheckboxChange(item.fieldName, 'destination')}
+                      selectedItems={(isSelected) ? [displayValue] : []}
+                      cardDefinition={{
+                        header: ((i: string) => (
+                          <div style={{ fontWeight: 'normal', cursor: 'pointer' }}>{i || "–"}</div>
+                        ))
                       }}
+                      cardsPerRow={[{
+                        cards: 1
+                      }]}
+                      entireCardClickable
+                      items={[displayValue]}
+                      selectionType="multi"
                     >
-                      <SpaceBetween size="xs" direction="horizontal" alignItems="center">
-                        {isSelected && (
-                          <Icon name="check" variant="success" size="medium" />
-                        )}
-                        <span style={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
-                          {displayValue || <em>(empty)</em>}
-                        </span>
-                      </SpaceBetween>
-                    </div>
+                    </Cards>
                   );
                 },
               },

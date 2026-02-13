@@ -557,6 +557,344 @@ Implementation follows this sequence:
   - Verify test coverage meets goals (>80% frontend, >90% backend)
   - Ask the user if questions arise
 
+## Bugfix Tasks
+
+- [x] 20. Add getById methods to frontend entity services (Bugfix: Entity Selection Persistence)
+  - [x] 20.1 Add getParticipantById to ParticipantService
+    - Create static method `getParticipantById(id: string): Promise<Participant>`
+    - Call GET /api/v1/participants/:id endpoint
+    - Return participant data
+    - Handle errors appropriately
+    - _Requirements: 12.1, 12.7_
+
+  - [x] 20.2 Add getActivityById to ActivityService
+    - Create static method `getActivityById(id: string): Promise<Activity>`
+    - Call GET /api/v1/activities/:id endpoint
+    - Return activity data with activityType populated
+    - Handle errors appropriately
+    - _Requirements: 12.2, 12.7_
+
+  - [x] 20.3 Add getVenueById to VenueService
+    - Create static method `getVenueById(id: string): Promise<Venue>`
+    - Call GET /api/v1/venues/:id endpoint
+    - Return venue data
+    - Handle errors appropriately
+    - _Requirements: 12.3, 12.7_
+
+  - [x] 20.4 Add getActivityTypeById to ActivityTypeService
+    - Create static method `getActivityTypeById(id: string): Promise<ActivityType>`
+    - Call GET /api/v1/activity-types/:id endpoint
+    - Return activity type data with activityCategory populated
+    - Handle errors appropriately
+    - _Requirements: 12.5, 12.7_
+
+  - [x] 20.5 Add getPopulationById to PopulationService
+    - Create static method `getPopulationById(id: string): Promise<Population>`
+    - Call GET /api/v1/populations/:id endpoint
+    - Return population data
+    - Handle errors appropriately
+    - _Requirements: 12.6, 12.7_
+
+  - [ ]* 20.6 Write unit tests for service getById methods
+    - Test successful fetch returns entity
+    - Test invalid ID throws error
+    - Test network errors are handled
+    - _Requirements: 12.7, 12.8_
+
+- [x] 21. Update AsyncEntitySelect component with ensure included support (Bugfix: Entity Selection Persistence)
+  - [x] 21.1 Add new props to AsyncEntitySelect interface
+    - Add optional `ensureIncluded?: string | null` prop
+    - Add optional `fetchByIdFunction?: (id: string) => Promise<any>` prop
+    - Update TypeScript interface definition
+    - _Requirements: 11.1, 12.9_
+
+  - [x] 21.2 Implement ensured entity fetching logic
+    - Add state to track ensured entity
+    - Add state to track fetch status
+    - Create useEffect to fetch ensured entity on mount
+    - Check if `ensureIncluded` and `fetchByIdFunction` are provided
+    - Fetch entity by ID using `fetchByIdFunction`
+    - Store fetched entity in state
+    - Mark fetch as complete (even on error)
+    - Log errors to console if fetch fails
+    - _Requirements: 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
+
+  - [x] 21.3 Merge ensured entity with search results
+    - Update options useMemo to include ensured entity
+    - Check if ensured entity is already in search results
+    - If not present, format ensured entity using `formatOption`
+    - Add formatted entity to beginning of options list
+    - Ensure ensured entity remains in options even when search query changes
+    - _Requirements: 11.4, 11.8, 12.13, 12.14_
+
+  - [x] 21.4 Implement React Query caching for fetch-by-ID
+    - Use useQuery hook for fetching ensured entity
+    - Set appropriate cache key
+    - Set staleTime to prevent unnecessary refetches
+    - Handle loading and error states
+    - _Requirements: 11.6, 12.13_
+
+  - [x] 21.5 Ensure backward compatibility
+    - Test component works without `ensureIncluded` prop
+    - Test component works without `fetchByIdFunction` prop
+    - Verify existing usages are not affected
+    - Ensure no breaking changes to public API
+    - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5_
+
+  - [ ]* 21.6 Write unit tests for AsyncEntitySelect ensure included
+    - Test ensured entity is fetched when not in initial results
+    - Test ensured entity is not fetched when already in results
+    - Test ensured entity is added to options list
+    - Test ensured entity remains visible during search
+    - Test component works without ensureIncluded (backward compatibility)
+    - Test error handling when fetch-by-ID fails
+    - _Requirements: 11.1-11.8_
+
+- [x] 22. Update MergeInitiationModal to use ensure included (Bugfix: Entity Selection Persistence)
+  - [x] 22.1 Update getEntityConfig to include fetchByIdFunction
+    - Add `fetchByIdFunction` property to return object for each entity type
+    - Map participant to `ParticipantService.getParticipantById`
+    - Map activity to `ActivityService.getActivityById`
+    - Map venue to `VenueService.getVenueById`
+    - Map geographicArea to `GeographicAreaService.getGeographicAreaById`
+    - Map activityType to `ActivityTypeService.getActivityTypeById`
+    - Map population to `PopulationService.getPopulationById`
+    - _Requirements: 12.10, 12.11, 12.12_
+
+  - [x] 22.2 Pass ensureIncluded to source AsyncEntitySelect
+    - Extract `fetchByIdFunction` from getEntityConfig
+    - Pass `ensureIncluded={sourceId}` prop to source AsyncEntitySelect
+    - Pass `fetchByIdFunction={fetchByIdFunction}` prop to source AsyncEntitySelect
+    - _Requirements: 11.9, 11.11_
+
+  - [x] 22.3 Pass ensureIncluded to destination AsyncEntitySelect
+    - Extract `fetchByIdFunction` from getEntityConfig
+    - Pass `ensureIncluded={destinationId}` prop to destination AsyncEntitySelect
+    - Pass `fetchByIdFunction={fetchByIdFunction}` prop to destination AsyncEntitySelect
+    - _Requirements: 11.10, 11.12_
+
+  - [x] 22.4 Verify swap functionality with ensured entities
+    - Test that swapping updates ensureIncluded props correctly
+    - Verify both entities remain visible after swap
+    - Ensure AsyncEntitySelect refetches newly ensured entities if needed
+    - _Requirements: 11.13, 11.14_
+
+  - [ ]* 22.5 Write integration tests for MergeInitiationModal
+    - Test source entity remains visible after selection
+    - Test destination entity remains visible after selection
+    - Test swap functionality with entities not in first page
+    - Test both entities remain visible after swap
+    - Test merge flow completes successfully with ensured entities
+    - _Requirements: 11.9-11.14_
+
+- [x] 23. Update ReconciliationPage to respect geographic filter (Bugfix: Geographic Filter Enforcement)
+  - [x] 23.1 Import useGlobalGeographicFilter hook
+    - Add import statement for the hook
+    - _Requirements: 13.1_
+  
+  - [x] 23.2 Extract selectedGeographicAreaId from hook
+    - Call useGlobalGeographicFilter() in component
+    - Destructure selectedGeographicAreaId
+    - _Requirements: 13.1_
+  
+  - [x] 23.3 Update fetchEntity function signature
+    - Add geographicAreaId parameter to fetchEntity function
+    - Make parameter optional for backward compatibility
+    - _Requirements: 13.2, 16.6_
+  
+  - [x] 23.4 Pass geographicAreaId to entity service calls
+    - Update ParticipantService.getParticipant call
+    - Update ActivityService.getActivity call
+    - Update VenueService.getVenue call
+    - Update GeographicAreaService.getGeographicArea call
+    - Pass geographicAreaId in params object
+    - _Requirements: 13.2_
+  
+  - [x] 23.5 Add selectedGeographicAreaId to useEffect dependencies
+    - Include selectedGeographicAreaId in dependency array
+    - Ensure re-fetch when filter changes
+    - _Requirements: 13.3_
+  
+  - [x] 23.6 Improve error handling for geographic authorization
+    - Check for 403 status code in error handling
+    - Check for geographic-related error messages
+    - Display clear error message about geographic restrictions
+    - _Requirements: 13.4, 15.1, 15.2, 15.3_
+  
+  - [x] 23.7 Add "Go Back" button in error state
+    - Display button when error occurs
+    - Navigate to previous page on click
+    - _Requirements: 15.4_
+
+- [x] 24. Verify backend entity services support geographic filtering (Bugfix: Geographic Filter Enforcement)
+  - [x] 24.1 Check ParticipantService.getParticipant method
+    - Verify method accepts geographicAreaId parameter
+    - Verify geographic authorization is enforced
+    - Add support if missing
+    - _Requirements: 14.1, 14.2_
+  
+  - [x] 24.2 Check ActivityService.getActivity method
+    - Verify method accepts geographicAreaId parameter
+    - Verify geographic authorization is enforced
+    - Add support if missing
+    - _Requirements: 14.1, 14.2_
+  
+  - [x] 24.3 Check VenueService.getVenue method
+    - Verify method accepts geographicAreaId parameter
+    - Verify geographic authorization is enforced
+    - Add support if missing
+    - _Requirements: 14.1, 14.2_
+  
+  - [x] 24.4 Check GeographicAreaService.getGeographicArea method
+    - Verify method accepts geographicAreaId parameter
+    - Verify geographic authorization is enforced
+    - Add support if missing
+    - _Requirements: 14.1, 14.2_
+
+- [ ] 25. Update merge services to enforce geographic authorization (Bugfix: Geographic Filter Enforcement)
+  - [ ] 25.1 Update ParticipantMergeService.merge method
+    - Add userId and geographicAreaId parameters
+    - Add geographic authorization check before merge
+    - Throw 403 error if authorization fails
+    - _Requirements: 14.1, 14.2, 14.3_
+  
+  - [ ] 25.2 Update ActivityMergeService.merge method
+    - Add userId and geographicAreaId parameters
+    - Add geographic authorization check before merge
+    - Throw 403 error if authorization fails
+    - _Requirements: 14.1, 14.2, 14.3_
+  
+  - [ ] 25.3 Update VenueMergeService.merge method
+    - Add userId and geographicAreaId parameters
+    - Add geographic authorization check before merge
+    - Throw 403 error if authorization fails
+    - _Requirements: 14.1, 14.2, 14.3_
+  
+  - [ ] 25.4 Update GeographicAreaMergeService.merge method
+    - Add userId and geographicAreaId parameters
+    - Add geographic authorization check before merge
+    - Throw 403 error if authorization fails
+    - _Requirements: 14.1, 14.2, 14.3_
+  
+  - [ ] 25.5 Update ActivityTypeMergeService.merge method
+    - Add userId and geographicAreaId parameters (for consistency)
+    - Geographic authorization may not apply to activity types
+    - _Requirements: 16.8_
+  
+  - [ ] 25.6 Update PopulationMergeService.merge method
+    - Add userId and geographicAreaId parameters (for consistency)
+    - Geographic authorization may not apply to populations
+    - _Requirements: 16.8_
+
+- [ ] 26. Update merge API routes to pass geographic filter (Bugfix: Geographic Filter Enforcement)
+  - [ ] 26.1 Update participant merge route
+    - Extract geographicAreaId from query parameters
+    - Extract userId from req.user
+    - Pass both to merge service
+    - _Requirements: 14.1_
+  
+  - [ ] 26.2 Update activity merge route
+    - Extract geographicAreaId from query parameters
+    - Extract userId from req.user
+    - Pass both to merge service
+    - _Requirements: 14.1_
+  
+  - [ ] 26.3 Update venue merge route
+    - Extract geographicAreaId from query parameters
+    - Extract userId from req.user
+    - Pass both to merge service
+    - _Requirements: 14.1_
+  
+  - [ ] 26.4 Update geographic area merge route
+    - Extract geographicAreaId from query parameters
+    - Extract userId from req.user
+    - Pass both to merge service
+    - _Requirements: 14.1_
+  
+  - [ ] 26.5 Update activity type merge route
+    - Extract geographicAreaId from query parameters (for consistency)
+    - Extract userId from req.user
+    - Pass both to merge service
+    - _Requirements: 16.8_
+  
+  - [ ] 26.6 Update population merge route
+    - Extract geographicAreaId from query parameters (for consistency)
+    - Extract userId from req.user
+    - Pass both to merge service
+    - _Requirements: 16.8_
+
+- [x] 27. Update frontend merge API service to pass geographic filter (Bugfix: Geographic Filter Enforcement)
+  - [x] 27.1 Update mergeParticipants method
+    - Accept geographicAreaId parameter
+    - Pass as query parameter in API call
+    - _Requirements: 13.2_
+  
+  - [x] 27.2 Update mergeActivities method
+    - Accept geographicAreaId parameter
+    - Pass as query parameter in API call
+    - _Requirements: 13.2_
+  
+  - [x] 27.3 Update mergeVenues method
+    - Accept geographicAreaId parameter
+    - Pass as query parameter in API call
+    - _Requirements: 13.2_
+  
+  - [x] 27.4 Update mergeGeographicAreas method
+    - Accept geographicAreaId parameter
+    - Pass as query parameter in API call
+    - _Requirements: 13.2_
+  
+  - [x] 27.5 Update ReconciliationPage to pass geographicAreaId to merge API
+    - Pass selectedGeographicAreaId to executeMerge function
+    - Update executeMerge to pass geographicAreaId to service methods
+    - _Requirements: 13.2_
+
+- [ ] 28. Add audit logging for geographic authorization failures (Bugfix: Geographic Filter Enforcement)
+  - [ ] 28.1 Log authorization failures in merge services
+    - Log userId, entityIds, and geographicAreaId
+    - Log timestamp and failure reason
+    - Use existing audit logging infrastructure
+    - _Requirements: 14.5_
+
+- [ ] 29. Testing for bugfixes
+  - [ ]* 29.1 Write unit test for ReconciliationPage with geographic filter
+    - Test that geographicAreaId is passed to fetch functions
+    - Test error handling for unauthorized entities
+    - Test re-fetch when filter changes
+    - _Requirements: 13.1, 13.2, 13.3, 13.4_
+  
+  - [ ]* 29.2 Write unit test for merge services with geographic authorization
+    - Test authorization check is performed
+    - Test 403 error when entities outside authorized area
+    - Test merge proceeds when entities are authorized
+    - _Requirements: 14.1, 14.2, 14.3_
+  
+  - [ ]* 29.3 Write integration test for merge flow with geographic filter
+    - Test complete flow from initiation to completion
+    - Test with entities within filtered area
+    - Test with entities outside filtered area
+    - _Requirements: All geographic filter requirements_
+  
+  - [ ]* 29.4 Manual testing with active geographic filter
+    - Test merge within filtered area
+    - Test merge with entity outside filtered area
+    - Verify error messages are clear
+    - _Requirements: 15.1, 15.2, 15.3, 15.4_
+  
+  - [ ]* 29.5 Manual testing without geographic filter
+    - Test merge works normally
+    - Verify backward compatibility
+    - _Requirements: 16.6, 16.7, 16.8, 16.9_
+
+- [x] 30. Final checkpoint - Verify all bugfixes work correctly
+  - Test MergeInitiationModal with entities not in first page of results
+  - Test swap functionality with ensured entities
+  - Test ReconciliationPage with active geographic filter
+  - Test merge with entities outside geographic filter
+  - Verify no regressions in existing functionality
+  - Ensure all tests pass
+  - Ask the user if questions arise
+
 ## Notes
 
 - Tasks marked with `*` are optional test-related sub-tasks and can be skipped for faster MVP

@@ -19,6 +19,10 @@ This document specifies the requirements for a record merging feature that allow
 - **Merge_Transaction**: A database transaction containing all merge operations
 - **Address_History_Entry**: A ParticipantAddressHistory record linking a participant to a venue
 - **Assignment**: A relationship between a participant and an activity through the Assignment table
+- **AsyncEntitySelect**: A reusable dropdown component for selecting entities with lazy loading and search
+- **Ensure_Included**: A pattern where a specific entity ID is fetched and added to dropdown options if not present in initial results
+- **Global_Geographic_Filter**: The application-wide filter that restricts data visibility to a specific geographic area and its descendants
+- **Geographic_Authorization**: The backend authorization mechanism that ensures users can only access entities within their authorized geographic areas
 
 ## Requirements
 
@@ -165,3 +169,100 @@ This document specifies the requirements for a record merging feature that allow
 6. THE System SHALL support merging for Population entities
 7. WHEN merging GeographicArea, Venue, Participant, or Activity entities, THE System SHALL treat them as Complex_Entity types requiring reconciliation
 8. WHEN merging ActivityType or Population entities, THE System SHALL treat them as Simple_Entity types without reconciliation
+
+### Requirement 11: Entity Selection Persistence
+
+**User Story:** As a user initiating a merge, I want the currently selected entity to remain visible in the dropdown even if it's not in the first page of results, so that I can see what I've selected and swap source/destination without losing my selection.
+
+#### Acceptance Criteria
+
+1. THE AsyncEntitySelect component SHALL accept an optional `ensureIncluded` prop containing an entity ID
+2. WHEN the `ensureIncluded` prop is provided, THE AsyncEntitySelect component SHALL fetch that specific entity by ID if it's not in the initial results
+3. WHEN fetching the ensured entity, THE AsyncEntitySelect component SHALL use the appropriate service method to fetch by ID
+4. WHEN the ensured entity is fetched successfully, THE AsyncEntitySelect component SHALL add it to the options list
+5. WHEN the ensured entity fetch fails, THE AsyncEntitySelect component SHALL log the error and continue without adding it
+6. THE AsyncEntitySelect component SHALL fetch the ensured entity only once during the initial load
+7. THE AsyncEntitySelect component SHALL NOT refetch the ensured entity when the search query changes
+8. WHEN the ensured entity is already present in the initial results, THE AsyncEntitySelect component SHALL NOT fetch it again
+9. THE MergeInitiationModal component SHALL pass the `sourceId` as the `ensureIncluded` prop to the source AsyncEntitySelect
+10. THE MergeInitiationModal component SHALL pass the `destinationId` as the `ensureIncluded` prop to the destination AsyncEntitySelect
+11. WHEN the source entity is selected, THE source AsyncEntitySelect SHALL ensure that entity remains in the options list
+12. WHEN the destination entity is selected, THE destination AsyncEntitySelect SHALL ensure that entity remains in the options list
+13. WHEN the user clicks the "Swap" button, THE MergeInitiationModal SHALL update both `ensureIncluded` props to reflect the swapped IDs
+14. WHEN the swap occurs, THE AsyncEntitySelect components SHALL fetch and display the newly ensured entities if not already present
+
+### Requirement 12: Entity Service Fetch by ID Support
+
+**User Story:** As a developer, I want all entity services to provide a consistent fetch-by-ID method, so that AsyncEntitySelect can fetch ensured entities for any entity type.
+
+#### Acceptance Criteria
+
+1. THE ParticipantService SHALL provide a `getParticipantById(id)` method
+2. THE ActivityService SHALL provide an `getActivityById(id)` method
+3. THE VenueService SHALL provide a `getVenueById(id)` method
+4. THE GeographicAreaService SHALL already provide a `getGeographicAreaById(id)` method (existing)
+5. THE ActivityTypeService SHALL provide a `getActivityTypeById(id)` method
+6. THE PopulationService SHALL provide a `getPopulationById(id)` method
+7. WHEN any fetch-by-ID method is called with a valid ID, THE service SHALL return the entity with all necessary fields for display
+8. WHEN any fetch-by-ID method is called with an invalid ID, THE service SHALL throw an appropriate error
+9. THE AsyncEntitySelect component SHALL accept an optional `fetchByIdFunction` prop
+10. WHEN the `fetchByIdFunction` prop is provided, THE AsyncEntitySelect component SHALL use it to fetch the ensured entity
+11. WHEN the `fetchByIdFunction` prop is not provided, THE AsyncEntitySelect component SHALL attempt to derive the fetch-by-ID method from the entity type
+12. THE AsyncEntitySelect component SHALL support fetch-by-ID for all entity types: participant, activity, venue, geographic-area, activity-type, population
+13. WHEN fetching by ID, THE AsyncEntitySelect component SHALL format the fetched entity using the provided `formatOption` function
+14. WHEN fetching by ID, THE AsyncEntitySelect component SHALL add the formatted entity to the options list if not already present
+
+### Requirement 13: Geographic Filter Enforcement in Reconciliation
+
+**User Story:** As a user with an active geographic area filter, I want the reconciliation page to only show entities within my filtered area, so that I cannot accidentally merge entities outside my authorized scope.
+
+#### Acceptance Criteria
+
+1. WHEN a user navigates to the reconciliation page with an active Global_Geographic_Filter, THE ReconciliationPage SHALL fetch source and destination entities using the filtered geographic area ID
+2. WHEN fetching entities for reconciliation, THE ReconciliationPage SHALL pass the `geographicAreaId` parameter to the entity fetch functions
+3. WHEN the Global_Geographic_Filter changes while on the reconciliation page, THE ReconciliationPage SHALL re-fetch entities with the updated filter
+4. WHEN an entity fetch fails due to geographic authorization, THE ReconciliationPage SHALL display a clear error message indicating the entity is not accessible within the current filter
+5. WHEN both source and destination entities are successfully fetched within the filtered area, THE ReconciliationPage SHALL display the reconciliation interface normally
+6. WHEN the MergeInitiationModal is displayed with an active Global_Geographic_Filter, THE AsyncEntitySelect components SHALL automatically filter entities by the selected geographic area
+7. WHEN a user selects source and destination entities, BOTH entities SHALL be within the filtered geographic area
+8. WHEN the user proceeds to reconciliation, THE selected entities SHALL be accessible within the current filter
+
+### Requirement 14: Geographic Authorization in Merge API
+
+**User Story:** As a system administrator, I want the merge API to enforce geographic authorization, so that users cannot merge entities outside their authorized areas even if they bypass the UI.
+
+#### Acceptance Criteria
+
+1. WHEN a merge API request is received, THE Backend SHALL verify that both source and destination entities are within the user's authorized geographic areas
+2. WHEN either the source or destination entity is outside the user's authorized areas, THE Backend SHALL return a 403 Forbidden error with a descriptive message
+3. WHEN both entities are within authorized areas, THE Backend SHALL proceed with the merge operation normally
+4. THE Backend SHALL use the existing geographic authorization middleware to enforce these checks
+5. THE Backend SHALL log any geographic authorization failures for audit purposes
+
+### Requirement 15: Geographic Error Handling and User Feedback
+
+**User Story:** As a user, I want clear error messages when I cannot merge entities due to geographic restrictions, so that I understand why the operation failed.
+
+#### Acceptance Criteria
+
+1. WHEN the reconciliation page cannot fetch an entity due to geographic authorization, THE Frontend SHALL display an Alert component with type "error"
+2. THE error message SHALL clearly state which entity (source or destination) is not accessible
+3. THE error message SHALL indicate that the entity is outside the current geographic filter
+4. THE Frontend SHALL provide a "Go Back" button to return to the previous page
+5. WHEN a merge API call fails due to geographic authorization, THE Frontend SHALL display the error message from the API response
+
+### Requirement 16: Backward Compatibility
+
+**User Story:** As a developer, I want the bugfixes to maintain backward compatibility, so that the merge feature works correctly both with and without active filters or in existing usage scenarios.
+
+#### Acceptance Criteria
+
+1. THE AsyncEntitySelect component SHALL continue to work without the `ensureIncluded` prop (optional)
+2. THE AsyncEntitySelect component SHALL continue to work without the `fetchByIdFunction` prop (optional)
+3. WHEN neither `ensureIncluded` nor `fetchByIdFunction` are provided, THE AsyncEntitySelect component SHALL behave exactly as before
+4. THE AsyncEntitySelect component SHALL NOT break any existing usages in the codebase
+5. THE AsyncEntitySelect component SHALL maintain the same public API surface (no breaking changes)
+6. WHEN no Global_Geographic_Filter is active, THE ReconciliationPage SHALL fetch entities without geographic restrictions
+7. WHEN no Global_Geographic_Filter is active, THE merge API SHALL not apply geographic authorization beyond the user's base permissions
+8. THE bugfixes SHALL NOT break existing merge functionality for users without geographic filters
+9. THE bugfixes SHALL NOT require changes to the database schema or API contracts

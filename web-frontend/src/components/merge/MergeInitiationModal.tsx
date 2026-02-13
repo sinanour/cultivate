@@ -109,7 +109,8 @@ export function MergeInitiationModal({
       setShowConfirmation(true);
     } else {
       // For complex entities, navigate to reconciliation page
-      navigate(`/merge/${entityType}/reconcile`, {
+      // Use URL parameters for reliability, with state as backup
+      navigate(`/merge/${entityType}/reconcile?source=${sourceId}&destination=${destinationId}`, {
         state: { sourceId, destinationId },
       });
       onDismiss();

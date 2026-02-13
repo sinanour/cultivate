@@ -96,6 +96,83 @@ The merge process follows these high-level steps:
    - Success: Frontend displays success message and redirects to destination entity
    - Failure: Frontend displays error message with details
 
+## Bug Fixes and Enhancements
+
+### Entity Selection Persistence
+
+**Problem**: Selected entities disappear from dropdowns in MergeInitiationModal when they are not in the first page of results.
+
+**Solution**: Implement "ensure included" pattern in AsyncEntitySelect component:
+
+1. **AsyncEntitySelect Enhancement**:
+   - Add `ensureIncluded` prop to specify an entity ID that must be included in options
+   - Add `fetchByIdFunction` prop to fetch specific entities by ID
+   - Fetch ensured entity on mount if not in initial results
+   - Merge ensured entity with search results
+   - Cache fetch-by-ID requests using React Query
+
+2. **Service Layer Updates**:
+   - Add `getById()` methods to all entity services (ParticipantService, ActivityService, VenueService, ActivityTypeService, PopulationService)
+   - GeographicAreaService already has this method
+
+3. **MergeInitiationModal Integration**:
+   - Pass `sourceId` as `ensureIncluded` to source AsyncEntitySelect
+   - Pass `destinationId` as `ensureIncluded` to destination AsyncEntitySelect
+   - Pass appropriate `fetchByIdFunction` for each entity type
+   - Update `ensureIncluded` props when swap occurs
+
+**Benefits**:
+- Selected entities remain visible even when not in first page
+- Swap functionality works correctly with entities from different pages
+- Follows proven pattern from useGeographicAreaOptions
+- Backward compatible (all new props are optional)
+
+### Geographic Filter Enforcement
+
+**Problem**: ReconciliationPage does not respect the global geographic area filter, allowing users to view and merge entities outside their authorized scope.
+
+**Solution**: Enforce geographic filtering throughout the merge flow:
+
+1. **ReconciliationPage Updates**:
+   - Import and use `useGlobalGeographicFilter` hook
+   - Pass `geographicAreaId` to entity fetch functions
+   - Re-fetch entities when filter changes
+   - Display clear error messages for geographic authorization failures
+   - Provide "Go Back" button in error state
+
+2. **Backend Service Updates**:
+   - Verify entity services support `geographicAreaId` parameter in getById methods
+   - Add geographic authorization checks in merge services
+   - Throw 403 errors when entities are outside authorized areas
+
+3. **Backend Route Updates**:
+   - Extract `geographicAreaId` from query parameters
+   - Extract `userId` from authenticated request
+   - Pass both to merge services for authorization
+
+4. **Frontend API Service Updates**:
+   - Accept `geographicAreaId` parameter in merge methods
+   - Pass as query parameter in API calls
+   - ReconciliationPage passes `selectedGeographicAreaId` to merge API
+
+**Benefits**:
+- Users cannot accidentally merge entities outside their authorized scope
+- Defense in depth: frontend filter + backend authorization
+- Clear error messages when geographic restrictions apply
+- Backward compatible (works with or without active filter)
+- Audit logging for geographic authorization failures
+
+**Data Flow with Geographic Filter**:
+
+```
+User with active filter → MergeInitiationModal (filtered ✓)
+  → ReconciliationPage (filtered ✓)
+    → Entity fetch WITH geographicAreaId
+      → Backend enforces geographic authorization
+        → User only sees entities within filtered area
+          → Clear error if entity not accessible
+```
+
 ## Components and Interfaces
 
 ### Frontend Components
@@ -143,6 +220,52 @@ interface MergeInitiationState {
 - Implements "Swap" button to exchange source and destination
 - Validates source ≠ destination before allowing confirmation
 - Displays clear visual indicators for merge direction (e.g., arrow icon)
+- **Bugfix**: Passes `ensureIncluded` and `fetchByIdFunction` props to AsyncEntitySelect components to ensure selected entities remain visible
+
+#### AsyncEntitySelect Component (Enhanced)
+
+**Purpose**: Reusable dropdown component for selecting entities with lazy loading, search, and ensure included support
+
+**New Props** (for bugfix):
+```typescript
+interface AsyncEntitySelectProps {
+  // ... existing props ...
+  
+  /** ID of a specific entity that must be included in options (e.g., when pre-selected) */
+  ensureIncluded?: string | null;
+  
+  /** Function to fetch a single entity by ID (required when ensureIncluded is provided) */
+  fetchByIdFunction?: (id: string) => Promise<any>;
+}
+```
+
+**Ensure Included Implementation**:
+1. **Initial Fetch Logic**:
+   - Fetch initial batch of entities using existing `fetchFunction`
+   - Check if `ensureIncluded` entity is in the results
+   - If not present and `fetchByIdFunction` is provided, fetch the entity by ID
+   - Add fetched entity to options list
+   - Format using existing `formatOption` function
+
+2. **Caching Strategy**:
+   - Fetch ensured entity only once during initial load
+   - Do NOT refetch when search query changes
+   - Use React Query for caching the fetch-by-ID request
+
+3. **Error Handling**:
+   - Log errors if ensured entity fetch fails
+   - Continue without adding the entity (graceful degradation)
+   - Do not block the component from rendering
+
+4. **State Management**:
+   - Track whether ensured entity has been fetched
+   - Merge ensured entity with search results
+   - Maintain ensured entity in options even when search query changes
+
+**Backward Compatibility**:
+- All new props are optional
+- Component works without `ensureIncluded` or `fetchByIdFunction`
+- Existing usages continue to work without modification
 
 #### ReconciliationPage
 
@@ -163,6 +286,7 @@ interface ReconciliationPageProps {
 ```typescript
 interface ReconciliationState {
   fieldSelections: Record<string, 'source' | 'destination'>;
+  selectedGeographicAreaId: string | null; // Bugfix: for geographic filter
 }
 ```
 
@@ -171,6 +295,10 @@ interface ReconciliationState {
 - Columns: Field Name | Source Value (Card) | Destination Value (Card)
 - Each row represents one field to reconcile
 - Source and destination values rendered as Card components with entireCardClickable
+- **Bugfix**: Uses `useGlobalGeographicFilter` hook to respect active geographic filter
+- **Bugfix**: Passes `geographicAreaId` to entity fetch functions
+- **Bugfix**: Re-fetches entities when filter changes
+- **Bugfix**: Displays clear error messages for geographic authorization failures
 - Responsive: Table automatically adapts to mobile screens
 
 **Table Structure**:
