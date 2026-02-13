@@ -877,8 +877,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Add delete button with confirmation dialog
     - Add "Apply Filter" button in header section
     - When "Apply Filter" button clicked, update global geographic area filter to current area using setGeographicAreaFilter from GlobalGeographicFilterContext
-    - When "Apply Filter" button clicked, navigate to geographic areas list page (/geographic-areas) where filter is applied
-    - _Requirements: 6B.8, 6B.11, 6B.19, 6B.19a, 6B.19b, 6B.19c, 6B.19d, 6B.19e, 6B.19f, 6B.19g, 6B.19h, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
+    - _Requirements: 6B.8, 6B.11, 6B.19, 6B.19a, 6B.19b, 6B.19c, 6B.19d, 6B.19e, 6B.19f, 6B.19g, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
   - [x] 9.3a Update GeographicAreaService to pass global filter to children endpoint
     - Update getChildren(id) method to accept optional geographicAreaId parameter
@@ -911,7 +910,7 @@ This implementation plan covers the React-based web application built with TypeS
 
   - [ ]* 9.4a Write property test for Apply Filter button
     - **Property 54a: Geographic Area Apply Filter Button**
-    - **Validates: Requirements 6B.19a, 6B.19b, 6B.19c**
+    - **Validates: Requirements 6B.19a, 6B.19b**
 
 - [x] 10. Checkpoint - Verify core entity management UI
   - Ensure all tests pass, ask the user if questions arise.

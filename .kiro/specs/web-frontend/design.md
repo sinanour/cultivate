@@ -714,7 +714,6 @@ src/
 - Positions edit button as right-most action in header (before Back button)
 - Navigates to /geographic-areas/:id/edit when edit button is clicked
 - When "Apply Filter" button is clicked, updates the global geographic area filter to the current geographic area
-- When "Apply Filter" button is clicked, navigates to the geographic areas list view where the filter is applied
 - Shows confirmation dialog when delete button is clicked
 - Navigates to geographic area list page after successful deletion
 - Displays error message when deletion fails

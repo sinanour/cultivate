@@ -198,7 +198,6 @@ export function GeographicAreaDetail() {
                   onClick={() => {
                     if (id) {
                       setGeographicAreaFilter(id);
-                      navigate('/geographic-areas');
                     }
                   }}
                 >
