@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
@@ -20,7 +20,6 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { formatDate } from '../../utils/date.utils';
 import { ImportResultsModal } from '../common/ImportResultsModal';
-import { ProgressIndicator } from '../common/ProgressIndicator';
 import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
@@ -29,8 +28,7 @@ import type { ImportResult } from '../../types/csv.types';
 import { invalidatePageCaches, getListPageQueryKeys } from '../../utils/cache-invalidation.utils';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
-const ITEMS_PER_PAGE = 10;
-const BATCH_SIZE = 100;
+const ITEMS_PER_PAGE = 100;
 
 // Helper function to convert YYYY-MM-DD to ISO datetime string
 function toISODateTime(dateString: string, isEndOfDay = false): string {
@@ -57,7 +55,6 @@ export function ActivityList() {
   const [showImportResults, setShowImportResults] = useState(false);
   const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isFetchingRef = useRef(false);
 
   // Separate state variables (like EngagementDashboard) - NOT a single filterState object
   const [dateRange, setDateRange] = useState<FilterGroupingState['dateRange']>(null);
@@ -69,14 +66,6 @@ export function ActivityList() {
   // Bidirectional cache: label ↔ UUID (for converting labels to UUIDs for API calls)
   const [labelToUuid, setLabelToUuid] = useState<Map<string, string>>(new Map());
 
-  // Batched loading state
-  const [allActivities, setAllActivities] = useState<Activity[]>([]);
-  const currentBatchPageRef = useRef(1); // Use ref instead of state to avoid stale closures
-  const [totalCount, setTotalCount] = useState(0);
-  const [isLoadingBatch, setIsLoadingBatch] = useState(false);
-  const [loadingError, setLoadingError] = useState<string | undefined>();
-  const [hasMorePages, setHasMorePages] = useState(true);
-  const [isCancelled, setIsCancelled] = useState(false); // Track if user cancelled loading
   const [filtersReady, setFiltersReady] = useState(false); // Track if initial filters are resolved
 
   // Helper to add to cache (label -> UUID mapping)
@@ -234,6 +223,7 @@ export function ActivityList() {
   const handleFilterUpdate = (state: FilterGroupingState) => {
     setDateRange(state.dateRange);
     setPropertyFilterQuery(state.filterTokens);
+    setCurrentPageIndex(1); // Reset to page 1 when filters change
   };
 
   // Handler for when initial URL filter resolution completes
@@ -304,115 +294,47 @@ export function ActivityList() {
     return params;
   }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, labelToUuid]);
 
+  // Fetch activities using React Query with pagination
+  const {
+    data: activitiesData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      "activities",
+      currentPageIndex,
+      ITEMS_PER_PAGE,
+      filterParams,
+    ],
+    queryFn: async () => {
+      const response = await ActivityService.getActivitiesFlexible({
+        page: currentPageIndex,
+        limit: ITEMS_PER_PAGE,
+        ...filterParams
+      });
+      return response;
+    },
+    enabled: filtersReady, // Only fetch when filters are ready
+    staleTime: 30000, // Cache for 30 seconds
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching
+  });
+
+  const activities = activitiesData?.data || [];
+  const totalCount = activitiesData?.pagination.total || 0;
+  const totalPages = activitiesData?.pagination.totalPages || 0;
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => ActivityService.deleteActivity(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       setDeleteError('');
-      // Reset batched loading
-      setAllActivities([]);
-      currentBatchPageRef.current = 1; // Reset page ref
-      setHasMorePages(true);
+      setCurrentPageIndex(1); // Reset to page 1 after deletion
     },
     onError: (error: Error) => {
       setDeleteError(error.message || 'Failed to remove activity.');
     },
   });
-
-  // Reset state when filters change
-  useEffect(() => {
-    setAllActivities([]);
-    currentBatchPageRef.current = 1; // Reset page ref
-    setTotalCount(0);
-    setIsLoadingBatch(false);
-    setLoadingError(undefined);
-    setHasMorePages(true);
-    setIsCancelled(false);
-    isFetchingRef.current = false;
-  }, [selectedGeographicAreaId, dateRange, propertyFilterQuery]);
-
-  // Function to fetch next batch
-  const fetchNextBatch = useCallback(async () => {
-    if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
-
-    isFetchingRef.current = true;
-    setIsLoadingBatch(true);
-    setLoadingError(undefined);
-
-    try {
-      // Capture current page from ref to avoid stale closure
-      const pageToFetch = currentBatchPageRef.current;
-      
-      const response = await ActivityService.getActivitiesFlexible({
-        page: pageToFetch,
-        limit: BATCH_SIZE,
-        ...filterParams
-      });
-      
-      // If this is the first page, replace activities instead of appending
-      if (pageToFetch === 1) {
-        setAllActivities(response.data);
-      } else {
-        setAllActivities(prev => [...prev, ...response.data]);
-      }
-      setTotalCount(response.pagination.total);
-      setHasMorePages(pageToFetch < response.pagination.totalPages);
-      currentBatchPageRef.current = pageToFetch + 1; // Increment page ref
-    } catch (error) {
-      console.error('Error fetching activities batch:', error);
-      setLoadingError(error instanceof Error ? error.message : 'Failed to load activities');
-    } finally {
-      setIsLoadingBatch(false);
-      isFetchingRef.current = false;
-    }
-  }, [isLoadingBatch, hasMorePages, filterParams, isCancelled]);
-
-  // Cancel loading handler
-  const handleCancelLoading = useCallback(() => {
-    setIsCancelled(true);
-    setHasMorePages(false); // Stop auto-fetching
-    isFetchingRef.current = false;
-  }, []);
-
-  // Resume loading handler
-  const handleResumeLoading = useCallback(() => {
-    setIsCancelled(false);
-    setHasMorePages(true);
-    // Trigger next batch fetch
-    fetchNextBatch();
-  }, [fetchNextBatch]);
-
-  // Fetch first batch on mount or when filters change (only when page is 1)
-  useEffect(() => {
-    // Wait for filters to be ready before fetching
-    if (!filtersReady) return;
-    
-    if (currentBatchPageRef.current === 1 && hasMorePages && !isLoadingBatch && allActivities.length === 0 && !isFetchingRef.current) {
-      fetchNextBatch();
-    }
-  }, [hasMorePages, isLoadingBatch, allActivities.length, fetchNextBatch, filtersReady]);
-
-  // Auto-fetch next batch after previous batch renders
-  useEffect(() => {
-    if (!isLoadingBatch && hasMorePages && currentBatchPageRef.current > 1) {
-      const timer = setTimeout(() => {
-        fetchNextBatch();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoadingBatch, hasMorePages, fetchNextBatch]);
-
-  // Retry function
-  const handleRetry = useCallback(() => {
-    setLoadingError(undefined);
-    fetchNextBatch();
-  }, [fetchNextBatch]);
-
-  // Pagination for display
-  const paginatedActivities = useMemo(() => {
-    const startIndex = (currentPageIndex - 1) * ITEMS_PER_PAGE;
-    return allActivities.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [allActivities, currentPageIndex]);
 
   const handleEdit = (activity: Activity) => {
     navigate(`/activities/${activity.id}/edit`);
@@ -466,10 +388,7 @@ export function ActivityList() {
 
       if (result.successCount > 0) {
         queryClient.invalidateQueries({ queryKey: ['activities'] });
-        // Reset batched loading
-        setAllActivities([]);
-        currentBatchPageRef.current = 1; // Reset page ref
-        setHasMorePages(true);
+        setCurrentPageIndex(1); // Reset to page 1 after import
       }
     } catch (error) {
       setCsvError(error instanceof Error ? error.message : 'Failed to import activities');
@@ -481,8 +400,6 @@ export function ActivityList() {
     }
   };
 
-  const isLoading = isLoadingBatch && currentBatchPageRef.current === 1;
-  const loadedCount = allActivities.length;
   const hasActiveFilters = propertyFilterQuery.tokens.length > 0 || dateRange !== null;
 
   // Pull-to-refresh handler
@@ -493,18 +410,12 @@ export function ActivityList() {
       clearLocalStorage: false // Don't clear localStorage to preserve auth
     });
 
-    // Reset pagination and batched loading state
-    setAllActivities([]);
-    currentBatchPageRef.current = 1;
-    setTotalCount(0);
-    setHasMorePages(true);
-    setIsCancelled(false);
+    // Reset pagination
     setCurrentPageIndex(1);
-    isFetchingRef.current = false;
 
-    // Trigger initial batch fetch
-    await fetchNextBatch();
-  }, [queryClient, fetchNextBatch]);
+    // Trigger refetch
+    await refetch();
+  }, [queryClient, refetch]);
 
   return (
     <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
@@ -527,18 +438,18 @@ export function ActivityList() {
           {csvError}
         </Alert>
       )}
-      {loadingError && (
+        {error && (
         <Alert
           type="error"
           dismissible
-          onDismiss={() => setLoadingError(undefined)}
+            onDismiss={() => { }}
           action={
-            <Button onClick={handleRetry} iconName="refresh">
+            <Button onClick={() => refetch()} iconName="refresh">
               Retry
             </Button>
           }
         >
-          {loadingError}
+            {error instanceof Error ? error.message : 'Failed to load activities'}
         </Alert>
       )}
       
@@ -614,7 +525,7 @@ export function ActivityList() {
             ),
           },
         ]}
-        items={paginatedActivities}
+          items={activities}
         loading={isLoading}
         loadingText="Loading activities"
         sortingDisabled
@@ -694,34 +605,20 @@ export function ActivityList() {
             }
           >
             <Box display="inline" fontSize="heading-l" fontWeight="bold">
-              <SpaceBetween direction="horizontal" size="xs">
-                <Box display="inline-block" variant="h1">
-                  <SpaceBetween direction="horizontal" size="xs">
-                      <span>Activities</span>
-                      {loadedCount >= totalCount && totalCount > 0 && (
-                        <Box display="inline" color="text-status-inactive" variant="h1" fontWeight="normal">
-                          ({loadedCount})
-                        </Box>
-                      )}
-                  </SpaceBetween>
-                </Box>
-                <ProgressIndicator
-                  loadedCount={loadedCount}
-                  totalCount={totalCount}
-                  entityName="activities"
-                  onCancel={handleCancelLoading}
-                  onResume={handleResumeLoading}
-                  isCancelled={isCancelled}
-                />
-              </SpaceBetween>
+              Activities {totalCount > 0 && `(${totalCount.toLocaleString()})`}
             </Box>
           </Header>
         }
         pagination={
           <Pagination
             currentPageIndex={currentPageIndex}
-            pagesCount={Math.ceil(allActivities.length / ITEMS_PER_PAGE)}
+            pagesCount={totalPages}
             onChange={({ detail }) => setCurrentPageIndex(detail.currentPageIndex)}
+            ariaLabels={{
+              nextPageLabel: "Next page",
+              previousPageLabel: "Previous page",
+              pageLabel: (pageNumber) => `Page ${pageNumber}`,
+            }}
           />
         }
       />

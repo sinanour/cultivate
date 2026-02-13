@@ -297,18 +297,14 @@ src/
 
 **ParticipantList**
 - Displays table with search, sort, and filter capabilities
-- Uses CloudScape Table with batched pagination (100 items per batch)
-- Fetches participants in batches and renders incrementally
-- Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
-- Loading indicator positioned next to entity count in header
-- Cancel button allows user to interrupt batched loading at any point
-- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
-- Resume button positioned near entity count where loading indicator was displayed
-- When Resume button is clicked, continues fetching batches from where loading was interrupted
-- Resume button visible only when loading was cancelled and more items remain to load
-- Resume button hidden when all items loaded or when filters change
-- Does NOT use Alert components for loading progress
-- Allows interaction with already-loaded participants while additional batches load
+- Uses CloudScape Table with native pagination (100 items per page default)
+- Fetches only the requested page from backend on-demand when user navigates
+- Displays total count in table header (e.g., "4,725 participants")
+- Uses CloudScape Table's built-in loading indicator while fetching page data
+- Allows users to change page size using Table's page size selector
+- Caches fetched pages using React Query for improved performance
+- Invalidates page caches when filters change or data mutations occur
+- Resets to page 1 when filters are applied
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
 - Displays population badges beside each participant name using CloudScape Badge component
 - Retrieves population data from populations array field included in API response (no additional API calls)
@@ -426,19 +422,14 @@ src/
 - **URL Filter Initialization:** When page loads with URL filter parameters, waits for FilterGroupingPanel to resolve display names to UUIDs before fetching activity data
 - **URL Filter Initialization:** When page loads without URL filter parameters, immediately fetches activity data
 - **URL Filter Initialization:** After FilterGroupingPanel resolves URL filters, automatically triggers initial data fetch with resolved filter values
-- Uses CloudScape Table with batched pagination (100 items per batch)
-- Fetches activities in batches and renders incrementally
-- Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
-- Loading indicator positioned next to entity count in header
-- Cancel button allows user to interrupt batched loading at any point
-- When cancelled, keeps already-loaded entities visible and stops fetching additional batches
-- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
-- Resume button positioned near entity count where loading indicator was displayed
-- When Resume button is clicked, continues fetching batches from where loading was interrupted
-- Resume button visible only when loading was cancelled and more items remain to load
-- Resume button hidden when all items loaded or when filters change
-- Does NOT use Alert components for loading progress
-- Allows interaction with already-loaded activities while additional batches load
+- Uses CloudScape Table with native pagination (100 items per page default)
+- Fetches only the requested page from backend on-demand when user navigates
+- Displays total count in table header (e.g., "2,341 activities")
+- Uses CloudScape Table's built-in loading indicator while fetching page data
+- Allows users to change page size using Table's page size selector
+- Caches fetched pages using React Query for improved performance
+- Invalidates page caches when filters change or data mutations occur
+- Resets to page 1 when filters are applied
 - Renders activity name as hyperlink in primary column (links to /activities/:id)
 - Shows activity category and type
 - Visually distinguishes finite vs ongoing activities
@@ -561,18 +552,14 @@ src/
 - Uses green color badge for PRIVATE_RESIDENCE venue type
 - Uses medium severity color (orange/warning) badge for PUBLIC_BUILDING venue type
 - Leaves venue type cell blank when venue type is null
-- Uses CloudScape Table with batched pagination (100 items per batch)
-- Fetches venues in batches and renders incrementally
-- Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
-- Loading indicator positioned next to entity count in header
-- Cancel button allows user to interrupt batched loading at any point
-- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
-- Resume button positioned near entity count where loading indicator was displayed
-- When Resume button is clicked, continues fetching batches from where loading was interrupted
-- Resume button visible only when loading was cancelled and more items remain to load
-- Resume button hidden when all items loaded or when filters change
-- Does NOT use Alert components for loading progress
-- Allows interaction with already-loaded venues while additional batches load
+- Uses CloudScape Table with native pagination (100 items per page default)
+- Fetches only the requested page from backend on-demand when user navigates
+- Displays total count in table header (e.g., "1,823 venues")
+- Uses CloudScape Table's built-in loading indicator while fetching page data
+- Allows users to change page size using Table's page size selector
+- Caches fetched pages using React Query for improved performance
+- Invalidates page caches when filters change or data mutations occur
+- Resets to page 1 when filters are applied
 - Renders venue name as hyperlink in primary column (links to /venues/:id)
 - Renders geographic area name as hyperlink in geographic area column (links to /geographic-areas/:id)
 - Provides actions for edit and delete (no separate View button)
@@ -1353,26 +1340,25 @@ src/
 - Integrates seamlessly with existing chart configurations
 
 **ProgressIndicator**
-- Reusable component for displaying batched loading progress with pause and resume functionality
-- Encapsulates the common loading UI pattern used across all list views and map view
+- Reusable component for displaying batched loading progress with pause and resume functionality for Map View
+- Encapsulates the loading UI pattern used for map marker loading
 - Consists of an icon button (pause/play) followed by a CloudScape ProgressBar component
 - Icon button displays "pause" icon during active loading, "play" icon when paused
-- ProgressBar displays label with entity count: "Loading X / Y {entityName}..." when active
-- ProgressBar displays label with entity count: "Loaded X / Y {entityName}." when paused
+- ProgressBar displays label with marker count: "Loading X / Y markers..." when active
+- ProgressBar displays label with marker count: "Loaded X / Y markers." when paused
 - ProgressBar calculates and displays percentage progress value
 - ProgressBar remains visible in both active and paused states
 - Unmounts completely (returns null) when loading is complete
 - Uses CloudScape SpaceBetween for horizontal layout with icon button on left
-- Supports customizable entity names (e.g., "participants", "activities", "venues", "markers")
+- Supports customizable entity names (e.g., "markers")
 - Provides accessible keyboard navigation and ARIA labels for screen readers
-- Entity counts in list headers are hidden during loading and paused states to prevent button position shifts
-- Entity counts only appear after ProgressIndicator unmounts (when loading is complete)
+- Positioned as an overlay on the map view near map controls
 
 **Implementation Details:**
 - Accepts props:
   - loadedCount: number - Number of items currently loaded
   - totalCount: number - Total number of items to load
-  - entityName: string - Name of entity type for display (e.g., "participants", "markers")
+  - entityName: string - Name of entity type for display (e.g., "markers")
   - onCancel: () => void - Callback invoked when pause button is clicked
   - onResume: () => void - Callback invoked when play button is clicked
   - isCancelled: boolean - Whether loading has been paused by user
@@ -1383,13 +1369,8 @@ src/
 - ProgressBar label when active: "Loading {loadedCount} / {totalCount} {entityName}..."
 - ProgressBar label when paused: "Loaded {loadedCount} / {totalCount} {entityName}."
 - Includes appropriate ARIA labels: "Pause loading" and "Resume loading {entityName}"
-- Parent components conditionally render entity count only when loadedCount >= totalCount
 
-**Usage Examples:**
-- ParticipantList header: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="participants" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
-- ActivityList header: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="activities" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
-- VenueList header: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="venues" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
-- GeographicAreaList: Similar pattern for tree node loading progress
+**Usage Example:**
 - MapView overlay: `<ProgressIndicator loadedCount={loadedCount} totalCount={totalCount} entityName="markers" onCancel={handleCancelLoading} onResume={handleResumeLoading} isCancelled={isCancelled} />`
 
 **PopulationBadge (Rendering Pattern)**

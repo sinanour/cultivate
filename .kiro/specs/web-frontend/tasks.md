@@ -372,27 +372,23 @@ This implementation plan covers the React-based web application built with TypeS
     - Clean up blocker on component unmount
     - _Requirements: 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
 
-  - [x] 7.1 Create ParticipantList component with batched incremental loading
+  - [x] 7.1 Create ParticipantList component with CloudScape Table native pagination
     - Display table with search, sort, and filter
-    - Use CloudScape Table with batched pagination (100 items per batch)
-    - Implement batched loading: fetch participants in batches of 100 using pagination
-    - Render table rows incrementally as each batch is fetched
-    - Display progress indicator during loading ("Loading participants: X / Y")
-    - Update progress indicator after each batch is rendered
-    - Allow users to interact with already-loaded rows (click, select) while additional batches load
-    - Automatically fetch next batch after previous batch is rendered
-    - Use pagination metadata (total count) from API to determine if more batches available
-    - Remove loading indicator when all batches are fetched
-    - Handle batch fetching errors with retry button
-    - Implement Cancel button to interrupt batched loading
-    - When loading is cancelled, keep already-loaded participants visible
-    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
-    - Position Resume button near entity count where loading indicator was displayed
-    - When Resume button is clicked, continue fetching batches from where loading was interrupted
-    - Show Resume button only when loading was cancelled and more items remain
-    - Hide Resume button when all items loaded or when filters change
-    - Implement client-side search
-    - _Requirements: 4.1, 4.2, 4.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.17, 26A.18, 26A.19, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
+    - Use CloudScape Table with native pagination enabled
+    - Set default page size to 100 items per page
+    - Configure Table pagination prop with pagesCount calculated from total count
+    - Fetch only requested page from backend using GET /api/v1/participants?page=X&limit=Y
+    - Extract total count from API response metadata
+    - Display total count in table header (e.g., "4,725 participants")
+    - Handle onPaginationChange events from CloudScape Table
+    - Fetch new page data when user navigates to different page
+    - Use React Query to cache fetched pages
+    - Invalidate page caches when filters change
+    - Reset to page 1 when filters are applied
+    - Display CloudScape Table's built-in loading indicator while fetching
+    - Allow users to change page size using Table's page size selector
+    - Handle page fetch errors with CloudScape Alert and retry button
+    - _Requirements: 4.1, 4.2, 4.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.11, 26A.12, 26A.13, 26A.14, 26A.15, 26A.28, 26A.29, 26A.30, 26A.31, 26A.32, 26A.33, 26A.34, 26A.35, 26A.36, 26A.37_
 
   - [ ]* 7.2 Write property test for participant list display
     - **Property 5: Participant List Display**
@@ -402,12 +398,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 6: Participant Search Functionality**
     - **Validates: Requirements 4.2**
 
-  - [ ]* 7.3a Write property tests for batched loading with resume
-    - **Property 187: Batched Loading Cancellation**
-    - **Property 188: Resume Button Display After Cancellation**
-    - **Property 189: Resume Button Continues Loading**
-    - **Property 190: Resume Button Visibility Logic**
-    - **Validates: Requirements 26B.17, 26B.18, 26B.19, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.29, 26B.30, 26B.31**
+  - [ ]* 7.3a Write property tests for CloudScape Table pagination
+    - **Property 187: Table Pagination Page Fetching**
+    - **Property 188: Table Page Size Selection**
+    - **Property 189: Table Page Navigation**
+    - **Property 190: Table Cache Invalidation on Filter Change**
+    - **Validates: Requirements 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.11, 26A.12, 26A.13, 26A.14, 26A.15, 26A.28, 26A.29, 26A.30, 26A.31**
 
   - [x] 7.3b Integrate FilterGroupingPanel into ParticipantList
     - Import FilterGroupingPanel component
@@ -429,8 +425,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during data fetching
     - Integrate FilterGroupingPanel filters with global geographic area filter using AND logic
-    - Maintain existing batched loading behavior (100 items per batch)
-    - Keep ProgressIndicator for batched loading feedback
+    - Use CloudScape Table native pagination (no custom batched loading)
     - _Requirements: 5B.1, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.11, 5B.12, 5B.13, 5B.14, 5B.15, 5B.16, 5B.17, 5B.18, 5B.19, 5B.20, 5B.21, 5B.22, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
 
   - [ ]* 7.3c Write property tests for ParticipantList FilterGroupingPanel integration
@@ -610,35 +605,30 @@ This implementation plan covers the React-based web application built with TypeS
       - **Validates: Requirements 4.21, 4.22, 4.23, 4.24, 4.25, 4.26**
 
 - [x] 8. Implement venue management UI
-  - [x] 8.1 Create VenueList component with batched incremental loading
+  - [x] 8.1 Create VenueList component with CloudScape Table native pagination
     - Display table with name, address, geographic area, and venue type
     - Include venue type column in the table
     - When venue has a venue type specified, render it as CloudScape Badge component
     - Use green color badge for PRIVATE_RESIDENCE venue type
     - Use medium severity color (orange/warning) badge for PUBLIC_BUILDING venue type
     - Leave venue type cell blank when venue type is null
-    - Use CloudScape Table with batched pagination (100 items per batch)
-    - Implement batched loading: fetch venues in batches of 100 using pagination
-    - Render table rows incrementally as each batch is fetched
-    - Display progress indicator during loading ("Loading venues: X / Y")
-    - Update progress indicator after each batch is rendered
-    - Allow users to interact with already-loaded rows while additional batches load
-    - Automatically fetch next batch after previous batch is rendered
-    - Use pagination metadata (total count) from API to determine if more batches available
-    - Remove loading indicator when all batches are fetched
-    - Handle batch fetching errors with retry button
-    - Implement Cancel button to interrupt batched loading
-    - When loading is cancelled, keep already-loaded venues visible
-    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
-    - Position Resume button near entity count where loading indicator was displayed
-    - When Resume button is clicked, continue fetching batches from where loading was interrupted
-    - Show Resume button only when loading was cancelled and more items remain
-    - Hide Resume button when all items loaded or when filters change
+    - Use CloudScape Table with native pagination enabled
+    - Set default page size to 100 items per page
+    - Configure Table pagination prop with pagesCount calculated from total count
+    - Fetch only requested page from backend using GET /api/v1/venues?page=X&limit=Y
+    - Extract total count from API response metadata
+    - Display total count in table header (e.g., "1,823 venues")
+    - Handle onPaginationChange events from CloudScape Table
+    - Fetch new page data when user navigates to different page
+    - Use React Query to cache fetched pages
+    - Invalidate page caches when filters change
+    - Reset to page 1 when filters are applied
+    - Display CloudScape Table's built-in loading indicator while fetching
+    - Allow users to change page size using Table's page size selector
+    - Handle page fetch errors with CloudScape Alert and retry button
     - Render venue name as hyperlink to /venues/:id
     - Render geographic area name as hyperlink to /geographic-areas/:id
-    - Implement search via /venues/search?q= endpoint, sort, and filter
-    - Support optional pagination
-    - _Requirements: 6A.1, 6A.1a, 6A.1b, 6A.1c, 6A.1d, 6A.1e, 6A.1f, 6A.2, 6A.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.20, 26A.21, 26A.22, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
+    - _Requirements: 6A.1, 6A.1a, 6A.1b, 6A.1c, 6A.1d, 6A.1e, 6A.1f, 6A.2, 6A.3, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.22, 26A.23, 26A.24, 26A.25, 26A.26, 26A.27, 26A.28, 26A.29, 26A.30, 26A.31, 26A.32, 26A.33, 26A.34, 26A.35, 26A.36, 26A.37_
 
   - [ ]* 8.2 Write property tests for venue list and search
     - **Property 44: Venue List Display**
@@ -667,8 +657,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Note: URL synchronization is now handled by FilterGroupingPanel internally
     - Pass isLoading prop to FilterGroupingPanel during data fetching
     - Integrate FilterGroupingPanel filters with global geographic area filter using AND logic
-    - Maintain existing batched loading behavior (100 items per batch)
-    - Keep ProgressIndicator for batched loading feedback
+    - Use CloudScape Table native pagination (no custom batched loading)
     - _Requirements: 5B.2, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.11, 5B.23, 5B.24, 5B.25, 5B.26, 5B.27, 5B.28, 5B.29, 5B.30, 5B.31, 5B.32, 5B.33, 5B.34, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
 
   - [ ]* 8.1b Write property tests for VenueList FilterGroupingPanel integration
@@ -954,22 +943,18 @@ This implementation plan covers the React-based web application built with TypeS
     - Pass isLoading prop to FilterGroupingPanel during data fetching
     - Integrate FilterGroupingPanel filters with global geographic area filter using AND logic
     - Provide comprehensive i18nStrings for PropertyFilter accessibility
-    - Maintain existing batched loading behavior (100 items per batch)
-    - Keep ProgressIndicator for batched loading feedback
+    - Use CloudScape Table native pagination (no custom batched loading)
     - _Requirements: 5B.3, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.11, 5B.35, 5B.36, 5B.37, 5B.38, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.7, 5A.8, 5A.9, 5A.10, 5A.11, 5A.12, 5A.13, 5A.14, 5A.15, 5A.16, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.26, 5A.27, 5A.28, 5A.29, 5A.30, 5A.31, 5A.32, 5A.33, 5A.34, 5A.35, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
-    - When Resume button is clicked, continue fetching batches from where loading was interrupted
-    - Show Resume button only when loading was cancelled and more items remain
-    - Hide Resume button when all items loaded or when filters change
-    - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11, 5.12, 5.13, 5.14, 5.15, 5.16, 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.7, 5A.8, 5A.9, 5A.10, 5A.11, 5A.12, 5A.13, 5A.14, 5A.15, 5A.16, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.26, 5A.27, 5A.28, 5A.29, 5A.30, 5A.31, 5A.32, 5A.33, 5A.34, 5A.35, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
 
-  - [ ]* 11.1a Write property tests for ActivityList FilterGroupingPanel integration
+  - [ ]* 11.1a Write property tests for ActivityList FilterGroupingPanel integration and pagination
     - **Property 182: FilterGroupingPanel Token Consolidation**
     - **Property 183: FilterGroupingPanel Display Name Rendering**
     - **Property 184: FilterGroupingPanel URL Synchronization**
     - **Property 185: FilterGroupingPanel Multi-Dimensional Logic**
     - **Property 186: FilterGroupingPanel De-duplication**
     - **Property 210: ActivityList FilterGroupingPanel Configuration**
-    - **Validates: Requirements 5B.3, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.35, 5B.36, 5B.37, 5B.38, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5A.13, 5A.14, 5A.15, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.27, 5A.28**
+    - **Property 211: ActivityList CloudScape Table Pagination**
+    - **Validates: Requirements 5B.3, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.35, 5B.36, 5B.37, 5B.38, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5A.13, 5A.14, 5A.15, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.27, 5A.28, 26A.16, 26A.17, 26A.18, 26A.19, 26A.20, 26A.21**
 
   - [ ]* 11.2 Write property tests for activity list
     - **Property 11: Activity List Display**

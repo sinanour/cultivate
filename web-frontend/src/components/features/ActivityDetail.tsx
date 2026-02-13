@@ -336,6 +336,7 @@ export function ActivityDetail() {
                 <SpaceBetween direction="horizontal" size="xs">
                   <ResponsiveButton
                     onClick={() => navigate("/activities")}
+                    iconName="arrow-left"
                     mobileIcon="arrow-left"
                     mobileAriaLabel="Back to activities list"
                   >

@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
@@ -17,7 +17,6 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
 import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
 import { ImportResultsModal } from '../common/ImportResultsModal';
-import { ProgressIndicator } from '../common/ProgressIndicator';
 import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
 import { ResponsiveButton } from '../common/ResponsiveButton';
 import { VenueDisplay } from '../common/VenueDisplay';
@@ -27,8 +26,7 @@ import type { ImportResult } from '../../types/csv.types';
 import { invalidatePageCaches, getListPageQueryKeys } from '../../utils/cache-invalidation.utils';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
-const ITEMS_PER_PAGE = 10;
-const BATCH_SIZE = 100;
+const ITEMS_PER_PAGE = 100;
 
 export function VenueList() {
   const queryClient = useQueryClient();
@@ -45,23 +43,16 @@ export function VenueList() {
   const [showImportResults, setShowImportResults] = useState(false);
   const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isFetchingRef = useRef(false);
 
-  // Batched loading state
-  const [allVenues, setAllVenues] = useState<Venue[]>([]);
-  const currentBatchPageRef = useRef(1); // Use ref instead of state to avoid stale closures
-  const [totalCount, setTotalCount] = useState(0);
-  const [isLoadingBatch, setIsLoadingBatch] = useState(false);
-  const [loadingError, setLoadingError] = useState<string | undefined>();
-  const [hasMorePages, setHasMorePages] = useState(true);
-  const [isCancelled, setIsCancelled] = useState(false);
-  const [filtersReady, setFiltersReady] = useState(false); // Track if initial filters are resolved
+  // Batched loading state removed - using React Query pagination instead
 
   // Separate state variables (like EngagementDashboard) - NOT a single filterState object
   const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
     tokens: [],
     operation: 'and',
   });
+
+  const [filtersReady, setFiltersReady] = useState(false); // Track if initial filters are resolved
 
   // Extract individual values from consolidated tokens
   const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
@@ -142,6 +133,7 @@ export function VenueList() {
   // Handler for FilterGroupingPanel updates (called when "Update" button clicked)
   const handleFilterUpdate = (state: FilterGroupingState) => {
     setPropertyFilterQuery(state.filterTokens);
+    setCurrentPageIndex(1); // Reset to page 1 when filters change
   };
 
   // Handler for when initial URL filter resolution completes
@@ -192,115 +184,48 @@ export function VenueList() {
     return params;
   }, [propertyFilterQuery, selectedGeographicAreaId]);
 
+  // Fetch venues using React Query with pagination
+  const {
+    data: venuesData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      "venues",
+      currentPageIndex,
+      ITEMS_PER_PAGE,
+      filterParams,
+    ],
+    queryFn: async () => {
+      const response = await VenueService.getVenuesFlexible({
+        page: currentPageIndex,
+        limit: ITEMS_PER_PAGE,
+        geographicAreaId: filterParams.geographicAreaId,
+        filter: filterParams.filter
+      });
+      return response;
+    },
+    enabled: filtersReady, // Only fetch when filters are ready
+    staleTime: 30000, // Cache for 30 seconds
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching
+  });
+
+  const venues = venuesData?.data || [];
+  const totalCount = venuesData?.pagination.total || 0;
+  const totalPages = venuesData?.pagination.totalPages || 0;
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => VenueService.deleteVenue(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['venues'] });
       setDeleteError('');
-      // Reset batched loading
-      setAllVenues([]);
-      currentBatchPageRef.current = 1; // Reset page ref
-      setHasMorePages(true);
+      setCurrentPageIndex(1); // Reset to page 1 after deletion
     },
     onError: (error: Error) => {
       setDeleteError(error.message || 'Failed to remove venue. It may be referenced by activities or participants.');
     },
   });
-
-  // Reset state when filters change
-  useEffect(() => {
-    setAllVenues([]);
-    currentBatchPageRef.current = 1; // Reset page ref
-    setTotalCount(0);
-    setIsLoadingBatch(false);
-    setLoadingError(undefined);
-    setHasMorePages(true);
-    setIsCancelled(false);
-    isFetchingRef.current = false;
-  }, [filterParams]);
-
-  // Function to fetch next batch
-  const fetchNextBatch = useCallback(async () => {
-    if (isLoadingBatch || !hasMorePages || isFetchingRef.current || isCancelled) return;
-
-    isFetchingRef.current = true;
-    setIsLoadingBatch(true);
-    setLoadingError(undefined);
-
-    try {
-      // Capture current page from ref to avoid stale closure
-      const pageToFetch = currentBatchPageRef.current;
-      
-      const response = await VenueService.getVenuesFlexible({
-        page: pageToFetch,
-        limit: BATCH_SIZE,
-        geographicAreaId: filterParams.geographicAreaId,
-        filter: filterParams.filter
-      });
-      
-      // If this is the first page, replace venues instead of appending
-      if (pageToFetch === 1) {
-        setAllVenues(response.data);
-      } else {
-        setAllVenues(prev => [...prev, ...response.data]);
-      }
-      setTotalCount(response.pagination.total);
-      setHasMorePages(pageToFetch < response.pagination.totalPages);
-      currentBatchPageRef.current = pageToFetch + 1; // Increment page ref
-    } catch (error) {
-      console.error('Error fetching venues batch:', error);
-      setLoadingError(error instanceof Error ? error.message : 'Failed to load venues');
-    } finally {
-      setIsLoadingBatch(false);
-      isFetchingRef.current = false;
-    }
-  }, [isLoadingBatch, hasMorePages, filterParams, isCancelled]);
-
-  // Cancel loading handler
-  const handleCancelLoading = useCallback(() => {
-    setIsCancelled(true);
-    setHasMorePages(false);
-    isFetchingRef.current = false;
-  }, []);
-
-  // Resume loading handler
-  const handleResumeLoading = useCallback(() => {
-    setIsCancelled(false);
-    setHasMorePages(true);
-    fetchNextBatch();
-  }, [fetchNextBatch]);
-
-  // Fetch first batch on mount or when dependencies change
-  useEffect(() => {
-    // Wait for filters to be ready before fetching
-    if (!filtersReady) return;
-    
-    if (currentBatchPageRef.current === 1 && hasMorePages && !isLoadingBatch && allVenues.length === 0 && !isFetchingRef.current) {
-      fetchNextBatch();
-    }
-  }, [hasMorePages, isLoadingBatch, allVenues.length, fetchNextBatch, filtersReady]);
-
-  // Auto-fetch next batch after previous batch renders
-  useEffect(() => {
-    if (!isLoadingBatch && hasMorePages && currentBatchPageRef.current > 1) {
-      const timer = setTimeout(() => {
-        fetchNextBatch();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoadingBatch, hasMorePages, fetchNextBatch]);
-
-  // Retry function
-  const handleRetry = useCallback(() => {
-    setLoadingError(undefined);
-    fetchNextBatch();
-  }, [fetchNextBatch]);
-
-  // Pagination for display
-  const paginatedVenues = useMemo(() => {
-    const startIndex = (currentPageIndex - 1) * ITEMS_PER_PAGE;
-    return allVenues.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [allVenues, currentPageIndex]);
 
   const handleEdit = (venue: Venue) => {
     navigate(`/venues/${venue.id}/edit`);
@@ -354,10 +279,7 @@ export function VenueList() {
 
       if (result.successCount > 0) {
         queryClient.invalidateQueries({ queryKey: ['venues'] });
-        // Reset batched loading
-        setAllVenues([]);
-        currentBatchPageRef.current = 1; // Reset page ref
-        setHasMorePages(true);
+        setCurrentPageIndex(1); // Reset to page 1 after import
       }
     } catch (error) {
       setCsvError(error instanceof Error ? error.message : 'Failed to import venues');
@@ -369,9 +291,6 @@ export function VenueList() {
     }
   };
 
-  const isLoading = isLoadingBatch && currentBatchPageRef.current === 1;
-  const loadedCount = allVenues.length;
-
   // Pull-to-refresh handler
   const handlePullToRefresh = useCallback(async () => {
     // Invalidate caches (but preserve auth tokens)
@@ -380,18 +299,12 @@ export function VenueList() {
       clearLocalStorage: false // Don't clear localStorage to preserve auth
     });
 
-    // Reset pagination and batched loading state
-    setAllVenues([]);
-    currentBatchPageRef.current = 1;
-    setTotalCount(0);
-    setHasMorePages(true);
-    setIsCancelled(false);
+    // Reset pagination
     setCurrentPageIndex(1);
-    isFetchingRef.current = false;
 
-    // Trigger initial batch fetch
-    await fetchNextBatch();
-  }, [queryClient, fetchNextBatch]);
+    // Trigger refetch
+    await refetch();
+  }, [queryClient, refetch]);
 
   return (
     <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
@@ -414,18 +327,18 @@ export function VenueList() {
           {csvError}
         </Alert>
       )}
-      {loadingError && (
+        {error && (
         <Alert
           type="error"
           dismissible
-          onDismiss={() => setLoadingError(undefined)}
+            onDismiss={() => { }}
           action={
-            <Button onClick={handleRetry} iconName="refresh">
+            <Button onClick={() => refetch()} iconName="refresh">
               Retry
             </Button>
           }
         >
-          {loadingError}
+            {error instanceof Error ? error.message : 'Failed to load venues'}
         </Alert>
       )}
       
@@ -516,7 +429,7 @@ export function VenueList() {
             },
           },
         ]}
-        items={paginatedVenues}
+          items={venues}
         loading={isLoading}
         loadingText="Loading venues"
         sortingDisabled
@@ -584,34 +497,20 @@ export function VenueList() {
             }
           >
             <Box display="inline" fontSize="heading-l" fontWeight="bold">
-              <SpaceBetween direction="horizontal" size="xs">
-                <Box display="inline-block" variant="h1">
-                  <SpaceBetween direction="horizontal" size="xs">
-                      <span>Venues</span>
-                      {loadedCount >= totalCount && totalCount > 0 && (
-                        <Box display="inline" color="text-status-inactive" variant="h1" fontWeight="normal">
-                          ({loadedCount})
-                        </Box>
-                      )}
-                  </SpaceBetween>
-                </Box>
-                <ProgressIndicator
-                  loadedCount={loadedCount}
-                  totalCount={totalCount}
-                  entityName="venues"
-                  onCancel={handleCancelLoading}
-                  onResume={handleResumeLoading}
-                  isCancelled={isCancelled}
-                />
-              </SpaceBetween>
+              Venues {totalCount > 0 && `(${totalCount.toLocaleString()})`}
             </Box>
           </Header>
         }
         pagination={
           <Pagination
             currentPageIndex={currentPageIndex}
-            pagesCount={Math.ceil(allVenues.length / ITEMS_PER_PAGE)}
+            pagesCount={totalPages}
             onChange={({ detail }) => setCurrentPageIndex(detail.currentPageIndex)}
+            ariaLabels={{
+              nextPageLabel: "Next page",
+              previousPageLabel: "Previous page",
+              pageLabel: (pageNumber) => `Page ${pageNumber}`,
+            }}
           />
         }
       />

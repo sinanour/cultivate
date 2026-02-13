@@ -155,6 +155,7 @@ export function VenueDetail() {
               <SpaceBetween direction="horizontal" size="xs">
                 <ResponsiveButton
                   onClick={() => navigate('/venues')}
+                  iconName="arrow-left"
                   mobileIcon="arrow-left"
                   mobileAriaLabel="Back to venues list"
                 >

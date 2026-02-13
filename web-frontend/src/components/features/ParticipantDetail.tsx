@@ -242,6 +242,7 @@ export function ParticipantDetail() {
               <SpaceBetween direction="horizontal" size="xs">
                 <ResponsiveButton
                   onClick={() => navigate('/participants')}
+                  iconName="arrow-left"
                   mobileIcon="arrow-left"
                   mobileAriaLabel="Back to participants list"
                 >

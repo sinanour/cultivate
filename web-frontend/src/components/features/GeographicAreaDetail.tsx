@@ -13,6 +13,7 @@ import Alert from '@cloudscape-design/components/alert';
 import Badge from '@cloudscape-design/components/badge';
 import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
 import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
+import Pagination from '@cloudscape-design/components/pagination';
 import { GeographicAreaService } from '../../services/api/geographic-area.service';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
@@ -26,6 +27,9 @@ import { invalidatePageCaches, getDetailPageQueryKeys } from '../../utils/cache-
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
 import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
+const SUBDIVISIONS_PAGE_SIZE = 10;
+const VENUES_PAGE_SIZE = 10;
+
 export function GeographicAreaDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -36,6 +40,8 @@ export function GeographicAreaDetail() {
   const [deleteError, setDeleteError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
+  const [subdivisionsPageIndex, setSubdivisionsPageIndex] = useState(1);
+  const [venuesPageIndex, setVenuesPageIndex] = useState(1);
 
   const { data: geographicArea, isLoading, error, refetch } = useQuery({
     queryKey: ['geographicArea', id],
@@ -49,6 +55,13 @@ export function GeographicAreaDetail() {
     enabled: !!id,
   });
 
+  // Paginate children for display
+  const paginatedChildren = children.slice(
+    (subdivisionsPageIndex - 1) * SUBDIVISIONS_PAGE_SIZE,
+    subdivisionsPageIndex * SUBDIVISIONS_PAGE_SIZE
+  );
+  const childrenTotalPages = Math.ceil(children.length / SUBDIVISIONS_PAGE_SIZE);
+
   const { data: ancestors = [], refetch: refetchAncestors } = useQuery({
     queryKey: ['geographicAreaAncestors', id],
     queryFn: () => GeographicAreaService.getAncestors(id!),
@@ -60,6 +73,13 @@ export function GeographicAreaDetail() {
     queryFn: () => GeographicAreaService.getVenues(id!),
     enabled: !!id && user?.role !== 'PII_RESTRICTED', // Don't fetch for PII_RESTRICTED
   });
+
+  // Paginate venues for display
+  const paginatedVenues = venues.slice(
+    (venuesPageIndex - 1) * VENUES_PAGE_SIZE,
+    venuesPageIndex * VENUES_PAGE_SIZE
+  );
+  const venuesTotalPages = Math.ceil(venues.length / VENUES_PAGE_SIZE);
 
   const { data: statistics, refetch: refetchStatistics } = useQuery({
     queryKey: ['geographicAreaStatistics', id],
@@ -167,6 +187,7 @@ export function GeographicAreaDetail() {
               <SpaceBetween direction="horizontal" size="xs">
                 <ResponsiveButton
                   onClick={() => navigate('/geographic-areas')}
+                  iconName="arrow-left"
                   mobileIcon="arrow-left"
                   mobileAriaLabel="Back to geographic areas list"
                 >
@@ -252,7 +273,11 @@ export function GeographicAreaDetail() {
       {children.length > 0 && (
         <Table
           wrapLines={false}
-          header={<Header variant="h3">Sub-Divisions Within This Area</Header>}
+            header={
+              <Header variant="h3">
+                Sub-Divisions Within This Area ({children.length})
+              </Header>
+            }
           columnDefinitions={[
             {
               id: 'name',
@@ -269,12 +294,26 @@ export function GeographicAreaDetail() {
               cell: (item) => <Badge color={getAreaTypeBadgeColor(item.areaType)}>{item.areaType}</Badge>,
             },
           ]}
-          items={children}
+            items={paginatedChildren}
           empty={
             <Box textAlign="center" color="inherit">
               <b>No sub-divisions</b>
             </Box>
           }
+            pagination={
+              childrenTotalPages > 1 ? (
+                <Pagination
+                  currentPageIndex={subdivisionsPageIndex}
+                  pagesCount={childrenTotalPages}
+                  onChange={({ detail }) => setSubdivisionsPageIndex(detail.currentPageIndex)}
+                  ariaLabels={{
+                    nextPageLabel: "Next page",
+                    previousPageLabel: "Previous page",
+                    pageLabel: (pageNumber) => `Page ${pageNumber}`,
+                  }}
+                />
+              ) : undefined
+            }
         />
       )}
 
@@ -282,7 +321,11 @@ export function GeographicAreaDetail() {
         {user?.role !== 'PII_RESTRICTED' && (
           <Table
             wrapLines={false}
-            header={<Header variant="h3">Venues in This Area</Header>}
+            header={
+              <Header variant="h3">
+                Venues in This Area ({venues.length})
+              </Header>
+            }
             columnDefinitions={[
               {
                 id: 'name',
@@ -318,7 +361,7 @@ export function GeographicAreaDetail() {
                 },
               },
             ]}
-            items={venues}
+            items={paginatedVenues}
             empty={
               <Box textAlign="center" color="inherit">
                 <b>No venues</b>
@@ -326,6 +369,20 @@ export function GeographicAreaDetail() {
                   No venues are in this geographic area.
                 </Box>
               </Box>
+            }
+            pagination={
+              venuesTotalPages > 1 ? (
+                <Pagination
+                  currentPageIndex={venuesPageIndex}
+                  pagesCount={venuesTotalPages}
+                  onChange={({ detail }) => setVenuesPageIndex(detail.currentPageIndex)}
+                  ariaLabels={{
+                    nextPageLabel: "Next page",
+                    previousPageLabel: "Previous page",
+                    pageLabel: (pageNumber) => `Page ${pageNumber}`,
+                  }}
+                />
+              ) : undefined
             }
           />
         )}

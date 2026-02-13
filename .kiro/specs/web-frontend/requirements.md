@@ -43,9 +43,9 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Ancestor_Cache**: An internal data structure used by Geographic_Area_Selector to store ancestor geographic area details for the sole purpose of building hierarchy path descriptions, without adding those ancestors to the dropdown options list
 - **Map_Marker**: A lightweight data structure containing only the essential fields needed to render a pin on a map (coordinates and identifiers)
 - **Popup_Content**: Detailed information about a map marker that is loaded on-demand when a user clicks the marker
-- **Lazy_Loading**: A performance optimization strategy where data is fetched in batches of 100 items using paginated APIs and rendered incrementally to reduce latency and provide continuous loading feedback to the user
-- **Batched_Loading**: A technique where large datasets are fetched in multiple smaller requests (batches of 100 items) and rendered progressively as each batch arrives
-- **Incremental_Rendering**: A UI pattern where entities are displayed on screen as soon as they are fetched, without waiting for all data to be loaded
+- **Lazy_Loading**: A performance optimization strategy where data is fetched on-demand. For Map View, markers are fetched in batches of 100 items and rendered incrementally. For list pages, data is fetched one page at a time when the user navigates to that page using CloudScape Table's native pagination.
+- **Batched_Loading**: A technique used in Map View where large datasets of markers are fetched in multiple smaller requests (batches of 100 items) and rendered progressively as each batch arrives. List pages use standard pagination instead.
+- **Incremental_Rendering**: A UI pattern used in Map View where markers are displayed on screen as soon as they are fetched, without waiting for all data to be loaded. List pages use standard page-by-page rendering.
 - **Auto_Zoom**: Automatic adjustment of map zoom level to fit all visible markers within the viewport
 - **Server_Side_Filtering**: A filtering approach where filter criteria are sent to the backend API as query parameters, and the backend returns only matching records, reducing data transfer and improving performance
 - **PropertyFilter**: A CloudScape Design System component that provides a unified interface for filtering data by multiple properties with support for lazy-loading values, token-based filter display, and URL synchronization
@@ -592,6 +592,8 @@ The Web Frontend package provides a responsive React-based web application that 
 ### Requirement 6C: Map View UI with Optimized Loading
 
 **User Story:** As a community organizer, I want to view activities, participant locations, and venues on a map with fast initial rendering, batched incremental loading, and progressive content display, so that I can visualize community engagement and infrastructure by geography even when there are thousands of markers while receiving continuous loading feedback.
+
+> **Note**: The batched incremental loading pattern with ProgressIndicator described in this requirement applies exclusively to the Map View. List pages (Participants, Activities, Venues) use CloudScape Table's native pagination instead (see Requirement 26A).
 
 #### Acceptance Criteria
 
@@ -1620,109 +1622,118 @@ The Web Frontend package provides a responsive React-based web application that 
 13. WHEN the global geographic area filter is active and sufficiently scoped, THE Web_App SHALL display all matching items in dropdowns for convenience
 14. WHEN viewing data at a large geographic scale (country or global), THE Web_App SHALL rely on text-based filtering and batched loading to manage the large result sets efficiently
 
-### Requirement 26A: Batched Incremental Loading for List Views
+### Requirement 26A: CloudScape Table Native Pagination for List Pages
 
-**User Story:** As a community organizer working with large datasets, I want table and tree views to load data in batches with incremental rendering and progress feedback, so that I can start interacting with data immediately while the full dataset loads in the background.
-
-#### Acceptance Criteria
-
-**General Batched Loading Behavior:**
-
-1. THE Web_App SHALL fetch data for all high-cardinality entity list views (activities, participants, venues, geographic areas) in batches of 100 items using paginated API requests
-2. THE Web_App SHALL render list items incrementally as each batch is fetched, without waiting for all batches to complete
-3. WHEN the first batch of items is fetched, THE Web_App SHALL immediately render those items in the table or tree view
-4. WHEN subsequent batches of items are fetched, THE Web_App SHALL append and render those items to the existing display
-5. THE Web_App SHALL display a progress indicator showing the number of items loaded and total items available (e.g., "Loading: 300 / 1,500 items")
-6. THE Web_App SHALL update the progress indicator after each batch is rendered
-7. THE Web_App SHALL keep the loading indicator visible until all batches have been fetched and rendered
-8. THE Web_App SHALL allow users to interact with already-rendered items (click, select, scroll) while additional batches are still loading
-9. THE Web_App SHALL automatically fetch the next batch of items after the previous batch has been rendered
-10. THE Web_App SHALL use pagination metadata from the API response (total count) to determine if more batches are available
-11. WHEN all batches have been fetched, THE Web_App SHALL remove the loading indicator and display the final item count
-12. THE Web_App SHALL handle errors during batch fetching gracefully, displaying already-loaded items and an error message for failed batches
-13. THE Web_App SHALL provide a retry button when batch fetching fails, allowing users to resume loading from the failed batch
-
-**Activity List Batched Loading:**
-
-14. THE Web_App SHALL apply batched incremental loading to the ActivityList component
-15. WHEN loading activities, THE Web_App SHALL fetch in batches of 100 and render incrementally
-16. THE Web_App SHALL display "Loading activities: X / Y" progress indicator during batch loading
-
-**Participant List Batched Loading:**
-
-17. THE Web_App SHALL apply batched incremental loading to the ParticipantList component
-18. WHEN loading participants, THE Web_App SHALL fetch in batches of 100 and render incrementally
-19. THE Web_App SHALL display "Loading participants: X / Y" progress indicator during batch loading
-
-**Venue List Batched Loading:**
-
-20. THE Web_App SHALL apply batched incremental loading to the VenueList component
-21. WHEN loading venues, THE Web_App SHALL fetch in batches of 100 and render incrementally
-22. THE Web_App SHALL display "Loading venues: X / Y" progress indicator during batch loading
-
-**Geographic Area Tree View Batched Loading:**
-
-23. THE Web_App SHALL apply batched incremental loading to the GeographicAreaList tree view component
-24. WHEN initially loading the tree view, THE Web_App SHALL fetch top-level areas and their immediate children in batches of 100
-25. WHEN expanding a tree node with many children (>100), THE Web_App SHALL fetch children in batches of 100 and render incrementally
-26. THE Web_App SHALL display "Loading areas: X / Y" progress indicator during batch loading of tree nodes
-27. THE Web_App SHALL allow users to expand/collapse already-loaded nodes while additional nodes are still loading
-
-**Search and Filter Integration:**
-
-28. WHEN search or filter parameters are applied, THE Web_App SHALL restart batched loading with the new filter criteria
-29. THE Web_App SHALL use the total count from the API response to show accurate progress during filtered loading
-30. THE Web_App SHALL clear existing items and start fresh batched loading when filters change significantly
-
-### Requirement 26B: Subtle Loading Indicators for Batched Loading with Cancellation
-
-**User Story:** As a user, I want subtle, non-intrusive loading indicators with the ability to cancel during batched loading, so that I can see loading progress without being distracted and can interrupt long-running loads if needed.
+**User Story**: As a community organizer viewing list pages, I want tables to use standard pagination controls, so that I can navigate through large datasets efficiently without automatically loading all pages.
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL NOT use Alert components to indicate batched loading progress
-2. THE Web_App SHALL display a subtle loading indicator next to the container or table header during batched loading
-3. THE loading indicator SHALL consist of a Spinner component and a text label showing progress (e.g., "Loading: 24 / 100")
-4. THE loading indicator SHALL be positioned near the entity count in the header (e.g., "Participants (24 / 100)" with spinner)
+**General Table Pagination Behavior:**
+
+1. THE Web_App SHALL use CloudScape Table component's native pagination capability for ParticipantList, ActivityList, and VenueList
+2. THE Web_App SHALL configure Table with pagination enabled
+3. THE Web_App SHALL set default page size to 100 items per page
+4. THE Web_App SHALL allow users to change page size using CloudScape Table's page size selector
+5. THE Web_App SHALL display total item count in table header (e.g., "4,725 participants")
+6. THE Web_App SHALL fetch only the requested page from the backend API when user navigates to a new page
+7. THE Web_App SHALL NOT automatically fetch subsequent pages until user explicitly requests them
+8. THE Web_App SHALL display CloudScape Table's built-in loading indicator while fetching page data
+9. THE Web_App SHALL use React Query to cache fetched pages for improved performance on re-visits
+
+**Participant List Pagination:**
+
+10. THE ParticipantList component SHALL fetch participants using GET /api/v1/participants?page=X&limit=Y
+11. THE ParticipantList component SHALL extract total count from API response metadata
+12. THE ParticipantList component SHALL pass total count to CloudScape Table's paginationLabels
+13. THE ParticipantList component SHALL handle page change events from CloudScape Table
+14. WHEN user clicks to page 2, THE ParticipantList SHALL fetch page 2 data from backend
+15. THE ParticipantList component SHALL reset to page 1 when filters change
+
+**Activity List Pagination:**
+
+16. THE ActivityList component SHALL fetch activities using GET /api/v1/activities?page=X&limit=Y
+17. THE ActivityList component SHALL extract total count from API response metadata
+18. THE ActivityList component SHALL pass total count to CloudScape Table's paginationLabels
+19. THE ActivityList component SHALL handle page change events from CloudScape Table
+20. WHEN user clicks to page 3, THE ActivityList SHALL fetch page 3 data from backend
+21. THE ActivityList component SHALL reset to page 1 when filters change
+
+**Venue List Pagination:**
+
+22. THE VenueList component SHALL fetch venues using GET /api/v1/venues?page=X&limit=Y
+23. THE VenueList component SHALL extract total count from API response metadata
+24. THE VenueList component SHALL pass total count to CloudScape Table's paginationLabels
+25. THE VenueList component SHALL handle page change events from CloudScape Table
+26. WHEN user clicks to page 5, THE VenueList SHALL fetch page 5 data from backend
+27. THE VenueList component SHALL reset to page 1 when filters change
+
+**Performance and Caching:**
+
+28. THE Web_App SHALL use React Query's caching to avoid refetching already-loaded pages
+29. THE Web_App SHALL invalidate page caches when filters change
+30. THE Web_App SHALL invalidate page caches when data mutations occur (create, update, delete)
+31. THE Web_App SHALL display stale data from cache while refetching in background (React Query's staleWhileRevalidate)
+
+**Error Handling:**
+
+32. WHEN a page fetch fails, THE Web_App SHALL display CloudScape Alert with error message
+33. WHEN a page fetch fails, THE Web_App SHALL provide a retry button
+34. WHEN retry is clicked, THE Web_App SHALL attempt to fetch the failed page again
+
+**Accessibility:**
+
+35. THE CloudScape Table pagination controls SHALL be keyboard navigable
+36. THE CloudScape Table pagination controls SHALL announce page changes to screen readers
+37. THE CloudScape Table SHALL maintain focus management during page transitions
+
+### Requirement 26B: Subtle Loading Indicators for Map View Batched Loading with Cancellation
+
+**User Story:** As a user viewing the map, I want subtle, non-intrusive loading indicators with the ability to cancel during batched marker loading, so that I can see loading progress without being distracted and can interrupt long-running loads if needed.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL NOT use Alert components to indicate batched loading progress on the map view
+2. THE Web_App SHALL display a subtle loading indicator near the map controls during batched marker loading
+3. THE loading indicator SHALL consist of a Spinner component and a text label showing progress (e.g., "Loading: 300 / 1,500 markers")
+4. THE loading indicator SHALL be positioned near the map controls as an overlay
 5. THE loading indicator SHALL remain mounted and visible for the entire duration of the batched loading process
-6. WHEN all batches have been fetched, THE Web_App SHALL hide the loading indicator
-7. WHEN all batches have been fetched, THE Web_App SHALL display only the final count without the spinner (e.g., "Participants (100)")
+6. WHEN all marker batches have been fetched, THE Web_App SHALL hide the loading indicator
+7. WHEN all marker batches have been fetched, THE Web_App SHALL display only the final marker count
 8. THE loading indicator SHALL use a small or normal-sized Spinner component (not large)
 9. THE loading indicator SHALL use muted or secondary text styling to avoid drawing excessive attention
-10. THE Web_App SHALL apply this subtle loading indicator pattern to ActivityList, ParticipantList, VenueList, GeographicAreaList, and MapView components
-11. THE Web_App SHALL NOT display Alert components with "Loading activities: X / Y" messages during normal batched loading
+10. THE Web_App SHALL apply this subtle loading indicator pattern to MapView component only
+11. THE Web_App SHALL NOT display Alert components with "Loading markers: X / Y" messages during normal batched loading
 12. THE Web_App SHALL reserve Alert components for error states, warnings, and important user notifications only
-13. THE loading indicator SHALL be visually integrated into the header area without disrupting the layout
+13. THE loading indicator SHALL be visually integrated into the map interface without disrupting the layout
 14. THE loading indicator SHALL NOT cause layout shifts or content jumping when it appears or disappears
 15. THE loading indicator SHALL include a "Cancel" button positioned next to the progress text
 16. THE "Cancel" button SHALL be visible for the entire duration of the batched loading process
-17. WHEN a user clicks the "Cancel" button, THE Web_App SHALL immediately stop fetching additional batches
-18. WHEN a user clicks the "Cancel" button, THE Web_App SHALL keep all already-loaded entities visible in the list or map
+17. WHEN a user clicks the "Cancel" button, THE Web_App SHALL immediately stop fetching additional marker batches
+18. WHEN a user clicks the "Cancel" button, THE Web_App SHALL keep all already-loaded markers visible on the map
 19. WHEN a user clicks the "Cancel" button, THE Web_App SHALL hide the loading indicator
-20. WHEN a user clicks the "Cancel" button, THE Web_App SHALL update the entity count to reflect only the loaded entities
+20. WHEN a user clicks the "Cancel" button, THE Web_App SHALL update the marker count to reflect only the loaded markers
 21. THE "Cancel" button SHALL use a subtle, inline-link or icon-only style to match the loading indicator's non-intrusive appearance
 22. THE "Cancel" button SHALL be keyboard accessible and include appropriate ARIA labels for screen readers (e.g., "Cancel loading")
 23. WHEN batched loading is cancelled and partial results are displayed, THE Web_App SHALL display a "Resume" icon button using the CloudScape refresh icon
-24. THE "Resume" button SHALL be positioned near the entity count in the header where the loading indicator was previously displayed
+24. THE "Resume" button SHALL be positioned near the map controls where the loading indicator was previously displayed
 25. THE "Resume" button SHALL use CloudScape Button component with iconName="refresh" and variant="icon"
-26. WHEN a user clicks the "Resume" button, THE Web_App SHALL continue fetching batches from where the loading was interrupted
-27. WHEN a user clicks the "Resume" button, THE Web_App SHALL display the loading indicator again with updated progress (e.g., "Loading: 250 / 1,500")
-28. THE "Resume" button SHALL be keyboard accessible and include appropriate ARIA labels for screen readers (e.g., "Resume loading")
-29. THE "Resume" button SHALL be visible only when batched loading has been cancelled and there are more items to load
-30. WHEN all items have been loaded (either through completion or after resuming), THE Web_App SHALL hide the "Resume" button
-31. WHEN a user applies new filters or refreshes the view, THE Web_App SHALL hide the "Resume" button and restart batched loading from the beginning
-32. THE Web_App SHALL NOT automatically resume batched loading after cancellation unless the user explicitly clicks the "Resume" button, changes filters, or refreshes the view
+26. WHEN a user clicks the "Resume" button, THE Web_App SHALL continue fetching marker batches from where the loading was interrupted
+27. WHEN a user clicks the "Resume" button, THE Web_App SHALL display the loading indicator again with updated progress (e.g., "Loading: 250 / 1,500 markers")
+28. THE "Resume" button SHALL be keyboard accessible and include appropriate ARIA labels for screen readers (e.g., "Resume loading markers")
+29. THE "Resume" button SHALL be visible only when batched loading has been cancelled and there are more markers to load
+30. WHEN all markers have been loaded (either through completion or after resuming), THE Web_App SHALL hide the "Resume" button
+31. WHEN a user applies new filters, changes map mode, or pans/zooms the map, THE Web_App SHALL hide the "Resume" button and restart batched loading from the beginning
+32. THE Web_App SHALL NOT automatically resume batched loading after cancellation unless the user explicitly clicks the "Resume" button, changes filters, or interacts with the map
 33. THE "Cancel" button SHALL be positioned inline with the loading progress text to maintain horizontal layout
 34. THE "Cancel" button SHALL use muted styling (e.g., variant="inline-link" or icon-only with subdued color) to avoid visual prominence
 
+### Requirement 26C: Reusable Batched Loading Progress Indicator for Map View
 
-### Requirement 26C: Reusable Batched Loading Progress Indicator
-
-**User Story:** As a developer, I want a reusable component for displaying batched loading progress with pause and resume functionality, so that I can maintain consistent loading UX across all list views and the map view without duplicating code.
+**User Story:** As a developer, I want a reusable component for displaying batched loading progress with pause and resume functionality for the map view, so that I can maintain consistent loading UX without duplicating code.
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL provide a reusable ProgressIndicator component that encapsulates batched loading UI logic
+1. THE Web_App SHALL provide a reusable ProgressIndicator component that encapsulates batched loading UI logic for map markers
 2. THE ProgressIndicator component SHALL accept props for loadedCount, totalCount, entityName, onCancel, onResume, and isCancelled
 3. THE ProgressIndicator component SHALL consist of an icon button followed by a CloudScape ProgressBar component
 4. THE icon button SHALL display a "pause" icon (iconName="pause") when loading is actively in progress
@@ -1730,24 +1741,20 @@ The Web Frontend package provides a responsive React-based web application that 
 6. THE icon button SHALL display a "play" icon (iconName="play") when loading is paused (isCancelled is true) and more items remain to load
 7. WHEN the play icon button is clicked, THE ProgressIndicator SHALL invoke the onResume callback to resume loading
 8. THE ProgressBar component SHALL display a label showing the loading state with entity count
-9. WHEN actively loading, THE ProgressBar label SHALL be "Loading X / Y {entityName}..." where X is loadedCount and Y is totalCount (e.g., "Loading 300 / 4725 venues...")
-10. WHEN paused, THE ProgressBar label SHALL be "Loaded X / Y {entityName}." where X is loadedCount and Y is totalCount (e.g., "Loaded 300 / 4725 venues.")
+9. WHEN actively loading, THE ProgressBar label SHALL be "Loading X / Y {entityName}..." where X is loadedCount and Y is totalCount (e.g., "Loading 300 / 4725 markers...")
+10. WHEN paused, THE ProgressBar label SHALL be "Loaded X / Y {entityName}." where X is loadedCount and Y is totalCount (e.g., "Loaded 300 / 4725 markers.")
 11. THE ProgressBar component SHALL calculate and display the percentage progress value based on loadedCount and totalCount
 12. THE ProgressBar component SHALL remain visible when loading is paused (not hidden)
 13. THE ProgressIndicator component SHALL unmount completely (return null) when loadedCount equals totalCount
 14. THE ProgressIndicator component SHALL use CloudScape SpaceBetween for horizontal layout with the icon button positioned to the left of the ProgressBar
-15. THE ProgressIndicator component SHALL be usable in table headers, container headers, and map overlays
-16. THE Web_App SHALL use the ProgressIndicator component in ParticipantList, ActivityList, VenueList, GeographicAreaList, and MapView components
-17. THE Web_App SHALL remove duplicated loading progress UI code from all list and map components after integrating ProgressIndicator
-18. THE ProgressIndicator component SHALL support customizable entity names (e.g., "participants", "activities", "venues", "markers")
+15. THE ProgressIndicator component SHALL be usable as an overlay on the map view
+16. THE Web_App SHALL use the ProgressIndicator component in MapView component only
+17. THE Web_App SHALL NOT use the ProgressIndicator component in ParticipantList, ActivityList, or VenueList components
+18. THE ProgressIndicator component SHALL support customizable entity names (e.g., "markers")
 19. THE icon button SHALL use variant="icon" for consistent styling
 20. THE icon button SHALL include appropriate ARIA labels: "Pause loading" when showing pause icon, "Resume loading {entityName}" when showing play icon
 21. THE ProgressBar SHALL use status="in-progress" when actively loading
-22. THE ProgressIndicator component SHALL be positioned inline with entity counts in headers using SpaceBetween for horizontal layout
-23. WHEN loading is in progress or paused, THE Web_App SHALL hide the entity count display in list view headers
-24. WHEN loading is complete (loadedCount equals totalCount), THE Web_App SHALL display the final entity count in list view headers
-25. THE entity count SHALL remain hidden during active loading and paused states to prevent the pause/play button from shifting position when clicked
-26. THE entity count SHALL only appear after the ProgressIndicator component unmounts (when loading is complete)
+22. THE ProgressIndicator component SHALL be positioned as an overlay on the map view near map controls
 
 ### Requirement 27: Clear Optional Fields
 
