@@ -208,6 +208,10 @@ export default function ReconciliationPage() {
       return option?.label || String(value);
     }
 
+    if (field.type === 'activityType') {
+      return value.name;
+    }
+
     if (field.type === 'date') {
       return formatDate(value);
     }
@@ -440,6 +444,7 @@ function getEntityFields(entityType: ComplexEntityType) {
     case 'activity':
       return [
         { name: 'name', label: 'Name', type: 'text' as const },
+        { name: 'activityType', label: 'Activity Type', type: 'activityType' as const },
         { name: 'startDate', label: 'Start Date', type: 'date' as const },
         { name: 'endDate', label: 'End Date', type: 'date' as const },
         {
