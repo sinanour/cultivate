@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import Button from "@cloudscape-design/components/button";
@@ -383,10 +382,13 @@ export function GeographicAreaList() {
         setIsBatchCancelled(false);
         setCurrentPage(1);
         setExpandedItemIds(new Set());
+        setChildrenCache(new Map()); // Clear cached children when returning to pagination mode
         return;
       }
 
       // Filters active - switch to batched loading mode
+      // Clear cached children from lazy-loading to prevent them from appearing in filtered results
+      setChildrenCache(new Map());
       setIsFiltering(true);
       setIsBatchLoading(true);
       setIsBatchCancelled(false);
@@ -647,10 +649,14 @@ export function GeographicAreaList() {
               {csvError}
             </Alert>
           )}
-          <Container
+          <Table
+            columnDefinitions={columnDefinitions}
+            items={tableData}
+            loading={isLoading && !isBatchLoading}
+            loadingText="Loading geographic areas"
+            trackBy="id"
             header={
               <Header
-                variant="h1"
                 actions={
                   <SpaceBetween direction="horizontal" size="xs">
                     {canEdit() && (
@@ -695,90 +701,83 @@ export function GeographicAreaList() {
                   </SpaceBetween>
                 }
               >
-                Geographic Areas
-                {isFiltering && batchProgress.total > 0 && !isBatchLoading && (
-                  <span> ({batchProgress.total} areas)</span>
-                )}
+                <SpaceBetween direction="horizontal" size="xs">
+                  <Box display="inline" fontSize="heading-l" fontWeight="bold">
+                    Geographic Areas {isFiltering && batchProgress.total > 0 && !isBatchLoading && `(${batchProgress.total.toLocaleString()})`}
+                  </Box>
+                  {isBatchLoading && batchProgress.total > 0 && (
+                    <Box margin={{ bottom: "s" }}>
+                      <ProgressIndicator
+                        loadedCount={batchProgress.loaded}
+                        totalCount={batchProgress.total}
+                        entityName="areas"
+                        onCancel={handleCancelBatchLoading}
+                        onResume={handleResumeBatchLoading}
+                        isCancelled={isBatchCancelled}
+                      />
+                    </Box>
+                  )}
+                </SpaceBetween>
               </Header>
             }
-          >
-            {isBatchLoading && batchProgress.total > 0 && (
-              <Box margin={{ bottom: "s" }}>
-                <ProgressIndicator
-                  loadedCount={batchProgress.loaded}
-                  totalCount={batchProgress.total}
-                  entityName="areas"
-                  onCancel={handleCancelBatchLoading}
-                  onResume={handleResumeBatchLoading}
-                  isCancelled={isBatchCancelled}
-                />
-              </Box>
-            )}
-            <Table
-              columnDefinitions={columnDefinitions}
-              items={tableData}
-              loading={isLoading && !isBatchLoading}
-              loadingText="Loading geographic areas"
-              trackBy="id"
-              filter={
-                <FilterGroupingPanel
-                  filterProperties={filterProperties}
-                  groupingMode="none"
-                  includeDateRange={false}
-                  onUpdate={handleFilterUpdate}
-                  isLoading={isLoading}
-                />
-              }
-              empty={
-                <Box textAlign="center" color="inherit">
-                  <b>No geographic areas</b>
-                  <Box padding={{ bottom: "s" }} variant="p" color="inherit">
-                    {isFiltering
-                      ? "No geographic areas match the current filters."
-                      : "No geographic areas to display."}
-                  </Box>
-                  {canCreate() && !isFiltering && (
-                    <ResponsiveButton
-                      onClick={handleCreate}
-                      mobileIcon="add-plus"
-                      mobileAriaLabel="Create new geographic area"
-                    >
-                      Create geographic area
-                    </ResponsiveButton>
-                  )}
+            filter={
+              <FilterGroupingPanel
+                filterProperties={filterProperties}
+                groupingMode="none"
+                includeDateRange={false}
+                onUpdate={handleFilterUpdate}
+                isLoading={isLoading}
+              />
+            }
+            empty={
+              <Box textAlign="center" color="inherit">
+                <b>No geographic areas</b>
+                <Box padding={{ bottom: "s" }} variant="p" color="inherit">
+                  {isFiltering
+                    ? "No geographic areas match the current filters."
+                    : "No geographic areas to display."}
                 </Box>
-              }
-              expandableRows={{
-                getItemChildren,
-                isItemExpandable,
-                expandedItems,
-                onExpandableItemToggle: handleExpandableItemToggle,
-              }}
-              pagination={
-                !isFiltering ? (
-                  <Pagination
-                    currentPageIndex={currentPage}
-                    pagesCount={totalPages}
-                    onChange={({
-                      detail,
-                    }: {
-                      detail: { currentPageIndex: number };
-                    }) => setCurrentPage(detail.currentPageIndex)}
-                    ariaLabels={{
-                      nextPageLabel: "Next page",
-                      previousPageLabel: "Previous page",
-                      pageLabel: (pageNumber: number) => `Page ${pageNumber}`,
-                    }}
-                  />
-                ) : undefined
-              }
-              ariaLabels={{
-                itemSelectionLabel: () => "",
-                allItemsSelectionLabel: () => "",
-                selectionGroupLabel: "Geographic area selection",
-              }}
-            />
-          </Container>
+                {canCreate() && !isFiltering && (
+                  <ResponsiveButton
+                    onClick={handleCreate}
+                    mobileIcon="add-plus"
+                    mobileAriaLabel="Create new geographic area"
+                  >
+                    Create geographic area
+                  </ResponsiveButton>
+                )}
+              </Box>
+            }
+            expandableRows={{
+              getItemChildren,
+              isItemExpandable,
+              expandedItems,
+              onExpandableItemToggle: handleExpandableItemToggle,
+            }}
+            pagination={
+              !isFiltering ? (
+                <Pagination
+                  currentPageIndex={currentPage}
+                  pagesCount={totalPages}
+                  onChange={({
+                    detail,
+                  }: {
+                    detail: { currentPageIndex: number };
+                  }) => setCurrentPage(detail.currentPageIndex)}
+                  ariaLabels={{
+                    nextPageLabel: "Next page",
+                    previousPageLabel: "Previous page",
+                    pageLabel: (pageNumber: number) => `Page ${pageNumber}`,
+                  }}
+                />
+              ) : undefined
+            }
+            ariaLabels={{
+              itemSelectionLabel: () => "",
+              allItemsSelectionLabel: () => "",
+              selectionGroupLabel: "Geographic area selection",
+            }}
+          />
         </SpaceBetween>
         <ImportResultsModal
           visible={showImportResults}
