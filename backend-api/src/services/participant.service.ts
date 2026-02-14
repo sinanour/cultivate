@@ -12,6 +12,7 @@ import { AppError } from '../types/errors.types';
 import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
 import { transformParticipantResponses, transformParticipantResponse } from '../utils/participant.utils';
 import { GeographicFilteringService } from './geographic-filtering.service';
+import { calculateAgeCohort, buildAgeCohortFilter, AgeCohort } from '../utils/age-cohort.utils';
 
 export interface CreateParticipantInput {
     name: string;
@@ -130,13 +131,47 @@ export class ParticipantService {
 
         // Removed legacy search parameter handling - use filter.name or filter.email instead
 
+        // Extract ageCohorts from filter for special handling (requires date range conversion)
+        let ageCohortWhere: any = undefined;
+        let filterWithoutCohorts = filter;
+
+        if (filter?.ageCohorts) {
+            // Normalize to array
+            const cohortsRaw = filter.ageCohorts;
+            const cohorts = Array.isArray(cohortsRaw)
+                ? cohortsRaw
+                : (typeof cohortsRaw === 'string'
+                    ? cohortsRaw.split(',').map(v => v.trim()).filter(v => v.length > 0)
+                    : [cohortsRaw]);
+
+            if (cohorts.length > 0) {
+                // Validate cohort names
+                const validCohorts = Object.values(AgeCohort);
+                const invalidCohorts = cohorts.filter(c => !validCohorts.includes(c as AgeCohort));
+                if (invalidCohorts.length > 0) {
+                    throw new AppError(
+                        'VALIDATION_ERROR',
+                        `Invalid age cohort names: ${invalidCohorts.join(', ')}. Valid values are: ${validCohorts.join(', ')}`,
+                        400
+                    );
+                }
+
+                // Convert cohorts to date range conditions
+                ageCohortWhere = buildAgeCohortFilter(cohorts as AgeCohort[]);
+            }
+
+            // Remove ageCohorts from filter object to avoid passing to buildWhereClause
+            const { ageCohorts: _, ...restFilter } = filter;
+            filterWithoutCohorts = restFilter;
+        }
+
         // Extract populationIds from filter for special handling (many-to-many relationship)
         let populationWhere: any = undefined;
-        let filterWithoutPopulations = filter;
+        let filterWithoutPopulations = filterWithoutCohorts;
 
-        if (filter?.populationIds) {
+        if (filterWithoutCohorts?.populationIds) {
             // Normalize to array (handle comma-separated strings)
-            const populationIdsRaw = filter.populationIds;
+            const populationIdsRaw = filterWithoutCohorts.populationIds;
             const populationIds = Array.isArray(populationIdsRaw)
                 ? populationIdsRaw
                 : (typeof populationIdsRaw === 'string'
@@ -155,21 +190,20 @@ export class ParticipantService {
             }
 
             // Remove populationIds from filter object to avoid passing to buildWhereClause
-            const { populationIds: _, ...restFilter } = filter;
+            const { populationIds: _, ...restFilter } = filterWithoutCohorts;
             filterWithoutPopulations = restFilter;
         }
 
-        // Build flexible filter where clause (without populationIds)
+        // Build flexible filter where clause (without populationIds and ageCohorts)
         const flexibleWhere = filterWithoutPopulations ? buildWhereClause('participant', filterWithoutPopulations) : undefined;
 
-        // Merge population filter with flexible filter using AND logic
+        // Merge all filters using AND logic
+        const whereClauses = [ageCohortWhere, populationWhere, flexibleWhere].filter(Boolean);
         let combinedWhere: any = undefined;
-        if (populationWhere && flexibleWhere) {
-            combinedWhere = { AND: [populationWhere, flexibleWhere] };
-        } else if (populationWhere) {
-            combinedWhere = populationWhere;
-        } else if (flexibleWhere) {
-            combinedWhere = flexibleWhere;
+        if (whereClauses.length > 1) {
+            combinedWhere = { AND: whereClauses };
+        } else if (whereClauses.length === 1) {
+            combinedWhere = whereClauses[0];
         }
 
         // Build select clause for attribute selection
@@ -278,18 +312,18 @@ export class ParticipantService {
         const skip = (validPage - 1) * validLimit;
         const paginatedParticipants = filteredParticipants.slice(skip, skip + validLimit);
 
-        // Remove the included relations for the response (if not using select) and transform populations
+        // Remove the included relations for the response (if not using select) and transform populations + add ageCohort
         const data = select
             ? paginatedParticipants
             : paginatedParticipants.map(({ addressHistory, ...participant }: any) => {
-                // Transform to include flattened populations array
+                // Transform to include flattened populations array and ageCohort
                 return transformParticipantResponse(participant);
             });
 
         return PaginationHelper.createResponse(data, validPage, validLimit, total);
     }
 
-    async getParticipantById(id: string, userId?: string, userRole?: string): Promise<Participant> {
+    async getParticipantById(id: string, userId?: string, userRole?: string): Promise<Participant & { ageCohort: string }> {
         const participant = await this.participantRepository.findById(id);
         if (!participant) {
             throw new Error('Participant not found');
@@ -299,7 +333,10 @@ export class ParticipantService {
         if (userId) {
             // Administrator bypass
             if (userRole === 'ADMINISTRATOR') {
-                return participant;
+                return {
+                    ...participant,
+                    ageCohort: calculateAgeCohort(participant.dateOfBirth)
+                };
             }
 
             // Determine participant's current home venue from address history
@@ -338,7 +375,10 @@ export class ParticipantService {
             // If no address history, allow access (participant not yet associated with any area)
         }
 
-        return participant;
+        return {
+            ...participant,
+            ageCohort: calculateAgeCohort(participant.dateOfBirth)
+        };
     }
 
     // Removed deprecated searchParticipants method - use getParticipantsFlexible with filter instead
@@ -680,13 +720,14 @@ export class ParticipantService {
             'phone',
             'notes',
             'dateOfBirth',
+            'ageCohort',
             'dateOfRegistration',
             'nickname',
             'createdAt',
             'updatedAt'
         ];
 
-        // Transform participants to CSV format
+        // Transform participants to CSV format with ageCohort
         const data = participants.map(p => ({
             id: p.id,
             name: p.name,
@@ -694,6 +735,7 @@ export class ParticipantService {
             phone: p.phone || '',
             notes: p.notes || '',
             dateOfBirth: formatDateForCSV(p.dateOfBirth),
+            ageCohort: calculateAgeCohort(p.dateOfBirth),
             dateOfRegistration: formatDateForCSV(p.dateOfRegistration),
             nickname: p.nickname || '',
             createdAt: formatDateForCSV(p.createdAt),

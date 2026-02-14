@@ -38,6 +38,16 @@ export enum GeographicAreaType {
     WORLD = 'WORLD',
 }
 
+// Age Cohorts
+export enum AgeCohort {
+    CHILD = 'Child',
+    JUNIOR_YOUTH = 'Junior Youth',
+    YOUTH = 'Youth',
+    YOUNG_ADULT = 'Young Adult',
+    ADULT = 'Adult',
+    UNKNOWN = 'Unknown',
+}
+
 // Sync Operation Types
 export enum SyncOperation {
     CREATE = 'CREATE',

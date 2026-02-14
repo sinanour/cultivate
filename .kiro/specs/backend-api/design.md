@@ -208,7 +208,7 @@ Services implement business logic and coordinate operations:
 - **RoleService**: Manages role CRUD operations, validates uniqueness, prevents deletion of referenced roles
 - **PopulationService**: Manages population CRUD operations (admin only for create/update/delete), validates uniqueness, prevents deletion of referenced populations, manages participant-population associations (many-to-many), validates participant and population existence, prevents duplicate associations
 - **UserService**: Manages user CRUD operations (admin only), validates email is provided, accepts optional display name, validates email uniqueness, hashes passwords with bcrypt (minimum 8 characters), excludes password hashes from all responses, supports role assignment and modification, allows optional password updates, supports creating users with geographic authorization rules in a single atomic transaction, handles user deletion with cascade deletion of associated geographic authorization rules, prevents deletion of the last administrator user, provides user self-profile management endpoints (all roles), validates current password before allowing password changes, restricts profile updates to display name and password only (no email, role, or authorization rule changes)
-- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, includes population associations in all participant list responses to enable population badge display without additional API round trips, pushes all filtering and field selection to database layer via Prisma
+- **ParticipantService**: Manages participant CRUD operations, validates email format and uniqueness when email is provided, validates dateOfBirth is in the past when provided, validates dateOfRegistration when provided, manages home venue associations with Type 2 SCD, retrieves participant activity assignments, calculates ageCohort derived field from dateOfBirth at query time, supports filtering by age cohorts by converting cohort names to date range conditions, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, includes population associations in all participant list responses to enable population badge display without additional API round trips, pushes all filtering and field selection to database layer via Prisma
 - **ActivityService**: Manages activity CRUD operations, validates required fields, handles status transitions, manages venue associations over time, validates additionalParticipantCount is a positive integer when provided, supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
 - **AssignmentService**: Manages participant-activity assignments, validates references, prevents duplicates
 - **VenueService**: Manages venue CRUD operations, validates geographic area references, prevents deletion of referenced venues, retrieves associated activities and current residents (participants whose most recent address history is at the venue), supports geographic area filtering for list queries, supports unified flexible filtering on all fields via filter[] parameters with appropriate matching logic (partial matching for high-cardinality text fields, exact matching for low-cardinality fields), supports customizable attribute selection via fields parameter with dot notation for nested relations, pushes all filtering and field selection to database layer via Prisma
@@ -473,7 +473,8 @@ ParticipantQuerySchema = {
     nickname: string (optional, case-insensitive partial match),
     dateOfBirth: date (optional, exact match),
     dateOfRegistration: date (optional, exact match),
-    populationIds: string[] (optional, array of valid UUIDs, OR logic)
+    populationIds: string[] (optional, array of valid UUIDs, OR logic),
+    ageCohorts: string[] (optional, array of cohort names: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown", OR logic)
   },
   fields: string (optional, comma-separated field names like "id,name,email" or "id,name,addressHistory.venue.name")
 }
@@ -488,6 +489,7 @@ ParticipantResponse = {
   dateOfBirth: string (optional, nullable, ISO 8601 date),
   dateOfRegistration: string (optional, nullable, ISO 8601 date),
   nickname: string (optional, nullable),
+  ageCohort: string (derived field, one of: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"),
   createdAt: string (ISO 8601 datetime),
   updatedAt: string (ISO 8601 datetime),
   populations: Array<{ id: string, name: string }> (array of population objects, empty array if no populations)
@@ -537,6 +539,210 @@ GeographicAreaQuerySchema = {
   fields: string (optional, comma-separated field names like "id,name,areaType" or "id,name,parent.name,childCount")
 }
 ```
+
+### Age Cohort Calculation and Filtering
+
+**Design Pattern:**
+
+The Age Cohort is a derived field calculated from a participant's dateOfBirth at query time. It is not stored in the database but computed dynamically in the service layer and included in all participant responses.
+
+**Age Cohort Definitions:**
+
+```typescript
+enum AgeCohort {
+  CHILD = "Child",              // < 11 years old
+  JUNIOR_YOUTH = "Junior Youth", // >= 11 and < 15 years old
+  YOUTH = "Youth",              // >= 15 and < 21 years old
+  YOUNG_ADULT = "Young Adult",  // >= 21 and < 30 years old
+  ADULT = "Adult",              // >= 30 years old
+  UNKNOWN = "Unknown"           // null dateOfBirth
+}
+```
+
+**Calculation Logic:**
+
+```typescript
+function calculateAgeCohort(dateOfBirth: Date | null, referenceDate?: Date): AgeCohort {
+  if (!dateOfBirth) {
+    return AgeCohort.UNKNOWN;
+  }
+  
+  const refDate = referenceDate || new Date();
+  const ageInYears = refDate.getFullYear() - dateOfBirth.getFullYear();
+  const monthDiff = refDate.getMonth() - dateOfBirth.getMonth();
+  const dayDiff = refDate.getDate() - dateOfBirth.getDate();
+  
+  // Adjust age if birthday hasn't occurred yet in the reference year
+  const adjustedAge = (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) 
+    ? ageInYears - 1 
+    : ageInYears;
+  
+  if (adjustedAge < 11) return AgeCohort.CHILD;
+  if (adjustedAge < 15) return AgeCohort.JUNIOR_YOUTH;
+  if (adjustedAge < 21) return AgeCohort.YOUTH;
+  if (adjustedAge < 30) return AgeCohort.YOUNG_ADULT;
+  return AgeCohort.ADULT;
+}
+```
+
+**Contextual Age Calculation:**
+
+The reference date for age calculation depends on the context:
+
+- **General participant queries** (GET /api/v1/participants, GET /api/v1/participants/:id, GET /api/v1/venues/:id/participants): Use current date
+- **Activity participant queries** (GET /api/v1/activities/:id/participants): 
+  - If activity has non-null endDate: Use activity's endDate
+  - If activity has null endDate (ongoing): Use current date
+
+This ensures historical accuracy - when viewing participants in an activity with an endDate, we see their age cohort at the time the activity ended, not their current age. For ongoing activities (null endDate), we use the current date since the activity is still in progress.
+
+**Service Layer Implementation:**
+
+```typescript
+// In ParticipantService
+async getParticipants(options: QueryOptions): Promise<PaginatedResponse<Participant>> {
+  // Fetch participants from repository
+  const participants = await this.participantRepository.findAllPaginated(options);
+  
+  // Calculate ageCohort for each participant using current date
+  const participantsWithCohort = participants.data.map(participant => ({
+    ...participant,
+    ageCohort: this.calculateAgeCohort(participant.dateOfBirth)
+  }));
+  
+  return {
+    ...participants,
+    data: participantsWithCohort
+  };
+}
+
+// In ActivityService
+async getActivityParticipants(activityId: string): Promise<ParticipantWithAssignment[]> {
+  // Fetch activity to get endDate
+  const activity = await this.activityRepository.findById(activityId);
+  
+  // Fetch participants with their assignments
+  const participants = await this.assignmentRepository.findByActivityId(activityId);
+  
+  // Determine reference date for age calculation
+  const referenceDate = activity.endDate || new Date();
+  
+  // Calculate ageCohort for each participant using contextual reference date
+  const participantsWithCohort = participants.map(participant => ({
+    ...participant,
+    ageCohort: this.calculateAgeCohort(participant.dateOfBirth, referenceDate)
+  }));
+  
+  return participantsWithCohort;
+}
+```
+
+**Filtering by Age Cohort:**
+
+When filtering by age cohorts, the service layer converts cohort names to date range conditions before querying the database:
+
+```typescript
+function convertCohortToDateRange(cohort: AgeCohort): { min?: Date; max?: Date } | null {
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  
+  switch (cohort) {
+    case AgeCohort.CHILD:
+      // < 11 years old: dateOfBirth > (current date - 11 years)
+      return { min: new Date(currentYear - 11, today.getMonth(), today.getDate()) };
+    
+    case AgeCohort.JUNIOR_YOUTH:
+      // >= 11 and < 15 years old
+      return {
+        min: new Date(currentYear - 15, today.getMonth(), today.getDate()),
+        max: new Date(currentYear - 11, today.getMonth(), today.getDate())
+      };
+    
+    case AgeCohort.YOUTH:
+      // >= 15 and < 21 years old
+      return {
+        min: new Date(currentYear - 21, today.getMonth(), today.getDate()),
+        max: new Date(currentYear - 15, today.getMonth(), today.getDate())
+      };
+    
+    case AgeCohort.YOUNG_ADULT:
+      // >= 21 and < 30 years old
+      return {
+        min: new Date(currentYear - 30, today.getMonth(), today.getDate()),
+        max: new Date(currentYear - 21, today.getMonth(), today.getDate())
+      };
+    
+    case AgeCohort.ADULT:
+      // >= 30 years old: dateOfBirth < (current date - 30 years)
+      return { max: new Date(currentYear - 30, today.getMonth(), today.getDate()) };
+    
+    case AgeCohort.UNKNOWN:
+      // null dateOfBirth
+      return null;
+    
+    default:
+      throw new Error(`Invalid age cohort: ${cohort}`);
+  }
+}
+
+// Build Prisma WHERE clause for age cohort filtering
+function buildAgeCohortFilter(cohorts: AgeCohort[]): any {
+  if (cohorts.length === 0) return {};
+  
+  const conditions = cohorts.map(cohort => {
+    if (cohort === AgeCohort.UNKNOWN) {
+      return { dateOfBirth: null };
+    }
+    
+    const range = convertCohortToDateRange(cohort);
+    const condition: any = {};
+    
+    if (range.min) {
+      condition.gte = range.min;
+    }
+    if (range.max) {
+      condition.lt = range.max;
+    }
+    
+    return { dateOfBirth: condition };
+  });
+  
+  // Apply OR logic for multiple cohorts
+  return conditions.length === 1 ? conditions[0] : { OR: conditions };
+}
+```
+
+**Repository Layer:**
+
+The repository layer receives the converted date range conditions and applies them to the Prisma query:
+
+```typescript
+// In ParticipantRepository
+async findAllPaginated(options: QueryOptions) {
+  const where: any = {};
+  
+  // ... other filters ...
+  
+  // Apply age cohort filter if provided
+  if (options.filter?.ageCohorts) {
+    const cohortFilter = buildAgeCohortFilter(options.filter.ageCohorts);
+    Object.assign(where, cohortFilter);
+  }
+  
+  return prisma.participant.findMany({
+    where,
+    // ... other query options ...
+  });
+}
+```
+
+**Performance Considerations:**
+
+- Age cohort calculation is lightweight (simple date arithmetic)
+- Filtering by age cohort uses indexed dateOfBirth column for efficient queries
+- No additional database columns or indexes required
+- Calculation happens in application layer after database query
+- For large result sets, consider calculating cohort in database using CASE expressions if performance becomes an issue
 
 ### Unified Filtering and Attribute Selection Architecture
 
@@ -1963,6 +2169,7 @@ The API uses Prisma to define the following database models:
 - assignments: Assignment[] (relation)
 - addressHistory: ParticipantAddressHistory[] (relation)
 - participantPopulations: ParticipantPopulation[] (relation)
+- **ageCohort: String (derived field, not stored)** - Calculated from dateOfBirth: "Child" (< 11 years), "Junior Youth" (>= 11 and < 15 years), "Youth" (>= 15 and < 21 years), "Young Adult" (>= 21 and < 30 years), "Adult" (>= 30 years), "Unknown" (null dateOfBirth)
 
 **ParticipantAddressHistory**
 - id: UUID (primary key)

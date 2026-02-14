@@ -28,6 +28,7 @@ import { EntitySelectorWithActions } from '../common/EntitySelectorWithActions';
 import { PopulationMembershipManager } from '../participants/PopulationMembershipManager';
 import { ParticipantPopulationService } from '../../services/api/population.service';
 import { useAuth } from '../../hooks/useAuth';
+import { calculateAgeCohort } from '../../utils/age-cohort.utils';
 
 interface ParticipantFormProps {
   participant: Participant | null;
@@ -46,6 +47,11 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
   const [dateOfRegistration, setDateOfRegistration] = useState('');
   const [nickname, setNickname] = useState('');
   
+  // Computed age cohort from dateOfBirth
+  const ageCohort = useMemo(() => {
+    return calculateAgeCohort(dateOfBirth || null);
+  }, [dateOfBirth]);
+
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [dateOfBirthError, setDateOfBirthError] = useState('');
@@ -731,6 +737,13 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                 onBlur={() => validateDateOfBirth(dateOfBirth)}
                 placeholder="YYYY-MM-DD"
                 disabled={isSubmitting}
+              />
+            </FormField>
+            <FormField label="Age Cohort" constraintText="Calculated from Date of Birth">
+              <Input
+                value={ageCohort}
+                disabled
+                readOnly
               />
             </FormField>
             <FormField label="Date of Registration" errorText={dateOfRegistrationError} constraintText="Optional">

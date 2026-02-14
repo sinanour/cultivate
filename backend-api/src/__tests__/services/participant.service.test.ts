@@ -62,12 +62,16 @@ describe('ParticipantService', () => {
 
     describe('getParticipantById', () => {
         it('should return participant by ID', async () => {
-            const mockParticipant = { id: '1', name: 'John Doe', email: 'john@example.com', phone: null, notes: null, createdAt: new Date(), updatedAt: new Date() };
+            const mockParticipant = { id: '1', name: 'John Doe', email: 'john@example.com', phone: null, notes: null, dateOfBirth: null, createdAt: new Date(), updatedAt: new Date() };
             mockParticipantRepo.findById = jest.fn().mockResolvedValue(mockParticipant);
 
             const result = await service.getParticipantById('1');
 
-            expect(result).toEqual(mockParticipant);
+            // Expect ageCohort to be added
+            expect(result).toEqual({
+                ...mockParticipant,
+                ageCohort: 'Unknown' // null dateOfBirth results in Unknown cohort
+            });
         });
 
         it('should throw error for non-existent participant', async () => {

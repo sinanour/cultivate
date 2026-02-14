@@ -314,6 +314,12 @@ export function ParticipantDetail() {
               <div>{formatDate(participant.dateOfBirth)}</div>
             </div>
           )}
+            {participant.ageCohort && (
+              <div>
+                <Box variant="awsui-key-label">Age Cohort</Box>
+                <div>{participant.ageCohort}</div>
+              </div>
+            )}
           {participant.dateOfRegistration && (
             <div>
               <Box variant="awsui-key-label">Date of Registration</Box>

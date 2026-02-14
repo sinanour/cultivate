@@ -1228,6 +1228,91 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
 - [ ] 24. Checkpoint - Verify participant enhancements
   - Ensure all tests pass, ask the user if questions arise.
 
+- [x] 25. Implement Age Cohort derived field
+  - [x] 25.1 Create Age Cohort utility functions
+    - Create calculateAgeCohort(dateOfBirth, referenceDate?) utility function in utils directory
+    - Accept optional referenceDate parameter (defaults to current date if not provided)
+    - Return one of: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"
+    - Implement age calculation logic with proper birthday adjustment
+    - Handle null dateOfBirth by returning "Unknown"
+    - _Requirements: 3A.1, 3A.2, 3A.3, 3A.4, 3A.5, 3A.6, 3A.7_
+
+  - [x] 25.2 Create Age Cohort filter conversion functions
+    - Create convertCohortToDateRange(cohort) utility function
+    - Convert cohort names to date range conditions for database queries
+    - Handle all cohort types: Child, Junior Youth, Youth, Young Adult, Adult, Unknown
+    - Return min/max date boundaries for each cohort
+    - _Requirements: 3A.13, 3A.14, 3A.15, 3A.16, 3A.17, 3A.18, 3A.19_
+
+  - [x] 25.3 Create buildAgeCohortFilter function for Prisma queries
+    - Accept array of cohort names
+    - Convert each cohort to date range condition using convertCohortToDateRange
+    - Combine multiple cohorts using OR logic
+    - Return Prisma WHERE clause for dateOfBirth filtering
+    - Handle "Unknown" cohort as dateOfBirth IS NULL condition
+    - _Requirements: 3A.20, 3A.21_
+
+  - [x] 25.4 Update ParticipantService to calculate ageCohort
+    - Update getParticipants() to calculate ageCohort for each participant using current date
+    - Update getParticipantById() to calculate ageCohort using current date
+    - Add ageCohort field to all participant response objects
+    - _Requirements: 3A.6, 3A.7, 3A.26_
+
+  - [x] 25.5 Update ActivityService to calculate contextual ageCohort
+    - Update getActivityParticipants() to fetch activity's endDate
+    - When activity has non-null endDate, use endDate as reference for age calculation
+    - When activity has null endDate, use current date as reference
+    - Calculate ageCohort for each participant using contextual reference date
+    - Add ageCohort field to activity participant response objects
+    - _Requirements: 3A.8, 3A.9_
+
+  - [x] 25.6 Update VenueService to calculate ageCohort
+    - Update getVenueParticipants() to calculate ageCohort using current date
+    - Add ageCohort field to venue participant response objects
+    - _Requirements: 3A.10_
+
+  - [x] 25.7 Implement Age Cohort filtering in ParticipantRepository
+    - Update findAllPaginated() to accept ageCohorts filter parameter
+    - Call buildAgeCohortFilter() to convert cohorts to date range conditions
+    - Apply age cohort filter to Prisma WHERE clause
+    - Combine with other filters using AND logic
+    - _Requirements: 3A.11, 3A.12, 3A.13, 3A.20, 3A.21_
+
+  - [x] 25.8 Update validation schemas for Age Cohort filtering
+    - Update ParticipantQuerySchema to accept ageCohorts array parameter
+    - Validate cohort names are one of: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"
+    - Return 400 Bad Request for invalid cohort names
+    - Use Zod enum validation
+    - _Requirements: 3A.22, 3A.23_
+
+  - [x] 25.9 Update CSV export to include ageCohort
+    - Update exportParticipants() to calculate ageCohort for each participant
+    - Add ageCohort column to CSV output (after dateOfBirth column)
+    - Use current date as reference for age calculation in exports
+    - _Requirements: 3A.24_
+
+  - [x] 25.10 Update OpenAPI documentation
+    - Document ageCohort as a derived field in Participant schema
+    - Document ageCohorts filter parameter for GET /api/v1/participants
+    - Include examples showing age cohort filtering
+    - Clarify that ageCohort is read-only and not accepted in create/update requests
+    - Document contextual age calculation for activity participants
+    - _Requirements: 3A.1, 3A.2, 3A.6, 3A.7, 3A.8, 3A.9, 3A.10, 3A.11_
+
+  - [ ]* 25.11 Write property tests for Age Cohort
+    - **Property 289: Age Cohort Calculation Accuracy**
+    - **Property 290: Age Cohort Unknown for Null DateOfBirth**
+    - **Property 291: Age Cohort Contextual Calculation for Activities**
+    - **Property 292: Age Cohort Filter Conversion to Date Ranges**
+    - **Property 293: Age Cohort Multiple Cohort OR Logic**
+    - **Property 294: Age Cohort Filter Validation**
+    - **Property 295: Age Cohort CSV Export Inclusion**
+    - **Property 296: Age Cohort Consistent Across Contexts**
+    - **Validates: Requirements 3A.1, 3A.2, 3A.3, 3A.4, 3A.5, 3A.6, 3A.7, 3A.8, 3A.9, 3A.10, 3A.11, 3A.12, 3A.13, 3A.14, 3A.15, 3A.16, 3A.17, 3A.18, 3A.19, 3A.20, 3A.21, 3A.22, 3A.23, 3A.24, 3A.25, 3A.26_
+
+- [x] 26. Checkpoint - Verify Age Cohort implementation
+  - Ensure all tests pass, ask the user if questions arise.
+
 ## Global Geographic Area Filter Implementation Notes
 
 **Query Parameter Support:**

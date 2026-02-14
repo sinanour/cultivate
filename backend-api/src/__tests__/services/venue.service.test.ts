@@ -184,7 +184,7 @@ describe('VenueService', () => {
             const venueId = 'venue-1';
             const mockVenue = { id: venueId, name: 'Community Center', address: '123 Main St', geographicAreaId: 'area-1', latitude: null, longitude: null, venueType: null, createdAt: new Date(), updatedAt: new Date() };
             const mockParticipants = [
-                { id: 'p1', name: 'John Doe', email: 'john@example.com', phone: null, notes: null, populations: [], createdAt: new Date(), updatedAt: new Date() },
+                { id: 'p1', name: 'John Doe', email: 'john@example.com', phone: null, notes: null, dateOfBirth: null, populations: [], createdAt: new Date(), updatedAt: new Date() },
             ];
 
             mockVenueRepo.findById = jest.fn().mockResolvedValue(mockVenue);
@@ -192,7 +192,13 @@ describe('VenueService', () => {
 
             const result = await service.getVenueParticipants(venueId);
 
-            expect(result).toEqual(mockParticipants);
+            // Expect ageCohort to be added by transformParticipantResponses
+            expect(result).toEqual([
+                {
+                    ...mockParticipants[0],
+                    ageCohort: 'Unknown' // null dateOfBirth results in Unknown cohort
+                }
+            ]);
         });
 
         it('should throw error for non-existent venue', async () => {

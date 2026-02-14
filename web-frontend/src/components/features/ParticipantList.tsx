@@ -132,6 +132,23 @@ export function ParticipantList() {
         },
       },
       {
+        key: "ageCohort",
+        propertyLabel: "Age Cohort",
+        groupValuesLabel: "Age Cohort values",
+        operators: ["="],
+        loadItems: async () => {
+          // Predefined list - no async loading needed
+          return [
+            { propertyKey: "ageCohort", value: "Child", label: "Child" },
+            { propertyKey: "ageCohort", value: "Junior Youth", label: "Junior Youth" },
+            { propertyKey: "ageCohort", value: "Youth", label: "Youth" },
+            { propertyKey: "ageCohort", value: "Young Adult", label: "Young Adult" },
+            { propertyKey: "ageCohort", value: "Adult", label: "Adult" },
+            { propertyKey: "ageCohort", value: "Unknown", label: "Unknown" },
+          ];
+        },
+      },
+      {
         key: "population",
         propertyLabel: "Population",
         groupValuesLabel: "Population values",
@@ -217,6 +234,14 @@ export function ParticipantList() {
     // Add email filter if present
     if (emailLabels.length > 0) {
       params.filter.email = emailLabels[0];
+    }
+
+    // Extract age cohort filter
+    const ageCohortLabels = propertyFilterQuery.tokens
+      .filter((t) => t.propertyKey === "ageCohort" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
+    if (ageCohortLabels.length > 0) {
+      params.filter.ageCohorts = ageCohortLabels.join(",");
     }
 
     const populationLabels = propertyFilterQuery.tokens
@@ -417,6 +442,12 @@ export function ParticipantList() {
                 </>
               ),
               sortingField: "name",
+            },
+            {
+              id: "ageCohort",
+              header: "Age Cohort",
+              cell: (item) => item.ageCohort || "Unknown",
+              sortingField: "ageCohort",
             },
             {
               id: "email",

@@ -604,6 +604,61 @@ This implementation plan covers the React-based web application built with TypeS
       - **Property 171: Population Membership Management in Form**
       - **Validates: Requirements 4.21, 4.22, 4.23, 4.24, 4.25, 4.26**
 
+  - [x] 7.9 Implement Age Cohort display and filtering
+    - [x] 7.9.1 Add Age Cohort column to ParticipantList
+      - Add "Age Cohort" column definition to CloudScape Table
+      - Position column between Name and Email columns
+      - Display ageCohort value from API response for each participant
+      - Render cohort name as plain text (Child, Junior Youth, Youth, Young Adult, Adult, Unknown)
+      - _Requirements: 4A.1, 4A.2, 4A.3, 4A.4, 4A.5_
+
+    - [x] 7.9.2 Add Age Cohort filter to FilterGroupingPanel on ParticipantList
+      - Add Age Cohort as a filter property in FilterGroupingPanel configuration
+      - Provide predefined options: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"
+      - No async loading needed (static list)
+      - When user selects cohorts, add to filter tokens
+      - Display cohort names in filter tokens (e.g., "Age Cohort = Child, Junior Youth")
+      - Send selected cohorts to backend as ?filter[ageCohorts]=cohort1,cohort2
+      - _Requirements: 4A.6, 4A.7, 4A.8, 4A.9, 4A.10, 4A.11, 4A.12_
+
+    - [x] 7.9.3 Implement Age Cohort URL synchronization
+      - Persist age cohort filter selections to URL query parameters
+      - Restore age cohort filters from URL on page load
+      - Include age cohorts in FilterGroupingPanel's URL parameter handling
+      - _Requirements: 4A.13, 4A.14_
+
+    - [x] 7.9.4 Display Age Cohort on ParticipantDetail page
+      - Add Age Cohort field to participant detail view
+      - Display ageCohort value from API response
+      - Position near other demographic information (dateOfBirth, dateOfRegistration)
+      - _Requirements: 4A.15_
+
+    - [x] 7.9.5 Display Age Cohort in activity and venue participant lists
+      - Ensure ageCohort is displayed in ActivityDetail participant list
+      - Ensure ageCohort is displayed in VenueDetail participant list
+      - Display contextual age cohort (based on activity endDate when applicable)
+      - _Requirements: 4A.16, 4A.17, 4A.18_
+
+    - [x] 7.9.6 Add Age Cohort display to ParticipantFormPage
+      - Add read-only Age Cohort field to form
+      - Calculate and display cohort based on dateOfBirth field value
+      - Update displayed cohort when user changes dateOfBirth
+      - Display "Unknown" when dateOfBirth is null
+      - Do NOT provide input field (read-only display only)
+      - Position near dateOfBirth field
+      - _Requirements: 4A.19, 4A.20, 4A.21, 4A.22_
+
+    - [ ]* 7.9.7 Write property tests for Age Cohort UI
+      - **Property 298: Age Cohort Column Display**
+      - **Property 299: Age Cohort Filter Property Configuration**
+      - **Property 300: Age Cohort Filter Token Display**
+      - **Property 301: Age Cohort URL Synchronization**
+      - **Property 302: Age Cohort Detail View Display**
+      - **Property 303: Age Cohort Contextual Display in Activity Lists**
+      - **Property 304: Age Cohort Read-Only Form Display**
+      - **Property 305: Age Cohort Dynamic Update on DateOfBirth Change**
+      - **Validates: Requirements 4A.1, 4A.2, 4A.3, 4A.4, 4A.5, 4A.6, 4A.7, 4A.8, 4A.9, 4A.10, 4A.11, 4A.12, 4A.13, 4A.14, 4A.15, 4A.16, 4A.17, 4A.18, 4A.19, 4A.20, 4A.21, 4A.22_
+
 - [x] 8. Implement venue management UI
   - [x] 8.1 Create VenueList component with CloudScape Table native pagination
     - Display table with name, address, geographic area, and venue type

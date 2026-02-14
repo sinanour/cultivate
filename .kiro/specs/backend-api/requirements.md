@@ -47,6 +47,7 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Additional_Participant_Count**: An optional positive integer field on activities that represents approximate attendance beyond individually tracked participants, used for high-level participation tracking in large gatherings
 - **Token_Invalidation**: A security mechanism that revokes all authorization tokens issued before a specific timestamp, forcing users to re-authenticate
 - **Last_Invalidation_Timestamp**: A persistent field in the User model that stores the most recent time when all tokens were invalidated for that user
+- **Age_Cohort**: A derived field calculated from a participant's date of birth that categorizes participants into age groups (Child, Junior Youth, Youth, Young Adult, Adult, Unknown) for demographic analysis and filtering
 
 ## Requirements
 
@@ -144,6 +145,48 @@ The Backend API package provides the RESTful API service that implements all bus
 22. WHEN creating an address history record, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same participant
 23. THE API SHALL provide a GET /api/participants/:id/activities endpoint that returns all activity assignments for the participant with activity and role details
 24. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only participants whose current home venue is in the specified geographic area or its descendants
+
+### Requirement 3A: Calculate and Filter by Age Cohort
+
+**User Story:** As a community organizer, I want to view and filter participants by age cohort (derived from date of birth), so that I can analyze and segment my community by age groups without manually calculating ages.
+
+#### Acceptance Criteria
+
+1. THE API SHALL calculate an ageCohort derived field for each participant based on their dateOfBirth
+2. THE ageCohort field SHALL be calculated at query time (not stored in the database)
+3. THE API SHALL define the following age cohort categories:
+   - "Child": participants with age < 11 years
+   - "Junior Youth": participants with age >= 11 and < 15 years
+   - "Youth": participants with age >= 15 and < 21 years
+   - "Young Adult": participants with age >= 21 and < 30 years
+   - "Adult": participants with age >= 30 years
+   - "Unknown": participants with null dateOfBirth
+4. WHEN calculating age for a participant in a general context (participant list, participant detail), THE API SHALL use the current date as the reference point
+5. WHEN calculating age for a participant associated with an activity that has a non-null endDate, THE API SHALL use the activity's endDate as the reference point
+6. WHEN calculating age for a participant associated with an activity that has a null endDate (ongoing activity), THE API SHALL use the current date as the reference point
+7. WHEN calculating age, THE API SHALL compute the difference in years between dateOfBirth and the reference date (current date or activity endDate)
+6. THE API SHALL include the ageCohort field in GET /api/v1/participants endpoint responses (list)
+7. THE API SHALL include the ageCohort field in GET /api/v1/participants/:id endpoint responses (detail)
+8. THE API SHALL include the ageCohort field in GET /api/v1/activities/:id/participants endpoint responses
+9. WHEN including ageCohort in GET /api/v1/activities/:id/participants responses, THE API SHALL calculate age based on the activity's endDate if endDate is non-null, otherwise use the current date
+10. THE API SHALL include the ageCohort field in GET /api/v1/venues/:id/participants endpoint responses
+11. THE API SHALL accept ?filter[ageCohorts]=cohort1,cohort2 parameter on GET /api/v1/participants to filter by one or more age cohorts
+11. WHEN filtering by age cohorts, THE API SHALL accept an array of cohort names (e.g., ?filter[ageCohorts]=Child,Youth)
+12. WHEN filtering by age cohorts, THE API SHALL apply OR logic within the cohort dimension (participants matching at least one cohort)
+13. WHEN filtering by age cohorts, THE API SHALL convert cohort names to date range conditions before querying the database
+14. WHEN filtering for "Child" cohort, THE API SHALL query for participants with dateOfBirth > (current date - 11 years)
+15. WHEN filtering for "Junior Youth" cohort, THE API SHALL query for participants with dateOfBirth >= (current date - 15 years) AND dateOfBirth < (current date - 11 years)
+16. WHEN filtering for "Youth" cohort, THE API SHALL query for participants with dateOfBirth >= (current date - 21 years) AND dateOfBirth < (current date - 15 years)
+17. WHEN filtering for "Young Adult" cohort, THE API SHALL query for participants with dateOfBirth >= (current date - 30 years) AND dateOfBirth < (current date - 21 years)
+18. WHEN filtering for "Adult" cohort, THE API SHALL query for participants with dateOfBirth < (current date - 30 years)
+19. WHEN filtering for "Unknown" cohort, THE API SHALL query for participants with dateOfBirth IS NULL
+20. WHEN multiple age cohorts are specified in the filter, THE API SHALL combine the date range conditions using OR logic
+21. WHEN age cohort filter is combined with other filters, THE API SHALL apply AND logic across filter dimensions
+22. THE API SHALL validate that age cohort filter values are one of the defined cohort names
+23. WHEN an invalid age cohort name is provided, THE API SHALL return 400 Bad Request with a validation error
+24. THE API SHALL include ageCohort in CSV export responses for participants
+25. THE API SHALL NOT accept ageCohort in CSV import requests (it is a derived field, not an input field)
+26. THE API SHALL calculate ageCohort consistently across all participant response contexts (list, detail, nested in activities/venues)
 
 ### Requirement 4: Create and Manage Activities
 

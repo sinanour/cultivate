@@ -306,6 +306,9 @@ src/
 - Invalidates page caches when filters change or data mutations occur
 - Resets to page 1 when filters are applied
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
+- **Displays Age Cohort column showing derived age group (Child, Junior Youth, Youth, Young Adult, Adult, Unknown)**
+- **Positions Age Cohort column between Name column and Email column**
+- **Retrieves ageCohort derived field from backend API response for each participant**
 - Displays population badges beside each participant name using CloudScape Badge component
 - Retrieves population data from populations array field included in API response (no additional API calls)
 - Shows all populations the participant belongs to as badges with consistent color scheme
@@ -316,11 +319,14 @@ src/
 - Provides actions for edit and delete (no separate View button)
 - Uses FilterGroupingPanel component for server-side filtering
 - Configures FilterGroupingPanel without grouping controls (filtering only, no grouping)
-- Configures FilterGroupingPanel with filter properties: Name, Email, Date of Birth, Date of Registration, Population
-- Implements lazy loading of filter property values with 300ms debouncing
+- Configures FilterGroupingPanel with filter properties: Name, Email, Date of Birth, Date of Registration, Population, **Age Cohort**
+- **Age Cohort filter property provides predefined options: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"**
+- **Age Cohort filter does not require async loading (predefined list)**
+- Implements lazy loading of filter property values with 300ms debouncing (for Name, Email, Population)
 - When "Update" button clicked on FilterGroupingPanel: sends filter criteria to backend as query parameters
-- Applies OR logic within filter dimensions (e.g., multiple populations)
-- Applies AND logic across filter dimensions (e.g., populations AND date of birth range)
+- **When age cohort filter is applied, sends ?filter[ageCohorts]=cohort1,cohort2 to backend**
+- Applies OR logic within filter dimensions (e.g., multiple populations, multiple age cohorts)
+- Applies AND logic across filter dimensions (e.g., populations AND date of birth range AND age cohorts)
 - Persists filter selections to URL query parameters for shareability
 - Restores filters from URL parameters on page load
 - **URL Filter Initialization:** When page loads with URL filter parameters, waits for FilterGroupingPanel to resolve display names to UUIDs before fetching participant data
@@ -338,6 +344,11 @@ src/
 - Validates dateOfBirth is in the past when provided (optional)
 - Validates dateOfRegistration is a valid date when provided (optional)
 - Supports optional email, phone, notes, dateOfBirth, dateOfRegistration, and nickname fields
+- **Displays Age Cohort as a read-only field calculated from dateOfBirth**
+- **When dateOfBirth is provided, calculates and displays the corresponding age cohort (Child, Junior Youth, Youth, Young Adult, Adult)**
+- **When dateOfBirth is null, displays "Unknown" as the age cohort**
+- **Updates displayed age cohort value automatically when user changes dateOfBirth field**
+- **Does NOT provide an input field for ageCohort (it is derived, not editable)**
 - Provides clear buttons (X icons) next to optional fields to remove previously entered values
 - When clear button is clicked, sets field value to null/empty and sends null to API on save
 - Visually indicates when optional fields are empty vs populated
@@ -361,6 +372,7 @@ src/
 
 **ParticipantDetail**
 - Shows participant information in detail view
+- **Displays Age Cohort derived field (Child, Junior Youth, Youth, Young Adult, Adult, or Unknown)**
 - Renders participant email address as a clickable mailto link using CloudScape Link component
 - Renders participant phone number as a clickable tel link using CloudScape Link component
 - Displays primary edit button in header section using CloudScape Button with variant="primary"

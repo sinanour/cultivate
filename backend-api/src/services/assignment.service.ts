@@ -32,10 +32,14 @@ export class AssignmentService {
 
         const assignments = await this.assignmentRepository.findByActivityId(activityId);
 
-        // Transform participant data to include flattened populations array
+        // Determine reference date for age calculation
+        // Use activity's endDate if non-null, otherwise use current date
+        const referenceDate = activity.endDate || new Date();
+
+        // Transform participant data to include flattened populations array and contextual ageCohort
         return assignments.map(assignment => ({
             ...assignment,
-            participant: transformParticipantResponse(assignment.participant)
+            participant: transformParticipantResponse(assignment.participant, referenceDate)
         }));
     }
 

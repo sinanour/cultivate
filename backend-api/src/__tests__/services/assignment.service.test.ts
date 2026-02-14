@@ -36,7 +36,7 @@ describe('AssignmentService', () => {
                     activityId,
                     participantId: 'p1',
                     roleId: 'role-1',
-                    participant: { id: 'p1', name: 'John Doe', email: 'john@example.com', populations: [] },
+                    participant: { id: 'p1', name: 'John Doe', email: 'john@example.com', dateOfBirth: null, populations: [] },
                     role: { id: 'role-1', name: 'Participant' },
                     createdAt: new Date(),
                 },
@@ -47,7 +47,16 @@ describe('AssignmentService', () => {
 
             const result = await service.getActivityParticipants(activityId);
 
-            expect(result).toEqual(mockAssignments);
+            // Expect ageCohort to be added by transformParticipantResponse
+            expect(result).toEqual([
+                {
+                    ...mockAssignments[0],
+                    participant: {
+                        ...mockAssignments[0].participant,
+                        ageCohort: 'Unknown' // null dateOfBirth results in Unknown cohort
+                    }
+                }
+            ]);
         });
 
         it('should throw error for non-existent activity', async () => {

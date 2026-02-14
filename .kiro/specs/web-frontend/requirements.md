@@ -58,6 +58,7 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Pull_To_Refresh**: A mobile-friendly gesture where users can pull down on a page to trigger a refresh of the current view, clearing all cached data and forcing a re-fetch from the backend
 - **Token_Invalidation**: A security mechanism that revokes all authorization tokens issued before a specific timestamp, forcing users to re-authenticate across all devices
 - **Multi_Device_Logout**: A user action that invalidates all authorization tokens for a user across all devices, requiring re-authentication on all sessions
+- **Age_Cohort**: A derived field calculated from a participant's date of birth that categorizes participants into age groups (Child, Junior Youth, Youth, Young Adult, Adult, Unknown) for demographic analysis and filtering
 
 ## Requirements
 
@@ -207,6 +208,35 @@ The Web Frontend package provides a responsive React-based web application that 
 24. THE Web_App SHALL provide an interface to remove the participant from populations
 25. THE Web_App SHALL allow a participant to belong to zero, one, or multiple populations
 26. THE Web_App SHALL display population memberships on the participant detail view
+
+### Requirement 4A: Display and Filter by Age Cohort
+
+**User Story:** As a community organizer, I want to view and filter participants by age cohort in the participant list, so that I can quickly identify and segment participants by age group for program planning and analysis.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display an "Age Cohort" column in the ParticipantList table
+2. THE Web_App SHALL retrieve the ageCohort derived field from the backend API for each participant
+3. THE Web_App SHALL display the ageCohort value in the Age Cohort column for each participant
+4. THE Web_App SHALL display one of the following cohort values: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"
+5. THE Web_App SHALL render the Age Cohort column between the Name column and the Email column in the participant list table
+6. THE Web_App SHALL add Age Cohort as a filter property in the FilterGroupingPanel on the ParticipantList page
+7. THE Age Cohort filter property SHALL provide predefined options without async loading: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"
+8. WHEN a user selects one or more age cohorts in the filter, THE Web_App SHALL send the selected cohorts to the backend API using ?filter[ageCohorts]=cohort1,cohort2 parameter
+9. WHEN multiple age cohorts are selected, THE Web_App SHALL apply OR logic within the age cohort filter dimension
+10. WHEN age cohort filter is combined with other filters, THE Web_App SHALL apply AND logic across filter dimensions
+11. THE Web_App SHALL display age cohort filter tokens in the PropertyFilter with human-readable cohort names
+12. WHEN an age cohort filter token is displayed, THE Web_App SHALL show the cohort names as a comma-separated list (e.g., "Age Cohort = Child, Junior Youth")
+13. THE Web_App SHALL persist age cohort filter selections to URL query parameters
+14. WHEN a user navigates to a ParticipantList URL with age cohort filter parameters, THE Web_App SHALL restore and apply the age cohort filter
+15. THE Web_App SHALL display the ageCohort field on the ParticipantDetail page
+16. THE Web_App SHALL display the ageCohort field in any participant list context (activity participants, venue participants)
+17. WHEN displaying participants in the context of an activity with a non-null endDate, THE Web_App SHALL display the age cohort calculated based on the activity's end date, reflecting the participant's age when the activity ended
+18. WHEN displaying participants in the context of an activity with a null endDate (ongoing activity), THE Web_App SHALL display the age cohort calculated based on the current date
+19. THE Web_App SHALL NOT provide an input field for ageCohort in the ParticipantFormPage (it is a derived field, not editable)
+20. THE Web_App SHALL calculate and display the ageCohort value based on the dateOfBirth field in the form preview or detail view
+21. WHEN dateOfBirth is null or not provided, THE Web_App SHALL display "Unknown" as the age cohort
+22. THE Web_App SHALL update the displayed age cohort value when the user changes the dateOfBirth field in the form
 
 ### Requirement 5: Activity Management UI
 
