@@ -129,7 +129,7 @@ export const addRateLimitHeaders = (_req: any, res: any, next: any) => {
 export const smartRateLimiter = (req: any, res: any, next: any) => {
     const method = req.method.toUpperCase();
 
-    if (method === 'GET') {
+    if (method === 'GET' || req.url.includes('geographic-areas/batch-ancestors')) {
         return queryRateLimiter(req, res, next);
     } else if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
         return mutationRateLimiter(req, res, next);
