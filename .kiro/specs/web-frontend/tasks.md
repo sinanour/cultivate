@@ -792,57 +792,125 @@ This implementation plan covers the React-based web application built with TypeS
       - **Validates: Requirements 22.2, 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15, 22.16, 22.17, 22.18, 22.19, 22.20, 22.21, 22.22, 22.23, 22.24, 22.25, 22.26**
 
 - [x] 9. Implement geographic area management UI
-  - [x] 9.1 Create GeographicAreaList component with batched incremental loading
-    - Display hierarchical tree view using CloudScape TreeView component
-    - Use TreeView with items prop containing hierarchical data structure
-    - Manage expanded state with expandedItems and onExpandedItemsChange props
-    - Enable vertical connector lines with connectorLines="vertical" prop
-    - Show area type badges for each node with increased vertical spacing
-    - Initially fetch only top-level areas and immediate children using depth=1 parameter
-    - When global filter active: fetch filtered area's immediate children using depth=1
-    - Implement lazy loading with batched fetching: fetch children in batches of 100 on-demand when user expands node via GET /api/geographic-areas/:id/children
-    - When expanding nodes with many children (>100), render children incrementally as batches arrive
-    - Display progress indicator during batch loading ("Loading areas: X / Y")
-    - Update progress indicator after each batch is rendered
-    - Allow users to expand/collapse already-loaded nodes while additional nodes load
-    - Implement Cancel button to interrupt batched loading
-    - When loading is cancelled, keep already-loaded areas visible
-    - When loading is cancelled with partial results, display Resume icon button using CloudScape refresh icon
-    - Position Resume button near entity count where loading indicator was displayed
-    - When Resume button is clicked, continue fetching batches from where loading was interrupted
-    - Show Resume button only when loading was cancelled and more items remain
-    - Hide Resume button when all items loaded or when filters change
-    - Use childCount field from API to determine if node has children
-    - Show expansion affordance (arrow) only when childCount > 0
-    - Hide expansion affordance when childCount = 0 (leaf node)
-    - Display loading indicator on node while fetching children
-    - Cache fetched children to avoid redundant API calls on collapse/re-expand
-    - Maintain expansion state when navigating away and returning to view
-    - Implement click-to-toggle expansion on row click for nodes with children
-    - Add hover highlighting with smooth background color transitions
-    - Show pointer cursor for expandable rows, default cursor for leaf nodes
-    - Prevent action button clicks from triggering row toggle with stopPropagation
-    - Provide Edit and Delete actions per node based on permissions (no separate View button)
-    - Support optional pagination
-    - Handle delete validation (REFERENCED_ENTITY error)
-    - When global filter is active, display filtered area, immediate children (initially), AND all ancestors (never suppress ancestors)
-    - Visually indicate ancestor areas as read-only (e.g., with badge, icon, or muted styling)
-    - Ensure ancestors are always rendered to provide hierarchy context
-    - Support progressive disclosure through user-initiated node expansion
-    - _Requirements: 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.15, 6B.16, 6B.17, 6B.18, 6B.19, 6B.20, 6B.23, 6B.24, 6B.25, 6B.26, 6B.27, 26A.1, 26A.2, 26A.3, 26A.4, 26A.5, 26A.6, 26A.7, 26A.8, 26A.9, 26A.10, 26A.23, 26A.24, 26A.25, 26A.26, 26A.27, 26B.15, 26B.16, 26B.17, 26B.18, 26B.19, 26B.20, 26B.23, 26B.24, 26B.25, 26B.26, 26B.27, 26B.28, 26B.29, 26B.30, 26B.31_
+  - [ ] 9.1 Create GeographicAreaList component with Table expandableRows and filtering
+    - [ ] 9.1.1 Set up Table component with expandableRows configuration
+      - Use CloudScape Table component with expandableRows feature
+      - Configure expandableRows with getItemChildren, isItemExpandable, expandedItems, onExpandableItemToggle
+      - Define column definitions: Name (hyperlinked), Area Type (badge), Child Count, Actions
+      - Render geographic area names as hyperlinks to /geographic-areas/:id
+      - Render area type badges using getAreaTypeBadgeColor() utility
+      - Provide Edit and Delete action buttons per row based on permissions
+      - Handle delete validation (REFERENCED_ENTITY error)
+      - _Requirements: 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6, 6B.7, 6B.8, 6B.9_
 
-  - [ ]* 9.2 Write property tests for hierarchical display and lazy loading
-    - **Property 50: Geographic Area Hierarchical Display**
-    - **Property 59a: Geographic Area Ancestor Display in Tree View**
-    - **Property 59b: Geographic Area Ancestor Read-Only Indication**
-    - **Property 59c: Geographic Area Ancestor Non-Suppression**
-    - **Property 59d: Lazy Loading Initial Fetch**
-    - **Property 59e: On-Demand Child Fetching**
-    - **Property 59f: Child Count Leaf Node Detection**
-    - **Property 59g: Child Count Expansion Affordance Display**
-    - **Property 59h: Children Caching**
-    - **Property 59i: Expansion State Persistence**
-    - **Validates: Requirements 6B.1, 6B.2, 6B.3, 6B.4, 6B.6, 6B.7, 6B.8, 6B.9, 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.23, 6B.24, 6B.25, 6B.26, 6B.27_
+    - [ ] 9.1.2 Implement pagination mode (no filters active)
+      - Configure Table with native pagination, fixed page size of 100 top-level rows
+      - Fetch paginated top-level areas using GET /api/v1/geographic-areas?page=X&limit=100&depth=1
+      - Include all ancestors in response to maintain hierarchical context
+      - Do NOT display total count in table header when no filters active
+      - Calculate pagination based only on top-level row count
+      - Handle page navigation events
+      - Use React Query to cache fetched pages
+      - _Requirements: 6B.10, 6B.11, 6B.12, 6B.13, 6B.14, 6B.15, 6B.16, 6B.17, 6B.18, 6B.19_
+
+    - [ ] 9.1.3 Implement lazy loading of children (no filters)
+      - When user expands a row, check if children already fetched
+      - If not fetched, fetch children using GET /api/v1/geographic-areas/:id/children?depth=1
+      - Display loading indicator within expanded row section
+      - Cache fetched children to avoid redundant API calls
+      - Recursively apply lazy loading when child rows are expanded
+      - Always include ancestors in display
+      - _Requirements: 6B.20, 6B.21, 6B.22, 6B.23, 6B.24, 6B.25, 6B.26_
+
+    - [ ] 9.1.4 Integrate FilterGroupingPanel for filtering
+      - Add FilterGroupingPanel as Table's filter prop
+      - Configure with groupingMode="none" and includeDateRange=false
+      - Define two filter properties:
+        - Name: text-based partial match with lazy loading and 300ms debouncing
+        - Area Type: enumerated options (NEIGHBOURHOOD, COMMUNITY, CITY, etc.)
+      - Implement handleFilterUpdate callback
+      - Apply OR logic within area type dimension, AND logic across dimensions
+      - _Requirements: 6B.27, 6B.28, 6B.29, 6B.30, 6B.31, 6B.32, 6B.33, 6B.34, 6B.35_
+
+    - [ ] 9.1.5 Implement batched loading with filters active
+      - When filters active and "Update" clicked, initiate batched loading
+      - Omit depth parameter to fetch all matching areas
+      - Fetch in batches of 100 using pagination (page=1, page=2, etc.)
+      - Display ProgressIndicator with loaded/total count and Cancel/Resume buttons
+      - Position ProgressIndicator in table header area
+      - Handle Cancel button to interrupt loading
+      - Display Resume button when loading cancelled with partial results
+      - Hide Resume button when all loaded or filters change
+      - Display total count of matching areas in header after all batches loaded
+      - Count represents matching areas only (not ancestors)
+      - _Requirements: 6B.36, 6B.37, 6B.38, 6B.39, 6B.40, 6B.41, 6B.42, 6B.43, 6B.44, 6B.45, 6B.46_
+
+    - [ ] 9.1.6 Implement ancestor fetching for filtered results
+      - When filters active, fetch ancestors using POST /api/v1/geographic-areas/batch-ancestors
+      - Batch ancestor requests in groups of up to 100 area IDs
+      - Include ancestors in table display for hierarchical context
+      - Render ancestors with same visual styling as matching areas (no special indication)
+      - Never suppress or hide ancestors
+      - _Requirements: 6B.47, 6B.48, 6B.49, 6B.50, 6B.51_
+
+    - [ ] 9.1.7 Build hierarchical structure for filtered results
+      - Organize all areas (matching + ancestors) into hierarchical structure
+      - Render only top-level areas as top-level table rows
+      - Render all other areas as nested rows within parents
+      - Automatically expand rows along path to filtered areas on current page
+      - Do NOT expand rows for filtered areas not on current page
+      - Exclude areas UNLESS they match filter OR are direct ancestor of matching area
+      - Render all areas with consistent visual styling
+      - Example: Filter "San" + "City" shows United States → California → San Francisco, San Diego
+      - Do NOT show San Bruno (neighborhood) or other non-ancestor areas
+      - _Requirements: 6B.52, 6B.53, 6B.54, 6B.55, 6B.56, 6B.57, 6B.58, 6B.59, 6B.60, 6B.61, 6B.62, 6B.63, 6B.64, 6B.65_
+
+    - [ ] 9.1.8 Implement pagination with filters active
+      - After all batches loaded, enable Table's native pagination
+      - Paginate based on top-level row count in filtered result set
+      - Fixed page size of 100 top-level rows
+      - Auto-expand rows to reveal filtered areas on current page
+      - _Requirements: 6B.66, 6B.67, 6B.68, 6B.69, 6B.70_
+
+    - [ ] 9.1.9 Implement filter clearing and state management
+      - When "Clear All" clicked then "Update" clicked, return to non-filtered pagination mode
+      - Clear batched loading state and expanded rows state
+      - Invalidate React Query caches
+      - Remove total count from table header
+      - Prevent FilterGroupingPanel from staying in loading state
+      - _Requirements: 6B.71, 6B.72, 6B.73, 6B.74, 6B.75, 6B.76, 6B.77_
+
+    - [ ] 9.1.10 Integrate global geographic area filter
+      - Apply global filter to all fetch requests
+      - When global filter active with no local filters, fetch filtered area and descendants with pagination
+      - Combine global and local filters using AND logic
+      - Clear caches and refetch when global filter changes
+      - Always include ancestors regardless of filter state
+      - _Requirements: 6B.78, 6B.79, 6B.80, 6B.81, 6B.82_
+
+    - [ ] 9.1.11 Add accessibility and error handling
+      - Provide accessible keyboard navigation for table interactions
+      - Include appropriate ARIA labels for screen readers
+      - Handle errors during batch fetching with retry options
+      - Display empty states when no areas match filters
+      - Maintain table interactivity during batched loading
+      - Render all areas with consistent visual styling
+      - _Requirements: 6B.83, 6B.84, 6B.85, 6B.86, 6B.87, 6B.88, 6B.89_
+
+  - [ ]* 9.1.12 Write property tests for Table-based geographic area list
+    - **Property 286: Geographic Area Table Structure**
+    - **Property 287: Geographic Area Table Expandable Rows**
+    - **Property 288: Geographic Area Table Pagination Without Filters**
+    - **Property 289: Geographic Area Table Lazy Loading**
+    - **Property 290: Geographic Area Table Filtering**
+    - **Property 291: Geographic Area Table Batched Loading with Filters**
+    - **Property 292: Geographic Area Table Ancestor Fetching**
+    - **Property 293: Geographic Area Table Hierarchical Display**
+    - **Property 294: Geographic Area Table Auto-Expansion**
+    - **Property 295: Geographic Area Table Filter Clearing**
+    - **Property 296: Geographic Area Table Header Count Display**
+    - **Property 297: Geographic Area Table Consistent Styling**
+    - **Validates: Requirements 6B.1-6B.89_
 
   - [x] 9.2 Create GeographicAreaFormPage component
     - Dedicated full-page form for create/edit (not a modal)
@@ -855,15 +923,15 @@ This implementation plan covers the React-based web application built with TypeS
     - Implement navigation guard using useFormNavigationGuard hook
     - Display confirmation dialog when user attempts to navigate away with unsaved changes
     - Allow vertical scrolling for form fields
-    - _Requirements: 6B.2, 6B.3, 6B.5, 6B.6, 6B.7, 2A.4, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
+    - _Requirements: 6B.90, 6B.91, 6B.93, 6B.94, 6B.95, 2A.4, 2A.5, 2A.6, 2A.9, 2A.10, 2A.11, 2A.12, 2A.13, 2A.14, 2A.15_
 
   - [ ]* 9.3 Write property tests for geographic area validation
     - **Property 51: Geographic Area Required Field Validation**
     - **Property 52: Circular Relationship Prevention**
     - **Property 53: Geographic Area Deletion Prevention**
-    - **Validates: Requirements 6B.5, 6B.7, 6B.9, 6B.10**
+    - **Validates: Requirements 6B.93, 6B.95, 6B.104, 6B.105**
 
-  - [x] 9.3 Create GeographicAreaDetail component
+  - [x] 9.4 Create GeographicAreaDetail component
     - Display full hierarchy path using /geographic-areas/:id/ancestors endpoint
     - List child areas from /geographic-areas/:id/children endpoint
     - List associated venues from /geographic-areas/:id/venues endpoint
@@ -877,40 +945,15 @@ This implementation plan covers the React-based web application built with TypeS
     - Add delete button with confirmation dialog
     - Add "Apply Filter" button in header section
     - When "Apply Filter" button clicked, update global geographic area filter to current area using setGeographicAreaFilter from GlobalGeographicFilterContext
-    - _Requirements: 6B.8, 6B.11, 6B.19, 6B.19a, 6B.19b, 6B.19c, 6B.19d, 6B.19e, 6B.19f, 6B.19g, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
+    - _Requirements: 6B.96, 6B.97, 6B.98, 6B.99, 6B.100, 6B.101, 6B.102, 6B.103, 6B.104, 6B.105, 23.1, 23.2, 23.3, 23.4, 23A.1, 23A.2_
 
-  - [x] 9.3a Update GeographicAreaService to pass global filter to children endpoint
-    - Update getChildren(id) method to accept optional geographicAreaId parameter
-    - Update getChildrenPaginated(parentId, page, limit) method to accept optional geographicAreaId parameter
-    - When geographicAreaId is provided, append it as a query parameter to the API request
-    - Enables filtered tree views to show only the relevant branch when a global filter is active
-    - _Requirements: 6B.7a, 6B.7b, 6B.7c_
-
-  - [x] 9.3b Update GeographicAreaList to pass global filter when fetching children
-    - Update fetchChildrenBatch callback to pass selectedGeographicAreaId to getChildrenPaginated
-    - Add selectedGeographicAreaId to the callback's dependency array
-    - Ensures that when a global filter is active and a node is expanded, only children in the filtered area's ancestral lineage are fetched
-    - Example: Filter by "Downtown", expand "World" → returns only "North America" (ancestor of Downtown)
-    - _Requirements: 6B.7a, 6B.7b, 6B.7c_
-
-  - [x] 9.3c Add useEffect to clear cache when global filter changes
-    - Import useEffect from React
-    - Add useEffect that watches selectedGeographicAreaId
-    - When filter changes, clear childrenCache (set to new Map())
-    - When filter changes, clear batchLoadingState (set to empty object)
-    - When filter changes, reset expandedItems (set to empty array)
-    - Ensures tree view shows fresh data when filter changes
-    - Prevents stale children from being displayed
-    - React Query automatically refetches tree data due to queryKey dependency
-    - _Requirements: 6B.28, 6B.29, 6B.30, 6B.31_
-
-  - [ ]* 9.4 Write property test for hierarchy path display
+  - [ ]* 9.5 Write property test for hierarchy path display
     - **Property 54: Geographic Area Hierarchy Path Display**
-    - **Validates: Requirements 6B.11**
+    - **Validates: Requirements 6B.96**
 
-  - [ ]* 9.4a Write property test for Apply Filter button
+  - [ ]* 9.6 Write property test for Apply Filter button
     - **Property 54a: Geographic Area Apply Filter Button**
-    - **Validates: Requirements 6B.19a, 6B.19b**
+    - **Validates: Requirements 6B.97, 6B.98**
 
 - [x] 10. Checkpoint - Verify core entity management UI
   - Ensure all tests pass, ask the user if questions arise.

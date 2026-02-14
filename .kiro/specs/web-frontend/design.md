@@ -647,52 +647,77 @@ src/
 
 #### 9. Geographic Area Management
 
+#### 9. Geographic Area Management
+
 **GeographicAreaList**
-- Displays hierarchical tree view of geographic areas using CloudScape TreeView component
-- Uses TreeView with items prop containing hierarchical data structure
-- Manages expanded state with expandedItems and onExpandedItemsChange
-- Shows vertical connector lines to visualize hierarchy relationships
-- Renders area type badges for each node with increased vertical spacing
-- Renders geographic area name as hyperlink in tree nodes (links to /geographic-areas/:id)
-- Applies padding directly to interactive elements for full-height clickability and hover treatment
-- Initially fetches only top-level areas and their immediate children using depth=1 parameter
-- When global filter active: fetches filtered area's immediate children using depth=1
-- Implements lazy loading with batched fetching: fetches children in batches of 100 items on-demand when user expands a node
-- When fetching children and a global geographic area filter is active, passes the filter as a geographicAreaId query parameter to ensure only children in the filtered area's ancestral lineage are returned
-- When expanding a top-level area with a leaf node filter active, receives only the child that is the direct ancestor of the filtered leaf node
-- When expanding nodes with many children (>100), renders children incrementally as batches arrive
-- Displays subtle loading indicator in header during batch loading (Spinner + "Loading: X / Y" text + Cancel button)
-- Loading indicator positioned next to entity count in header
-- Cancel button allows user to interrupt batched loading at any point
-- When loading is cancelled with partial results, displays "Resume" icon button using CloudScape refresh icon
-- Resume button positioned near entity count where loading indicator was displayed
-- When Resume button is clicked, continues fetching batches from where loading was interrupted
-- Resume button visible only when loading was cancelled and more items remain to load
-- Resume button hidden when all items loaded or when filters change
-- Does NOT use Alert components for loading progress
-- Uses childCount field from API to determine if node has children
-- Shows expansion affordance (arrow) only when childCount > 0
-- Hides expansion affordance when childCount = 0 (leaf node)
-- Displays loading indicator on node while fetching children
-- Caches fetched children to avoid redundant API calls on collapse/re-expand
-- Maintains expansion state when navigating away and returning to view
-- Supports click-to-toggle expansion on any row with children
-- Provides hover highlighting with smooth transitions for interactive feedback
-- Shows pointer cursor for expandable rows, default cursor for leaf nodes
-- Provides Edit and Delete actions per node based on user permissions (no separate View button)
-- Prevents action button clicks from triggering row toggle using event propagation control
+- Displays hierarchical geographic areas using CloudScape Table component with expandableRows feature
+- Renders ONLY top-level geographic areas (null parentGeographicAreaId) as top-level table rows
+- Renders all non-top-level areas as nested rows within their parent's expandable section
+- Uses Table's native expandableRows configuration with getItemChildren, isItemExpandable, expandedItems, and onExpandableItemToggle
+- Displays columns: Name (hyperlinked), Area Type (badge), Child Count, Actions (Edit/Delete)
+- Renders geographic area names as hyperlinks to /geographic-areas/:id
+- Renders area type badges using getAreaTypeBadgeColor() utility
+- Provides Edit and Delete action buttons per row based on user permissions
+- **Pagination (No Filters Active):**
+  - Uses CloudScape Table's native pagination with fixed page size of 100 top-level rows
+  - Fetches paginated top-level areas with depth=1 to include immediate children
+  - Includes all ancestors in response to maintain hierarchical context
+  - Does NOT display total count in table header when no filters active
+  - Calculates pagination based only on top-level row count (not nested rows)
+- **Lazy Loading of Children (No Filters Active):**
+  - When user expands a row, checks if children already fetched
+  - If not fetched, fetches children on-demand using GET /api/v1/geographic-areas/:id/children with depth=1
+  - Displays loading indicator within expanded row section while fetching
+  - Caches fetched children to avoid redundant API calls
+  - Recursively applies lazy loading when child rows are expanded
+- **Filtering with FilterGroupingPanel:**
+  - Integrates FilterGroupingPanel as Table's filter prop
+  - Configured with groupingMode="none" and includeDateRange=false
+  - Provides two filter properties: Name (partial match, lazy-loaded) and Area Type (enumerated)
+  - Name filter implements 300ms debouncing and fetches from backend using ?filter[name]=<text>
+  - Area Type filter provides predefined options (NEIGHBOURHOOD, COMMUNITY, CITY, etc.)
+  - Applies OR logic within area type dimension, AND logic across dimensions
+- **Batched Loading with Filters Active:**
+  - When filters active and "Update" clicked, initiates batched loading of ALL matching areas
+  - Omits depth parameter to fetch all matching areas regardless of hierarchy level
+  - Fetches in batches of 100 items using pagination
+  - Displays ProgressIndicator showing loaded/total count with Cancel/Resume buttons
+  - Fetches ancestors for all matching areas using POST /api/v1/geographic-areas/batch-ancestors
+  - Batches ancestor requests in groups of up to 100 area IDs
+  - Displays total count of matching areas in table header after all batches loaded
+  - Count represents matching areas only (not including ancestors)
+- **Hierarchical Display with Filters Active:**
+  - Organizes all areas (matching + ancestors) into hierarchical structure
+  - Renders only top-level areas as top-level table rows
+  - Renders all other areas as nested rows within their parents
+  - Automatically expands rows along path to filtered areas on current page
+  - Excludes areas UNLESS they match filter OR are direct ancestor of matching area
+  - Example: Filter "San" + "City" shows United States → California → San Francisco, San Diego
+  - Does NOT show San Bruno (neighborhood) or other non-ancestor areas
+- **Pagination with Filters Active:**
+  - After all batches loaded, enables Table's native pagination
+  - Paginates based on top-level row count in filtered result set
+  - Fixed page size of 100 top-level rows
+  - Auto-expands rows to reveal filtered areas on current page
+- **Filter Clearing:**
+  - When "Clear All" clicked then "Update" clicked, returns to non-filtered pagination mode
+  - Clears batched loading state and expanded rows state
+  - Invalidates React Query caches
+  - Removes total count from table header
+  - Prevents FilterGroupingPanel from staying in loading state
+- **Visual Styling:**
+  - Renders all areas with consistent visual styling
+  - No special read-only indication for ancestors
+  - Ancestors always visible for hierarchical context (with or without filters)
+- **Global Filter Integration:**
+  - Applies global geographic area filter to all fetch requests
+  - Combines global and local filters using AND logic
+  - Clears caches and refetches when global filter changes
+  - Always includes ancestors regardless of filter state
 - Handles delete validation (prevents deletion if referenced by venues or child areas)
-- Shows area type badges for each geographic area
-- Provides expand/collapse functionality for hierarchy navigation
-- Provides actions for edit and delete (no separate View button)
-- Handles delete validation (prevents deletion if referenced)
-- Applies global geographic area filter from context when active
-- When filtered, displays the selected area, its immediate children (initially), and all its ancestors (to maintain hierarchy context)
-- Visually indicates ancestor areas as read-only when displayed due to filtering (e.g., with a badge, icon, or muted styling)
-- Never suppresses or hides ancestor areas from the tree view, as they provide essential navigational context
-- Supports progressive disclosure through user-initiated node expansion
-- Clears children cache, batch loading state, and expanded items when global geographic area filter changes to prevent stale data display
-- Automatically refetches tree data when filter changes through React Query's queryKey dependency on selectedGeographicAreaId
+- Provides accessible keyboard navigation and ARIA labels
+- Maintains smooth visual feedback during all loading operations
+- Allows table interaction during batched loading (scroll, expand/collapse loaded rows)
 
 **GeographicAreaFormPage**
 - Dedicated full-page form for creating/editing geographic areas (not a modal)

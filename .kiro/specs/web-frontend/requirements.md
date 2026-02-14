@@ -480,51 +480,163 @@ The Web Frontend package provides a responsive React-based web application that 
 
 ### Requirement 6B: Geographic Area Management UI
 
-**User Story:** As a community organizer, I want to manage geographic areas in the web interface with lazy loading support, so that I can efficiently navigate large geographic hierarchies without loading all nodes at once.
+**User Story:** As a community organizer, I want to manage geographic areas in a table with expandable hierarchical rows and comprehensive filtering, so that I can efficiently navigate and search large geographic hierarchies.
 
 #### Acceptance Criteria
 
-1. THE Web_App SHALL display a hierarchical tree view of geographic areas using CloudScape TreeView component
-2. WHEN first navigating to the geographic areas view, THE Web_App SHALL fetch only the top-level geographic areas (based on the current global filter) and their immediate children
-3. WHEN no global filter is active, THE Web_App SHALL fetch all top-level areas with null parents (e.g., countries) and their immediate children (e.g., states or provinces)
-4. WHEN a specific geographic area is selected in the global filter, THE Web_App SHALL fetch only the immediate children of that filtered area
-5. THE Web_App SHALL use the depth query parameter when fetching geographic areas to limit recursive fetching
-6. WHEN initially loading the tree view, THE Web_App SHALL request depth=1 to fetch only one level of children
-7. WHEN a tree node is expanded by the user, THE Web_App SHALL fetch the children of that node on demand using GET /api/geographic-areas/:id/children
-7a. WHEN a tree node is expanded and a global geographic area filter is active, THE Web_App SHALL pass the filter as a geographicAreaId query parameter to the children endpoint
-7b. WHEN the children endpoint receives a geographicAreaId filter parameter, THE Web_App SHALL expect to receive only children that are in the direct ancestral lineage of the filtered area
-7c. WHEN a global filter is set to a leaf node and the user expands a top-level area, THE Web_App SHALL receive only the child that is the direct ancestor of the filtered leaf node
-8. THE Web_App SHALL use the childCount field from the API response to determine if a node has children
-9. WHEN childCount is 0, THE Web_App SHALL render the node as a leaf node without expansion affordance
-10. WHEN childCount is greater than 0, THE Web_App SHALL render the node with expansion affordance (arrow icon or similar)
-11. THE Web_App SHALL display a loading indicator on a node while fetching its children
-12. THE Web_App SHALL cache fetched children to avoid redundant API calls when collapsing and re-expanding nodes
-13. THE Web_App SHALL provide a dedicated page to create new geographic areas
-14. THE Web_App SHALL provide a dedicated page to edit existing geographic areas
-15. THE Web_App SHALL provide a delete button for geographic areas
-16. THE Web_App SHALL validate that geographic area name and type are provided
-17. THE Web_App SHALL use the Geographic_Area_Selector component for parent geographic area selection
-18. THE Web_App SHALL prevent circular parent-child relationships
-19. THE Web_App SHALL display a detail view showing geographic area information, child areas, and associated venues from the area and all descendant areas (recursive aggregation)
-19a. THE Web_App SHALL provide an "Apply Filter" button on the geographic area detail page
-19b. WHEN the "Apply Filter" button is clicked, THE Web_App SHALL update the global geographic area filter to the current geographic area
-19c. WHEN displaying the list of associated venues on the geographic area detail page, THE Web_App SHALL include a venue type column
-19d. WHEN a venue in the associated venues list has a venue type specified, THE Web_App SHALL render the venue type as a CloudScape Badge component
-19e. WHEN the venue type is PRIVATE_RESIDENCE in the associated venues list, THE Web_App SHALL render the badge with green color
-19f. WHEN the venue type is PUBLIC_BUILDING in the associated venues list, THE Web_App SHALL render the badge with medium severity color (orange/warning color)
-19g. WHEN a venue in the associated venues list does not have a venue type specified (null), THE Web_App SHALL leave the venue type cell blank
-20. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
-21. WHEN deleting a geographic area, THE Web_App SHALL display an error message explaining which entities reference it
-22. THE Web_App SHALL display the full hierarchy path for each geographic area
-23. WHEN the global geographic area filter is active, THE Web_App SHALL display the filtered area, its immediate children (initially), AND all its ancestors in the tree view to maintain hierarchy context
-24. WHEN displaying ancestors of a filtered geographic area, THE Web_App SHALL visually indicate that ancestor areas are read-only (e.g., with a badge, icon, or muted styling)
-25. THE Web_App SHALL NOT suppress or hide ancestor geographic areas from the tree view when a filter is active, as ancestors provide essential navigational context
-26. THE Web_App SHALL support progressive disclosure of the hierarchy through user-initiated node expansion
-27. THE Web_App SHALL maintain expansion state when navigating away and returning to the geographic areas view
-28. WHEN the global geographic area filter changes, THE Web_App SHALL clear the children cache to prevent displaying stale data
-29. WHEN the global geographic area filter changes, THE Web_App SHALL clear the batch loading state to reset any in-progress loading
-30. WHEN the global geographic area filter changes, THE Web_App SHALL reset the expanded items to start with a fresh tree view
-31. WHEN the global geographic area filter changes, THE Web_App SHALL automatically refetch the tree data through React Query's dependency tracking
+**Table Structure and Display:**
+
+1. THE Web_App SHALL display geographic areas using CloudScape Table component with expandableRows feature
+2. THE Web_App SHALL render ONLY top-level geographic areas (with null parentGeographicAreaId) as top-level table rows
+3. THE Web_App SHALL render all non-top-level geographic areas as nested rows within their respective parent's expandable section
+4. THE Web_App SHALL use the Table's native expandableRows configuration to enable row expansion
+5. THE Web_App SHALL display the following columns in the table:
+   - Name (with hyperlink to detail page)
+   - Area Type (with colored badge)
+   - Child Count
+   - Actions (Edit, Delete buttons)
+6. THE Web_App SHALL render geographic area names as hyperlinks to /geographic-areas/:id
+7. THE Web_App SHALL render area type badges using getAreaTypeBadgeColor() utility for consistent coloring
+8. THE Web_App SHALL display the child count for each geographic area
+9. THE Web_App SHALL provide Edit and Delete action buttons for each row based on user permissions
+
+**Pagination (No Filters Active):**
+
+10. THE Web_App SHALL use CloudScape Table's native pagination when no filters are active
+11. THE Web_App SHALL set a fixed page size of 100 top-level rows per page
+12. THE Web_App SHALL NOT allow users to customize the page size
+13. THE Web_App SHALL calculate pagination based ONLY on the count of top-level rows (not nested rows)
+14. WHEN first navigating to the geographic areas view with no filters, THE Web_App SHALL fetch the first page of top-level geographic areas (limit=100, page=1)
+15. WHEN a user navigates to a different page, THE Web_App SHALL fetch that page of top-level geographic areas
+16. WHEN no filters are active, THE Web_App SHALL NOT display a total count in the table header
+17. THE Web_App SHALL use the depth=1 query parameter when fetching paginated results to include immediate children
+18. WHEN fetching paginated results without filters, THE Web_App SHALL include all ancestors in the response to maintain hierarchical context
+19. THE Web_App SHALL render all ancestors as expandable rows in the table hierarchy
+
+**Lazy Loading of Children (No Filters Active):**
+
+20. WHEN a user expands a row, THE Web_App SHALL check if children have already been fetched for that geographic area
+21. IF children have NOT been fetched, THE Web_App SHALL fetch children on-demand using GET /api/v1/geographic-areas/:id/children
+22. THE Web_App SHALL use depth=1 parameter when fetching children to load only immediate children
+23. THE Web_App SHALL display a loading indicator within the expanded row section while fetching children
+24. THE Web_App SHALL cache fetched children to avoid redundant API calls when collapsing and re-expanding rows
+25. WHEN a child row is expanded, THE Web_App SHALL recursively apply the same lazy loading logic to fetch grandchildren
+26. THE Web_App SHALL always include ancestors in the table display to maintain hierarchical context, regardless of whether filters are active
+
+**Filtering with FilterGroupingPanel:**
+
+27. THE Web_App SHALL integrate FilterGroupingPanel component as the Table's filter prop
+28. THE FilterGroupingPanel SHALL be configured with groupingMode="none" (no grouping controls)
+29. THE FilterGroupingPanel SHALL be configured with includeDateRange=false (no date range needed)
+30. THE FilterGroupingPanel SHALL provide two filter properties:
+    - Name: text-based partial match filter
+    - Area Type: enumerated type filter (NEIGHBOURHOOD, COMMUNITY, CITY, CLUSTER, COUNTY, PROVINCE, STATE, COUNTRY, CONTINENT, HEMISPHERE, WORLD)
+31. THE Name filter SHALL implement lazy loading with 300ms debouncing
+32. WHEN a user types in the Name filter, THE Web_App SHALL fetch matching geographic areas from the backend using ?filter[name]=<text> parameter
+33. THE Area Type filter SHALL provide predefined options without async loading
+34. WHEN multiple area types are selected, THE Web_App SHALL apply OR logic within the area type dimension
+35. WHEN both name and area type filters are applied, THE Web_App SHALL apply AND logic across dimensions
+
+**Batched Loading with Filters Active:**
+
+36. WHEN filters are active and the user clicks "Update", THE Web_App SHALL initiate batched loading of ALL matching geographic areas
+37. WHEN filters are active, THE Web_App SHALL omit the depth query parameter to fetch all matching areas regardless of hierarchy level
+38. THE Web_App SHALL fetch filtered results in batches of 100 items using pagination (page=1, limit=100, then page=2, limit=100, etc.)
+39. THE Web_App SHALL display a ProgressIndicator component showing loaded count and total count (e.g., "Loading areas: 300 / 1,500")
+40. THE ProgressIndicator SHALL include a Cancel button to interrupt batched loading
+41. WHEN loading is cancelled, THE Web_App SHALL keep already-loaded areas visible in the table
+42. WHEN loading is cancelled with partial results, THE Web_App SHALL display a Resume button
+43. WHEN the Resume button is clicked, THE Web_App SHALL continue fetching batches from where loading was interrupted
+44. THE Resume button SHALL be hidden when all areas are loaded or when filters change
+45. WHEN filters are active and all batches have been loaded, THE Web_App SHALL display the total count of matching areas in the table header
+46. THE total count displayed SHALL represent the number of geographic areas that match the filter criteria (not including ancestors)
+
+**Ancestor Fetching for Filtered Results:**
+
+47. WHEN filters are active, THE Web_App SHALL fetch ancestors for all matching geographic areas using POST /api/v1/geographic-areas/batch-ancestors
+48. THE Web_App SHALL batch ancestor fetch requests in groups of up to 100 area IDs
+49. THE Web_App SHALL include fetched ancestors in the table display to maintain hierarchical context
+50. THE Web_App SHALL NOT suppress or hide ancestor areas, as they provide essential navigational context
+51. THE Web_App SHALL render ancestors using the same visual styling as matching areas (no special read-only indication)
+
+**Hierarchical Display with Filters Active:**
+
+52. WHEN filters are active and results are fully loaded, THE Web_App SHALL organize all areas (matching + ancestors) into a hierarchical structure
+53. THE Web_App SHALL render ONLY top-level areas (null parent) as top-level table rows
+54. THE Web_App SHALL render all other areas as nested rows within their respective parent's expandable section
+55. THE Web_App SHALL automatically expand rows along the path to filtered areas that appear on the current page
+56. THE Web_App SHALL NOT expand rows for filtered areas that are not on the current page
+57. WHEN a filtered area's ancestors are on the current page, THE Web_App SHALL expand those ancestor rows to reveal the filtered area
+58. THE Web_App SHALL exclude geographic areas from the table UNLESS they match the filter criteria OR are a direct ancestor of a matching area
+59. THE Web_App SHALL render all areas (both matching and ancestors) with consistent visual styling
+
+**Example: Filtering for "San" + "City":**
+
+60. GIVEN a filter for name="San" and areaType="City"
+61. WHEN the filter returns "San Francisco" and "San Diego" (both cities in California, USA)
+62. THEN the table SHALL display:
+    - "United States" (top-level row, ancestor, expanded)
+      - "California" (nested row, ancestor, expanded)
+        - "San Francisco" (nested row, matches filter)
+        - "San Diego" (nested row, matches filter)
+63. THE table SHALL NOT display "San Bruno" (a neighborhood of San Francisco) because it doesn't match the filter (not a City)
+64. THE table SHALL NOT display other US states or other countries because they are not ancestors of matching areas
+65. THE table header SHALL display "2 geographic areas" (count of matching areas only, not including ancestors)
+
+**Pagination with Filters Active:**
+
+66. WHEN filters are active and all results are loaded, THE Web_App SHALL enable CloudScape Table's native pagination
+67. THE Web_App SHALL paginate based on the count of top-level rows (e.g., countries) in the filtered result set
+68. THE Web_App SHALL use a fixed page size of 100 top-level rows
+69. WHEN a user navigates to page 2, THE Web_App SHALL display the next 100 top-level rows and their nested descendants
+70. THE Web_App SHALL automatically expand rows to reveal filtered areas that appear on the current page
+
+**Filter Clearing and State Management:**
+
+71. WHEN the user clicks "Clear All" on the FilterGroupingPanel, THE Web_App SHALL reset all filters
+72. WHEN the user clicks "Update" after clearing filters, THE Web_App SHALL return to the non-filtered pagination mode
+73. THE Web_App SHALL clear the batched loading state when filters are cleared
+74. THE Web_App SHALL clear the expanded rows state when filters are cleared
+75. THE Web_App SHALL invalidate React Query caches to prevent stale data display
+76. THE FilterGroupingPanel SHALL NOT remain in a loading state after clearing filters due to query result caching
+77. WHEN returning to non-filtered mode, THE Web_App SHALL remove the total count from the table header
+
+**Global Geographic Area Filter Integration:**
+
+78. WHEN the global geographic area filter is active, THE Web_App SHALL apply it to all fetch requests
+79. WHEN the global filter is active with no local filters, THE Web_App SHALL fetch only the filtered area and its descendants using pagination
+80. WHEN both global filter and local filters are active, THE Web_App SHALL combine them using AND logic
+81. WHEN the global geographic area filter changes, THE Web_App SHALL clear caches and refetch data
+82. THE Web_App SHALL always include ancestors in the display regardless of global or local filter state
+
+**Performance and UX:**
+
+83. THE Web_App SHALL provide smooth visual feedback during all loading operations
+84. THE Web_App SHALL maintain table interactivity during batched loading (users can scroll, expand/collapse already-loaded rows)
+85. THE Web_App SHALL handle errors during batch fetching gracefully with retry options
+86. THE Web_App SHALL display appropriate empty states when no areas match the filter criteria
+87. THE Web_App SHALL provide accessible keyboard navigation for all table interactions
+88. THE Web_App SHALL include appropriate ARIA labels for screen readers
+89. THE Web_App SHALL render all geographic areas with consistent visual styling regardless of whether they match filters or are ancestors
+
+**Existing Functionality Preserved:**
+
+90. THE Web_App SHALL provide a dedicated page to create new geographic areas
+91. THE Web_App SHALL provide a dedicated page to edit existing geographic areas
+92. THE Web_App SHALL provide a delete button for geographic areas
+93. THE Web_App SHALL validate that geographic area name and type are provided
+94. THE Web_App SHALL use the Geographic_Area_Selector component for parent geographic area selection
+95. THE Web_App SHALL prevent circular parent-child relationships
+96. THE Web_App SHALL display a detail view showing geographic area information, child areas, and associated venues from the area and all descendant areas (recursive aggregation)
+97. THE Web_App SHALL provide an "Apply Filter" button on the geographic area detail page
+98. WHEN the "Apply Filter" button is clicked, THE Web_App SHALL update the global geographic area filter to the current geographic area
+99. WHEN displaying the list of associated venues on the geographic area detail page, THE Web_App SHALL include a venue type column
+100. WHEN a venue in the associated venues list has a venue type specified, THE Web_App SHALL render the venue type as a CloudScape Badge component
+101. WHEN the venue type is PRIVATE_RESIDENCE in the associated venues list, THE Web_App SHALL render the badge with green color
+102. WHEN the venue type is PUBLIC_BUILDING in the associated venues list, THE Web_App SHALL render the badge with medium severity color (orange/warning color)
+103. WHEN a venue in the associated venues list does not have a venue type specified (null), THE Web_App SHALL leave the venue type cell blank
+104. WHEN deleting a geographic area, THE Web_App SHALL prevent deletion if venues or child areas reference it
+105. WHEN deleting a geographic area, THE Web_App SHALL display an error message explaining which entities reference it
 
 ### Requirement 6B1: Reusable Geographic Area Selector Component
 

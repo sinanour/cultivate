@@ -601,6 +601,79 @@ export class GeographicAreaService {
 
         return allAreas;
     }
+    /**
+     * Helper method to recursively fetch children up to a specified depth
+     * Applies geographic filtering and flexible filters at each level
+     */
+    private async fetchChildrenWithDepth(
+        parentId: string,
+        depth: number,
+        effectiveAreaIds: string[] | undefined,
+        flexibleWhere: any,
+        select: any
+    ): Promise<any[]> {
+        // Build where clause for children
+        let whereClause: any = { parentGeographicAreaId: parentId };
+
+        // Apply geographic filtering if needed
+        if (effectiveAreaIds) {
+            whereClause = {
+                AND: [
+                    whereClause,
+                    { id: { in: effectiveAreaIds } }
+                ]
+            };
+        }
+
+        // Apply flexible filters if provided
+        if (flexibleWhere) {
+            whereClause = { AND: [whereClause, flexibleWhere] };
+        }
+
+        // Fetch children at this level
+        const queryOptions: any = {
+            where: whereClause,
+            orderBy: { name: 'asc' }
+        };
+
+        if (select) {
+            queryOptions.select = select;
+        } else {
+            queryOptions.include = { parent: true };
+        }
+
+        const children = await this.prisma.geographicArea.findMany(queryOptions);
+
+        // Add childCount and recursively fetch deeper children if depth > 1
+        const childrenWithData = await Promise.all(
+            children.map(async (child: any) => {
+                const childCount = await this.geographicAreaRepository.countChildren(child.id);
+
+                // If depth > 1, recursively fetch grandchildren
+                if (depth > 1) {
+                    const grandchildren = await this.fetchChildrenWithDepth(
+                        child.id,
+                        depth - 1,
+                        effectiveAreaIds,
+                        flexibleWhere,
+                        select
+                    );
+                    return {
+                        ...child,
+                        childCount,
+                        children: grandchildren.length > 0 ? grandchildren : undefined
+                    };
+                }
+
+                return {
+                    ...child,
+                    childCount
+                };
+            })
+        );
+
+        return childrenWithData;
+    }
 
     /**
      * Get geographic areas with flexible filtering and customizable attribute selection (paginated)
@@ -635,19 +708,129 @@ export class GeographicAreaService {
             }
         }
 
-        // If depth is specified, use non-paginated depth-limited fetching
-        // (pagination doesn't make sense with hierarchical depth-limited data)
+        // If depth is specified, we need to paginate at the top level and then fetch children
         if (depth !== undefined) {
-            const areas = await this.getAllGeographicAreasFlexible({
+            // Determine effective geographic area IDs for filtering
+            const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIds(
                 geographicAreaId,
-                depth,
-                filter,
-                fields,
                 authorizedAreaIds,
-                hasGeographicRestrictions,
-                readOnlyAreaIds
-            });
-            return PaginationHelper.createResponse(areas, validPage, validLimit, areas.length);
+                hasGeographicRestrictions
+            );
+
+            // When geographicAreaId is provided, include the filtered area itself
+            let filteredAreaItself: GeographicArea | null = null;
+            if (geographicAreaId) {
+                filteredAreaItself = await this.geographicAreaRepository.findById(geographicAreaId);
+                if (!filteredAreaItself) {
+                    throw new Error('Geographic area not found');
+                }
+            }
+
+            // Build where clause for top-level areas (or children of filtered area)
+            let whereClause: any;
+
+            if (geographicAreaId) {
+                // Fetching children of a specific area
+                whereClause = { parentGeographicAreaId: geographicAreaId };
+            } else {
+                // Fetching top-level areas (null parent)
+                whereClause = { parentGeographicAreaId: null };
+            }
+
+            // Apply geographic filtering if needed
+            if (effectiveAreaIds) {
+                // Include both authorized areas (FULL access) and read-only areas (ancestors)
+                const allAccessibleAreaIds = hasGeographicRestrictions
+                    ? [...new Set([...effectiveAreaIds, ...readOnlyAreaIds])]
+                    : effectiveAreaIds;
+
+                whereClause = {
+                    AND: [
+                        whereClause,
+                        { id: { in: allAccessibleAreaIds } }
+                    ]
+                };
+            }
+
+            // Apply flexible filters if provided
+            if (flexibleWhere) {
+                whereClause = { AND: [whereClause, flexibleWhere] };
+            }
+
+            // Count total top-level areas matching the criteria
+            const total = await this.prisma.geographicArea.count({ where: whereClause });
+
+            // Fetch paginated top-level areas
+            const queryOptions: any = {
+                where: whereClause,
+                skip: (validPage - 1) * validLimit,
+                take: validLimit,
+                orderBy: { name: 'asc' }
+            };
+
+            if (select) {
+                queryOptions.select = select;
+            } else {
+                queryOptions.include = { parent: true };
+            }
+
+            const topLevelAreas = await this.prisma.geographicArea.findMany(queryOptions);
+
+            // Prepare combined area IDs for child fetching (includes read-only ancestors)
+            const allAccessibleAreaIds = (effectiveAreaIds && hasGeographicRestrictions)
+                ? [...new Set([...effectiveAreaIds, ...readOnlyAreaIds])]
+                : effectiveAreaIds;
+
+            // For each top-level area, recursively fetch children up to depth
+            const areasWithChildren = await Promise.all(
+                topLevelAreas.map(async (area: any) => {
+                    const childCount = await this.geographicAreaRepository.countChildren(area.id);
+
+                    // If depth > 0, fetch children recursively
+                    if (depth > 0) {
+                        const children = await this.fetchChildrenWithDepth(area.id, depth, allAccessibleAreaIds, flexibleWhere, select);
+                        return {
+                            ...area,
+                            childCount,
+                            children: children.length > 0 ? children : undefined
+                        };
+                    }
+
+                    return {
+                        ...area,
+                        childCount
+                    };
+                })
+            );
+
+            // If geographicAreaId was provided, prepend the filtered area itself with its children
+            if (filteredAreaItself) {
+                // Fetch ancestors for navigation context
+                const ancestors = await this.geographicAreaRepository.findAncestors(geographicAreaId!);
+
+                // Filter ancestors by authorization if user has restrictions
+                let authorizedAncestors = ancestors;
+                if (hasGeographicRestrictions) {
+                    const authorizedSet = new Set([...authorizedAreaIds, ...readOnlyAreaIds]);
+                    authorizedAncestors = ancestors.filter(a => authorizedSet.has(a.id));
+                }
+
+                // The filtered area itself should show the paginated children
+                const filteredAreaWithChildren = {
+                    ...filteredAreaItself,
+                    children: areasWithChildren.length > 0 ? areasWithChildren : undefined
+                };
+
+                // Return ancestors + filtered area (with paginated children nested)
+                return PaginationHelper.createResponse(
+                    [...authorizedAncestors, filteredAreaWithChildren] as any,
+                    validPage,
+                    validLimit,
+                    total
+                );
+            }
+
+            return PaginationHelper.createResponse(areasWithChildren as any, validPage, validLimit, total);
         }
 
         // Determine effective geographic area IDs
