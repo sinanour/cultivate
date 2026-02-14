@@ -305,10 +305,13 @@ src/
 - Caches fetched pages using React Query for improved performance
 - Invalidates page caches when filters change or data mutations occur
 - Resets to page 1 when filters are applied
+- **Displays consistent minimum column set: Name, Age Cohort, Email, Phone (in that order)**
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
 - **Displays Age Cohort column showing derived age group (Child, Junior Youth, Youth, Young Adult, Adult, Unknown)**
 - **Positions Age Cohort column between Name column and Email column**
 - **Retrieves ageCohort derived field from backend API response for each participant**
+- **Displays Email column with clickable mailto links when email is present, empty cell when null**
+- **Displays Phone column with clickable tel links when phone is present, empty cell when null**
 - Displays population badges beside each participant name using CloudScape Badge component
 - Retrieves population data from populations array field included in API response (no additional API calls)
 - Shows all populations the participant belongs to as badges with consistent color scheme
@@ -316,6 +319,7 @@ src/
 - Wraps multiple badges to next line if needed
 - Sorts badges alphabetically by population name
 - Displays no badges for participants with zero population memberships
+- MAY include additional columns after Phone column (e.g., Date of Birth, Date of Registration, Notes)
 - Provides actions for edit and delete (no separate View button)
 - Uses FilterGroupingPanel component for server-side filtering
 - Configures FilterGroupingPanel without grouping controls (filtering only, no grouping)
@@ -509,6 +513,11 @@ src/
 - Hides edit and delete buttons when user has READ_ONLY role
 - Shows edit and delete buttons when user has EDITOR or ADMINISTRATOR role
 - Lists all assigned participants with their roles
+- **Displays consistent minimum column set for participants: Name, Age Cohort, Email, Phone (in that order)**
+- **Displays Age Cohort column showing derived age group from backend API**
+- **Displays Email column with clickable mailto links when email is present, empty cell when null**
+- **Displays Phone column with clickable tel links when phone is present, empty cell when null**
+- Includes additional context-specific columns after Phone: Role, Notes, Population badges
 - Provides interface to add/remove participant assignments
 - Shows venue history table in reverse chronological order
 - Provides interface to add venue associations
@@ -545,13 +554,18 @@ src/
 
 **AssignmentList**
 - Displays assigned participants on activity detail
+- **Displays consistent minimum column set: Name, Age Cohort, Email, Phone (in that order)**
 - Renders participant name as hyperlink in primary column (links to /participants/:id)
+- **Displays Age Cohort column showing derived age group from backend API**
+- **Displays Email column with clickable mailto links when email is present, empty cell when null**
+- **Displays Phone column with clickable tel links when phone is present, empty cell when null**
 - Displays population badges beside each participant name using CloudScape Badge component
 - Retrieves population data from populations array field in participant object from API response
 - Shows all populations the participant belongs to as badges with consistent color scheme
 - Positions badges immediately after participant name with appropriate spacing
 - Sorts badges alphabetically by population name
 - Displays no badges for participants with zero population memberships
+- Includes additional context-specific columns after Phone: Role, Notes
 - Shows role and notes for each assignment
 - Provides remove button for each assignment (no separate View button)
 
@@ -649,12 +663,17 @@ src/
   - Uses consistent map styling with VenueFormMapView for visual continuity
 - Lists all activities associated with the venue (current and historical) with activity names hyperlinked to /activities/:id
 - Lists all participants with this venue as their current home address (most recent address history) with participant names hyperlinked to /participants/:id
+- **Displays consistent minimum column set for participants: Name, Age Cohort, Email, Phone (in that order)**
+- **Displays Age Cohort column showing derived age group from backend API**
+- **Displays Email column with clickable mailto links when email is present, empty cell when null**
+- **Displays Phone column with clickable tel links when phone is present, empty cell when null**
 - Displays population badges beside each participant name using CloudScape Badge component
 - Retrieves population data from populations array field in participant object from API response
 - Shows all populations each participant belongs to as badges with consistent color scheme
 - Positions badges immediately after participant name with appropriate spacing
 - Sorts badges alphabetically by population name
 - Displays no badges for participants with zero population memberships
+- MAY include additional columns after Phone column for venue-specific context
 - Displays geographic area hierarchy path
 
 #### 9. Geographic Area Management
@@ -1441,6 +1460,27 @@ src/
 - Consistent visual treatment across all participant list contexts
 - Alphabetical sorting ensures predictable badge order
 - Graceful handling of missing or empty populations array
+
+**Consistent Participant List Columns Pattern**
+- All participant lists throughout the application display a standardized minimum column set
+- **Minimum columns (in order):** Name, Age Cohort, Email, Phone
+- **Column specifications:**
+  - Name: Hyperlinked to /participants/:id, followed by population badges
+  - Age Cohort: Derived field from backend API (Child, Junior Youth, Youth, Young Adult, Adult, Unknown)
+  - Email: Clickable mailto link when present, empty cell when null
+  - Phone: Clickable tel link when present, empty cell when null
+- **Context-specific columns:** Additional columns MAY be added after Phone column (e.g., Role, Notes, Date of Birth)
+- **Applies to all participant list contexts:**
+  - ParticipantList component (main list page)
+  - ActivityDetail component (assigned participants table)
+  - VenueDetail component (current residents table)
+  - AssignmentList component (embedded in ActivityForm)
+- **Design rationale:**
+  - Provides predictable, consistent user experience across all views
+  - Enables quick participant identification regardless of context
+  - Maintains essential contact information visibility
+  - Supports responsive design on tablet and desktop viewports
+  - Allows context-specific extensions without breaking consistency
 
 **FilterGroupingPanel**
 - Reusable component for consistent filtering and grouping interface across data visualization pages and list pages

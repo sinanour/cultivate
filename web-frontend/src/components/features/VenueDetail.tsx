@@ -284,9 +284,33 @@ export function VenueDetail() {
               ),
             },
             {
+              id: 'ageCohort',
+              header: 'Age Cohort',
+              cell: (item) => item.ageCohort || 'Unknown',
+            },
+            {
               id: 'email',
               header: 'Email',
-              cell: (item) => item.email || '-',
+              cell: (item) =>
+                item.email ? (
+                  <Link href={`mailto:${item.email}`} external>
+                    {item.email}
+                  </Link>
+                ) : (
+                  '-'
+                ),
+            },
+            {
+              id: 'phone',
+              header: 'Phone',
+              cell: (item) =>
+                item.phone ? (
+                  <Link href={`tel:${item.phone}`} external>
+                    {item.phone}
+                  </Link>
+                ) : (
+                  '-'
+                ),
             },
           ]}
           items={participants}

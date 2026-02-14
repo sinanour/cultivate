@@ -238,6 +238,30 @@ The Web Frontend package provides a responsive React-based web application that 
 21. WHEN dateOfBirth is null or not provided, THE Web_App SHALL display "Unknown" as the age cohort
 22. THE Web_App SHALL update the displayed age cohort value when the user changes the dateOfBirth field in the form
 
+### Requirement 4B: Consistent Participant List Columns
+
+**User Story:** As a community organizer, I want to see consistent participant information across all participant lists in the application, so that I can quickly identify participants regardless of where I'm viewing them.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display a consistent minimum set of columns in all participant list contexts
+2. THE minimum column set SHALL include: Name, Age Cohort, Email, Phone
+3. THE Web_App SHALL display these columns in the following order: Name, Age Cohort, Email, Phone
+4. THE Web_App SHALL apply this consistent column set to the main ParticipantList page
+5. THE Web_App SHALL apply this consistent column set to the ActivityDetail page's assigned participants table
+6. THE Web_App SHALL apply this consistent column set to the VenueDetail page's current residents table
+7. THE Web_App SHALL apply this consistent column set to the AssignmentList component (embedded in ActivityForm)
+8. WHEN displaying the Name column, THE Web_App SHALL render participant names as hyperlinks to /participants/:id
+9. WHEN displaying the Age Cohort column, THE Web_App SHALL show the ageCohort value retrieved from the backend API
+10. WHEN displaying the Email column, THE Web_App SHALL render email addresses as clickable mailto links when email is present
+11. WHEN displaying the Email column, THE Web_App SHALL display an empty cell or placeholder when email is null
+12. WHEN displaying the Phone column, THE Web_App SHALL render phone numbers as clickable tel links when phone is present
+13. WHEN displaying the Phone column, THE Web_App SHALL display an empty cell or placeholder when phone is null
+14. THE Web_App MAY include additional context-specific columns after the minimum column set (e.g., Role in activity context, Population badges)
+15. WHEN additional columns are included, THE Web_App SHALL position them after the Phone column
+16. THE Web_App SHALL maintain consistent column widths and visual styling across all participant list contexts
+17. THE Web_App SHALL ensure all participant list tables are responsive and work on tablet and desktop viewports
+
 ### Requirement 5: Activity Management UI
 
 **User Story:** As a community organizer, I want to manage activities in the web interface with comprehensive filtering capabilities, so that I can track community events and find specific activities efficiently.

@@ -659,6 +659,65 @@ This implementation plan covers the React-based web application built with TypeS
       - **Property 305: Age Cohort Dynamic Update on DateOfBirth Change**
       - **Validates: Requirements 4A.1, 4A.2, 4A.3, 4A.4, 4A.5, 4A.6, 4A.7, 4A.8, 4A.9, 4A.10, 4A.11, 4A.12, 4A.13, 4A.14, 4A.15, 4A.16, 4A.17, 4A.18, 4A.19, 4A.20, 4A.21, 4A.22_
 
+  - [x] 7.10 Implement consistent participant list columns across all contexts
+    - [x] 7.10.1 Update ParticipantList component columns
+      - Ensure columns are displayed in order: Name, Age Cohort, Email, Phone
+      - Verify Name column renders as hyperlink to /participants/:id
+      - Verify Age Cohort column displays derived value from API
+      - Add Email column with clickable mailto links (when present) or empty cell (when null)
+      - Add Phone column with clickable tel links (when present) or empty cell (when null)
+      - Position population badges after participant name
+      - Position any additional columns (Date of Birth, Date of Registration, Notes) after Phone column
+      - Maintain consistent column widths and styling
+      - _Requirements: 4B.1, 4B.2, 4B.3, 4B.4, 4B.8, 4B.9, 4B.10, 4B.11, 4B.12, 4B.13, 4B.14, 4B.15, 4B.16, 4B.17_
+
+    - [x] 7.10.2 Update ActivityDetail assigned participants table
+      - Ensure columns are displayed in order: Name, Age Cohort, Email, Phone, Role, Notes
+      - Verify Name column renders as hyperlink to /participants/:id
+      - Verify Age Cohort column displays contextual age cohort (based on activity endDate when applicable)
+      - Add Email column with clickable mailto links (when present) or empty cell (when null)
+      - Add Phone column with clickable tel links (when present) or empty cell (when null)
+      - Position population badges after participant name
+      - Position Role and Notes columns after Phone column
+      - Maintain consistent column widths and styling with ParticipantList
+      - _Requirements: 4B.1, 4B.2, 4B.3, 4B.5, 4B.8, 4B.9, 4B.10, 4B.11, 4B.12, 4B.13, 4B.14, 4B.15, 4B.16, 4B.17_
+
+    - [x] 7.10.3 Update VenueDetail current residents table
+      - Ensure columns are displayed in order: Name, Age Cohort, Email, Phone
+      - Verify Name column renders as hyperlink to /participants/:id
+      - Verify Age Cohort column displays derived value from API
+      - Add Email column with clickable mailto links (when present) or empty cell (when null)
+      - Add Phone column with clickable tel links (when present) or empty cell (when null)
+      - Position population badges after participant name
+      - Position any additional venue-specific columns after Phone column
+      - Maintain consistent column widths and styling with ParticipantList
+      - _Requirements: 4B.1, 4B.2, 4B.3, 4B.6, 4B.8, 4B.9, 4B.10, 4B.11, 4B.12, 4B.13, 4B.14, 4B.15, 4B.16, 4B.17_
+
+    - [x] 7.10.4 Update AssignmentList component (embedded in ActivityForm)
+      - Ensure columns are displayed in order: Name, Age Cohort, Email, Phone, Role, Notes
+      - Verify Name column renders as hyperlink to /participants/:id
+      - Verify Age Cohort column displays derived value from API
+      - Add Email column with clickable mailto links (when present) or empty cell (when null)
+      - Add Phone column with clickable tel links (when present) or empty cell (when null)
+      - Position population badges after participant name
+      - Position Role and Notes columns after Phone column
+      - Maintain consistent column widths and styling with ParticipantList
+      - _Requirements: 4B.1, 4B.2, 4B.3, 4B.7, 4B.8, 4B.9, 4B.10, 4B.11, 4B.12, 4B.13, 4B.14, 4B.15, 4B.16, 4B.17_
+
+    - [x]* 7.10.5 Write property tests for consistent participant list columns
+      - **Property 306: Consistent Minimum Column Set**
+      - **Property 307: Consistent Column Order**
+      - **Property 308: Name Column Hyperlink**
+      - **Property 309: Age Cohort Column Display**
+      - **Property 310: Email Column Mailto Links**
+      - **Property 311: Email Column Empty State**
+      - **Property 312: Phone Column Tel Links**
+      - **Property 313: Phone Column Empty State**
+      - **Property 314: Additional Columns Positioning**
+      - **Property 315: Consistent Column Styling**
+      - **Property 316: Responsive Table Layout**
+      - **Validates: Requirements 4B.1, 4B.2, 4B.3, 4B.4, 4B.5, 4B.6, 4B.7, 4B.8, 4B.9, 4B.10, 4B.11, 4B.12, 4B.13, 4B.14, 4B.15, 4B.16, 4B.17_
+
 - [x] 8. Implement venue management UI
   - [x] 8.1 Create VenueList component with CloudScape Table native pagination
     - Display table with name, address, geographic area, and venue type

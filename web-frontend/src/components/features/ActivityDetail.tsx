@@ -501,9 +501,33 @@ export function ActivityDetail() {
               },
             },
             {
+              id: "ageCohort",
+              header: "Age Cohort",
+              cell: (item) => item.participant?.ageCohort || "Unknown",
+            },
+            {
               id: "email",
               header: "Email",
-              cell: (item) => item.participant?.email || "-",
+              cell: (item) =>
+                item.participant?.email ? (
+                  <Link href={`mailto:${item.participant.email}`} external>
+                    {item.participant.email}
+                  </Link>
+                ) : (
+                  "-"
+                ),
+            },
+            {
+              id: "phone",
+              header: "Phone",
+              cell: (item) =>
+                item.participant?.phone ? (
+                  <Link href={`tel:${item.participant.phone}`} external>
+                    {item.participant.phone}
+                  </Link>
+                ) : (
+                  "-"
+                ),
             },
             {
               id: "role",
