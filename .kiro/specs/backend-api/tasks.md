@@ -708,6 +708,35 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - All filtering now uses unified filter[] API from Requirement 28
     - _Requirements: 4.20, 28.1-28.67_
 
+  - [x] 11.4c Implement Last Updated timestamp filtering for activities
+    - Update ActivityQuerySchema validation to accept filter[updatedAt] with nested operators (lte, lt, gte, gt)
+    - Add support for ISO 8601 datetime string parsing for updatedAt filter values
+    - When only date provided (YYYY-MM-DD), convert to start of day (00:00:00.000Z)
+    - Update ActivityRepository.buildWhereClause() to handle updatedAt filter with comparison operators
+    - Build Prisma WHERE clause: { updatedAt: { lte: date, lt: date, gte: date, gt: date } }
+    - Support multiple operators simultaneously (e.g., gte AND lte for range filtering)
+    - Combine updatedAt filter with other filters using AND logic
+    - Create database index on activities.updatedAt field via Prisma migration
+    - Update ActivityService.getActivities() to apply updatedAt filter
+    - When updatedAt filter is active, order results by updatedAt descending by default
+    - Include updatedAt filter in total count calculation for pagination
+    - Validate updatedAt filter values are valid ISO 8601 datetime strings
+    - Return 400 Bad Request with validation error for invalid datetime strings
+    - _Requirements: 4A.1, 4A.2, 4A.3, 4A.4, 4A.5, 4A.6, 4A.7, 4A.8, 4A.9, 4A.10, 4A.11, 4A.12, 4A.13, 4A.14, 4A.15_
+
+  - [ ]* 11.4d Write property tests for Last Updated filtering
+    - **Property 219: Activity Updated At Filter On-Or-Before**
+    - **Property 220: Activity Updated At Filter Strictly Before**
+    - **Property 221: Activity Updated At Filter Between (Range)**
+    - **Property 222: Activity Updated At Filter On-Or-After**
+    - **Property 223: Activity Updated At Filter Strictly After**
+    - **Property 224: Activity Updated At Date-Only Input Handling**
+    - **Property 225: Activity Updated At Multiple Operators AND Logic**
+    - **Property 226: Activity Updated At Combined with Other Filters**
+    - **Property 227: Activity Updated At Validation**
+    - **Property 228: Activity Updated At Default Ordering**
+    - **Validates: Requirements 4A.1, 4A.2, 4A.3, 4A.4, 4A.5, 4A.6, 4A.7, 4A.8, 4A.9, 4A.10, 4A.11, 4A.12, 4A.13, 4A.14, 4A.15_
+
   - [ ]* 11.4b Write property tests for activity filtering
     - **Property 212: Activity Type Filter** (via filter[activityTypeIds])
     - **Property 213: Activity Category Filter** (via filter[activityCategoryIds])

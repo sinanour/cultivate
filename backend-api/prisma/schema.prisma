@@ -246,6 +246,7 @@ model Activity {
   @@index([status])
   @@index([startDate])
   @@index([endDate])
+  @@index([updatedAt])
   @@map("activities")
 }
 

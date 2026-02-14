@@ -88,7 +88,15 @@ export class ActivityService {
         if (options.filter) {
             for (const [key, value] of Object.entries(options.filter)) {
                 if (value !== undefined && value !== null) {
-                    if (Array.isArray(value)) {
+                    // Handle nested objects (like updatedAt with operators)
+                    if (typeof value === 'object' && !Array.isArray(value)) {
+                        // For nested objects like updatedAt: { gte: '...', lte: '...' }
+                        for (const [nestedKey, nestedValue] of Object.entries(value)) {
+                            if (nestedValue !== undefined && nestedValue !== null) {
+                                params.append(`filter[${key}][${nestedKey}]`, String(nestedValue));
+                            }
+                        }
+                    } else if (Array.isArray(value)) {
                         params.append(`filter[${key}]`, value.join(','));
                     } else {
                         params.append(`filter[${key}]`, value.toString());

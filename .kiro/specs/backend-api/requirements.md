@@ -215,6 +215,33 @@ The Backend API package provides the RESTful API service that implements all bus
 19. WHEN creating an activity-venue association, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same activity
 20. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only activities whose current venue is in the specified geographic area or its descendants
 
+### Requirement 4A: Filter Activities by Last Updated Timestamp
+
+**User Story:** As a community organizer, I want to filter activities by when they were last updated, so that I can find recently modified activities or identify activities that haven't been updated in a while.
+
+#### Acceptance Criteria
+
+1. THE API SHALL accept ?filter[updatedAt]=timestamp parameter on GET /api/v1/activities to filter by last updated timestamp
+2. THE API SHALL support flexible date-range filtering operators for the updatedAt field:
+   - On-or-before: ?filter[updatedAt][lte]=YYYY-MM-DD (activities updated on or before the specified date)
+   - Strictly before: ?filter[updatedAt][lt]=YYYY-MM-DD (activities updated before the specified date)
+   - Between: ?filter[updatedAt][gte]=YYYY-MM-DD&filter[updatedAt][lte]=YYYY-MM-DD (activities updated within the date range)
+   - On-or-after: ?filter[updatedAt][gte]=YYYY-MM-DD (activities updated on or after the specified date)
+   - Strictly after: ?filter[updatedAt][gt]=YYYY-MM-DD (activities updated after the specified date)
+3. THE API SHALL accept ISO 8601 datetime strings for updatedAt filter values (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)
+4. WHEN only a date is provided (YYYY-MM-DD), THE API SHALL treat it as the start of that day (00:00:00.000Z)
+5. WHEN multiple updatedAt operators are provided (e.g., gte and lte for range), THE API SHALL apply all operators using AND logic
+6. WHEN updatedAt filter is combined with other filters (name, status, activityTypeIds, etc.), THE API SHALL apply all filters using AND logic across dimensions
+7. THE API SHALL validate that updatedAt filter values are valid ISO 8601 datetime strings
+8. WHEN an invalid datetime string is provided for updatedAt filter, THE API SHALL return 400 Bad Request with a validation error
+9. THE API SHALL use the Activity model's updatedAt field (automatically managed by Prisma) for filtering
+10. THE API SHALL create a database index on activities.updatedAt field for efficient timestamp-based queries
+11. THE API SHALL support updatedAt filtering in combination with pagination (page, limit parameters)
+12. WHEN updatedAt filter is applied, THE API SHALL include the filter in the total count calculation for pagination metadata
+13. THE API SHALL support updatedAt filtering in combination with geographic area filtering (geographicAreaId parameter)
+14. THE API SHALL support updatedAt filtering in combination with the unified flexible filtering system (other filter[fieldName] parameters)
+15. THE API SHALL return activities ordered by updatedAt descending by default when updatedAt filter is applied (most recently updated first)
+
 ### Requirement 5: Assign Participants to Activities
 
 **User Story:** As a community organizer, I want to assign participants to activities with specific roles via API, so that I can track who is involved and what they do.

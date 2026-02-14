@@ -35,7 +35,7 @@ export interface FilterPropertyWithLoader {
   key: string;
   propertyLabel: string;
   groupValuesLabel: string;
-  operators?: PropertyFilterProps.ComparisonOperator[];
+  operators?: PropertyFilterProps.ComparisonOperator[] | any; // Allow any for custom form operators
   loadItems: (filterText: string, property: FilterPropertyWithLoader) => Promise<PropertyFilterProps.FilteringOption[]>;
 }
 

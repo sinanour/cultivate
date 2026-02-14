@@ -1102,6 +1102,42 @@ This implementation plan covers the React-based web application built with TypeS
     - Use CloudScape Table native pagination (no custom batched loading)
     - _Requirements: 5B.3, 5B.4, 5B.5, 5B.6, 5B.7, 5B.8, 5B.9, 5B.10, 5B.11, 5B.35, 5B.36, 5B.37, 5B.38, 5B.39, 5B.40, 5B.41, 5B.42, 5B.43, 5B.44, 5B.45, 5B.46, 5B.47, 5B.48, 5A.1, 5A.2, 5A.3, 5A.4, 5A.5, 5A.6, 5A.7, 5A.8, 5A.9, 5A.10, 5A.11, 5A.12, 5A.13, 5A.14, 5A.15, 5A.16, 5A.17, 5A.18, 5A.19, 5A.20, 5A.21, 5A.22, 5A.23, 5A.24, 5A.25, 5A.26, 5A.27, 5A.28, 5A.29, 5A.30, 5A.31, 5A.32, 5A.33, 5A.34, 5A.35, 7C.18, 7C.19, 7C.20, 7C.21, 7C.22, 7C.23, 7C.24, 7C.25, 7C.26, 7C.27, 7C.28, 7C.29, 7C.30_
 
+  - [x] 11.1a Add Last Updated filter to ActivityList FilterGroupingPanel
+    - Add "Last Updated" as a filter property in FilterGroupingPanel configuration
+    - Configure property to support date-range filtering with operators: lte, lt, gte, gt, and between (gte + lte)
+    - Use CloudScape DateRangePicker or custom date selection component for the filter UI
+    - When user selects "On-or-before" with date D, generate query parameter: ?filter[updatedAt][lte]=D
+    - When user selects "Strictly before" with date D, generate query parameter: ?filter[updatedAt][lt]=D
+    - When user selects "Between" with dates D1 and D2, generate query parameters: ?filter[updatedAt][gte]=D1&filter[updatedAt][lte]=D2
+    - When user selects "On-or-after" with date D, generate query parameter: ?filter[updatedAt][gte]=D
+    - When user selects "Strictly after" with date D, generate query parameter: ?filter[updatedAt][gt]=D
+    - Format dates as ISO 8601 strings (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ) when sending to backend
+    - Display human-readable filter token (e.g., "Last Updated between 2025-01-01 and 2025-12-31")
+    - Persist "Last Updated" filter to URL query parameters
+    - Restore "Last Updated" filter from URL on page load
+    - Apply AND logic when combining with other filters
+    - Validate date inputs and display validation errors for invalid dates
+    - Allow clearing "Last Updated" filter independently
+    - Reset to page 1 when "Last Updated" filter is applied or changed
+    - _Requirements: 5A1.1, 5A1.2, 5A1.3, 5A1.4, 5A1.5, 5A1.6, 5A1.7, 5A1.8, 5A1.9, 5A1.10, 5A1.11, 5A1.12, 5A1.13, 5A1.14, 5A1.15, 5A1.16, 5A1.17, 5A1.18, 5A1.19, 5A1.20_
+
+  - [ ]* 11.1b Write property tests for Last Updated filter in ActivityList
+    - **Property 317: Last Updated Filter Property Configuration**
+    - **Property 318: Last Updated Filter On-Or-Before Query Generation**
+    - **Property 319: Last Updated Filter Strictly Before Query Generation**
+    - **Property 320: Last Updated Filter Between Query Generation**
+    - **Property 321: Last Updated Filter On-Or-After Query Generation**
+    - **Property 322: Last Updated Filter Strictly After Query Generation**
+    - **Property 323: Last Updated Filter ISO 8601 Date Formatting**
+    - **Property 324: Last Updated Filter Token Display**
+    - **Property 325: Last Updated Filter URL Persistence**
+    - **Property 326: Last Updated Filter URL Restoration**
+    - **Property 327: Last Updated Filter AND Logic with Other Filters**
+    - **Property 328: Last Updated Filter Validation**
+    - **Property 329: Last Updated Filter Independent Clearing**
+    - **Property 330: Last Updated Filter Pagination Reset**
+    - **Validates: Requirements 5A1.1, 5A1.2, 5A1.3, 5A1.4, 5A1.5, 5A1.6, 5A1.7, 5A1.8, 5A1.9, 5A1.10, 5A1.11, 5A1.12, 5A1.13, 5A1.14, 5A1.15, 5A1.16, 5A1.17, 5A1.18, 5A1.19, 5A1.20_
+
   - [ ]* 11.1a Write property tests for ActivityList FilterGroupingPanel integration and pagination
     - **Property 182: FilterGroupingPanel Token Consolidation**
     - **Property 183: FilterGroupingPanel Display Name Rendering**

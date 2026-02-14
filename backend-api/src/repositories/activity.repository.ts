@@ -223,6 +223,29 @@ export class ActivityRepository {
       });
     }
 
+    // Updated At filter (flexible date-range filtering with comparison operators)
+    if ((filters as any).updatedAt) {
+      const updatedAtFilter = (filters as any).updatedAt;
+      const updatedAtCondition: any = {};
+
+      if (updatedAtFilter.lte) {
+        updatedAtCondition.lte = new Date(updatedAtFilter.lte);
+      }
+      if (updatedAtFilter.lt) {
+        updatedAtCondition.lt = new Date(updatedAtFilter.lt);
+      }
+      if (updatedAtFilter.gte) {
+        updatedAtCondition.gte = new Date(updatedAtFilter.gte);
+      }
+      if (updatedAtFilter.gt) {
+        updatedAtCondition.gt = new Date(updatedAtFilter.gt);
+      }
+
+      if (Object.keys(updatedAtCondition).length > 0) {
+        andConditions.push({ updatedAt: updatedAtCondition });
+      }
+    }
+
     // Population filter (activities with at least one participant in specified populations)
     if (filters.populationIds && filters.populationIds.length > 0) {
       andConditions.push({
@@ -258,11 +281,16 @@ export class ActivityRepository {
       where.AND = andConditions;
     }
 
+    // Determine ordering: use updatedAt descending when updatedAt filter is active, otherwise startDate descending
+    const orderBy = (filters as any).updatedAt
+      ? { updatedAt: 'desc' as const }
+      : { startDate: 'desc' as const };
+
     const queryOptions: any = {
       where,
       skip,
       take: limit,
-      orderBy: { startDate: 'desc' },
+      orderBy,
     };
 
     if (select) {

@@ -285,6 +285,11 @@ export class ActivityService {
       repositoryFilters.name = filter.name;
     }
 
+    // Add updatedAt filter if provided (timestamp range filtering)
+    if (filter?.updatedAt) {
+      repositoryFilters.updatedAt = filter.updatedAt;
+    }
+
     // Use repository's comprehensive filtering method
     const { data, total } = await this.activityRepository.findWithFilters(
       repositoryFilters,

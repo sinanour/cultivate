@@ -10,6 +10,8 @@ import Badge from '@cloudscape-design/components/badge';
 import Link from '@cloudscape-design/components/link';
 import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
+import DatePicker from '@cloudscape-design/components/date-picker';
+import FormField from '@cloudscape-design/components/form-field';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import type { Activity } from '../../types';
 import { ActivityService, type ActivityFilterParams } from '../../services/api/activity.service';
@@ -179,6 +181,26 @@ export function ActivityList() {
         }));
       },
     },
+    {
+      key: 'lastUpdated',
+      propertyLabel: 'Last Updated',
+      groupValuesLabel: 'Last Updated value',
+      operators: ['<=', '<', '>=', '>'].map(operator => ({
+        operator,
+        form: ({ value, onChange }: { value?: string; onChange: (value: string) => void }) => (
+          <FormField>
+            <DatePicker
+              value={value ?? ''}
+              onChange={event => onChange(event.detail.value)}
+              placeholder="YYYY/MM/DD"
+              expandToViewport={true}
+            />
+          </FormField>
+        ),
+        match: 'date' as const,
+      })) as any, // Cast to any to bypass type checking for custom form operators
+      loadItems: async () => [], // No async loading for date picker
+    },
   ], []); // Empty deps - functions are stable
 
   // Pre-populate cache when filter tokens are restored from URL
@@ -278,6 +300,32 @@ export function ActivityList() {
     if (nameValues.length > 0) {
       // For name filtering, we use the first value (typically only one name filter at a time)
       params.filter!.name = nameValues[0];
+    }
+
+    // Last Updated filter - convert PropertyFilter tokens to updatedAt query parameters
+    const lastUpdatedTokens = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'lastUpdated');
+    if (lastUpdatedTokens.length > 0) {
+      if (!params.filter!.updatedAt) {
+        params.filter!.updatedAt = {};
+      }
+
+      lastUpdatedTokens.forEach(token => {
+        const operator = token.operator;
+        const value = token.value;
+
+        if (!value) return;
+
+        // Convert operator to backend format and convert date to ISO datetime
+        if (operator === '<=') {
+          params.filter!.updatedAt.lte = toISODateTime(value, true); // End of day
+        } else if (operator === '<') {
+          params.filter!.updatedAt.lt = toISODateTime(value, false); // Start of day
+        } else if (operator === '>=') {
+          params.filter!.updatedAt.gte = toISODateTime(value, false); // Start of day
+        } else if (operator === '>') {
+          params.filter!.updatedAt.gt = toISODateTime(value, true); // End of day
+        }
+      });
     }
 
     // Date range - convert to ISO datetime format and add to filter

@@ -380,6 +380,38 @@ The Web Frontend package provides a responsive React-based web application that 
 34. THE Web_App SHALL position the DateRangePicker and PropertyFilter components together in a consistent layout matching the analytics dashboards
 35. THE Web_App SHALL provide comprehensive i18nStrings for PropertyFilter accessibility and localization
 
+### Requirement 5A1: Filter Activities by Last Updated Timestamp
+
+**User Story:** As a community organizer, I want to filter activities by when they were last updated in the activity list, so that I can find recently modified activities or identify activities that haven't been updated in a while.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL add "Last Updated" as a filter property in the FilterGroupingPanel on the ActivityList page
+2. THE "Last Updated" filter property SHALL support flexible date-range filtering with the following operators:
+   - On-or-before: Activities updated on or before the specified date
+   - Strictly before: Activities updated before the specified date
+   - Between: Activities updated within the specified date range
+   - On-or-after: Activities updated on or after the specified date
+   - Strictly after: Activities updated after the specified date
+3. THE Web_App SHALL use CloudScape DateRangePicker or similar date selection component for the "Last Updated" filter
+4. WHEN a user selects a date range for "Last Updated", THE Web_App SHALL convert the selection to appropriate query parameters
+5. WHEN "On-or-before" is selected with date D, THE Web_App SHALL send ?filter[updatedAt][lte]=D to the backend
+6. WHEN "Strictly before" is selected with date D, THE Web_App SHALL send ?filter[updatedAt][lt]=D to the backend
+7. WHEN "Between" is selected with dates D1 and D2, THE Web_App SHALL send ?filter[updatedAt][gte]=D1&filter[updatedAt][lte]=D2 to the backend
+8. WHEN "On-or-after" is selected with date D, THE Web_App SHALL send ?filter[updatedAt][gte]=D to the backend
+9. WHEN "Strictly after" is selected with date D, THE Web_App SHALL send ?filter[updatedAt][gt]=D to the backend
+10. THE Web_App SHALL format dates as ISO 8601 strings (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ) when sending to the backend
+11. THE Web_App SHALL display the "Last Updated" filter token in the PropertyFilter with human-readable date formatting
+12. WHEN a "Last Updated" filter is active, THE Web_App SHALL display a token like "Last Updated between 2025-01-01 and 2025-12-31" or "Last Updated on-or-after 2025-06-01"
+13. THE Web_App SHALL persist "Last Updated" filter selections to URL query parameters
+14. WHEN a user navigates to an ActivityList URL with "Last Updated" filter parameters, THE Web_App SHALL restore and apply the filter
+15. WHEN "Last Updated" filter is combined with other filters (category, type, status, population, date range), THE Web_App SHALL apply all filters using AND logic across dimensions
+16. THE Web_App SHALL validate that "Last Updated" filter values are valid dates
+17. WHEN an invalid date is provided for "Last Updated" filter, THE Web_App SHALL display a validation error message
+18. THE Web_App SHALL allow users to clear the "Last Updated" filter independently of other filters
+19. THE Web_App SHALL allow users to clear all filters including "Last Updated" using the "Clear All" button
+20. THE "Last Updated" filter SHALL work correctly with pagination, resetting to page 1 when the filter is applied or changed
+
 ### Requirement 5B: Unified List Filtering with FilterGroupingPanel
 
 **User Story:** As a community organizer, I want to filter participant, venue, and activity lists using the FilterGroupingPanel component with server-side filtering and URL synchronization, so that I can efficiently find specific records with a consistent interface across all list pages.

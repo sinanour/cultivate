@@ -337,7 +337,13 @@ ActivityQuerySchema = {
   status: string[] (optional, array of PLANNED | ACTIVE | COMPLETED | CANCELLED, OR logic within dimension),
   populationIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
   startDate: string (optional, ISO 8601 datetime format, filters activities starting on or after this date),
-  endDate: string (optional, ISO 8601 datetime format, filters activities ending on or before this date)
+  endDate: string (optional, ISO 8601 datetime format, filters activities ending on or before this date),
+  updatedAt: {
+    lte: string (optional, ISO 8601 datetime format, filters activities updated on or before this date),
+    lt: string (optional, ISO 8601 datetime format, filters activities updated before this date),
+    gte: string (optional, ISO 8601 datetime format, filters activities updated on or after this date),
+    gt: string (optional, ISO 8601 datetime format, filters activities updated after this date)
+  } (optional, supports flexible date-range filtering)
 }
 
 // Assignment Schema
@@ -520,7 +526,13 @@ ActivityQuerySchema = {
     status: string[] (optional, array of PLANNED | ACTIVE | COMPLETED | CANCELLED, OR logic),
     populationIds: string[] (optional, array of valid UUIDs, OR logic),
     startDate: string (optional, ISO 8601 datetime format, >= filter),
-    endDate: string (optional, ISO 8601 datetime format, <= filter)
+    endDate: string (optional, ISO 8601 datetime format, <= filter),
+    updatedAt: {
+      lte: string (optional, ISO 8601 datetime format, <= filter),
+      lt: string (optional, ISO 8601 datetime format, < filter),
+      gte: string (optional, ISO 8601 datetime format, >= filter),
+      gt: string (optional, ISO 8601 datetime format, > filter)
+    } (optional, supports flexible date-range filtering)
   },
   fields: string (optional, comma-separated field names like "id,name,status" or "id,name,activityType.name,activityType.activityCategory.name")
 }
