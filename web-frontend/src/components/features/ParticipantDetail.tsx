@@ -327,8 +327,8 @@ export function ParticipantDetail() {
             </div>
           )}
           <div>
-            <Box variant="awsui-key-label">Created</Box>
-            <div>{formatDate(participant.createdAt)}</div>
+              <Box variant="awsui-key-label">Last Updated</Box>
+              <div>{formatDate(participant.updatedAt)}</div>
           </div>
           {participant.notes && (
             <div>

@@ -217,8 +217,8 @@ export function VenueDetail() {
             </div>
           )}
           <div>
-            <Box variant="awsui-key-label">Created</Box>
-            <div>{formatDate(venue.createdAt)}</div>
+              <Box variant="awsui-key-label">Last Updated</Box>
+              <div>{formatDate(venue.updatedAt)}</div>
           </div>
         </ColumnLayout>
       </Container>

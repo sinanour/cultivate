@@ -240,8 +240,8 @@ export function GeographicAreaDetail() {
             />
           </div>
           <div>
-            <Box variant="awsui-key-label">Created</Box>
-            <div>{formatDate(geographicArea.createdAt)}</div>
+              <Box variant="awsui-key-label">Last Updated</Box>
+              <div>{formatDate(geographicArea.updatedAt)}</div>
           </div>
         </ColumnLayout>
       </Container>
