@@ -886,19 +886,6 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
               label="Notes"
               errorText={notesError}
               description="Additional context or observations about this activity"
-              secondaryControl={
-                notes && (
-                  <Button
-                    variant="icon"
-                    iconName="close"
-                    onClick={() => {
-                      setNotes(null);
-                      setNotesError('');
-                    }}
-                    ariaLabel="Clear notes"
-                  />
-                )
-              }
             >
               <Textarea
                 value={notes || ''}
