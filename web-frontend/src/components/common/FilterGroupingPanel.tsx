@@ -455,20 +455,24 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
     onUpdate(newState);
   }, [dateRange, filterQuery, grouping, onUpdate, syncToURL]);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     setDateRange(null);
     setFilterQuery({ tokens: [], operation: 'and' });
     const defaultGrouping = groupingMode === 'none' ? null : (groupingMode === 'additive' ? [] : groupingDimensions[0]?.value || '');
     setGrouping(defaultGrouping);
     
-    // Clear URL parameters
+    // Create cleared state
     const clearedState: FilterGroupingState = {
       dateRange: null,
       filterTokens: { tokens: [], operation: 'and' },
       grouping: defaultGrouping,
     };
+
+    // Immediately apply the cleared state
+    setLastAppliedState(clearedState);
     syncToURL(clearedState);
-  };
+    onUpdate(clearedState);
+  }, [groupingMode, groupingDimensions, syncToURL, onUpdate]);
 
   // Register trigger function with parent (for Run Report pattern)
   useEffect(() => {

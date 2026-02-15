@@ -1341,25 +1341,33 @@ The Web Frontend package provides a responsive React-based web application that 
 43. THE FilterGroupingPanel SHALL support all PropertyFilter features: lazy loading, debouncing, token consolidation, and de-duplication
 44. THE FilterGroupingPanel SHALL disable the "Update" button when no changes have been made to filters or grouping
 45. THE FilterGroupingPanel SHALL enable the "Update" button when any filter or grouping selection has changed
-46. THE FilterGroupingPanel SHALL provide a "Clear All" button to reset all filters and grouping to their default states
-47. WHEN the "Clear All" button is clicked, THE FilterGroupingPanel SHALL reset date range, clear all filter tokens, and reset grouping to default
-48. THE FilterGroupingPanel SHALL display a loading indicator on the "Update" button while the parent component is fetching new data
-49. THE FilterGroupingPanel SHALL disable all controls while the parent component is fetching new data to prevent conflicting updates
+46. THE FilterGroupingPanel SHALL provide a "Clear All" button to reset all filters and grouping to their default states and immediately apply the cleared state
+47. WHEN the "Clear All" button is clicked, THE FilterGroupingPanel SHALL:
+    - Reset date range to null
+    - Clear all filter tokens (empty array)
+    - Reset grouping to default value
+    - Immediately invoke the onUpdate callback with the cleared FilterGroupingState
+    - Synchronize the cleared state to URL query parameters (remove all filter-related params while preserving other page parameters)
+    - Mark the current state as applied (set isDirty to false)
+48. WHEN the "Clear All" button is clicked, THE Web_App SHALL NOT require the user to click "Update" to apply the cleared filters
+49. THE "Clear All" button SHALL function as a combined "clear and apply" action, providing a single-click experience for resetting filters
+50. THE FilterGroupingPanel SHALL display a loading indicator on the "Update" button while the parent component is fetching new data
+51. THE FilterGroupingPanel SHALL disable all controls while the parent component is fetching new data to prevent conflicting updates
 
 **Styling and Accessibility:**
 
-50. THE FilterGroupingPanel SHALL use consistent styling and layout across all pages where it is used
-51. THE FilterGroupingPanel SHALL be responsive and adapt to different screen sizes
-52. THE FilterGroupingPanel SHALL provide clear labels for all controls (date range, filters, grouping)
+52. THE FilterGroupingPanel SHALL use consistent styling and layout across all pages where it is used
+53. THE FilterGroupingPanel SHALL be responsive and adapt to different screen sizes
+54. THE FilterGroupingPanel SHALL provide clear labels for all controls (date range, filters, grouping)
 
 **Usage Across Application:**
 
-53. THE Web_App SHALL use the FilterGroupingPanel component on the Engagement Dashboard page
-54. THE Web_App SHALL use the FilterGroupingPanel component on the Growth Dashboard page
-55. THE Web_App SHALL use the FilterGroupingPanel component on the Map View page
-56. WHEN used on the Engagement Dashboard, THE FilterGroupingPanel SHALL support additive grouping with dimensions: activity category, activity type, venue, geographic area
-57. WHEN used on the Growth Dashboard, THE FilterGroupingPanel SHALL support exclusive grouping with options: "All", "Activity Type", "Activity Category"
-58. WHEN used on the Map View, THE FilterGroupingPanel SHALL support exclusive grouping with options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
+55. THE Web_App SHALL use the FilterGroupingPanel component on the Engagement Dashboard page
+56. THE Web_App SHALL use the FilterGroupingPanel component on the Growth Dashboard page
+57. THE Web_App SHALL use the FilterGroupingPanel component on the Map View page
+58. WHEN used on the Engagement Dashboard, THE FilterGroupingPanel SHALL support additive grouping with dimensions: activity category, activity type, venue, geographic area
+59. WHEN used on the Growth Dashboard, THE FilterGroupingPanel SHALL support exclusive grouping with options: "All", "Activity Type", "Activity Category"
+60. WHEN used on the Map View, THE FilterGroupingPanel SHALL support exclusive grouping with options: "Activities by Type", "Activities by Category", "Participant Homes", "Venues"
 
 ### Requirement 8: Authentication UI
 

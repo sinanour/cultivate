@@ -743,11 +743,12 @@ src/
   - Fixed page size of 100 top-level rows
   - Auto-expands rows to reveal filtered areas on current page
 - **Filter Clearing:**
-  - When "Clear All" clicked then "Update" clicked, returns to non-filtered pagination mode
+  - When "Clear All" clicked, immediately returns to non-filtered pagination mode
   - Clears batched loading state and expanded rows state
   - Invalidates React Query caches
   - Removes total count from table header
   - Prevents FilterGroupingPanel from staying in loading state
+  - Automatically refetches data with cleared filters (no separate "Update" click needed)
 - **Visual Styling:**
   - Renders all areas with consistent visual styling
   - No special read-only indication for ancestors
@@ -1539,8 +1540,19 @@ src/
 - Provides visual feedback when filters/grouping have changed but not yet applied (highlights "Update" button)
 - Disables "Update" button when no changes have been made
 - Enables "Update" button when any filter or grouping selection has changed
-- Provides "Clear All" button to reset all filters and grouping to defaults
-- When "Clear All" clicked: resets date range, clears all filter tokens, resets grouping to default
+- Provides "Clear All" button to reset all filters and grouping to defaults and immediately apply the cleared state
+- When "Clear All" clicked:
+  - Resets date range to null
+  - Clears all filter tokens (empty array)
+  - Resets grouping to default value
+  - Immediately invokes onUpdate callback with the cleared FilterGroupingState
+  - Synchronizes the cleared state to URL query parameters (removes all filter-related params while preserving other page parameters)
+  - Marks the current state as applied (sets isDirty to false)
+  - Does NOT require user to click "Update" to apply the cleared filters
+- "Clear All" functions as a combined "clear and apply" action, providing single-click experience for resetting filters
+- **Clear All Behavior by Context:**
+  - **List Pages and Map View**: "Clear All" immediately applies cleared state and parent component refetches data automatically
+  - **Dashboard Pages (with hideUpdateButton={true})**: "Clear All" resets state but does NOT trigger data fetch, preserving Run Report Pattern where user must explicitly click "Run Report"
 - Displays loading indicator on "Update" button while parent component fetches new data
 - Disables all controls while parent component is fetching data to prevent conflicting updates
 - Supports all PropertyFilter features: lazy loading, debouncing, token consolidation, de-duplication

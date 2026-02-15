@@ -987,11 +987,12 @@ This implementation plan covers the React-based web application built with TypeS
       - _Requirements: 6B.66, 6B.67, 6B.68, 6B.69, 6B.70_
 
     - [ ] 9.1.9 Implement filter clearing and state management
-      - When "Clear All" clicked then "Update" clicked, return to non-filtered pagination mode
+      - When "Clear All" clicked, immediately return to non-filtered pagination mode
       - Clear batched loading state and expanded rows state
       - Invalidate React Query caches
       - Remove total count from table header
       - Prevent FilterGroupingPanel from staying in loading state
+      - Automatically refetch data with cleared filters (no separate "Update" click needed)
       - _Requirements: 6B.71, 6B.72, 6B.73, 6B.74, 6B.75, 6B.76, 6B.77_
 
     - [ ] 9.1.10 Integrate global geographic area filter
@@ -1600,7 +1601,13 @@ This implementation plan covers the React-based web application built with TypeS
     - When "Update" button clicked: mark current state as applied (set isDirty to false)
     - Render "Clear All" button using CloudScape Button
     - When "Clear All" clicked: reset dateRange to null, clear filterTokens array, reset grouping to default
-    - When "Clear All" clicked: remove all filter-related URL query parameters while preserving other page parameters
+    - When "Clear All" clicked: immediately invoke onUpdate callback with the cleared FilterGroupingState
+    - When "Clear All" clicked: synchronize the cleared state to URL query parameters (remove all filter-related params while preserving other page parameters)
+    - When "Clear All" clicked: mark the current state as applied (set isDirty to false)
+    - "Clear All" button functions as a combined "clear and apply" action (single-click experience)
+    - **Note on Clear All Behavior:**
+      - On list pages (Participants, Activities, Venues) and Map View: "Clear All" immediately applies cleared state and parent component refetches data
+      - On dashboard pages (Engagement, Growth) with hideUpdateButton={true}: "Clear All" resets state but does NOT trigger data fetch (preserves Run Report Pattern where user must explicitly click "Run Report")
     - When isLoading prop is true: display loading indicator on "Update" button (if visible)
     - When isLoading prop is true: disable all controls (DateRangePicker, PropertyFilter, grouping controls)
     - When disablePopulationFilter prop is true: disable or hide population property in PropertyFilter
@@ -1645,7 +1652,10 @@ This implementation plan covers the React-based web application built with TypeS
     - When "Update" button clicked: mark current state as applied (set isDirty to false)
     - Render "Clear All" button using CloudScape Button
     - When "Clear All" clicked: reset dateRange to null, clear filterTokens array, reset grouping to default
-    - When "Clear All" clicked: remove all filter-related URL query parameters while preserving other page parameters
+    - When "Clear All" clicked: immediately invoke onUpdate callback with the cleared FilterGroupingState
+    - When "Clear All" clicked: synchronize the cleared state to URL query parameters (remove all filter-related params while preserving other page parameters)
+    - When "Clear All" clicked: mark the current state as applied (set isDirty to false)
+    - "Clear All" button functions as a combined "clear and apply" action (single-click experience)
     - When isLoading prop is true: display loading indicator on "Update" button
     - When isLoading prop is true: disable all controls (DateRangePicker, PropertyFilter, grouping controls)
     - When disablePopulationFilter prop is true: disable or hide population property in PropertyFilter
