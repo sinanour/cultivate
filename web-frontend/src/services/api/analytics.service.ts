@@ -26,7 +26,7 @@ export interface GrowthMetricsParams {
     geographicAreaIds?: string[];
     venueIds?: string[];
     populationIds?: string[];
-    groupBy?: 'type' | 'category';
+    groupBy?: 'type' | 'category' | 'ageCohort';
 }
 
 export interface ActivityLifecycleData {

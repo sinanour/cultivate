@@ -163,3 +163,36 @@ export function buildAgeCohortFilter(
 export function validateAgeCohorts(cohorts: string[]): boolean {
     return cohorts.every((cohort) => AGE_COHORT_VALUES.includes(cohort as AgeCohort));
 }
+
+/**
+ * Get the evaluation date for a time period
+ * The evaluation date is used as the reference point for calculating age cohorts in time-series analytics
+ * @param period - The time period type (DAY, WEEK, MONTH, YEAR)
+ * @param periodDate - The date within the period
+ * @returns The evaluation date (last day of the period)
+ */
+export function getEvaluationDate(period: string, periodDate: Date): Date {
+    switch (period) {
+        case 'DAY':
+            // Use the specific day
+            return new Date(periodDate);
+
+        case 'WEEK':
+            // Use the last day of the week (Sunday)
+            const lastDayOfWeek = new Date(periodDate);
+            const dayOfWeek = periodDate.getDay();
+            lastDayOfWeek.setDate(periodDate.getDate() + (6 - dayOfWeek));
+            return lastDayOfWeek;
+
+        case 'MONTH':
+            // Use the last day of the month
+            return new Date(periodDate.getFullYear(), periodDate.getMonth() + 1, 0);
+
+        case 'YEAR':
+            // Use December 31 of the year
+            return new Date(periodDate.getFullYear(), 11, 31);
+
+        default:
+            throw new Error(`Invalid period: ${period}`);
+    }
+}

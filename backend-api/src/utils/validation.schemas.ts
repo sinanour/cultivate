@@ -464,13 +464,14 @@ export const GrowthQuerySchema = z.object({
       // Transform user-friendly values to GroupingDimension enum values
       if (val === 'type') return GroupingDimension.ACTIVITY_TYPE;
       if (val === 'category') return GroupingDimension.ACTIVITY_CATEGORY;
+      if (val === 'ageCohort') return GroupingDimension.AGE_COHORT;
       // If already an enum value, pass through
-      if (val === GroupingDimension.ACTIVITY_TYPE || val === GroupingDimension.ACTIVITY_CATEGORY) return val;
+      if (val === GroupingDimension.ACTIVITY_TYPE || val === GroupingDimension.ACTIVITY_CATEGORY || val === GroupingDimension.AGE_COHORT) return val;
       // Reject anything else
       return val;
     },
-    z.enum([GroupingDimension.ACTIVITY_TYPE, GroupingDimension.ACTIVITY_CATEGORY] as const, {
-      errorMap: () => ({ message: 'groupBy must be "type" or "category"' })
+    z.enum([GroupingDimension.ACTIVITY_TYPE, GroupingDimension.ACTIVITY_CATEGORY, GroupingDimension.AGE_COHORT] as const, {
+      errorMap: () => ({ message: 'groupBy must be "type", "category", or "ageCohort"' })
     }).optional()
   ),
 });

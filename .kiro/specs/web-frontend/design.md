@@ -1110,7 +1110,7 @@ src/
   - Charts load independently with individual loading states
 - Uses FilterGroupingPanel component for unified filtering and grouping interface
 - Configures FilterGroupingPanel with:
-  - Exclusive grouping mode supporting options: "All", "Activity Type", "Activity Category"
+  - Exclusive grouping mode supporting options: "All", "Activity Type", "Activity Category", "Age Cohort"
   - Filter properties: activity category, activity type, geographic area, venue, population
   - Date range selection via DateRangePicker
   - Time period selector (day, week, month, year)
@@ -1120,28 +1120,37 @@ src/
 - User must click "Run Report" again after clearing to see results
 - Displays three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
 - Each time period represents a snapshot of unique participants, unique activities, and total participation engaged at that point in time (not cumulative counts)
-- Provides CloudScape SegmentedControl to view growth metrics with three options:
+- Provides CloudScape SegmentedControl to view growth metrics with four options:
   - "All" (default selection)
   - "Activity Type"
   - "Activity Category"
+  - "Age Cohort"
 - When "All" selected: 
-  - Displays single aggregate time-series line for total unique participants, single aggregate time-series line for total unique activities, and single aggregate time-series line for total participation across all activity types and categories in all three charts
-  - Displays overall participant growth numbers, activity growth numbers, and participation growth numbers representing totals across all activity types and categories
+  - Displays single aggregate time-series line for total unique participants, single aggregate time-series line for total unique activities, and single aggregate time-series line for total participation across all activity types, categories, and age cohorts in all three charts
+  - Displays overall participant growth numbers, activity growth numbers, and participation growth numbers representing totals across all activity types, categories, and age cohorts
 - When "Activity Type" selected: 
   - Displays multiple time-series lines in all three charts, one line for each activity type showing unique participants, unique activities, and total participation for that type
   - Does NOT display overall growth numbers, showing only the grouped breakdown data
 - When "Activity Category" selected: 
   - Displays multiple time-series lines in all three charts, one line for each activity category showing unique participants, unique activities, and total participation for that category
   - Does NOT display overall growth numbers, showing only the grouped breakdown data
-- Uses consistent color scheme across all three charts (Unique Participants, Unique Activities, and Total Participation), so the same activity type or category has the same color on all charts
-- Displays interactive legend on all three charts showing color mapping for each activity type or category when multiple lines are displayed
+- When "Age Cohort" selected:
+  - Displays six time-series lines in all three charts, one line for each age cohort: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"
+  - Shows unique participants (whole numbers), unique activities (fractional values), and total participation (whole numbers) for each cohort
+  - Unique Activities chart displays fractional values on Y-axis (e.g., 0.25, 0.75, 1.5) representing proportional activity distribution
+  - Unique Participants and Total Participation charts display whole number values on Y-axis
+  - Provides tooltip or info icon explaining that activity counts are fractional based on participant age distribution at each time period
+  - When user hovers over fractional activity data point, displays exact fractional value with appropriate precision
+  - Does NOT display overall growth numbers, showing only the age cohort breakdown data
+- Uses consistent color scheme across all three charts (Unique Participants, Unique Activities, and Total Participation), so the same activity type, category, or age cohort has the same color on all charts
+- Displays interactive legend on all three charts showing color mapping for each activity type, category, or age cohort when multiple lines are displayed
 - Allows users to click legend items to toggle individual data series on/off
 - Visually indicates hidden series in legend (dimmed text or reduced opacity)
 - Maintains at least one visible series or displays appropriate message when all are hidden
 - Adjusts chart axis scales dynamically when series are toggled
 - Provides hover states on legend items to indicate clickability
 - Ensures legend items are keyboard navigable and screen reader accessible
-- Updates all three charts without page refresh when view mode changes between "All", "Activity Type", and "Activity Category"
+- Updates all three charts without page refresh when view mode changes between "All", "Activity Type", "Activity Category", and "Age Cohort"
 - Preserves current time period, date range, and geographic area filter selections when switching between view modes
 - Stores selected view mode in browser localStorage (key: "growthChartViewMode")
 - Restores previously selected view mode from localStorage when user returns to Growth Dashboard
@@ -1163,7 +1172,7 @@ src/
     - Units: d (day), w (week), m (month), y (year)
     - Examples: `-30d`, `-6m`, `-1y`
   - Filter parameters: activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds (arrays)
-  - Grouping parameter: `?groupBy=all` or `?groupBy=type` or `?groupBy=category`
+  - Grouping parameter: `?groupBy=all` or `?groupBy=type` or `?groupBy=category` or `?groupBy=ageCohort`
   - Reads URL parameters on component mount to restore filter/grouping selections
   - Does NOT automatically fetch data from URL parameters
   - User must click "Run Report" to view data with URL-restored selections

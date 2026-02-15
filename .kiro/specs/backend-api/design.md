@@ -455,12 +455,26 @@ GrowthQuerySchema = {
   period: enum (required, 'DAY' | 'WEEK' | 'MONTH' | 'YEAR'),
   startDate: string (optional, ISO 8601 datetime format),
   endDate: string (optional, ISO 8601 datetime format),
-  groupBy: enum (optional, 'type' | 'category'),
+  groupBy: enum (optional, 'type' | 'category' | 'ageCohort'),
   activityCategoryIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
   activityTypeIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
   geographicAreaIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
   venueIds: string[] (optional, array of valid UUIDs, OR logic within dimension),
   populationIds: string[] (optional, array of valid UUIDs, OR logic within dimension)
+}
+
+// Growth Response Schema (when groupBy is 'ageCohort')
+GrowthByAgeCohortResponse = {
+  success: boolean,
+  timeSeries: [] (empty when groupBy is specified),
+  groupedTimeSeries: {
+    "Child": Array<{ period: string, uniqueParticipants: number, uniqueActivities: number (fractional), totalParticipation: number, percentageChange: number }>,
+    "Junior Youth": Array<{ period: string, uniqueParticipants: number, uniqueActivities: number (fractional), totalParticipation: number, percentageChange: number }>,
+    "Youth": Array<{ period: string, uniqueParticipants: number, uniqueActivities: number (fractional), totalParticipation: number, percentageChange: number }>,
+    "Young Adult": Array<{ period: string, uniqueParticipants: number, uniqueActivities: number (fractional), totalParticipation: number, percentageChange: number }>,
+    "Adult": Array<{ period: string, uniqueParticipants: number, uniqueActivities: number (fractional), totalParticipation: number, percentageChange: number }>,
+    "Unknown": Array<{ period: string, uniqueParticipants: number, uniqueActivities: number (fractional), totalParticipation: number, percentageChange: number }>
+  }
 }
 
 // Flexible Filtering Schema (applies to all entity list endpoints)
@@ -757,6 +771,202 @@ async findAllPaginated(options: QueryOptions) {
 - No additional database columns or indexes required
 - Calculation happens in application layer after database query
 - For large result sets, consider calculating cohort in database using CASE expressions if performance becomes an issue
+
+### Fractional Activity Counts by Age Cohort
+
+**Design Pattern:**
+
+When grouping growth metrics by age cohort, activities are divided proportionally among cohorts based on the age distribution of their participants at each time period's evaluation date. This provides accurate representation of how activities serve different age groups over time.
+
+**Evaluation Date Determination:**
+
+The evaluation date is the reference point for calculating participant ages in time-series analytics:
+
+```typescript
+function getEvaluationDate(period: string, periodDate: Date): Date {
+  switch (period) {
+    case 'DAY':
+      // Use the specific day
+      return periodDate;
+    
+    case 'WEEK':
+      // Use the last day of the week (Sunday)
+      const lastDayOfWeek = new Date(periodDate);
+      lastDayOfWeek.setDate(periodDate.getDate() + (6 - periodDate.getDay()));
+      return lastDayOfWeek;
+    
+    case 'MONTH':
+      // Use the last day of the month
+      return new Date(periodDate.getFullYear(), periodDate.getMonth() + 1, 0);
+    
+    case 'YEAR':
+      // Use December 31 of the year
+      return new Date(periodDate.getFullYear(), 11, 31);
+    
+    default:
+      throw new Error(`Invalid period: ${period}`);
+  }
+}
+```
+
+**Fractional Activity Calculation:**
+
+```typescript
+interface ActivityCohortDistribution {
+  activityId: string;
+  cohortCounts: Map<AgeCohort, number>;  // Count of participants in each cohort
+  totalParticipants: number;
+}
+
+function calculateFractionalActivities(
+  activities: Activity[],
+  evaluationDate: Date
+): Map<AgeCohort, number> {
+  const fractionalCounts = new Map<AgeCohort, number>();
+  
+  // Initialize all cohorts to 0
+  Object.values(AgeCohort).forEach(cohort => {
+    fractionalCounts.set(cohort, 0);
+  });
+  
+  for (const activity of activities) {
+    // Get all participants for this activity
+    const participants = activity.assignments.map(a => a.participant);
+    
+    if (participants.length === 0) continue;
+    
+    // Calculate age cohort for each participant at the evaluation date
+    const cohortCounts = new Map<AgeCohort, number>();
+    for (const participant of participants) {
+      const cohort = calculateAgeCohort(participant.dateOfBirth, evaluationDate);
+      cohortCounts.set(cohort, (cohortCounts.get(cohort) || 0) + 1);
+    }
+    
+    // Calculate fractional contribution for each cohort
+    const totalParticipants = participants.length;
+    for (const [cohort, count] of cohortCounts.entries()) {
+      const fraction = count / totalParticipants;
+      fractionalCounts.set(cohort, fractionalCounts.get(cohort)! + fraction);
+    }
+  }
+  
+  return fractionalCounts;
+}
+```
+
+**Example Calculation:**
+
+Consider three activities in a time period:
+- **Activity A**: 1 Youth, 3 Junior Youth (total: 4 participants)
+  - Youth: 1/4 = 0.25 activities
+  - Junior Youth: 3/4 = 0.75 activities
+- **Activity B**: 2 Adults, 2 Young Adults (total: 4 participants)
+  - Adult: 2/4 = 0.5 activities
+  - Young Adult: 2/4 = 0.5 activities
+- **Activity C**: 5 Children (total: 5 participants)
+  - Child: 5/5 = 1.0 activities
+
+**Aggregated fractional activity counts:**
+- Child: 1.0
+- Junior Youth: 0.75
+- Youth: 0.25
+- Young Adult: 0.5
+- Adult: 0.5
+- Unknown: 0.0
+
+**Historical Age Cohort Evaluation:**
+
+For time-series analytics, participant ages must be evaluated historically at each time period:
+
+```typescript
+async function calculateGrowthByAgeCohort(
+  period: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR',
+  startDate: Date,
+  endDate: Date,
+  filters: GrowthFilters
+): Promise<GroupedTimeSeries> {
+  // Generate time periods
+  const periods = generateTimePeriods(period, startDate, endDate);
+  
+  const groupedTimeSeries: Record<AgeCohort, TimeSeriesData[]> = {
+    [AgeCohort.CHILD]: [],
+    [AgeCohort.JUNIOR_YOUTH]: [],
+    [AgeCohort.YOUTH]: [],
+    [AgeCohort.YOUNG_ADULT]: [],
+    [AgeCohort.ADULT]: [],
+    [AgeCohort.UNKNOWN]: []
+  };
+  
+  for (const periodDate of periods) {
+    // Determine evaluation date for this period
+    const evaluationDate = getEvaluationDate(period, periodDate);
+    
+    // Fetch activities active during this period (with filters applied)
+    const activities = await getActivitiesForPeriod(periodDate, filters);
+    
+    // Calculate fractional activities by cohort
+    const fractionalActivities = calculateFractionalActivities(activities, evaluationDate);
+    
+    // Calculate unique participants by cohort
+    const participantsByCohort = new Map<AgeCohort, Set<string>>();
+    
+    // Calculate total participation by cohort
+    const participationByCohort = new Map<AgeCohort, number>();
+    
+    for (const activity of activities) {
+      for (const assignment of activity.assignments) {
+        const participant = assignment.participant;
+        const cohort = calculateAgeCohort(participant.dateOfBirth, evaluationDate);
+        
+        // Track unique participants
+        if (!participantsByCohort.has(cohort)) {
+          participantsByCohort.set(cohort, new Set());
+        }
+        participantsByCohort.get(cohort)!.add(participant.id);
+        
+        // Track total participation
+        participationByCohort.set(cohort, (participationByCohort.get(cohort) || 0) + 1);
+      }
+    }
+    
+    // Build time-series data for each cohort
+    for (const cohort of Object.values(AgeCohort)) {
+      groupedTimeSeries[cohort].push({
+        period: periodDate.toISOString(),
+        uniqueParticipants: participantsByCohort.get(cohort)?.size || 0,
+        uniqueActivities: fractionalActivities.get(cohort) || 0,
+        totalParticipation: participationByCohort.get(cohort) || 0,
+        percentageChange: 0  // Calculate after all periods processed
+      });
+    }
+  }
+  
+  // Calculate percentage changes for each cohort
+  for (const cohort of Object.values(AgeCohort)) {
+    calculatePercentageChanges(groupedTimeSeries[cohort]);
+  }
+  
+  return groupedTimeSeries;
+}
+```
+
+**Key Design Points:**
+
+- **Historical Accuracy**: Participant ages are evaluated at each time period's evaluation date, not their current age
+- **Fractional Activities**: Activities are divided proportionally based on participant age distribution
+- **Whole Number Participants**: Unique participant counts remain discrete (no fractions)
+- **Whole Number Participation**: Total participation counts remain discrete (no fractions)
+- **All Cohorts Included**: Response includes all six cohorts even if some have zero values
+- **Filter Application**: All filters (activity type, category, geographic area, venue, population) are applied before age cohort grouping
+- **Cohort Transitions**: A participant who transitions from Junior Youth to Youth across multiple years is counted in the appropriate cohort for each time period
+
+**Performance Considerations:**
+
+- Age cohort calculation is performed in-memory after fetching activities and participants
+- For large datasets, consider caching evaluation date calculations
+- Fractional arithmetic is lightweight (simple division)
+- Historical evaluation requires fetching participant dateOfBirth for all assignments
+- Consider database-level calculation using CASE expressions for very large datasets
 
 ### Unified Filtering and Attribute Selection Architecture
 

@@ -48,6 +48,9 @@ The Backend API package provides the RESTful API service that implements all bus
 - **Token_Invalidation**: A security mechanism that revokes all authorization tokens issued before a specific timestamp, forcing users to re-authenticate
 - **Last_Invalidation_Timestamp**: A persistent field in the User model that stores the most recent time when all tokens were invalidated for that user
 - **Age_Cohort**: A derived field calculated from a participant's date of birth that categorizes participants into age groups (Child, Junior Youth, Youth, Young Adult, Adult, Unknown) for demographic analysis and filtering
+- **Fractional_Activity_Count**: A calculated metric used when grouping activities by age cohort, where each activity is divided proportionally among age cohorts based on the distribution of participants' ages at a specific evaluation date (e.g., an activity with 1 Youth and 3 Junior Youth participants contributes 0.25 activities to Youth and 0.75 activities to Junior Youth)
+- **Historical_Age_Cohort_Evaluation**: The process of calculating a participant's age cohort at a specific point in time (evaluation date) rather than using their current age, ensuring accurate age-based analytics for activities spanning multiple years where participants may transition between age cohorts
+- **Evaluation_Date**: The reference date used for calculating age cohorts in time-series analytics, typically the last day of the time period being analyzed (e.g., last day of week, month, or year)
 
 ## Requirements
 
@@ -578,12 +581,29 @@ The Backend API package provides the RESTful API service that implements all bus
 21. WHEN a populationIds filter is provided and an activity has 5 participants with 3 belonging to at least one of the specified populations, THE API SHALL count 3 unique participants (not 5) and 3 participation instances (not 5) for that activity in the time period
 22. WHEN multiple filter dimensions are provided (e.g., activityCategoryIds AND venueIds AND populationIds), THE API SHALL apply all filters using AND logic across dimensions
 23. WHEN multiple values are provided within a single filter dimension (e.g., venueIds=[A, B]), THE API SHALL apply OR logic within that dimension (venue IN (A, B))
-24. THE API SHALL accept an optional groupBy query parameter with string values 'type' or 'category' (not 'activityType' or 'activityCategory')
+24. THE API SHALL accept an optional groupBy query parameter with string values 'type', 'category', or 'ageCohort'
 25. WHEN groupBy is 'type', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_TYPE enum and return separate time-series data for each activity type in the groupedTimeSeries field
 26. WHEN groupBy is 'category', THE API SHALL convert the value to the internal GroupingDimension.ACTIVITY_CATEGORY enum and return separate time-series data for each activity category in the groupedTimeSeries field
-27. WHEN no groupBy parameter is provided, THE API SHALL return aggregate time-series data in the timeSeries field with groupedTimeSeries undefined
-28. WHEN groupBy is specified, THE API SHALL return an empty timeSeries array and populate the groupedTimeSeries object with activity type or category names as keys
-29. WHEN returning time-series data, THE API SHALL include unique participant counts, unique activity counts, and total participation counts for each time period
+27. WHEN groupBy is 'ageCohort', THE API SHALL convert the value to the internal GroupingDimension.AGE_COHORT enum and return separate time-series data for each age cohort in the groupedTimeSeries field
+28. WHEN no groupBy parameter is provided, THE API SHALL return aggregate time-series data in the timeSeries field with groupedTimeSeries undefined
+29. WHEN groupBy is specified, THE API SHALL return an empty timeSeries array and populate the groupedTimeSeries object with activity type, category, or age cohort names as keys
+30. WHEN returning time-series data, THE API SHALL include unique participant counts, unique activity counts, and total participation counts for each time period
+31. WHEN groupBy is 'ageCohort', THE API SHALL calculate unique participant counts and total participation counts as discrete whole numbers for each age cohort
+32. WHEN groupBy is 'ageCohort', THE API SHALL calculate unique activity counts as fractional values based on the proportion of participants in each age cohort
+33. WHEN calculating fractional activity counts by age cohort, THE API SHALL evaluate each participant's age cohort historically at the evaluation date (the date of the time period being calculated)
+34. WHEN a participant is associated with an activity spanning multiple time periods, THE API SHALL re-evaluate the participant's age cohort at each time period based on their dateOfBirth and the period's evaluation date
+35. WHEN an activity has 4 participants where 1 is a Youth and 3 are Junior Youth at a specific time period, THE API SHALL attribute 0.25 unique activities to the Youth cohort and 0.75 unique activities to the Junior Youth cohort for that period
+36. WHEN calculating fractional activity counts, THE API SHALL use the formula: (count of participants in cohort for activity) / (total count of participants in activity)
+37. WHEN an activity has participants with null dateOfBirth (Unknown cohort), THE API SHALL include those participants in the denominator when calculating fractional activity counts
+38. WHEN calculating age cohort for a participant at a specific time period, THE API SHALL use the period's evaluation date as the reference date for age calculation
+39. WHEN a time period is WEEK, THE API SHALL use the last day of the week as the evaluation date for age cohort calculation
+40. WHEN a time period is MONTH, THE API SHALL use the last day of the month as the evaluation date for age cohort calculation
+41. WHEN a time period is YEAR, THE API SHALL use the last day of the year (December 31) as the evaluation date for age cohort calculation
+42. WHEN a time period is DAY, THE API SHALL use that specific day as the evaluation date for age cohort calculation
+43. WHEN groupBy is 'ageCohort', THE API SHALL return time-series data with cohort names as keys: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"
+44. WHEN groupBy is 'ageCohort', THE API SHALL include all six age cohorts in the response even if some cohorts have zero participants or activities in certain time periods
+45. WHEN calculating growth metrics by age cohort, THE API SHALL apply all filter dimensions (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) before grouping by age cohort
+46. WHEN both populationIds filter and ageCohort grouping are applied, THE API SHALL first filter to participants in specified populations, then group those participants by their age cohort at each time period
 30. THE API SHALL use Zod preprocess to normalize array query parameters (activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds) before validation
 31. WHEN a single value is provided for an array parameter, THE API SHALL parse it as an array with one element
 32. WHEN multiple values are provided for an array parameter (e.g., ?venueIds=id1&venueIds=id2), THE API SHALL parse them as an array with multiple elements

@@ -61,7 +61,7 @@ function getColorForGroup(groupName: string, allGroups: string[]): string {
   return COLOR_PALETTE[index % COLOR_PALETTE.length];
 }
 
-type ViewMode = 'all' | 'type' | 'category';
+type ViewMode = 'all' | 'type' | 'category' | 'ageCohort';
 
 interface GrowthDashboardProps {
   runReportTrigger?: number; // Increment this to trigger report execution
@@ -83,19 +83,19 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     // First check URL parameter (new name)
     const urlGroupBy = searchParams.get('growthGroupBy');
-    if (urlGroupBy === 'all' || urlGroupBy === 'type' || urlGroupBy === 'category') {
+    if (urlGroupBy === 'all' || urlGroupBy === 'type' || urlGroupBy === 'category' || urlGroupBy === 'ageCohort') {
       return urlGroupBy;
     }
     
     // Backward compatibility: check old param name
     const oldGroupBy = searchParams.get('groupBy');
-    if (oldGroupBy === 'all' || oldGroupBy === 'type' || oldGroupBy === 'category') {
+    if (oldGroupBy === 'all' || oldGroupBy === 'type' || oldGroupBy === 'category' || oldGroupBy === 'ageCohort') {
       return oldGroupBy;
     }
     
     // Then check localStorage
     const stored = localStorage.getItem('growthChartViewMode');
-    if (stored === 'all' || stored === 'type' || stored === 'category') {
+    if (stored === 'all' || stored === 'type' || stored === 'category' || stored === 'ageCohort') {
       return stored;
     }
     
@@ -285,6 +285,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
     { value: 'all', label: 'All' },
     { value: 'type', label: 'Activity Type' },
     { value: 'category', label: 'Activity Category' },
+    { value: 'ageCohort', label: 'Age Cohort' },
   ];
 
   // Handler for FilterGroupingPanel updates
@@ -656,7 +657,28 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
       )}
 
       {/* Unique Activities Over Time Chart */}
-      <Container header={renderHeaderWithLoading('Unique Activities Over Time')}>
+        <Container header={
+          <SpaceBetween size="xs" direction="horizontal">
+            {renderHeaderWithLoading('Unique Activities Over Time')}
+            {appliedViewMode === 'ageCohort' && (
+              <Popover
+                dismissButton={false}
+                position="top"
+                size="medium"
+                triggerType="custom"
+                content={
+                  <Box variant="p">
+                    <strong>Fractional Activity Counts:</strong> When grouped by age cohort, activity counts are fractional.
+                    Each activity is divided proportionally based on the age distribution of its participants at each time period.
+                    For example, an activity with 1 Youth and 3 Junior Youth participants contributes 0.25 activities to Youth and 0.75 activities to Junior Youth.
+                  </Box>
+                }
+              >
+                <Icon name="status-info" variant="link" />
+              </Popover>
+            )}
+          </SpaceBetween>
+        }>
         {renderWithLoadingState(
           <>
             {appliedViewMode !== 'all' && activityLegendItems.length > 0 && (
@@ -673,8 +695,16 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
                   <XAxis dataKey="date" />
                   <YAxis 
                     label={{ value: 'Unique Activities', angle: -90, position: 'insideLeft' }}
+                    tickFormatter={appliedViewMode === 'ageCohort' ? (value) => value.toFixed(2) : undefined}
                   />
-                  <Tooltip />
+                  <Tooltip
+                    formatter={appliedViewMode === 'ageCohort' ? (value: any) => {
+                      if (typeof value === 'number') {
+                        return value.toFixed(2) + ' activities';
+                      }
+                      return value;
+                    } : undefined}
+                  />
               {appliedViewMode === 'all' ? (
                     <Area
                   type="monotone"

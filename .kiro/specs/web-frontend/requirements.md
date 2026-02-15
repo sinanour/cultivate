@@ -59,6 +59,8 @@ The Web Frontend package provides a responsive React-based web application that 
 - **Token_Invalidation**: A security mechanism that revokes all authorization tokens issued before a specific timestamp, forcing users to re-authenticate across all devices
 - **Multi_Device_Logout**: A user action that invalidates all authorization tokens for a user across all devices, requiring re-authentication on all sessions
 - **Age_Cohort**: A derived field calculated from a participant's date of birth that categorizes participants into age groups (Child, Junior Youth, Youth, Young Adult, Adult, Unknown) for demographic analysis and filtering
+- **Fractional_Activity_Count**: A calculated metric used when grouping activities by age cohort, where each activity is divided proportionally among age cohorts based on the distribution of participants' ages at a specific evaluation date (e.g., an activity with 1 Youth and 3 Junior Youth participants contributes 0.25 activities to Youth and 0.75 activities to Junior Youth)
+- **Historical_Age_Cohort_Evaluation**: The process of calculating a participant's age cohort at a specific point in time (evaluation date) rather than using their current age, ensuring accurate age-based analytics for activities spanning multiple years where participants may transition between age cohorts
 
 ## Requirements
 
@@ -1110,28 +1112,35 @@ The Web Frontend package provides a responsive React-based web application that 
 
 **View Mode Controls:**
 
-71. THE Web_App SHALL provide a segmented control to view growth metrics with three options: "All", "Activity Type", and "Activity Category"
+71. THE Web_App SHALL provide a segmented control to view growth metrics with four options: "All", "Activity Type", "Activity Category", and "Age Cohort"
 72. THE Segmented_Control SHALL default to "All" as the selected option
-73. WHEN "All" is selected in the segmented control, THE Web_App SHALL display a single aggregate time-series line for total unique participants, a single aggregate time-series line for total unique activities, and a single aggregate time-series line for total participation across all activity types and categories in all three charts
-74. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participation growth numbers (percentage change) representing totals across all activity types and categories
-75. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall activity growth numbers (percentage change) representing totals across all activity types and categories
-76. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participant growth numbers (percentage change) representing totals across all activity types and categories
-77. WHEN "Activity Type" or "Activity Category" is selected in the segmented control, THE Web_App SHALL NOT display overall growth numbers, showing only the grouped breakdown data
+73. WHEN "All" is selected in the segmented control, THE Web_App SHALL display a single aggregate time-series line for total unique participants, a single aggregate time-series line for total unique activities, and a single aggregate time-series line for total participation across all activity types, categories, and age cohorts in all three charts
+74. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participation growth numbers (percentage change) representing totals across all activity types, categories, and age cohorts
+75. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall activity growth numbers (percentage change) representing totals across all activity types, categories, and age cohorts
+76. WHEN "All" is selected in the segmented control, THE Web_App SHALL display overall participant growth numbers (percentage change) representing totals across all activity types, categories, and age cohorts
+77. WHEN "Activity Type", "Activity Category", or "Age Cohort" is selected in the segmented control, THE Web_App SHALL NOT display overall growth numbers, showing only the grouped breakdown data
 78. WHEN "Activity Type" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each activity type showing unique participants, unique activities, and total participation for that type
 79. WHEN "Activity Category" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each activity category showing unique participants, unique activities, and total participation for that category
-80. WHEN displaying multiple lines for activity types or categories, THE Web_App SHALL use a consistent color scheme across all three charts (Unique Participants, Unique Activities, and Total Participation), so that the same activity type or category has the same color on all charts
-81. THE Web_App SHALL display a legend on all three charts showing the color mapping for each activity type or category when multiple lines are displayed
-82. WHEN the view mode changes between "All", "Activity Type", and "Activity Category", THE Growth_Dashboard SHALL update all three charts without requiring a page refresh
-83. WHEN switching between view modes, THE Growth_Dashboard SHALL preserve the current time period, date range, and filter selections
-84. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage with key "growthChartViewMode"
-85. WHEN a user returns to the Growth Dashboard, THE Growth_Dashboard SHALL restore the previously selected view mode from local storage
-86. IF no previous selection exists in local storage, THE Growth_Dashboard SHALL default to "All" view
-87. WHEN local storage is unavailable, THE Growth_Dashboard SHALL function normally with "All" as the default
+80. WHEN "Age Cohort" is selected in the segmented control, THE Web_App SHALL display multiple time-series lines in all three charts, one line for each age cohort showing unique participants, unique activities (fractional), and total participation for that cohort
+81. WHEN displaying growth metrics by age cohort, THE Web_App SHALL display six time-series lines representing: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", and "Unknown"
+82. WHEN displaying unique activity counts by age cohort, THE Web_App SHALL display fractional activity values (e.g., 0.25, 0.75, 1.5) on the chart Y-axis
+83. WHEN displaying unique participant counts by age cohort, THE Web_App SHALL display whole number values on the chart Y-axis
+84. WHEN displaying total participation counts by age cohort, THE Web_App SHALL display whole number values on the chart Y-axis
+85. THE Web_App SHALL provide a tooltip or info icon explaining that activity counts by age cohort are fractional based on participant age distribution
+86. WHEN a user hovers over a fractional activity data point on the chart, THE Web_App SHALL display the exact fractional value with appropriate precision (e.g., "0.25 activities")
+87. WHEN displaying multiple lines for activity types, categories, or age cohorts, THE Web_App SHALL use a consistent color scheme across all three charts (Unique Participants, Unique Activities, and Total Participation), so that the same activity type, category, or age cohort has the same color on all charts
+88. THE Web_App SHALL display a legend on all three charts showing the color mapping for each activity type, category, or age cohort when multiple lines are displayed
+89. WHEN the view mode changes between "All", "Activity Type", "Activity Category", and "Age Cohort", THE Growth_Dashboard SHALL update all three charts without requiring a page refresh
+90. WHEN switching between view modes, THE Growth_Dashboard SHALL preserve the current time period, date range, and filter selections
+91. WHEN a user selects a view mode, THE System SHALL store the selection in browser local storage with key "growthChartViewMode"
+92. WHEN a user returns to the Growth Dashboard, THE Growth_Dashboard SHALL restore the previously selected view mode from local storage
+93. IF no previous selection exists in local storage, THE Growth_Dashboard SHALL default to "All" view
+94. WHEN local storage is unavailable, THE Growth_Dashboard SHALL function normally with "All" as the default
 
 **Filtering and Grouping Controls:**
 
 88. THE Web_App SHALL use the FilterGroupingPanel component to provide date range selection, property-based filtering, and exclusive grouping controls
-89. WHEN using the FilterGroupingPanel on the Growth Dashboard, THE Web_App SHALL configure it with exclusive grouping mode supporting options: "All", "Activity Type", "Activity Category"
+89. WHEN using the FilterGroupingPanel on the Growth Dashboard, THE Web_App SHALL configure it with exclusive grouping mode supporting options: "All", "Activity Type", "Activity Category", "Age Cohort"
 90. WHEN using the FilterGroupingPanel on the Growth Dashboard, THE Web_App SHALL configure it with filter properties: activity category, activity type, geographic area, venue, population
 91. THE FilterGroupingPanel on the Growth Dashboard SHALL hide the "Update" button
 91a. THE FilterGroupingPanel on the Growth Dashboard SHALL display the "Clear All" button
@@ -1163,6 +1172,7 @@ The Web Frontend package provides a responsive React-based web application that 
 107. WHEN the "Run Report" button is clicked, THE Web_App SHALL update the browser URL to reflect the current filter, time period, and grouping state
 108. THE Web_App SHALL enable browser back/forward navigation to move between different growth dashboard configurations
 109. WHEN a user shares a growth dashboard URL, THE Web_App SHALL restore the filter and grouping selections but require the recipient to click "Run Report" to view the data
+110. WHEN groupBy is 'ageCohort' in the URL parameters, THE Web_App SHALL restore the "Age Cohort" grouping selection in the FilterGroupingPanel
 
 **Activities Chart on Engagement Dashboard:**
 

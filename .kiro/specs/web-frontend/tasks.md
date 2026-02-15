@@ -1905,7 +1905,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Import FilterGroupingPanel component
     - Remove existing separate filter controls (dropdowns, SegmentedControl for grouping)
     - Configure FilterGroupingPanel with exclusive grouping mode
-    - Set groupingDimensions to: ['All', 'Activity Type', 'Activity Category']
+    - Set groupingDimensions to: ['All', 'Activity Type', 'Activity Category', 'Age Cohort']
     - Set filterProperties with lazy loading callbacks for each property:
       - Activity Category: loadItems callback fetches from ActivityCategoryService
       - Activity Type: loadItems callback fetches from ActivityTypeService
@@ -1934,17 +1934,18 @@ This implementation plan covers the React-based web application built with TypeS
     - Display three separate time-series charts: one for unique participant counts, one for unique activity counts, and one for total participation (non-unique participant-activity associations)
     - Provide time period selector (DAY, WEEK, MONTH, YEAR) using period parameter
     - Display each time period as a snapshot of unique participants, unique activities, and total participation (not cumulative)
-    - Add CloudScape SegmentedControl component with three options:
+    - Add CloudScape SegmentedControl component with four options:
       - "All" (default selection)
       - "Activity Type"
       - "Activity Category"
+      - "Age Cohort"
     - Implement view mode state management using React useState hook
     - When "All" selected:
       - Fetch aggregate growth data from API (no groupBy parameter)
       - Display single time-series line for total unique participants in Participant Growth Chart
       - Display single time-series line for total unique activities in Activity Growth Chart
       - Display single time-series line for total participation in Total Participation Chart
-      - Display overall participant growth numbers, activity growth numbers, and participation growth numbers representing totals across all activity types and categories
+      - Display overall participant growth numbers, activity growth numbers, and participation growth numbers representing totals across all activity types, categories, and age cohorts
     - When "Activity Type" selected:
       - Fetch growth data grouped by activity type from API (groupBy='type')
       - Display multiple time-series lines in all three charts, one for each activity type
@@ -1959,10 +1960,22 @@ This implementation plan covers the React-based web application built with TypeS
       - Show unique activities per category in Activity Growth Chart
       - Show total participation per category in Total Participation Chart
       - Do NOT display overall growth numbers, showing only the grouped breakdown data
+    - When "Age Cohort" selected:
+      - Fetch growth data grouped by age cohort from API (groupBy='ageCohort')
+      - Display six time-series lines in all three charts, one for each age cohort: "Child", "Junior Youth", "Youth", "Young Adult", "Adult", "Unknown"
+      - Show unique participants per cohort (whole numbers) in Participant Growth Chart with standard Y-axis
+      - Show unique activities per cohort (fractional values) in Activity Growth Chart with decimal Y-axis (e.g., 0.25, 0.75, 1.5)
+      - Show total participation per cohort (whole numbers) in Total Participation Chart with standard Y-axis
+      - Add info icon or tooltip near Activity Growth Chart explaining fractional activity counts
+      - Info text: "Activity counts are fractional when grouped by age cohort. Each activity is divided proportionally based on the age distribution of its participants at each time period."
+      - Configure recharts to display fractional values with 2 decimal places on Y-axis and in tooltips
+      - When user hovers over fractional activity data point, display exact value (e.g., "0.25 activities")
+      - Do NOT display overall growth numbers, showing only the age cohort breakdown data
     - Implement consistent color scheme across all three charts:
-      - Define color palette for activity types/categories
-      - Apply same color to same type/category on all three charts (Participant, Activity, and Participation)
+      - Define color palette for activity types/categories/age cohorts
+      - Apply same color to same type/category/cohort on all three charts (Participant, Activity, and Participation)
       - Use recharts color prop or custom color mapping function
+      - Ensure six distinct colors for age cohorts (Child, Junior Youth, Youth, Young Adult, Adult, Unknown)
     - Display legend on all three charts showing color mapping when multiple lines are displayed
     - Update all three charts without page refresh when view mode changes
     - Preserve current time period, date range, and geographic area filter selections when switching views
@@ -1991,7 +2004,7 @@ This implementation plan covers the React-based web application built with TypeS
     - Synchronize filter and grouping parameters with URL query parameters:
       - Read URL parameters on component mount to initialize dashboard state
       - Update URL when user changes filters or grouping (using React Router's useSearchParams)
-      - Support parameters: period, startDate, endDate, relativePeriod (compact format: -90d, -6m, -1y), activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds, groupBy (all|type|category)
+      - Support parameters: period, startDate, endDate, relativePeriod (compact format: -90d, -6m, -1y), activityCategoryIds, activityTypeIds, geographicAreaIds, venueIds, populationIds, groupBy (all|type|category|ageCohort)
       - Use same compact relative date format as Engagement dashboard for consistency
       - Enable browser back/forward navigation between different configurations
       - Ensure URL updates don't cause page reloads (use replace: true)
@@ -2011,6 +2024,12 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 33a: Growth Dashboard All View Mode**
     - **Property 33b: Growth Dashboard Activity Type View Mode**
     - **Property 33c: Growth Dashboard Activity Category View Mode**
+    - **Property 33c1: Growth Dashboard Age Cohort View Mode**
+    - **Property 33c2: Growth Dashboard Age Cohort Fractional Activities Display**
+    - **Property 33c3: Growth Dashboard Age Cohort Whole Number Participants Display**
+    - **Property 33c4: Growth Dashboard Age Cohort Info Icon Display**
+    - **Property 33c5: Growth Dashboard Age Cohort Tooltip Precision**
+    - **Property 33c6: Growth Dashboard Age Cohort Six Lines Display**
     - **Property 33d: Growth Dashboard Consistent Color Scheme**
     - **Property 33e: Growth Dashboard Legend Display**
     - **Property 33f: Growth Dashboard View Mode Switching**

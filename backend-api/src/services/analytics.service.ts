@@ -7,7 +7,9 @@ import {
     DateGranularity,
     GroupingDimension,
     DimensionKeys,
+    AgeCohort,
 } from '../utils/constants';
+import { calculateAgeCohort, getEvaluationDate } from '../utils/age-cohort.utils';
 import { GeographicBreakdownQueryBuilder, GeographicBreakdownFilters, PaginationParams as GeoBreakdownPaginationParams } from './analytics/geographic-breakdown-query-builder';
 import { GeographicFilteringService } from './geographic-filtering.service';
 
@@ -1275,6 +1277,12 @@ export class AnalyticsService {
             return { timeSeries: [], groupedTimeSeries };
         }
 
+        // If groupBy is AGE_COHORT, calculate grouped time series by age cohort with fractional activities
+        if (groupBy === GroupingDimension.AGE_COHORT) {
+            const groupedTimeSeries = this.calculateGrowthByAgeCohort(periods, activities, populationIds, timePeriod);
+            return { timeSeries: [], groupedTimeSeries };
+        }
+
         // Calculate aggregate time series
         const timeSeries = this.calculateGrowthTimeSeries(periods, activities, populationIds);
 
@@ -1354,6 +1362,145 @@ export class AnalyticsService {
         }
 
         return timeSeries;
+    }
+
+    /**
+     * Calculate growth metrics grouped by age cohort with fractional activity counts
+     * @param periods - Array of time periods to analyze
+     * @param activities - Filtered activities with assignments and participants
+     * @param populationIds - Optional population filter
+     * @param timePeriod - Time period type for evaluation date calculation
+     * @returns Grouped time series data by age cohort
+     */
+    private calculateGrowthByAgeCohort(
+        periods: Array<{ start: Date; end: Date; label: string }>,
+        activities: Array<{
+            id: string;
+            startDate: Date;
+            endDate: Date | null;
+            status: any;
+            additionalParticipantCount?: number | null;
+            assignments: Array<{
+                participantId: string;
+                participant: {
+                    dateOfBirth: Date | null;
+                    participantPopulations?: Array<{
+                        populationId: string;
+                        population: any;
+                    }>;
+                };
+            }>;
+        }>,
+        populationIds: string[] | undefined,
+        timePeriod: TimePeriod
+    ): Record<string, GrowthPeriodData[]> {
+        // Initialize grouped time series for all six age cohorts
+        const groupedTimeSeries: Record<string, GrowthPeriodData[]> = {
+            [AgeCohort.CHILD]: [],
+            [AgeCohort.JUNIOR_YOUTH]: [],
+            [AgeCohort.YOUTH]: [],
+            [AgeCohort.YOUNG_ADULT]: [],
+            [AgeCohort.ADULT]: [],
+            [AgeCohort.UNKNOWN]: [],
+        };
+
+        // Helper function to filter assignments by population
+        const filterAssignmentsByPopulation = (assignments: any[]) => {
+            if (!populationIds || populationIds.length === 0) {
+                return assignments;
+            }
+            return assignments.filter(assignment =>
+                assignment.participant?.participantPopulations?.some((pp: any) =>
+                    populationIds.includes(pp.populationId)
+                )
+            );
+        };
+
+        for (const period of periods) {
+            // Determine evaluation date for this period (last day of period)
+            const evaluationDate = getEvaluationDate(timePeriod, period.end);
+
+            // Filter activities active during this period
+            const activeActivities = activities.filter(activity => {
+                const startedBeforePeriodEnd = activity.startDate < period.end;
+                const notEndedOrEndedAfterPeriodStart =
+                    !activity.endDate || activity.endDate >= period.start;
+                return startedBeforePeriodEnd && notEndedOrEndedAfterPeriodStart;
+            });
+
+            // Calculate metrics by age cohort
+            const cohortMetrics = new Map<AgeCohort, {
+                uniqueParticipants: Set<string>;
+                fractionalActivities: number;
+                totalParticipation: number;
+            }>();
+
+            // Initialize all cohorts
+            Object.values(AgeCohort).forEach(cohort => {
+                cohortMetrics.set(cohort as AgeCohort, {
+                    uniqueParticipants: new Set(),
+                    fractionalActivities: 0,
+                    totalParticipation: 0,
+                });
+            });
+
+            // Process each active activity
+            for (const activity of activeActivities) {
+                // Filter assignments by population if needed
+                const filteredAssignments = filterAssignmentsByPopulation(activity.assignments);
+
+                if (filteredAssignments.length === 0) continue;
+
+                // Count participants by age cohort for this activity
+                const cohortCounts = new Map<AgeCohort, number>();
+                let totalParticipantsInActivity = 0;
+
+                for (const assignment of filteredAssignments) {
+                    const cohort = calculateAgeCohort(
+                        assignment.participant.dateOfBirth,
+                        evaluationDate
+                    );
+                    cohortCounts.set(cohort, (cohortCounts.get(cohort) || 0) + 1);
+                    totalParticipantsInActivity++;
+                }
+
+                // Calculate fractional activity contribution for each cohort
+                for (const [cohort, count] of cohortCounts.entries()) {
+                    const metrics = cohortMetrics.get(cohort)!;
+
+                    // Fractional activities: proportion of participants in this cohort
+                    const fraction = count / totalParticipantsInActivity;
+                    metrics.fractionalActivities += fraction;
+
+                    // Unique participants: add participant IDs to set
+                    filteredAssignments.forEach(assignment => {
+                        const participantCohort = calculateAgeCohort(
+                            assignment.participant.dateOfBirth,
+                            evaluationDate
+                        );
+                        if (participantCohort === cohort) {
+                            metrics.uniqueParticipants.add(assignment.participantId);
+                        }
+                    });
+
+                    // Total participation: count of assignments in this cohort
+                    metrics.totalParticipation += count;
+                }
+            }
+
+            // Build time series data for each cohort
+            for (const cohort of Object.values(AgeCohort)) {
+                const metrics = cohortMetrics.get(cohort as AgeCohort)!;
+                groupedTimeSeries[cohort].push({
+                    date: period.label,
+                    uniqueParticipants: metrics.uniqueParticipants.size,
+                    uniqueActivities: metrics.fractionalActivities,
+                    totalParticipation: metrics.totalParticipation,
+                });
+            }
+        }
+
+        return groupedTimeSeries;
     }
 
     /**

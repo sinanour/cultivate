@@ -929,7 +929,13 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
       - venueIds array filter (OR logic: venue IN (A, B))
       - populationIds array filter (OR logic: participant in at least one population)
       - Multiple dimensions combined with AND logic (e.g., category AND venue AND population)
-    - Support optional grouping by activity type or category for growth metrics
+    - Support optional grouping by activity type, category, or age cohort for growth metrics
+    - When grouping by age cohort, implement fractional activity count calculation
+    - When grouping by age cohort, evaluate participant ages historically at each time period's evaluation date
+    - Evaluation date is the last day of the time period (last day of week, month, or year; or the specific day for DAY period)
+    - Calculate fractional activities using formula: (participants in cohort) / (total participants in activity)
+    - Include all six age cohorts in response even if some have zero values
+    - Apply all filters before grouping by age cohort
     - Use Zod preprocess to normalize array query parameters (single value, multiple parameters, comma-separated)
     - Implement geographic breakdown calculation:
       - Accept optional parentGeographicAreaId parameter
@@ -1007,7 +1013,15 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 47P: Growth Metrics Multi-Dimensional Filter AND Logic**
     - **Property 47Q: Growth Metrics Within-Dimension OR Logic**
     - **Property 47R: Growth Metrics Array Parameter Normalization**
-    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 6.30, 6.31, 6.32, 6.33, 6.34, 6.35, 6.36, 6.37, 6.38, 6.39, 6.40, 6.41, 6.42, 6.43, 7.2, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33**
+    - **Property 47S: Growth Metrics Age Cohort Grouping Support**
+    - **Property 47T: Fractional Activity Count Calculation**
+    - **Property 47U: Historical Age Cohort Evaluation**
+    - **Property 47V: Evaluation Date Determination**
+    - **Property 47W: Age Cohort Fractional Activity Formula**
+    - **Property 47X: All Age Cohorts Included in Response**
+    - **Property 47Y: Whole Number Participant Counts by Age Cohort**
+    - **Property 47Z: Whole Number Participation Counts by Age Cohort**
+    - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.8a, 6.8b, 6.9, 6.10, 6.11, 6.12, 6.13, 6.14, 6.14a, 6.14b, 6.14c, 6.15, 6.16, 6.17, 6.18, 6.19, 6.20, 6.21, 6.22, 6.23, 6.24, 6.25, 6.26, 6.27, 6.28, 6.29, 6.30, 6.31, 6.32, 6.33, 6.34, 6.35, 6.36, 6.37, 6.38, 6.39, 6.40, 6.41, 6.42, 6.43, 7.2, 7.4, 7.5, 7.5a, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18, 7.19, 7.20, 7.21, 7.22, 7.23, 7.24, 7.25, 7.26, 7.27, 7.28, 7.29, 7.30, 7.31, 7.32, 7.33, 7.34, 7.35, 7.36, 7.37, 7.38, 7.39, 7.40, 7.41, 7.42, 7.43, 7.44, 7.45, 7.46**
 
   - [x] 13.3 Create analytics routes
     - GET /api/analytics/engagement

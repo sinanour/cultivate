@@ -78,6 +78,7 @@ export enum GroupingDimension {
     VENUE = 'venue',
     GEOGRAPHIC_AREA = 'geographicArea',
     DATE = 'date',
+    AGE_COHORT = 'ageCohort',
 }
 
 // Dimension key constants for grouped results
