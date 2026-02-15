@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
@@ -611,7 +611,7 @@ export function ActivityList() {
             actions={
               <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
-                  <>
+                  <React.Fragment key="edit-actions">
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -637,8 +637,7 @@ export function ActivityList() {
                     >
                       Export CSV
                     </ResponsiveButton>
-                  </>
-                )}
+                  </React.Fragment>)}
                 {canCreate() && (
                   <ResponsiveButton 
                     variant="primary" 

@@ -4044,3 +4044,105 @@ See `API_ALIGNMENT_SUMMARY.md` for detailed alignment documentation.
     - **Property 334: AsyncEntitySelect No Duplicate Options**
     - **Property 335: AsyncEntitySelect Description Type Safety**
     - **Validates: Requirements 26C.1, 26C.2, 26C.3, 26C.4, 26C.5, 26C.6, 26C.7, 26C.8, 26C.9, 26C.10, 26C.11, 26C.12, 26C.13, 26C.14, 26C.15, 26C.16, 26C.17, 26C.18, 26C.19, 26C.20, 26C.21, 26C.22, 26C.23, 26C.24, 26C.25, 26C.26, 26C.27_
+
+
+- [-] 45. Add React key properties to all list and table renderings
+  - [x] 45.1 Audit and update list component keys
+    - Review ParticipantList component and add key={participant.id} to each row
+    - Review ActivityList component and add key={activity.id} to each row
+    - Review VenueList component and add key={venue.id} to each row
+    - Review GeographicAreaList component and add key={area.id} to each row (including nested rows)
+    - Review ActivityCategoryList component and add key={category.id} to each row
+    - Review ActivityTypeList component and add key={type.id} to each row
+    - Review ParticipantRoleList component and add key={role.id} to each row
+    - Review PopulationList component and add key={population.id} to each row
+    - Review UserList component and add key={user.id} to each row
+    - _Requirements: 26D.1, 26D.2, 26D.3, 26D.7, 26D.8, 26D.9, 26D.10, 26D.11, 26D.12, 26D.13, 26D.14, 26D.15_
+
+  - [x] 45.2 Audit and update detail view embedded list keys
+    - Review ParticipantDetail component:
+      - Add key={activity.id} to each activity in activities list
+      - Add key={addressHistory.id} to each address history record
+      - Add key={population.id} to each population badge or list item
+    - Review ActivityDetail component:
+      - Add key={participant.id} to each participant in assigned participants table
+      - Add key={venue.id} to each venue in venue history table
+    - Review VenueDetail component:
+      - Add key={activity.id} to each activity in associated activities list
+      - Add key={participant.id} to each participant in current residents list
+    - Review GeographicAreaDetail component:
+      - Add key={area.id} to each child area in children list
+      - Add key={venue.id} to each venue in associated venues list
+    - _Requirements: 26D.16, 26D.17, 26D.18, 26D.19, 26D.20, 26D.21, 26D.22, 26D.23, 26D.24_
+
+  - [x] 45.3 Audit and update form component keys
+    - Review ParticipantFormPage component:
+      - Add key={addressHistory.id} to each address history record in embedded table
+      - Add key={population.id} to each population in membership list
+    - Review ActivityFormPage component:
+      - Add key={venue.id} to each venue in venue history table
+      - Add key={participant.id} to each participant in assignments table
+    - Review UserFormPage component:
+      - Add key={authRule.id} to each geographic authorization rule
+    - _Requirements: 26D.25, 26D.26, 26D.27, 26D.28, 26D.29_
+
+  - [x] 45.4 Audit and update dashboard component keys
+    - Review EngagementDashboard component:
+      - Add key={row.id} or appropriate unique identifier to each row in Engagement Summary table
+      - Add key={category.id} to each activity category in charts and legends
+      - Add key={type.id} to each activity type in charts and legends
+      - Add key={area.id} to each geographic area in geographic breakdown chart
+    - Review GrowthDashboard component:
+      - Add appropriate unique keys to all chart data series and legend items
+    - _Requirements: 26D.30, 26D.31, 26D.32, 26D.33, 26D.34_
+
+  - [x] 45.5 Audit and update map view component keys
+    - Review MapView component:
+      - Add key={marker.id} to each map marker when rendering marker lists
+      - Add key={type.id} or key={category.id} to each legend item based on current map mode
+    - _Requirements: 26D.35, 26D.36_
+
+  - [x] 45.6 Audit and update dropdown/select component keys
+    - Review Geographic_Area_Selector component:
+      - Add key={area.id} to each option when rendering options list
+    - Review AsyncEntitySelect component:
+      - Add key={entity.id} to each option when rendering options list
+    - Review FilterGroupingPanel component:
+      - Add appropriate unique keys to filter tokens and grouping dimension options
+    - _Requirements: 26D.37, 26D.38, 26D.39_
+
+  - [x] 45.7 Handle temporary entity keys
+    - Identify components that render temporary entities (not yet persisted)
+    - Implement temporary key generation using pattern: `temp-${Date.now()}-${index}`
+    - Document temporary key usage in component comments
+    - Ensure temporary keys are replaced with real UUIDs after persistence
+    - _Requirements: 26D.43_
+
+  - [x] 45.8 Add TypeScript type enforcement
+    - Review entity type definitions to ensure all have `id: string` property
+    - Add TypeScript interfaces for list item props that require id property
+    - Configure ESLint rules to warn about missing keys in development
+    - _Requirements: 26D.41, 26D.42_
+
+  - [x] 45.9 Test and verify key properties
+    - Run development build and check console for React key warnings
+    - Manually test list rendering and updates to verify no key-related issues
+    - Test list filtering, sorting, and pagination to ensure stable rendering
+    - Test detail view embedded lists for proper key usage
+    - Test form embedded lists for proper key usage
+    - _Requirements: 26D.40, 26D.41_
+
+  - [x]* 45.10 Write property-based tests for React keys
+    - **Property 346: List Items Have Key Properties**
+    - **Property 347: Key Values Are Unique Within Lists**
+    - **Property 348: Key Values Remain Stable Across Re-renders**
+    - **Property 349: Table Rows Have Key Properties**
+    - **Property 350: Dropdown Options Have Key Properties**
+    - **Property 351: Embedded List Items Have Key Properties**
+    - **Validates: Requirements 26D.1, 26D.2, 26D.3, 26D.4, 26D.5, 26D.6, 26D.44, 26D.45, 26D.46_
+
+- [x] 46. Checkpoint - Verify React key properties
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify no React key warnings in development console
+  - Test list rendering performance improvements
+  - Verify stable rendering during list updates

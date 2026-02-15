@@ -1,3 +1,4 @@
+import React from 'react';
 import { Modal, SpaceBetween, Alert, Table, Box } from '@cloudscape-design/components';
 import type { ImportResult } from '../../types/csv.types';
 
@@ -30,7 +31,7 @@ export function ImportResultsModal({ visible, result, onDismiss }: ImportResults
                 </Alert>
 
                 {result.errors.length > 0 && (
-                    <>
+                    <React.Fragment key="errors-section">
                         <Box variant="h3">Errors</Box>
                         <Table
                             columnDefinitions={[
@@ -49,7 +50,7 @@ export function ImportResultsModal({ visible, result, onDismiss }: ImportResults
                             items={result.errors}
                             variant="embedded"
                         />
-                    </>
+                    </React.Fragment>
                 )}
             </SpaceBetween>
         </Modal>

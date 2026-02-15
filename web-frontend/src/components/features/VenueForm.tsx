@@ -648,9 +648,9 @@ export function VenueForm({ venue, onSuccess, onCancel }: VenueFormProps) {
             Multiple locations found for this address. Please select the correct one:
           </Box>
           <SpaceBetween size="s">
-            {geocodingResults.map((result, index) => (
+            {geocodingResults.map((result) => (
               <Button
-                key={index}
+                key={`${result.latitude}-${result.longitude}`}
                 onClick={() => handleSelectResult(result)}
                 fullWidth
                 variant="normal"

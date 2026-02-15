@@ -9,11 +9,11 @@ export function TableSkeleton({ rows = 5, columns = 4 }: TableSkeletonProps) {
   return (
     <div>
       {Array.from({ length: rows }).map((_, rowIndex) => (
-        <Box key={rowIndex} padding="s">
+        <Box key={`skeleton-row-${rowIndex}`} padding="s">
           <div style={{ display: 'flex', gap: '16px' }}>
             {Array.from({ length: columns }).map((_, colIndex) => (
               <div
-                key={colIndex}
+                key={`skeleton-col-${colIndex}`}
                 style={{
                   flex: 1,
                   height: '20px',

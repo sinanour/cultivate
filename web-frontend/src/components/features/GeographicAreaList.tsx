@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import Header from "@cloudscape-design/components/header";
@@ -660,7 +660,7 @@ export function GeographicAreaList() {
                 actions={
                   <SpaceBetween direction="horizontal" size="xs">
                     {canEdit() && (
-                      <>
+                      <React.Fragment key="edit-actions">
                         <input
                           ref={fileInputRef}
                           type="file"
@@ -686,10 +686,11 @@ export function GeographicAreaList() {
                         >
                           Export CSV
                         </ResponsiveButton>
-                      </>
+                      </React.Fragment>
                     )}
                     {canCreate() && (
                       <ResponsiveButton
+                        key="create-button"
                         variant="primary"
                         onClick={handleCreate}
                         mobileIcon="add-plus"

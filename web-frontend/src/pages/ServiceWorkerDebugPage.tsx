@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container,
     Header,
@@ -134,7 +134,7 @@ export default function ServiceWorkerDebugPage() {
                                 {loading ? 'Loading...' : registration ? '✓ Registered' : '✗ Not Registered'}
                             </Box>
                             {registration && (
-                                <>
+                                <React.Fragment key="registration-info">
                                     <Box>
                                         <strong>State:</strong> {registration.active?.state || 'Unknown'}
                                     </Box>
@@ -144,7 +144,7 @@ export default function ServiceWorkerDebugPage() {
                                     <Button onClick={unregisterServiceWorker} variant="primary">
                                         Unregister Service Worker
                                     </Button>
-                                </>
+                                </React.Fragment>
                             )}
                         </SpaceBetween>
                     </Box>

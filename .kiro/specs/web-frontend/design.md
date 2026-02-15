@@ -77,6 +77,8 @@ src/
 
 ## Components and Interfaces
 
+> **React Key Properties**: All components that render lists or tables of entities MUST specify the React `key` property on each item, using the entity's UUID (`key={entity.id}`). This ensures efficient React reconciliation, prevents rendering bugs, and improves performance. See the "React Key Properties for List Rendering" section in Implementation Notes for detailed guidance.
+
 ### Core Components
 
 #### 1. Authentication Components
@@ -4909,6 +4911,118 @@ Accessibility tests ensure WCAG 2.1 AA compliance using axe-core.
 - Lazy load images
 - Use appropriate image formats (WebP)
 - Provide responsive images
+
+### React Key Properties for List Rendering
+
+**Design Principle:**
+All list items and table rows must have proper React `key` properties to enable efficient reconciliation, prevent rendering bugs, and improve performance.
+
+**Key Property Requirements:**
+
+**Entity Lists and Tables:**
+- Use entity UUID as key value: `key={entity.id}`
+- Never use array indices: `key={index}` ❌
+- Never use non-unique values: `key={entity.name}` ❌
+- Ensure keys remain stable across re-renders
+
+**Implementation Pattern:**
+```tsx
+// ✅ Correct: Using entity UUID
+<Table
+  items={participants}
+  columnDefinitions={columns}
+  // CloudScape Table automatically uses item.id if available
+/>
+
+// ✅ Correct: Manual list rendering
+{participants.map(participant => (
+  <div key={participant.id}>
+    {participant.name}
+  </div>
+))}
+
+// ❌ Incorrect: Using array index
+{participants.map((participant, index) => (
+  <div key={index}>
+    {participant.name}
+  </div>
+))}
+```
+
+**Component-Specific Key Usage:**
+
+**List Components:**
+- ParticipantList: `key={participant.id}`
+- ActivityList: `key={activity.id}`
+- VenueList: `key={venue.id}`
+- GeographicAreaList: `key={area.id}` (including nested rows)
+- Configuration lists: `key={category.id}`, `key={type.id}`, `key={role.id}`, `key={population.id}`
+- UserList: `key={user.id}`
+
+**Detail View Embedded Lists:**
+- Participant activities: `key={activity.id}`
+- Address history: `key={addressHistory.id}`
+- Population badges: `key={population.id}`
+- Activity participants: `key={participant.id}`
+- Venue history: `key={venue.id}`
+- Geographic area children: `key={area.id}`
+
+**Form Embedded Lists:**
+- Address history in forms: `key={addressHistory.id}` or `key={temp-${Date.now()}-${index}}` for unsaved records
+- Venue associations in forms: `key={venue.id}` or temporary key
+- Participant assignments in forms: `key={participant.id}` or temporary key
+- Authorization rules: `key={authRule.id}` or temporary key
+
+**Dashboard and Map Components:**
+- Engagement Summary table rows: `key={row.id}` or composite key
+- Chart legend items: `key={category.id}`, `key={type.id}`, `key={area.id}`
+- Map markers: `key={marker.id}`
+- Growth chart series: unique keys based on grouping dimension
+
+**Dropdown Options:**
+- Geographic_Area_Selector: `key={area.id}`
+- AsyncEntitySelect: `key={entity.id}`
+- FilterGroupingPanel tokens: unique keys for each token
+
+**Temporary Entity Keys:**
+For entities not yet persisted (e.g., new address history records before participant is saved):
+```tsx
+// Generate temporary unique key
+const tempKey = `temp-${Date.now()}-${index}`;
+
+// Use temporary key until entity is persisted
+<div key={record.id || tempKey}>
+  {/* content */}
+</div>
+```
+
+**TypeScript Enforcement:**
+All entity types should enforce the presence of an `id` property:
+```tsx
+interface BaseEntity {
+  id: string; // UUID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Participant extends BaseEntity {
+  name: string;
+  email?: string;
+  // ... other fields
+}
+```
+
+**Development Tooling:**
+- Configure ESLint to warn about missing keys in JSX lists
+- Use React DevTools to identify components with key warnings
+- Monitor console for React key-related warnings during development
+
+**Benefits:**
+- Prevents unnecessary re-renders when list order changes
+- Maintains component state correctly during list updates
+- Improves performance for large lists
+- Prevents subtle bugs with form inputs in lists
+- Enables React's reconciliation algorithm to work efficiently
 
 ### Security Considerations
 

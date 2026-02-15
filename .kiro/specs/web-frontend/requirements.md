@@ -2283,6 +2283,86 @@ All three optimizations have been **fully implemented and integrated**:
 These optimizations are transparent to end users and provide significant performance improvements without changing the user interface or user experience.
 
 
+### Requirement 26D: React Key Properties for List and Table Rendering
+
+**User Story:** As a developer, I want all list items and table rows to have proper React key properties set to entity UUIDs, so that React can efficiently track and update components, preventing rendering bugs and improving performance.
+
+#### Acceptance Criteria
+
+**General Key Property Requirements:**
+
+1. THE Web_App SHALL specify the React `key` property on every list item rendered using `.map()` or similar iteration methods
+2. THE Web_App SHALL specify the React `key` property on every table row rendered in CloudScape Table components
+3. THE Web_App SHALL use the entity's UUID as the value for the `key` property whenever rendering entities from the backend
+4. THE Web_App SHALL NOT use array indices as key values when rendering entity lists
+5. THE Web_App SHALL NOT use non-unique values (e.g., entity names) as key values
+6. THE Web_App SHALL ensure key values remain stable across re-renders for the same entity
+
+**List Component Key Requirements:**
+
+7. THE ParticipantList component SHALL set `key={participant.id}` on each participant row
+8. THE ActivityList component SHALL set `key={activity.id}` on each activity row
+9. THE VenueList component SHALL set `key={venue.id}` on each venue row
+10. THE GeographicAreaList component SHALL set `key={area.id}` on each geographic area row (including nested rows)
+11. THE ActivityCategoryList component SHALL set `key={category.id}` on each category row
+12. THE ActivityTypeList component SHALL set `key={type.id}` on each type row
+13. THE ParticipantRoleList component SHALL set `key={role.id}` on each role row
+14. THE PopulationList component SHALL set `key={population.id}` on each population row
+15. THE UserList component SHALL set `key={user.id}` on each user row
+
+**Detail View Embedded List Key Requirements:**
+
+16. THE ParticipantDetail component SHALL set `key={activity.id}` on each activity in the participant's activities list
+17. THE ParticipantDetail component SHALL set `key={addressHistory.id}` on each address history record
+18. THE ParticipantDetail component SHALL set `key={population.id}` on each population badge or list item
+19. THE ActivityDetail component SHALL set `key={participant.id}` on each participant in the assigned participants table
+20. THE ActivityDetail component SHALL set `key={venue.id}` on each venue in the venue history table
+21. THE VenueDetail component SHALL set `key={activity.id}` on each activity in the associated activities list
+22. THE VenueDetail component SHALL set `key={participant.id}` on each participant in the current residents list
+23. THE GeographicAreaDetail component SHALL set `key={area.id}` on each child area in the children list
+24. THE GeographicAreaDetail component SHALL set `key={venue.id}` on each venue in the associated venues list
+
+**Form Component Key Requirements:**
+
+25. THE ParticipantFormPage component SHALL set `key={addressHistory.id}` on each address history record in the embedded table
+26. THE ParticipantFormPage component SHALL set `key={population.id}` on each population in the membership list
+27. THE ActivityFormPage component SHALL set `key={venue.id}` on each venue in the venue history table
+28. THE ActivityFormPage component SHALL set `key={participant.id}` on each participant in the assignments table
+29. THE UserFormPage component SHALL set `key={authRule.id}` on each geographic authorization rule
+
+**Dashboard and Analytics Key Requirements:**
+
+30. THE EngagementDashboard component SHALL set `key={row.id}` or appropriate unique identifier on each row in the Engagement Summary table
+31. THE EngagementDashboard component SHALL set `key={category.id}` on each activity category in charts and legends
+32. THE EngagementDashboard component SHALL set `key={type.id}` on each activity type in charts and legends
+33. THE EngagementDashboard component SHALL set `key={area.id}` on each geographic area in the geographic breakdown chart
+34. THE GrowthDashboard component SHALL set appropriate unique keys on all chart data series and legend items
+
+**Map View Key Requirements:**
+
+35. THE MapView component SHALL set `key={marker.id}` on each map marker when rendering marker lists
+36. THE MapView component SHALL set `key={type.id}` or `key={category.id}` on each legend item based on the current map mode
+
+**Dropdown and Select Component Key Requirements:**
+
+37. THE Geographic_Area_Selector component SHALL set `key={area.id}` on each option when rendering the options list
+38. THE AsyncEntitySelect component SHALL set `key={entity.id}` on each option when rendering the options list
+39. THE FilterGroupingPanel component SHALL set appropriate unique keys on filter tokens and grouping dimension options
+
+**Validation and Error Prevention:**
+
+40. THE Web_App SHALL NOT render lists or tables without key properties in production builds
+41. THE Web_App development build SHALL log console warnings when key properties are missing or non-unique
+42. THE Web_App SHALL use TypeScript types to enforce that entity objects have an `id` property of type string (UUID)
+43. THE Web_App SHALL handle cases where temporary entities (not yet persisted) may need temporary unique keys (e.g., `temp-${Date.now()}-${index}`)
+
+**Testing Requirements:**
+
+44. THE Web_App SHALL include property-based tests that verify key properties are present on all rendered list items
+45. THE Web_App SHALL include property-based tests that verify key values are unique within each list
+46. THE Web_App SHALL include property-based tests that verify key values remain stable across re-renders for the same data
+
+
 ### Requirement 26C: AsyncEntitySelect Value Persistence
 
 **User Story:** As a user, when I select an option from a filtered list in AsyncEntitySelect and then change the filter text, I want the selected option to remain visible in the dropdown, so that I can see what I've selected and potentially change it.

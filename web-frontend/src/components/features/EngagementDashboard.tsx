@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Container from '@cloudscape-design/components/container';
@@ -1477,9 +1477,9 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
             <SpaceBetween size="s" direction="horizontal" alignItems="center">
               <Box>
                 {metrics.pagination ? (
-                  <>
+                    <React.Fragment key="pagination-info">
                     Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, metrics.pagination.totalRecords)} of {metrics.pagination.totalRecords} records
-                  </>
+                    </React.Fragment>
                 ) : (
                   'Showing all records'
                 )}
