@@ -250,7 +250,7 @@ export default function ReconciliationPage() {
                 id: 'field',
                 header: 'Field',
                 cell: (item: ReconciliationTableItem) => (
-                  <Box variant='h3' display='block' padding={{ vertical: 's' }}>{item.fieldLabel}</Box>
+                  <Box variant='h5' display='block' padding={{ vertical: 's' }}>{item.fieldLabel}</Box>
                 ),
                 width: 200,
               },
@@ -268,7 +268,7 @@ export default function ReconciliationPage() {
                         selectedItems={(isSelected) ? [displayValue] : []}
                         cardDefinition={{
                           header: ((i: string) => (
-                            <div style={{ fontWeight: 'normal', cursor: 'pointer' }}>{i || "–"}</div>
+                            <div style={{ fontWeight: 'normal', cursor: 'pointer', fontSize: 'smaller' }}>{i || "–"}</div>
                           ))
                         }}
                         cardsPerRow={[{
@@ -297,7 +297,7 @@ export default function ReconciliationPage() {
                       selectedItems={(isSelected) ? [displayValue] : []}
                       cardDefinition={{
                         header: ((i: string) => (
-                          <div style={{ fontWeight: 'normal', cursor: 'pointer' }}>{i || "–"}</div>
+                          <div style={{ fontWeight: 'normal', cursor: 'pointer', fontSize: 'smaller' }}>{i || "–"}</div>
                         ))
                       }}
                       cardsPerRow={[{
