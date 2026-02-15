@@ -2273,3 +2273,49 @@ All three optimizations have been **fully implemented and integrated**:
 - ✅ Production-ready
 
 These optimizations are transparent to end users and provide significant performance improvements without changing the user interface or user experience.
+
+
+### Requirement 26C: AsyncEntitySelect Value Persistence
+
+**User Story:** As a user, when I select an option from a filtered list in AsyncEntitySelect and then change the filter text, I want the selected option to remain visible in the dropdown, so that I can see what I've selected and potentially change it.
+
+#### Acceptance Criteria
+
+**Persist Selected Value in Options List:**
+
+1. THE AsyncEntitySelect component SHALL always include the currently selected value in the options list
+2. WHEN a user selects an option from filtered results, THE component SHALL store that entity in `ensuredEntity` state
+3. WHEN the filter text changes after a selection, THE component SHALL NOT reset the `ensuredEntity` state for the currently selected value
+4. WHEN the filter text changes after a selection, THE component SHALL continue to display the selected value in the options list
+5. THE component SHALL only fetch a selected entity by ID once, even if the filter text changes multiple times
+6. WHEN a user selects a different entity (value prop changes to a different ID), THE component SHALL fetch the new entity if needed
+7. WHEN a user clears the selection (value becomes empty), THE component SHALL allow `ensuredEntity` to be reset
+8. THE component SHALL position the ensured entity at the top of the options list when it's not in the filtered results
+9. THE component SHALL NOT duplicate the ensured entity in the options list if it already appears in the filtered results
+
+**Optimize Ensured Entity Fetching:**
+
+10. THE component SHALL NOT refetch an ensured entity when the filter text changes
+11. THE component SHALL only refetch an ensured entity when the `value` prop changes to a different entity ID
+12. THE component SHALL only refetch an ensured entity when the `ensureIncluded` prop changes to a different entity ID
+13. THE component SHALL mark an entity as "ensured" after successfully fetching it by ID
+14. THE component SHALL mark an entity as "ensured" after the user selects it from the filtered results
+15. THE component SHALL NOT reset the "ensured" flag when the filter text changes
+16. THE component SHALL reset the "ensured" flag only when the value changes to a different entity or becomes empty
+
+**Handle Edge Cases:**
+
+17. WHEN a user types a filter, selects an option, then types a different filter, THE selected option SHALL remain visible
+18. WHEN a user selects an option that appears in the initial unfiltered results, THE component SHALL NOT make an additional fetch by ID
+19. WHEN a user selects an option from filtered results, then clears the filter, THE selected option SHALL remain visible
+20. WHEN a user selects an option, then selects a different option, THE component SHALL update the ensured entity to the new selection
+21. WHEN a user clears the selection (empty value), THE component SHALL allow the ensured entity to be cleared on the next filter change
+22. WHEN the `ensureIncluded` prop is provided, THE component SHALL prioritize it over the `value` prop for ensuring inclusion
+23. WHEN both `ensureIncluded` and `value` are provided and different, THE component SHALL ensure both entities are in the options list
+
+**Required Props:**
+
+24. THE AsyncEntitySelect component SHALL require `fetchByIdFunction` prop for ensured entity behavior to work correctly
+25. ALL usages of AsyncEntitySelect throughout the application SHALL provide the `fetchByIdFunction` prop
+26. THE `formatOption` function SHALL return `description` as a string or undefined (not null or object)
+27. WHEN an entity's description field (email, address, etc.) is null, THE `formatOption` function SHALL return undefined for the description property

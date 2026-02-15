@@ -3983,3 +3983,54 @@ See `API_ALIGNMENT_SUMMARY.md` for detailed alignment documentation.
   - Verify no additional API calls are made to fetch populations
   - Verify consistent styling across all views
   - Test with zero, one, and multiple population memberships
+
+
+- [x] 26C. Fix AsyncEntitySelect value persistence regression
+  - [x] 26C.1 Remove problematic useEffect that resets hasEnsuredFetch on search changes
+    - Locate the useEffect with dependency array `[debouncedSearch]` in AsyncEntitySelect.tsx
+    - Delete the entire useEffect block that contains `setHasEnsuredFetch(false)`
+    - Add explanatory comment about why we don't reset on search changes
+    - Verify other useEffect hooks remain intact (reset on ensureIncluded change, reset on value change, main fetch logic)
+    - _Requirements: 26C.1, 26C.2, 26C.3, 26C.4, 26C.5, 26C.10, 26C.15, 26C.16_
+
+  - [x] 26C.2 Add fetchByIdFunction to all AsyncEntitySelect usages
+    - Update AssignmentForm.tsx: Add `fetchByIdFunction={ParticipantService.getParticipantById}`, fix `description: p.email || undefined`
+    - Update ActivityVenueHistoryForm.tsx: Add `fetchByIdFunction={VenueService.getVenueById}`, fix `description: v.address || undefined`
+    - Update AddressHistoryForm.tsx: Add `fetchByIdFunction={VenueService.getVenueById}`, fix `description: v.address || undefined`
+    - Update ActivityForm.tsx venue selector: Add `fetchByIdFunction={VenueService.getVenueById}`, fix `description: v.address || undefined`
+    - Update ActivityForm.tsx participant selector: Add `fetchByIdFunction={ParticipantService.getParticipantById}`, fix `description: p.email || undefined`
+    - Update ParticipantForm.tsx: Add `fetchByIdFunction={VenueService.getVenueById}`, fix `description: v.address || undefined`
+    - Verify MergeInitiationModal.tsx already has fetchByIdFunction (no changes needed)
+    - _Requirements: 26C.24, 26C.25, 26C.26, 26C.27_
+
+  - [x] 26C.3 Add comprehensive documentation
+    - Add JSDoc comment to AsyncEntitySelect component explaining ensured entity behavior
+    - Document that selected values persist across filter changes
+    - Note that fetchByIdFunction is required for this behavior
+    - Update prop documentation for `ensureIncluded` and `fetchByIdFunction`
+    - Clarify relationship between `value` and `ensureIncluded` props
+    - Add usage example showing proper component configuration
+    - _Requirements: 26C.1, 26C.2, 26C.5, 26C.22, 26C.24_
+
+  - [x] 26C.4 Add test coverage for value persistence
+    - Add test case "should persist selected entity when data changes" to AsyncEntitySelect.ensure-value.test.tsx
+    - Test that selected entity remains in options when query data changes
+    - Verify fetchByIdFunction is not called redundantly
+    - Verify both ensured entity and filtered results appear in options
+    - Run all AsyncEntitySelect tests to ensure no regressions
+    - _Requirements: 26C.1, 26C.2, 26C.3, 26C.4, 26C.5, 26C.8, 26C.9, 26C.10, 26C.17, 26C.18, 26C.19_
+
+  - [x] 26C.5 Verify build and compilation
+    - Run TypeScript compilation to check for errors
+    - Run production build to ensure no build failures
+    - Verify all AsyncEntitySelect usages compile without warnings
+    - Confirm CloudScape Autosuggest warning about object descriptions is resolved
+    - _Requirements: 26C.26, 26C.27_
+
+  - [ ]* 26C.6 Write property-based tests (optional)
+    - **Property 331: AsyncEntitySelect Selected Value Always in Options**
+    - **Property 332: AsyncEntitySelect No Redundant Fetches**
+    - **Property 333: AsyncEntitySelect Value Change Triggers Refetch**
+    - **Property 334: AsyncEntitySelect No Duplicate Options**
+    - **Property 335: AsyncEntitySelect Description Type Safety**
+    - **Validates: Requirements 26C.1, 26C.2, 26C.3, 26C.4, 26C.5, 26C.6, 26C.7, 26C.8, 26C.9, 26C.10, 26C.11, 26C.12, 26C.13, 26C.14, 26C.15, 26C.16, 26C.17, 26C.18, 26C.19, 26C.20, 26C.21, 26C.22, 26C.23, 26C.24, 26C.25, 26C.26, 26C.27_

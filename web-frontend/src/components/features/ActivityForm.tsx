@@ -956,10 +956,13 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                               fields: params.fields
                             });
                           }}
+                          fetchByIdFunction={async (id: string) => {
+                            return await VenueService.getVenueById(id);
+                          }}
                           formatOption={(v) => ({
                             value: v.id,
                             label: v.name,
-                            description: v.address,
+                            description: v.address || undefined,
                           })}
                           placeholder="Search for a venue"
                           invalid={!!venueFormErrors.venue}
@@ -1096,10 +1099,13 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                               fields: params.fields
                             });
                           }}
+                          fetchByIdFunction={async (id: string) => {
+                            return await ParticipantService.getParticipantById(id);
+                          }}
                           formatOption={(p) => ({
                             value: p.id,
                             label: p.name,
-                            description: p.email,
+                            description: p.email || undefined,
                           })}
                           placeholder="Search for a participant"
                           invalid={!!assignmentFormErrors.participant}

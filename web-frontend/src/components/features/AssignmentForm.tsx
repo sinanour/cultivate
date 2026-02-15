@@ -180,10 +180,13 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
                     fields: params.fields
                   });
                 }}
+                fetchByIdFunction={async (id: string) => {
+                  return await ParticipantService.getParticipantById(id);
+                }}
                 formatOption={(p) => ({
                   value: p.id,
                   label: p.name,
-                  description: p.email,
+                  description: p.email || undefined,
                 })}
                 placeholder="Search for a participant"
                 disabled={isSubmitting}

@@ -13,9 +13,13 @@ export interface AsyncEntitySelectOption {
 }
 
 export interface AsyncEntitySelectProps {
+  /** The currently selected entity ID */
   value: string;
+  /** Callback when selection changes */
   onChange: (value: string) => void;
+  /** Type of entity being selected */
   entityType: 'venue' | 'participant' | 'geographic-area' | 'activity' | 'activity-type' | 'population';
+  /** Function to fetch paginated list of entities with optional filtering */
   fetchFunction: (params: {
     page?: number;
     limit?: number;
@@ -23,18 +27,68 @@ export interface AsyncEntitySelectProps {
     filter?: Record<string, any>;
     fields?: string[];
   }) => Promise<{ data: any[]; pagination?: any }>;
+  /** Function to format entity data into option format */
   formatOption: (entity: any) => AsyncEntitySelectOption;
+  /** Placeholder text when no value selected */
   placeholder?: string;
+  /** Whether the component is disabled */
   disabled?: boolean;
+  /** Whether the component has invalid state */
   invalid?: boolean;
+  /** ARIA label for accessibility */
   ariaLabel?: string;
-  clearable?: boolean; // New prop to enable clear button
-  /** ID of a specific entity that must be included in options (e.g., when pre-selected) */
+  /** Whether to show a clear button */
+  clearable?: boolean;
+  /**
+   * ID of a specific entity that must be included in options.
+   * Use this when you need to ensure a specific entity is always available,
+   * such as when pre-selecting a value in a form. Takes precedence over `value`
+   * for ensuring inclusion.
+   */
   ensureIncluded?: string | null;
-  /** Function to fetch a single entity by ID (required when ensureIncluded is provided) */
+  /**
+   * Function to fetch a single entity by ID.
+   * REQUIRED for the component to ensure selected values persist in the options list.
+   * When a selected entity is not in the filtered results, this function fetches it
+   * so it can be displayed. The fetched entity is cached and persists across filter
+   * changes until a different entity is selected.
+   */
   fetchByIdFunction?: (id: string) => Promise<any>;
 }
 
+/**
+ * AsyncEntitySelect - A reusable dropdown component for selecting entities with async loading.
+ * 
+ * This component provides:
+ * - Lazy loading of options with search filtering
+ * - Automatic inclusion of selected values in the options list
+ * - Efficient caching to minimize API calls
+ * 
+ * **Ensured Entity Behavior:**
+ * When a value is selected (either via user selection or the `value` prop), the component
+ * ensures that entity remains visible in the options list even when the filter text changes.
+ * This prevents the selected value from disappearing when users type new search terms.
+ * 
+ * The component will fetch the selected entity by ID (using `fetchByIdFunction`) if it's
+ * not in the initial results. Once fetched, the entity is cached and persists across
+ * filter changes until a different entity is selected.
+ * 
+ * **Required Props for Ensured Entity Behavior:**
+ * - `fetchByIdFunction`: Required to fetch entities by ID when they're not in search results
+ * - `value`: The currently selected entity ID
+ * 
+ * @example
+ * ```tsx
+ * <AsyncEntitySelect
+ *   value={selectedVenueId}
+ *   onChange={setSelectedVenueId}
+ *   entityType="venue"
+ *   fetchFunction={VenueService.getVenues}
+ *   fetchByIdFunction={VenueService.getVenueById}
+ *   formatOption={(venue) => ({ value: venue.id, label: venue.name })}
+ * />
+ * ```
+ */
 export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
   value,
   onChange,
@@ -79,10 +133,10 @@ export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
   // Debounce the search text to avoid excessive API calls
   const debouncedSearch = useDebounce(filterText, 300);
 
-  // Reset hasEnsuredFetch when search query changes so we refetch with new results
-  useEffect(() => {
-    setHasEnsuredFetch(false);
-  }, [debouncedSearch]);
+  // Note: We do NOT reset hasEnsuredFetch when debouncedSearch changes.
+  // This ensures that once an entity is selected, it remains in the options
+  // list even when the filter text changes. The entity will only be refetched
+  // when the value or ensureIncluded props change to a different entity.
 
   // Fetch options based on search text and geographic filter
   const { data, isLoading, error } = useQuery({

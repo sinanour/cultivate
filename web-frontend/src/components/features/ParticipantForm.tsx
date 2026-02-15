@@ -804,10 +804,13 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                               fields: params.fields
                             });
                           }}
+                          fetchByIdFunction={async (id: string) => {
+                            return await VenueService.getVenueById(id);
+                          }}
                           formatOption={(v) => ({
                             value: v.id,
                             label: v.name,
-                            description: v.address,
+                            description: v.address || undefined,
                           })}
                           placeholder="Search for a venue"
                           invalid={!!addressFormErrors.venue}

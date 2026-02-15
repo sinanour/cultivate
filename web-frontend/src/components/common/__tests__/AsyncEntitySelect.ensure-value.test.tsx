@@ -180,4 +180,57 @@ describe('AsyncEntitySelect - Ensure Value Functionality', () => {
             expect(mockFetchByIdFunction).toHaveBeenCalledWith('entity-2');
         });
     });
+
+    it('should persist selected entity when data changes', async () => {
+    // This test verifies the fix: selected entities remain in options
+    // even when the underlying query data changes
+        const selectedEntity = { id: 'entity-selected', name: 'John Smith' };
+        const otherEntities = [{ id: 'entity-other', name: 'Jane Doe' }];
+
+        const mockFetchFunction = vi.fn().mockResolvedValue({
+            data: otherEntities,
+            pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+        });
+
+        const mockFetchByIdFunction = vi.fn().mockResolvedValue(selectedEntity);
+        const mockFormatOption = (entity: any) => ({
+            value: entity.id,
+            label: entity.name,
+        });
+
+        // Render with John Smith selected, but initial data only has Jane Doe
+        render(
+            <QueryClientProvider client={queryClient}>
+                <AsyncEntitySelect
+                    value="entity-selected"
+                    onChange={vi.fn()}
+                    entityType="participant"
+                    fetchFunction={mockFetchFunction}
+                    fetchByIdFunction={mockFetchByIdFunction}
+                    formatOption={mockFormatOption}
+                />
+            </QueryClientProvider>
+        );
+
+        // Wait for both fetches
+        await waitFor(() => {
+            expect(mockFetchFunction).toHaveBeenCalled();
+            expect(mockFetchByIdFunction).toHaveBeenCalledWith('entity-selected');
+        });
+
+        // Selected value should be displayed
+        await waitFor(() => {
+            expect(screen.getByDisplayValue('John Smith')).toBeInTheDocument();
+        });
+
+        // Open dropdown to verify both entities are in options
+        const input = screen.getByRole('combobox');
+        await userEvent.click(input);
+
+        // Both John Smith (ensured) and Jane Doe (from query) should be present
+        await waitFor(() => {
+            expect(screen.getByTitle('John Smith')).toBeInTheDocument();
+            expect(screen.getByTitle('Jane Doe')).toBeInTheDocument();
+        });
+    });
 });

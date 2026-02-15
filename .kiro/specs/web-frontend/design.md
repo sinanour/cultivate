@@ -1388,6 +1388,17 @@ src/
 - Provides clear visual feedback during async operations
 - Optimizes for both small scoped datasets (shows all immediately) and large global datasets (requires filtering)
 
+**Ensured Entity Behavior (Value Persistence):**
+- Ensures selected values always remain visible in the options list, even when filter text changes
+- When a user selects an entity, stores it in `ensuredEntity` state
+- Preserves `ensuredEntity` across filter text changes to prevent selected values from disappearing
+- Only fetches an entity by ID once, caching it for subsequent filter changes
+- Positions ensured entity at top of options list when not in filtered results
+- Prevents duplicate entries when ensured entity appears in filtered results
+- Resets ensured entity only when `value` or `ensureIncluded` props change to a different entity
+- Requires `fetchByIdFunction` prop to fetch entities by ID when not in search results
+- Requires `formatOption` to return `description` as string or undefined (not null or object)
+
 **Implementation Details:**
 - Generic component accepting entity type, fetch function, and display formatter
 - Maintains local state for search text, loading status, current results, and pagination metadata
@@ -1395,6 +1406,12 @@ src/
 - Implements virtual scrolling for large result sets
 - Tracks total count from API response for progress indicators
 - Provides accessible keyboard navigation and screen reader support
+- State management prevents unnecessary refetches while ensuring selected values persist
+- Three useEffect hooks manage ensured entity lifecycle:
+  1. Reset when `ensureIncluded` prop changes
+  2. Reset when `value` prop changes to different entity
+  3. Fetch ensured entity if not in current results (runs when data changes)
+- Does NOT reset ensured entity when filter text changes (key fix for value persistence)
 
 **InteractiveLegend**
 - Reusable component for making chart legends interactive across all multi-series charts
