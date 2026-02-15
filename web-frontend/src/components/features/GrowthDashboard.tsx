@@ -11,7 +11,7 @@ import type { PropertyFilterProps } from '@cloudscape-design/components/property
 import Popover from '@cloudscape-design/components/popover';
 import Icon from '@cloudscape-design/components/icon';
 import Spinner from '@cloudscape-design/components/spinner';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { AnalyticsService, type GrowthMetricsParams } from '../../services/api/analytics.service';
 import { PopulationService } from '../../services/api/population.service';
 import { activityCategoryService } from '../../services/api/activity-category.service';
@@ -668,7 +668,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
             )}
             {hasData ? (
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={mergedTimeSeriesData}>
+                <AreaChart data={mergedTimeSeriesData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis 
@@ -676,28 +676,32 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
                   />
                   <Tooltip />
               {appliedViewMode === 'all' ? (
-                <Line
+                    <Area
                   type="monotone"
                   dataKey="uniqueActivities"
                   stroke="#00C49F"
+                      fill="#00C49F"
                   strokeWidth={2}
                   name="Unique Activities"
+                      stackId={1}
                 />
               ) : (
                 groupNames
                   .filter((groupName) => activityLegend.isSeriesVisible(groupName))
                   .map((groupName) => (
-                    <Line
+                    <Area
                       key={groupName}
                       type="monotone"
                       dataKey={`uniqueActivities_${groupName}`}
                       stroke={groupColors[groupName]}
+                      fill={groupColors[groupName]}
                       strokeWidth={2}
                       name={groupName}
+                      stackId={1}
                     />
                   ))
               )}
-            </LineChart>
+                </AreaChart>
           </ResponsiveContainer>
         ) : (
           <Box textAlign="center" padding="l">
@@ -722,7 +726,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
             )}
             {hasData ? (
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={mergedTimeSeriesData}>
+                <AreaChart data={mergedTimeSeriesData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis 
@@ -730,28 +734,32 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
                   />
                   <Tooltip />
                   {appliedViewMode === 'all' ? (
-                    <Line
+                    <Area
                       type="monotone"
                       dataKey="uniqueParticipants"
                       stroke="#0088FE"
+                      fill="#0088FE"
                       strokeWidth={2}
                       name="Unique Participants"
+                      stackId={1}
                     />
                   ) : (
                     groupNames
                       .filter((groupName) => participantLegend.isSeriesVisible(groupName))
                       .map((groupName) => (
-                        <Line
+                        <Area
                           key={groupName}
                           type="monotone"
                           dataKey={`uniqueParticipants_${groupName}`}
                           stroke={groupColors[groupName]}
+                          fill={groupColors[groupName]}
                           strokeWidth={2}
                           name={groupName}
+                          stackId={1}
                         />
                   ))
               )}
-            </LineChart>
+                </AreaChart>
           </ResponsiveContainer>
         ) : (
           <Box textAlign="center" padding="l">
@@ -776,7 +784,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
             )}
             {hasData ? (
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={mergedTimeSeriesData}>
+                <AreaChart data={mergedTimeSeriesData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis 
@@ -784,28 +792,32 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
                   />
                   <Tooltip />
                   {appliedViewMode === 'all' ? (
-                    <Line
+                    <Area
                       type="monotone"
                       dataKey="totalParticipation"
                       stroke="#FFBB28"
+                      fill="#FFBB28"
                       strokeWidth={2}
                       name="Total Participation"
+                      stackId={1}
                     />
                   ) : (
                     groupNames
                       .filter((groupName) => participationLegend.isSeriesVisible(groupName))
                       .map((groupName) => (
-                        <Line
+                        <Area
                           key={groupName}
                           type="monotone"
                           dataKey={`totalParticipation_${groupName}`}
                           stroke={groupColors[groupName]}
+                          fill={groupColors[groupName]}
                           strokeWidth={2}
                           name={groupName}
+                          stackId={1}
                         />
                       ))
               )}
-            </LineChart>
+                </AreaChart>
           </ResponsiveContainer>
         ) : (
           <Box textAlign="center" padding="l">
