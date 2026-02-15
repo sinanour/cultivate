@@ -19,6 +19,7 @@ export interface CreateActivityInput {
   endDate?: Date;
   status?: ActivityStatus;
   additionalParticipantCount?: number | null;
+  notes?: string | null;
   venueIds?: string[];
   createdBy?: string;
 }
@@ -30,6 +31,7 @@ export interface UpdateActivityInput {
   endDate?: Date | null;
   status?: ActivityStatus;
   additionalParticipantCount?: number | null;
+  notes?: string | null;
   version?: number;
 }
 
@@ -389,6 +391,13 @@ export class ActivityService {
       }
     }
 
+    // Validate notes if provided
+    if (data.notes !== undefined && data.notes !== null) {
+      if (data.notes.length > 2000) {
+        throw new Error('Notes must be at most 2000 characters');
+      }
+    }
+
     // Validate venues if provided
     if (data.venueIds && data.venueIds.length > 0) {
       for (const venueId of data.venueIds) {
@@ -409,6 +418,7 @@ export class ActivityService {
           endDate: data.endDate,
           status: data.status || ActivityStatus.PLANNED,
           additionalParticipantCount: data.additionalParticipantCount,
+          notes: data.notes,
           createdBy: data.createdBy,
         },
         include: {
@@ -471,6 +481,13 @@ export class ActivityService {
       }
       if (!Number.isInteger(data.additionalParticipantCount)) {
         throw new Error('Additional participant count must be an integer');
+      }
+    }
+
+    // Validate notes if provided
+    if (data.notes !== undefined && data.notes !== null) {
+      if (data.notes.length > 2000) {
+        throw new Error('Notes must be at most 2000 characters');
       }
     }
 
@@ -595,6 +612,7 @@ export class ActivityService {
       'endDate',
       'status',
       'additionalParticipantCount',
+      'notes',
       'createdAt',
       'updatedAt'
     ];
@@ -611,6 +629,7 @@ export class ActivityService {
       endDate: formatDateForCSV(a!.endDate),
       status: a!.status,
       additionalParticipantCount: (a as any).additionalParticipantCount ?? '',
+      notes: (a as any).notes ?? '',
       createdAt: formatDateForCSV(a!.createdAt),
       updatedAt: formatDateForCSV(a!.updatedAt)
     }));
@@ -651,7 +670,9 @@ export class ActivityService {
             activityTypeId: validated.activityTypeId,
             startDate: new Date(validated.startDate),
             endDate: validated.endDate ? new Date(validated.endDate) : undefined,
-            status: validated.status
+            status: validated.status,
+            additionalParticipantCount: validated.additionalParticipantCount,
+            notes: validated.notes
           });
         } else {
           // Create new activity
@@ -660,7 +681,9 @@ export class ActivityService {
             activityTypeId: validated.activityTypeId,
             startDate: new Date(validated.startDate),
             endDate: validated.endDate ? new Date(validated.endDate) : undefined,
-            status: validated.status
+            status: validated.status,
+            additionalParticipantCount: validated.additionalParticipantCount,
+            notes: validated.notes
           });
         }
 

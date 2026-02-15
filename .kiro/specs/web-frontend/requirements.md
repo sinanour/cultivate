@@ -338,6 +338,33 @@ The Web Frontend package provides a responsive React-based web application that 
 16. THE Web_App SHALL send additionalParticipantCount to the backend API when creating or updating activities
 17. THE Web_App SHALL handle additionalParticipantCount in CSV import/export operations for activities
 
+### Requirement 5D: Display and Edit Activity Notes
+
+**User Story:** As a community organizer, I want to add freeform notes to activities in the web interface, so that I can record additional context, observations, or details about each activity.
+
+#### Acceptance Criteria
+
+1. THE Web_App SHALL display an optional "Notes" field on the ActivityFormPage (both create and edit modes)
+2. THE Web_App SHALL position the "Notes" field in the activity details section, after the status field
+3. THE Web_App SHALL use a CloudScape Textarea component for the notes field
+4. THE Web_App SHALL configure the Textarea with 4 rows for comfortable text entry
+5. THE Web_App SHALL validate that notes does not exceed 2000 characters
+6. THE Web_App SHALL display a character count indicator showing remaining characters (e.g., "1850 / 2000 characters")
+7. THE Web_App SHALL provide a clear button (X icon) next to the notes field label to remove previously entered notes
+8. WHEN the clear button is clicked, THE Web_App SHALL set notes to null and send null to the API on save
+9. THE Web_App SHALL display validation errors when notes exceeds 2000 characters
+10. THE Web_App SHALL display the notes value on the ActivityDetail page when notes is non-null
+11. WHEN notes is null or empty, THE Web_App SHALL NOT display the notes section on the ActivityDetail page
+12. THE Web_App SHALL position the notes display on ActivityDetail below the activity status field and above the venue history section
+13. THE Web_App SHALL use a CloudScape Container with a "Notes" header for the notes display
+14. THE Web_App SHALL preserve line breaks and formatting in the notes display using whiteSpace="pre-wrap"
+15. THE Web_App SHALL include notes in the activity merge reconciliation interface
+16. WHEN merging two activities with different notes values, THE Web_App SHALL display both notes side-by-side for comparison
+17. WHEN merging activities, THE Web_App SHALL allow the user to select which notes value to keep (source or target)
+18. WHEN both activities have null notes during merge, THE Web_App SHALL not display the notes reconciliation field
+19. THE Web_App SHALL send notes to the backend API when creating or updating activities
+20. THE Web_App SHALL handle notes in CSV import/export operations for activities
+
 ### Requirement 5A: Activity List Filtering UX with PropertyFilter
 
 **User Story:** As a community organizer, I want to filter the activity list using a consistent PropertyFilter interface matching the analytics dashboards, so that I can efficiently find specific activities with a familiar and powerful filtering experience.

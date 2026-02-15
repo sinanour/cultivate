@@ -58,12 +58,14 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const [endDate, setEndDate] = useState('');
   const [isOngoing, setIsOngoing] = useState(false);
   const [additionalParticipantCount, setAdditionalParticipantCount] = useState<number | null>(null);
+  const [notes, setNotes] = useState<string | null>(null);
   
   const [nameError, setNameError] = useState('');
   const [activityTypeError, setActivityTypeError] = useState('');
   const [startDateError, setStartDateError] = useState('');
   const [endDateError, setEndDateError] = useState('');
   const [additionalParticipantCountError, setAdditionalParticipantCountError] = useState('');
+  const [notesError, setNotesError] = useState('');
   const [error, setError] = useState('');
 
   // Venue history state
@@ -237,6 +239,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         endDate: activity.endDate?.split('T')[0] || '',
         isOngoing: activity.isOngoing || false,
         additionalParticipantCount: (activity as any).additionalParticipantCount ?? null,
+        notes: (activity as any).notes ?? null,
       };
       setName(values.name);
       setActivityTypeId(values.activityTypeId);
@@ -245,6 +248,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       setEndDate(values.endDate);
       setIsOngoing(values.isOngoing);
       setAdditionalParticipantCount(values.additionalParticipantCount);
+      setNotes(values.notes);
       setInitialFormState(values);
     } else {
       // Reset to defaults for create mode
@@ -256,6 +260,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         endDate: '',
         isOngoing: false,
         additionalParticipantCount: null,
+        notes: null,
       };
       setName(emptyValues.name);
       setActivityTypeId(emptyValues.activityTypeId);
@@ -660,6 +665,14 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       data.additionalParticipantCount = null;
     }
 
+    // Handle notes - send null if cleared, omit if never set
+    if (notes !== null) {
+      data.notes = notes;
+    } else if (activity && (activity as any).notes !== null) {
+      // Was set before, now cleared - send null explicitly
+      data.notes = null;
+    }
+
     // Handle endDate based on ongoing checkbox and field value
     // CRITICAL: When ongoing checkbox is checked, we MUST send null to clear endDate
     if (isOngoing) {
@@ -867,6 +880,44 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                 placeholder="Enter number of additional participants"
                 disabled={isSubmitting}
               />
+            </FormField>
+
+            <FormField
+              label="Notes"
+              errorText={notesError}
+              description="Additional context or observations about this activity"
+              secondaryControl={
+                notes && (
+                  <Button
+                    variant="icon"
+                    iconName="close"
+                    onClick={() => {
+                      setNotes(null);
+                      setNotesError('');
+                    }}
+                    ariaLabel="Clear notes"
+                  />
+                )
+              }
+            >
+              <Textarea
+                value={notes || ''}
+                onChange={({ detail }) => {
+                  const value = detail.value;
+                  if (value.length > 2000) {
+                    setNotesError('Notes must be at most 2000 characters');
+                  } else {
+                    setNotes(value || null);
+                    setNotesError('');
+                  }
+                }}
+                rows={4}
+                placeholder="Enter any additional notes about this activity..."
+                disabled={isSubmitting}
+              />
+              <Box variant="small" color="text-status-info">
+                {notes?.length || 0} / 2000 characters
+              </Box>
             </FormField>
 
             {/* Embedded Venue History Management */}

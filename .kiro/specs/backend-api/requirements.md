@@ -242,6 +242,40 @@ The Backend API package provides the RESTful API service that implements all bus
 14. THE API SHALL support updatedAt filtering in combination with the unified flexible filtering system (other filter[fieldName] parameters)
 15. THE API SHALL return activities ordered by updatedAt descending by default when updatedAt filter is applied (most recently updated first)
 
+### Requirement 4B: Track Activity Notes
+
+**User Story:** As a community organizer, I want to add freeform notes to activities via API, so that I can record additional context, observations, or details about each activity.
+
+#### Acceptance Criteria
+
+1. THE API SHALL add an optional notes field to the Activity model
+2. THE notes field SHALL be nullable and default to null
+3. THE notes field SHALL accept text up to 2000 characters
+4. THE API SHALL accept notes in POST /api/v1/activities endpoint (create)
+5. THE API SHALL accept notes in PUT /api/v1/activities/:id endpoint (update)
+6. THE API SHALL return notes in GET /api/v1/activities/:id endpoint responses
+7. THE API SHALL return notes in GET /api/v1/activities endpoint responses (list)
+8. THE API SHALL allow clearing notes by setting it to null in update requests
+9. WHEN notes is set to null, THE API SHALL store null in the database (not empty string)
+10. WHEN notes exceeds 2000 characters, THE API SHALL return 400 Bad Request with a validation error
+11. WHEN exporting activities to CSV, THE API SHALL include the notes field
+12. WHEN importing activities from CSV, THE API SHALL accept and validate the notes field
+13. THE API SHALL include notes in the Activity response schema in OpenAPI documentation
+
+### Requirement 5: Assign Participants to Activities1. THE API SHALL add an optional notes field to the Activity model
+2. THE notes field SHALL be nullable and default to null
+3. THE notes field SHALL accept text up to 2000 characters
+4. THE API SHALL accept notes in POST /api/v1/activities endpoint (create)
+5. THE API SHALL accept notes in PUT /api/v1/activities/:id endpoint (update)
+6. THE API SHALL return notes in GET /api/v1/activities/:id endpoint responses
+7. THE API SHALL return notes in GET /api/v1/activities endpoint responses (list)
+8. THE API SHALL allow clearing notes by setting it to null in update requests
+9. WHEN notes is set to null, THE API SHALL store null in the database (not empty string)
+10. WHEN notes exceeds 2000 characters, THE API SHALL return 400 Bad Request with a validation error
+11. WHEN exporting activities to CSV, THE API SHALL include the notes field
+12. WHEN importing activities from CSV, THE API SHALL accept and validate the notes field
+13. THE API SHALL include notes in the Activity response schema in OpenAPI documentation
+
 ### Requirement 5: Assign Participants to Activities
 
 **User Story:** As a community organizer, I want to assign participants to activities with specific roles via API, so that I can track who is involved and what they do.

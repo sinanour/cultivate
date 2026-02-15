@@ -423,11 +423,19 @@ export function ActivityDetail() {
               </div>
             </div>
             <div>
-              <Box variant="awsui-key-label">Created</Box>
-              <div>{formatDate(activity.createdAt)}</div>
+              <Box variant="awsui-key-label">Last Updated</Box>
+              <div>{formatDate(activity.updatedAt)}</div>
             </div>
           </ColumnLayout>
         </Container>
+
+        {(activity as any).notes && (
+          <Container header={<Header variant="h3">Notes</Header>}>
+            <div style={{ whiteSpace: 'pre-wrap' }}>
+              {(activity as any).notes}
+            </div>
+          </Container>
+        )}
 
         <ActivityVenueHistoryTable
           venueHistory={venueHistory}

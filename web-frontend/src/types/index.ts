@@ -115,6 +115,8 @@ export interface Activity {
     endDate?: string;
     status: 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
     isOngoing: boolean;
+    additionalParticipantCount?: number | null;
+    notes?: string | null;
     createdBy?: string;
     version: number;
     createdAt: string;

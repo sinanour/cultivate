@@ -1286,6 +1286,67 @@ This implementation plan covers the React-based web application built with TypeS
     - **Property 269: Additional Participant Count CSV Handling**
     - **Validates: Requirements 5C.1, 5C.2, 5C.3, 5C.4, 5C.5, 5C.6, 5C.7, 5C.8, 5C.9, 5C.10, 5C.11, 5C.12, 5C.13, 5C.14, 5C.15, 5C.16, 5C.17**
 
+- [x] 11B. Implement activity notes field
+  - [x] 11B.1 Add notes field to ActivityFormPage
+    - Add notes state variable to component
+    - Add CloudScape Textarea component for notes input
+    - Position after status field in activity details section
+    - Configure Textarea with 4 rows
+    - Add placeholder text: "Enter any additional notes about this activity..."
+    - Add character count indicator below textarea showing "X / 2000 characters"
+    - Use CloudScape Box component with variant="small" for character count
+    - _Requirements: 5D.1, 5D.2, 5D.3, 5D.4, 5D.6_
+
+  - [x] 11B.2 Add clear button for notes field
+    - Add Button with variant="icon" and iconName="close" in FormField secondaryControl
+    - When clicked, set notes to null
+    - Show button only when notes has value
+    - _Requirements: 5D.7, 5D.8_
+
+  - [x] 11B.3 Add validation for notes field
+    - Validate notes does not exceed 2000 characters
+    - Display error message using FormField error prop when validation fails
+    - Prevent form submission when notes exceeds limit
+    - _Requirements: 5D.5, 5D.9_
+
+  - [x] 11B.4 Include notes in API requests
+    - Add notes to create activity request body
+    - Add notes to update activity request body
+    - Send null when notes is cleared
+    - _Requirements: 5D.19_
+
+  - [x] 11B.5 Display notes on ActivityDetail page
+    - Add CloudScape Container with "Notes" header
+    - Position below activity status field and above venue history section
+    - Display notes value using Box component with whiteSpace="pre-wrap"
+    - Conditionally render only when notes is non-null and non-empty
+    - _Requirements: 5D.10, 5D.11, 5D.12, 5D.13, 5D.14_
+
+  - [ ] 11B.6 Add notes to merge reconciliation interface
+    - Display both source and target notes side-by-side in merge modal
+    - Use CloudScape RadioGroup for selection
+    - Allow user to choose which notes value to keep
+    - Hide notes reconciliation field when both activities have null notes
+    - _Requirements: 5D.15, 5D.16, 5D.17, 5D.18_
+
+  - [ ] 11B.7 Update CSV operations for notes
+    - Include notes column in activity CSV export
+    - Accept notes column in activity CSV import
+    - Validate max 2000 characters during import
+    - Handle empty string as null
+    - _Requirements: 5D.20_
+
+  - [ ]* 11B.8 Write property tests for activity notes UI
+    - **Property 338: Activity Notes Form Field Display**
+    - **Property 339: Activity Notes Character Count Indicator**
+    - **Property 340: Activity Notes Clear Button**
+    - **Property 341: Activity Notes Validation**
+    - **Property 342: Activity Notes Detail Display**
+    - **Property 343: Activity Notes Detail Conditional Rendering**
+    - **Property 344: Activity Notes Merge Reconciliation**
+    - **Property 345: Activity Notes CSV Handling**
+    - **Validates: Requirements 5D.1, 5D.2, 5D.3, 5D.4, 5D.5, 5D.6, 5D.7, 5D.8, 5D.9, 5D.10, 5D.11, 5D.12, 5D.13, 5D.14, 5D.15, 5D.16, 5D.17, 5D.18, 5D.19, 5D.20**
+
 - [x] 12. Implement assignment management UI
   - [x] 12.1 Create AssignmentForm component (embedded in ActivityForm)
     - Note: This component is now embedded within ActivityForm for both create and edit modes

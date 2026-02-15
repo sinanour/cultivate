@@ -315,7 +315,8 @@ ActivityCreateSchema = {
   startDate: date (required),
   endDate: date (optional, must be after startDate if provided),
   status: enum (optional, defaults to PLANNED),
-  additionalParticipantCount: number (optional, nullable, positive integer if provided)
+  additionalParticipantCount: number (optional, nullable, positive integer if provided),
+  notes: string (optional, nullable, max 2000 chars)
 }
 
 ActivityUpdateSchema = {
@@ -324,7 +325,8 @@ ActivityUpdateSchema = {
   startDate: date (optional),
   endDate: date (optional, nullable, must be after startDate if provided),
   status: enum (optional),
-  additionalParticipantCount: number (optional, nullable, positive integer if provided)
+  additionalParticipantCount: number (optional, nullable, positive integer if provided),
+  notes: string (optional, nullable, max 2000 chars)
 }
 
 // Activity Query Schema
@@ -1044,7 +1046,7 @@ async updateParticipant(id: string, data: ParticipantUpdateData): Promise<Partic
 
 - **Participant**: email, phone, notes, dateOfBirth, dateOfRegistration, nickname
 - **Venue**: latitude, longitude, venueType
-- **Activity**: endDate (converts finite activity to ongoing)
+- **Activity**: endDate (converts finite activity to ongoing), notes
 - **Assignment**: notes
 - **GeographicArea**: parentGeographicAreaId (removes parent, makes it a root area)
 
@@ -2226,6 +2228,7 @@ The API uses Prisma to define the following database models:
 - endDate: DateTime (optional)
 - status: Enum (PLANNED, ACTIVE, COMPLETED, CANCELLED)
 - additionalParticipantCount: Int (optional, nullable, positive integer if provided)
+- notes: String (optional, nullable, max 2000 chars)
 - createdAt: DateTime
 - updatedAt: DateTime
 - activityType: ActivityType (relation)

@@ -474,6 +474,14 @@ src/
 - Displays validation errors when additionalParticipantCount is not a positive integer
 - Rejects decimal values for additionalParticipantCount (only accepts whole numbers)
 - Displays help text explaining that additional participant count represents approximate attendance beyond tracked individuals
+- Displays optional "Notes" field in activity details section using CloudScape Textarea component
+- Positions "Notes" field after the status field
+- Configures Textarea with 4 rows for comfortable text entry
+- Validates notes does not exceed 2000 characters
+- Displays character count indicator showing remaining characters (e.g., "1850 / 2000 characters")
+- Provides clear button (X icon) next to notes field label to remove previously entered notes
+- When notes clear button is clicked, sets notes to null and sends null to API on save
+- Displays validation errors when notes exceeds 2000 characters
 - Includes embedded venue history management section within the form
 - Allows adding new venue associations with effective start dates
 - Allows editing existing venue associations (edit mode only)
@@ -503,6 +511,10 @@ src/
 - Clearly distinguishes between individually tracked participants and additional participant count
 - When additionalParticipantCount is null or 0, displays only count of individually assigned participants
 - When additionalParticipantCount is greater than 0, displays individual count, additional count, and total
+- Displays notes value when notes is non-null using CloudScape Container with "Notes" header
+- Positions notes display below activity status field and above venue history section
+- Preserves line breaks and formatting in notes display using whiteSpace="pre-wrap"
+- When notes is null or empty, does NOT display the notes section
 - Displays primary edit button in header section using CloudScape Button with variant="primary"
 - Displays delete button in header section next to edit button
 - Positions edit button as right-most action in header (before Back button)

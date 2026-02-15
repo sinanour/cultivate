@@ -196,6 +196,7 @@ export const ActivityCreateSchema = z.object({
   endDate: z.string().datetime('Invalid end date format').optional(),
   status: z.nativeEnum(ActivityStatus).optional(),
   additionalParticipantCount: z.number().int().positive('Additional participant count must be a positive integer').nullable().optional(),
+  notes: z.string().max(2000, 'Notes must be at most 2000 characters').nullable().optional(),
   venueIds: z.array(z.string().uuid('Invalid venue ID format')).optional(),
 });
 
@@ -206,6 +207,7 @@ export const ActivityUpdateSchema = z.object({
   endDate: z.union([z.string().datetime('Invalid end date format'), z.null()]).optional(),
   status: z.nativeEnum(ActivityStatus).optional(),
   additionalParticipantCount: z.number().int().positive('Additional participant count must be a positive integer').nullable().optional(),
+  notes: z.string().max(2000, 'Notes must be at most 2000 characters').nullable().optional(),
   version: z.number().int().positive().optional(),
 });
 
@@ -789,6 +791,10 @@ export const ActivityImportSchema = z.object({
       return isNaN(num) ? val : num;
     },
     z.number().int().positive('Additional participant count must be a positive integer').nullable().optional()
+  ),
+  notes: z.preprocess(
+    (val) => val === '' ? null : val,
+    z.string().max(2000, 'Notes must be at most 2000 characters').nullable().optional()
   ),
 });
 

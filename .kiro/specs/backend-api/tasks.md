@@ -857,6 +857,58 @@ This implementation plan covers the RESTful API service built with Node.js, Expr
     - **Property 263: Additional Participant Count CSV Import**
     - **Validates: Requirements 5C.1, 5C.2, 5C.3, 5C.4, 5C.5, 5C.6, 5C.7, 5C.8, 5C.9, 5C.10, 5C.11, 5C.12, 5C.13, 5C.14, 5C.15, 5C.16, 5C.17, 5C.18, 5C.19, 5C.20**
 
+- [x] 12B. Implement activity notes field
+  - [x] 12B.1 Update Prisma schema and create migration
+    - Add notes String field to Activity model (optional, nullable, max 2000 chars)
+    - Create Prisma migration: `ALTER TABLE "activities" ADD COLUMN "notes" TEXT;`
+    - Apply migration to database
+    - _Requirements: 4B.1, 4B.2, 4B.3_
+
+  - [x] 12B.2 Update validation schemas
+    - Update ActivityCreateSchema to accept optional notes (nullable, max 2000 chars)
+    - Update ActivityUpdateSchema to accept optional notes (nullable, max 2000 chars)
+    - Use Zod's .max(2000) validator for character limit
+    - Use Zod's .nullable() modifier to accept null values for clearing
+    - _Requirements: 4B.3, 4B.4, 4B.5, 4B.8, 4B.9, 4B.10_
+
+  - [x] 12B.3 Update ActivityService to handle notes
+    - Update createActivity() to accept and store notes field
+    - Update updateActivity() to accept and store notes field
+    - Support clearing notes by setting to null (distinguish from omitting field)
+    - Ensure notes is included in getActivityById() responses
+    - Ensure notes is included in getActivities() list responses
+    - _Requirements: 4B.4, 4B.5, 4B.6, 4B.7, 4B.8, 4B.9_
+
+  - [x] 12B.4 Update CSV export for activities
+    - Add notes column to activity CSV export
+    - Position column after additionalParticipantCount column
+    - Export null values as empty string
+    - _Requirements: 4B.11_
+
+  - [x] 12B.5 Update CSV import for activities
+    - Accept notes column in activity CSV import
+    - Validate max 2000 characters
+    - Convert empty string to null
+    - Apply same validation rules as create endpoint
+    - _Requirements: 4B.12_
+
+  - [ ] 12B.6 Update OpenAPI documentation
+    - Add notes field to Activity response schema
+    - Document as optional, nullable, max 2000 characters
+    - Add examples showing notes usage in create/update requests
+    - Document notes in GET responses
+    - _Requirements: 4B.13_
+
+  - [ ]* 12B.7 Write property tests for activity notes
+    - **Property 331: Activity Notes Optional Acceptance**
+    - **Property 332: Activity Notes Character Limit Validation**
+    - **Property 333: Activity Notes Null Default**
+    - **Property 334: Activity Notes in Responses**
+    - **Property 335: Activity Notes Field Clearing**
+    - **Property 336: Activity Notes CSV Export**
+    - **Property 337: Activity Notes CSV Import**
+    - **Validates: Requirements 4B.1, 4B.2, 4B.3, 4B.4, 4B.5, 4B.6, 4B.7, 4B.8, 4B.9, 4B.10, 4B.11, 4B.12, 4B.13**
+
 - [x] 13. Implement analytics engine
   - [x] 13.1 Create analytics service
     - Implement comprehensive engagement metrics calculation with temporal analysis

@@ -234,6 +234,7 @@ model Activity {
   endDate                   DateTime?
   status                    ActivityStatus         @default(PLANNED)
   additionalParticipantCount Int?
+  notes                     String?
   createdBy                 String?
   version                   Int                    @default(1)
   createdAt                 DateTime               @default(now())
