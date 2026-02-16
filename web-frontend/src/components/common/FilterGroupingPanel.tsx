@@ -543,7 +543,13 @@ export const FilterGroupingPanel: React.FC<FilterGroupingPanelProps> = ({
               customRelativeRangeOptionDescription: 'Set a custom range in the past',
               customRelativeRangeUnitLabel: 'Unit of time',
               formatRelativeRange: (range) => {
-                const unit = range.unit === 'day' ? 'days' : range.unit === 'month' ? 'months' : 'years';
+                const unitMap: Record<string, string> = {
+                  day: 'days',
+                  week: 'weeks',
+                  month: 'months',
+                  year: 'years'
+                };
+                const unit = unitMap[range.unit] || range.unit;
                 return `Last ${range.amount} ${unit}`;
               },
               formatUnit: (unit, value) => (value === 1 ? unit : `${unit}s`),

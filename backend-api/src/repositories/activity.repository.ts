@@ -208,19 +208,33 @@ export class ActivityRepository {
       andConditions.push({ status: { in: filters.status } });
     }
 
-    // Start date filter (activities starting on or after this date)
-    if (filters.startDate) {
-      andConditions.push({ startDate: { gte: filters.startDate } });
-    }
+    // Date range filter: activities active during the specified period
+    // Uses interval overlap algorithm: activity overlaps with filter range if
+    // activity.startDate <= filter.endDate AND (activity.endDate >= filter.startDate OR activity.endDate IS NULL)
 
-    // End date filter (activities ending on or before this date, or ongoing)
-    if (filters.endDate) {
+    if (filters.startDate && filters.endDate) {
+      // Both dates provided: find activities that overlap with the range
+      // Activity starts on or before the filter end date
+      andConditions.push({ startDate: { lte: filters.endDate } });
+
+    // Activity ends on or after the filter start date (or is ongoing)
       andConditions.push({
         OR: [
-          { endDate: { lte: filters.endDate } },
+          { endDate: { gte: filters.startDate } },
           { endDate: null }
         ]
       });
+    } else if (filters.startDate) {
+      // Only start date provided: activities that end on or after this date (or are ongoing)
+      andConditions.push({
+        OR: [
+          { endDate: { gte: filters.startDate } },
+          { endDate: null }
+        ]
+      });
+    } else if (filters.endDate) {
+      // Only end date provided: activities that start on or before this date
+      andConditions.push({ startDate: { lte: filters.endDate } });
     }
 
     // Updated At filter (flexible date-range filtering with comparison operators)

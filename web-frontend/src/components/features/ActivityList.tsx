@@ -332,6 +332,29 @@ export function ActivityList() {
     if (dateRange?.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
       params.filter!.startDate = toISODateTime(dateRange.startDate, false);
       params.filter!.endDate = toISODateTime(dateRange.endDate, true);
+    } else if (dateRange?.type === 'relative' && dateRange.amount && dateRange.unit) {
+      // Convert relative date range to absolute dates
+      const now = new Date();
+      const endDate = now;
+      const startDate = new Date(now);
+
+      switch (dateRange.unit) {
+        case 'day':
+          startDate.setDate(now.getDate() - dateRange.amount);
+          break;
+        case 'week':
+          startDate.setDate(now.getDate() - (dateRange.amount * 7));
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - dateRange.amount);
+          break;
+        case 'year':
+          startDate.setFullYear(now.getFullYear() - dateRange.amount);
+          break;
+      }
+
+      params.filter!.startDate = startDate.toISOString();
+      params.filter!.endDate = endDate.toISOString();
     }
     
     // Remove empty filter object if no filters
