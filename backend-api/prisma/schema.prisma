@@ -292,6 +292,7 @@ model Assignment {
   @@index([activityId])
   @@index([participantId])
   @@index([roleId])
+  @@index([participantId, roleId])
   @@map("assignments")
 }
 

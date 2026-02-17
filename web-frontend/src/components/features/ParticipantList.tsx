@@ -52,7 +52,8 @@ export function ParticipantList() {
   const [csvError, setCsvError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Separate state variables (like EngagementDashboard) - NOT a single filterState object
+  // Separate state variables for date range and property filters
+  const [dateRange, setDateRange] = useState<FilterGroupingState['dateRange']>(null);
   const [propertyFilterQuery, setPropertyFilterQuery] =
     useState<PropertyFilterProps.Query>({
       tokens: [],
@@ -171,6 +172,25 @@ export function ParticipantList() {
           }));
         },
       },
+      {
+        key: "role",
+        propertyLabel: "Role",
+        groupValuesLabel: "Role values",
+        operators: ["="],
+        loadItems: async (filterText: string) => {
+          const { ParticipantRoleService } = await import("../../services/api/participant-role.service");
+          const roles = await ParticipantRoleService.searchRoles(filterText);
+
+          // Cache both directions: UUID -> label and label -> UUID
+          roles.forEach((role: any) => addToCache(role.id, role.name));
+
+          return roles.map((role: any) => ({
+            propertyKey: "role",
+            value: role.name, // Store label as value for display in tokens
+            label: role.name, // Display label in dropdown
+          }));
+        },
+      },
     ],
     [selectedGeographicAreaId],
   );
@@ -183,16 +203,30 @@ export function ParticipantList() {
         (t) => t.propertyKey === "population",
       );
 
-      if (populationTokens.length === 0) {
+      // Get all role tokens
+      const roleTokens = propertyFilterQuery.tokens.filter(
+        (t) => t.propertyKey === "role",
+      );
+
+      if (populationTokens.length === 0 && roleTokens.length === 0) {
         return;
       }
 
-      // Fetch all populations to populate the cache
       try {
-        const populations = await PopulationService.getPopulations();
-        populations.forEach((pop: any) => addToCache(pop.id, pop.name));
+        // Fetch all populations to populate the cache
+        if (populationTokens.length > 0) {
+          const populations = await PopulationService.getPopulations();
+          populations.forEach((pop: any) => addToCache(pop.id, pop.name));
+        }
+
+        // Fetch all roles to populate the cache
+        if (roleTokens.length > 0) {
+          const { ParticipantRoleService } = await import("../../services/api/participant-role.service");
+          const roles = await ParticipantRoleService.getRoles();
+          roles.forEach((role: any) => addToCache(role.id, role.name));
+        }
       } catch (error) {
-        console.error("Error pre-populating population cache:", error);
+        console.error("Error pre-populating cache:", error);
       }
     };
 
@@ -201,6 +235,7 @@ export function ParticipantList() {
 
   // Handler for FilterGroupingPanel updates (called when "Update" button clicked)
   const handleFilterUpdate = (state: FilterGroupingState) => {
+    setDateRange(state.dateRange);
     setPropertyFilterQuery(state.filterTokens);
     setCurrentPageIndex(1); // Reset to page 1 when filters change
   };
@@ -255,13 +290,55 @@ export function ParticipantList() {
       params.filter!.populationIds = populationIds.join(",");
     }
 
+    // Extract role filter
+    const roleLabels = propertyFilterQuery.tokens
+      .filter((t) => t.propertyKey === "role" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
+    // Convert labels to UUIDs for API call
+    const roleIds = roleLabels
+      .map((label) => labelToUuid.get(label))
+      .filter(Boolean) as string[];
+    if (roleIds.length > 0) {
+      params.filter!.roleIds = roleIds.join(",");
+    }
+
+    // Activity date range from FilterGroupingPanel's built-in DateRangePicker
+    if (dateRange?.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
+      // Absolute date range
+      params.filter!.activityStartDate = dateRange.startDate;
+      params.filter!.activityEndDate = dateRange.endDate;
+    } else if (dateRange?.type === 'relative' && dateRange.amount && dateRange.unit) {
+      // Relative date range - calculate absolute dates
+      const now = new Date();
+      const startDate = new Date(now);
+
+      switch (dateRange.unit) {
+        case 'day':
+          startDate.setDate(now.getDate() - dateRange.amount);
+          break;
+        case 'week':
+          startDate.setDate(now.getDate() - (dateRange.amount * 7));
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - dateRange.amount);
+          break;
+        case 'year':
+          startDate.setFullYear(now.getFullYear() - dateRange.amount);
+          break;
+      }
+
+      // Format as YYYY-MM-DD
+      params.filter!.activityStartDate = startDate.toISOString().split('T')[0];
+      params.filter!.activityEndDate = now.toISOString().split('T')[0];
+    }
+
     // Remove empty filter object if no filters
     if (Object.keys(params.filter).length === 0) {
       delete params.filter;
     }
 
     return params;
-  }, [propertyFilterQuery, selectedGeographicAreaId, labelToUuid]);
+  }, [propertyFilterQuery, dateRange, selectedGeographicAreaId, labelToUuid]);
 
   // Fetch participants using React Query with pagination
   const {
@@ -379,7 +456,7 @@ export function ParticipantList() {
     }
   };
 
-  const hasActiveFilters = propertyFilterQuery.tokens.length > 0;
+  const hasActiveFilters = propertyFilterQuery.tokens.length > 0 || dateRange !== null;
 
   // Pull-to-refresh handler
   const handlePullToRefresh = useCallback(async () => {
@@ -530,7 +607,8 @@ export function ParticipantList() {
             <FilterGroupingPanel
               filterProperties={filterProperties}
               groupingMode="none"
-              includeDateRange={false}
+              includeDateRange={true}
+              initialDateRange={dateRange}
               initialFilterTokens={propertyFilterQuery}
               onUpdate={handleFilterUpdate}
               onInitialResolutionComplete={handleInitialResolutionComplete}

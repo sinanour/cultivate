@@ -129,6 +129,37 @@ export class ParticipantService {
         const { page, limit, geographicAreaId, filter, fields, authorizedAreaIds = [], hasGeographicRestrictions = false } = query;
         const { page: validPage, limit: validLimit } = PaginationHelper.validateAndNormalize({ page, limit });
 
+        // Validate roleIds if provided
+        if (filter?.roleIds) {
+            // Normalize to array first (handle comma-separated strings)
+            const roleIdsArray = Array.isArray(filter.roleIds)
+                ? filter.roleIds
+                : (typeof filter.roleIds === 'string'
+                    ? filter.roleIds.split(',').map(v => v.trim()).filter(v => v.length > 0)
+                    : [filter.roleIds]);
+
+            // Then validate each UUID
+            for (const roleId of roleIdsArray) {
+                if (typeof roleId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(roleId)) {
+                    throw new AppError('VALIDATION_ERROR', `Invalid role ID format: ${roleId}`, 400);
+                }
+            }
+        }
+
+        // Validate activity date range if provided
+        if (filter?.activityStartDate) {
+            const startDate = new Date(filter.activityStartDate);
+            if (isNaN(startDate.getTime())) {
+                throw new AppError('VALIDATION_ERROR', `Invalid activityStartDate format: ${filter.activityStartDate}`, 400);
+            }
+        }
+        if (filter?.activityEndDate) {
+            const endDate = new Date(filter.activityEndDate);
+            if (isNaN(endDate.getTime())) {
+                throw new AppError('VALIDATION_ERROR', `Invalid activityEndDate format: ${filter.activityEndDate}`, 400);
+            }
+        }
+
         // Removed legacy search parameter handling - use filter.name or filter.email instead
 
         // Extract ageCohorts from filter for special handling (requires date range conversion)
@@ -194,11 +225,27 @@ export class ParticipantService {
             filterWithoutPopulations = restFilter;
         }
 
-        // Build flexible filter where clause (without populationIds and ageCohorts)
-        const flexibleWhere = filterWithoutPopulations ? buildWhereClause('participant', filterWithoutPopulations) : undefined;
+        // Extract roleIds and activity date range from filter for special handling (requires Assignment table join)
+        let assignmentWhere: any = undefined;
+        let filterWithoutAssignments = filterWithoutPopulations;
+
+        if (filterWithoutPopulations?.roleIds || filterWithoutPopulations?.activityStartDate || filterWithoutPopulations?.activityEndDate) {
+            assignmentWhere = this.buildAssignmentFilter(
+                filterWithoutPopulations.roleIds,
+                filterWithoutPopulations.activityStartDate,
+                filterWithoutPopulations.activityEndDate
+            );
+
+            // Remove assignment-based filters from filter object
+            const { roleIds: _r, activityStartDate: _s, activityEndDate: _e, ...restFilter } = filterWithoutPopulations;
+            filterWithoutAssignments = restFilter;
+        }
+
+        // Build flexible filter where clause (without populationIds, ageCohorts, roleIds, and activity dates)
+        const flexibleWhere = filterWithoutAssignments ? buildWhereClause('participant', filterWithoutAssignments) : undefined;
 
         // Merge all filters using AND logic
-        const whereClauses = [ageCohortWhere, populationWhere, flexibleWhere].filter(Boolean);
+        const whereClauses = [ageCohortWhere, populationWhere, assignmentWhere, flexibleWhere].filter(Boolean);
         let combinedWhere: any = undefined;
         if (whereClauses.length > 1) {
             combinedWhere = { AND: whereClauses };
@@ -226,7 +273,9 @@ export class ParticipantService {
 
         if (!effectiveAreaIds) {
             // No geographic filter, just apply flexible filters
-            const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit, combinedWhere, select);
+            // Use DISTINCT when assignment-based filters are present to avoid duplicates
+            const useDistinct = assignmentWhere !== undefined;
+            const { data, total } = await this.participantRepository.findAllPaginated(validPage, validLimit, combinedWhere, select, useDistinct);
             const transformedData = select ? data : transformParticipantResponses(data);
 
             return PaginationHelper.createResponse(transformedData, validPage, validLimit, total);
@@ -819,5 +868,91 @@ export class ParticipantService {
         }
 
         return result;
+    }
+
+    /**
+     * Build Assignment table filter for role and activity date range filtering
+     * @private
+     */
+    private buildAssignmentFilter(
+        roleIds?: string | string[],
+        activityStartDate?: string,
+        activityEndDate?: string
+    ): any {
+        const hasRoleFilter = roleIds && (Array.isArray(roleIds) ? roleIds.length > 0 : true);
+        const hasDateFilter = activityStartDate || activityEndDate;
+
+        if (!hasRoleFilter && !hasDateFilter) {
+            return undefined;
+        }
+
+        // Normalize roleIds to array
+        let normalizedRoleIds: string[] | undefined;
+        if (hasRoleFilter) {
+            normalizedRoleIds = Array.isArray(roleIds)
+                ? roleIds
+                : (typeof roleIds === 'string'
+                    ? roleIds.split(',').map(v => v.trim()).filter(v => v.length > 0)
+                    : [roleIds as string]);
+        }
+
+        const assignmentCondition: any = {};
+
+        // Add role filter
+        if (normalizedRoleIds && normalizedRoleIds.length > 0) {
+            assignmentCondition.roleId = { in: normalizedRoleIds };
+        }
+
+        // Add activity date range filter
+        if (hasDateFilter) {
+            assignmentCondition.activity = this.buildActivityDateFilter(activityStartDate, activityEndDate);
+        }
+
+        return {
+            assignments: {
+                some: assignmentCondition
+            }
+        };
+    }
+
+    /**
+     * Build Activity date filter with overlap logic
+     * @private
+     */
+    private buildActivityDateFilter(startDate?: string, endDate?: string): any {
+        if (!startDate && !endDate) {
+            return {};
+        }
+
+        if (startDate && endDate) {
+            // Overlap logic: activity overlaps with filter range
+            // (activity.startDate <= filterEndDate) AND (activity.endDate >= filterStartDate OR activity.endDate IS NULL)
+            return {
+                AND: [
+                    { startDate: { lte: new Date(endDate) } },
+                    {
+                        OR: [
+                            { endDate: { gte: new Date(startDate) } },
+                            { endDate: null } // Ongoing activities
+                        ]
+                    }
+                ]
+            };
+        } else if (startDate) {
+            // Activities starting on or after date
+            return {
+                startDate: { gte: new Date(startDate) }
+            };
+        } else if (endDate) {
+            // Activities ending on or before date (or ongoing)
+            return {
+                OR: [
+                    { endDate: { lte: new Date(endDate) } },
+                    { endDate: null }
+                ]
+            };
+        }
+
+        return {};
     }
 }
