@@ -258,10 +258,12 @@ This implementation plan covers the React-based web application built with TypeS
   - [x] 5.1 Create ActivityCategoryList component
     - Display table using CloudScape Table
     - Distinguish predefined vs custom categories with badges
+    - Render activity category name as clickable Link that navigates to /activities?filter_activityCategory=<URL-encoded-name>
+    - URL-encode category name with spaces replaced by + symbols
     - Provide edit and delete actions
     - Handle delete validation (REFERENCED_ENTITY error when activity types reference it)
     - Display version number for debugging
-    - _Requirements: 2.2, 2.6, 2.7, 2.8_
+    - _Requirements: 2.2, 2.6, 2.7, 2.8, 2.17, 2.18_
 
   - [x] 5.2 Create ActivityCategoryForm component
     - Modal form for create/edit
@@ -274,11 +276,13 @@ This implementation plan covers the React-based web application built with TypeS
     - Display table using CloudScape Table
     - Group activity types by their category
     - Distinguish predefined vs custom types with badges
+    - Render activity type name as hyperlink that navigates to /activities?filter_activityType=<URL-encoded-name>
+    - URL-encode type name with spaces replaced by + symbols
     - Show associated activity category for each type
     - Provide edit and delete actions
     - Handle delete validation (REFERENCED_ENTITY error when activities reference it)
     - Display version number for debugging
-    - _Requirements: 2.3, 2.12, 2.14, 2.15_
+    - _Requirements: 2.3, 2.12, 2.14, 2.15, 2.19, 2.20_
 
   - [ ]* 5.4 Write property test for type/role distinction
     - **Property 1: Type/Role Distinction in Lists**
@@ -317,21 +321,24 @@ This implementation plan covers the React-based web application built with TypeS
 - [x] 6. Implement participant role management UI
   - [x] 6.1 Create ParticipantRoleList and ParticipantRoleForm components
     - Similar structure to activity type management
+    - Render role name as hyperlink that navigates to /participants?filter_role=<URL-encoded-name>
+    - URL-encode role name with spaces replaced by + symbols
     - Include version field in update requests for optimistic locking
     - Handle REFERENCED_ENTITY errors on deletion
     - Integrate ParticipantRoleList into ConfigurationPage
-    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9_
 
 - [x] 6A. Implement population management UI (admin only)
   - [x] 6A.1 Create PopulationList component
     - Display table using CloudScape Table
-    - Render population name as hyperlink in primary column
+    - Render population name as hyperlink that navigates to /participants?filter_population=<URL-encoded-name>
+    - URL-encode population name with spaces replaced by + symbols
     - Provide edit and delete actions per row (no separate View button)
     - Handle delete validation (REFERENCED_ENTITY error when participants reference it)
     - Restrict edit and delete actions to ADMINISTRATOR role only
     - Allow all roles to view populations
     - Display version number for debugging
-    - _Requirements: 3A.1, 3A.4, 3A.5, 3A.6, 3A.8, 3A.9, 3A.10_
+    - _Requirements: 3A.1, 3A.4, 3A.5, 3A.6, 3A.8, 3A.9, 3A.10, 3A.11, 3A.12_
 
   - [x] 6A.2 Create PopulationForm component
     - Modal form for create/edit
@@ -3285,18 +3292,47 @@ This implementation plan covers the React-based web application built with TypeS
 - [ ] 27. Checkpoint - Verify participant enhancements
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 28. Make Activity Categories clickable in Activity Category list
-  - [ ] 28.1 Update ActivityCategoryList component
+- [x] 28. Update Configuration List Hyperlinks to Navigate to Filtered Lists
+  - [x] 28.1 Update ActivityCategoryList component
     - Render activity category name as CloudScape Link component in the name column
-    - Add onClick handler to category link that opens the edit form for that category
-    - Use Link's onFollow event to trigger the edit action
+    - Add onClick handler to category link that navigates to /activities?filter_activityCategory=<URL-encoded-name>
+    - URL-encode category name with spaces replaced by + symbols
+    - Use Link's onFollow event to trigger navigation
     - Prevent default link navigation behavior
     - Use consistent styling with other hyperlinked columns in the application
     - _Requirements: 2.17, 2.18_
 
-  - [ ]* 28.2 Write property test for category link functionality
-    - **Property 4A: Activity Category Link in Category List**
-    - **Validates: Requirements 2.17, 2.18**
+  - [x] 28.2 Update ActivityTypeList component
+    - Render activity type name as CloudScape Link component in the name column
+    - Add onClick handler to type link that navigates to /activities?filter_activityType=<URL-encoded-name>
+    - URL-encode type name with spaces replaced by + symbols
+    - Use Link's onFollow event to trigger navigation
+    - Prevent default link navigation behavior
+    - _Requirements: 2.19, 2.20_
+
+  - [x] 28.3 Update ParticipantRoleList component
+    - Render role name as CloudScape Link component in the name column
+    - Add onClick handler to role link that navigates to /participants?filter_role=<URL-encoded-name>
+    - URL-encode role name with spaces replaced by + symbols
+    - Use Link's onFollow event to trigger navigation
+    - Prevent default link navigation behavior
+    - _Requirements: 3.8, 3.9_
+
+  - [x] 28.4 Update PopulationList component
+    - Render population name as CloudScape Link component in the name column
+    - Add onClick handler to population link that navigates to /participants?filter_population=<URL-encoded-name>
+    - URL-encode population name with spaces replaced by + symbols
+    - Use Link's onFollow event to trigger navigation
+    - Prevent default link navigation behavior
+    - _Requirements: 3A.11, 3A.12_
+
+  - [x] 28.5 Write tests for configuration list hyperlink navigation
+    - Test ActivityCategoryList navigates to filtered Activity List
+    - Test ActivityTypeList navigates to filtered Activity List
+    - Test ParticipantRoleList navigates to filtered Participant List
+    - Test PopulationList navigates to filtered Participant List
+    - Test URL encoding with spaces and special characters
+    - **Validates: Requirements 2.17, 2.18, 2.19, 2.20, 3.8, 3.9, 3A.11, 3A.12**
 
 - [x] 29. Merge Participant Roles into Configuration Page
   - [x] 29.1 Update ConfigurationPage component

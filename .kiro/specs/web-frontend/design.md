@@ -230,7 +230,8 @@ src/
 - Displays table of activity categories using CloudScape Table
 - Distinguishes predefined vs custom categories with badges
 - Renders activity category name as clickable CloudScape Link component in the name column
-- When category name link is clicked, opens the edit form for that category
+- When category name link is clicked, navigates to Activity List page filtered by that category (e.g., /activities?filter_activityCategory=Study+Circles)
+- URL-encodes the category name with spaces replaced by + symbols
 - Provides edit and delete actions per row (no separate View button)
 - Handles delete validation (prevents deletion if activity types reference it)
 
@@ -243,7 +244,8 @@ src/
 - Displays table of activity types using CloudScape Table
 - Groups activity types by their category
 - Distinguishes predefined vs custom types with badges
-- Renders activity type name as hyperlink in primary column (links to edit form or detail view)
+- Renders activity type name as hyperlink in primary column (links to Activity List page filtered by that type, e.g., /activities?filter_activityType=Devotional+Gathering)
+- URL-encodes the type name with spaces replaced by + symbols
 - Shows associated activity category for each type
 - Provides edit and delete actions per row (no separate View button)
 - Handles delete validation (prevents deletion if activities reference it)
@@ -268,7 +270,8 @@ src/
 **ParticipantRoleList**
 - Displays table of roles using CloudScape Table
 - Distinguishes predefined vs custom roles with badges
-- Renders role name as hyperlink in primary column (links to edit form or detail view)
+- Renders role name as hyperlink in primary column (links to Participant List page filtered by that role, e.g., /participants?filter_role=Tutor)
+- URL-encodes the role name with spaces replaced by + symbols
 - Provides edit and delete actions per row (no separate View button)
 - Handles delete validation (prevents deletion if referenced)
 - Integrated within the ConfigurationView page alongside activity categories and types
@@ -282,7 +285,8 @@ src/
 
 **PopulationList**
 - Displays table of populations using CloudScape Table
-- Renders population name as hyperlink in primary column (links to edit form or detail view)
+- Renders population name as hyperlink in primary column (links to Participant List page filtered by that population, e.g., /participants?filter_population=Persian)
+- URL-encodes the population name with spaces replaced by + symbols
 - Provides edit and delete actions per row (no separate View button)
 - Handles delete validation (prevents deletion if referenced by participants)
 - Integrated within the ConfigurationView page alongside activity categories, types, and roles

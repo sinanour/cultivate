@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
@@ -15,6 +16,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function ActivityCategoryList() {
+    const navigate = useNavigate();
     const [selectedCategory, setSelectedCategory] = useState<ActivityCategory | null>(null);
     const [isFormVisible, setIsFormVisible] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<ActivityCategory | null>(null);
@@ -77,7 +79,8 @@ export function ActivityCategoryList() {
                             <Link
                                 onFollow={(e) => {
                                     e.preventDefault();
-                                    handleEdit(item);
+                                    const encodedName = encodeURIComponent(item.name).replace(/%20/g, '+');
+                                    navigate(`/activities?filter_activityCategory=${encodedName}`);
                                 }}
                             >
                                 {item.name}

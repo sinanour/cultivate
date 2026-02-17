@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   Box,
@@ -17,6 +18,7 @@ import { ConfirmationDialog } from '../common/ConfirmationDialog';
 import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 
 export function PopulationList() {
+  const navigate = useNavigate();
   const [selectedPopulation, setSelectedPopulation] = useState<Population | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -88,7 +90,15 @@ export function PopulationList() {
             id: 'name',
             header: 'Name',
             cell: (item) => (
-              <Link onFollow={() => handleEdit(item)}>{item.name}</Link>
+              <Link
+                onFollow={(e) => {
+                  e.preventDefault();
+                  const encodedName = encodeURIComponent(item.name).replace(/%20/g, '+');
+                  navigate(`/participants?filter_population=${encodedName}`);
+                }}
+              >
+                {item.name}
+              </Link>
             ),
             sortingField: 'name',
           },

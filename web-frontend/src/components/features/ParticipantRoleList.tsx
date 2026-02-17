@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
@@ -17,6 +18,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
 
 export function ParticipantRoleList() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
   const [selectedRole, setSelectedRole] = useState<ParticipantRole | null>(null);
@@ -87,7 +89,8 @@ export function ParticipantRoleList() {
               <Link
                 onFollow={(e) => {
                   e.preventDefault();
-                  handleEdit(item);
+                  const encodedName = encodeURIComponent(item.name).replace(/%20/g, '+');
+                  navigate(`/participants?filter_role=${encodedName}`);
                 }}
               >
                 {item.name}

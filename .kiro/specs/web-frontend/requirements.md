@@ -127,18 +127,20 @@ The Web Frontend package provides a responsive React-based web application that 
 15. WHEN deleting an activity type, THE Web_App SHALL display an error message explaining why deletion failed
 16. THE Web_App SHALL validate that activity type names are not empty
 17. WHEN displaying activity categories in the list, THE Web_App SHALL render the activity category name as a clickable link
-18. WHEN an activity category name is clicked in the activity category list, THE Web_App SHALL open the edit form for that activity category
-19. THE Web_App SHALL display the participant roles list within the same configuration view
-20. THE Web_App SHALL display all four tables (activity categories, activity types, participant roles, and populations) in a cohesive layout on a single page
-21. THE Web_App SHALL display the populations list within the same configuration view
-22. THE Web_App SHALL provide a modal form to create new populations
-23. THE Web_App SHALL provide a modal form to edit existing populations
-24. THE Web_App SHALL provide a delete button for populations
-25. WHEN deleting a population, THE Web_App SHALL prevent deletion if participants reference it
-26. WHEN deleting a population, THE Web_App SHALL display an error message explaining why deletion failed
-27. THE Web_App SHALL validate that population names are not empty
-28. THE Web_App SHALL restrict population create, edit, and delete actions to ADMINISTRATOR role only
-29. THE Web_App SHALL allow EDITOR and READ_ONLY roles to view populations but not modify them
+18. WHEN an activity category name is clicked in the activity category list, THE Web_App SHALL navigate to the Activity List page filtered by that activity category (e.g., /activities?filter_activityCategory=Study+Circles)
+19. WHEN displaying activity types in the list, THE Web_App SHALL render the activity type name as a clickable link
+20. WHEN an activity type name is clicked in the activity type list, THE Web_App SHALL navigate to the Activity List page filtered by that activity type (e.g., /activities?filter_activityType=Devotional+Gathering)
+21. THE Web_App SHALL display the participant roles list within the same configuration view
+22. THE Web_App SHALL display all four tables (activity categories, activity types, participant roles, and populations) in a cohesive layout on a single page
+23. THE Web_App SHALL display the populations list within the same configuration view
+24. THE Web_App SHALL provide a modal form to create new populations
+25. THE Web_App SHALL provide a modal form to edit existing populations
+26. THE Web_App SHALL provide a delete button for populations
+27. WHEN deleting a population, THE Web_App SHALL prevent deletion if participants reference it
+28. WHEN deleting a population, THE Web_App SHALL display an error message explaining why deletion failed
+29. THE Web_App SHALL validate that population names are not empty
+30. THE Web_App SHALL restrict population create, edit, and delete actions to ADMINISTRATOR role only
+31. THE Web_App SHALL allow EDITOR and READ_ONLY roles to view populations but not modify them
 
 ### Requirement 3: Participant Role Management UI
 
@@ -153,6 +155,8 @@ The Web Frontend package provides a responsive React-based web application that 
 5. WHEN deleting a role, THE Web_App SHALL prevent deletion if assignments reference it
 6. WHEN deleting a role, THE Web_App SHALL display an error message explaining why deletion failed
 7. THE Web_App SHALL validate that role names are not empty
+8. WHEN displaying participant roles in the list, THE Web_App SHALL render the role name as a clickable link
+9. WHEN a participant role name is clicked in the role list, THE Web_App SHALL navigate to the Participant List page filtered by that role (e.g., /participants?filter_role=Tutor)
 
 ### Requirement 3A: Population Management UI
 
@@ -170,6 +174,8 @@ The Web Frontend package provides a responsive React-based web application that 
 8. THE Web_App SHALL restrict population create, edit, and delete actions to ADMINISTRATOR role only
 9. THE Web_App SHALL allow EDITOR and READ_ONLY roles to view populations but not modify them
 10. THE Web_App SHALL display the populations table within the same configuration view alongside activity categories, activity types, and participant roles
+11. WHEN displaying populations in the list, THE Web_App SHALL render the population name as a clickable link
+12. WHEN a population name is clicked in the population list, THE Web_App SHALL navigate to the Participant List page filtered by that population (e.g., /participants?filter_population=Persian)
 
 ### Requirement 4: Participant Management UI
 
