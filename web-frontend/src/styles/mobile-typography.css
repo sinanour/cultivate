@@ -3,7 +3,7 @@
 @media (max-width: 767px) {
   /* Base font size for readability on mobile */
   body {
-    font-size: 16px;
+    font-size: 16px !important;
     line-height: 1.5;
   }
   
@@ -40,7 +40,7 @@
   
   /* Paragraph text */
   p {
-    font-size: 16px;
+    font-size: 16px !important;
     line-height: 1.5;
     margin-bottom: 12px;
   }
@@ -66,7 +66,7 @@
   
   /* Button text sizing */
   button {
-    font-size: 16px;
+    font-size: 16px !important;
   }
   
   /* Form labels */
@@ -79,7 +79,7 @@
   
   /* Input text */
   input, textarea, select {
-    font-size: 16px; /* Prevents zoom on iOS */
+    font-size: 16px !important; /* Prevents zoom on iOS */
   }
   
   /* Table text */
