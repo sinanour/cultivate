@@ -431,14 +431,12 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
   // Helper to render header with loading indicator
   const renderHeaderWithLoading = (title: string) => {
     return (
-      <Header variant="h3">
-        <SpaceBetween size="xs" direction="horizontal">
-          <span>{title}</span>
-          {hasRunReport && isLoading && (
-            <Spinner size="normal" />
-          )}
-        </SpaceBetween>
-      </Header>
+      <SpaceBetween size="xs" direction="horizontal">
+        <span>{title}</span>
+        {hasRunReport && isLoading && (
+          <Spinner size="normal" />
+        )}
+      </SpaceBetween>
     );
   };
 
@@ -658,26 +656,29 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
 
       {/* Unique Activities Over Time Chart */}
         <Container header={
-          <SpaceBetween size="xs" direction="horizontal">
-            {renderHeaderWithLoading('Unique Activities Over Time')}
-            {appliedViewMode === 'ageCohort' && (
-              <Popover
-                dismissButton={false}
-                position="top"
-                size="medium"
-                triggerType="custom"
-                content={
-                  <Box variant="p">
-                    <strong>Fractional Activity Counts:</strong> When grouped by age cohort, activity counts are fractional.
-                    Each activity is divided proportionally based on the age distribution of its participants at each time period.
-                    For example, an activity with 1 Youth and 3 Junior Youth participants contributes 0.25 activities to Youth and 0.75 activities to Junior Youth.
-                  </Box>
-                }
-              >
-                <Icon name="status-info" variant="link" />
-              </Popover>
-            )}
-          </SpaceBetween>
+          <Header
+            variant="h3">
+            <SpaceBetween size="xs" direction="horizontal">
+              {renderHeaderWithLoading('Unique Activities Over Time')}
+              {appliedViewMode === 'ageCohort' && (
+                <Popover
+                  dismissButton={false}
+                  position="top"
+                  size="medium"
+                  triggerType="custom"
+                  content={
+                    <Box variant="p">
+                      <strong>Fractional Activity Counts:</strong> When grouped by age cohort, activity counts are fractional.
+                      Each activity is divided proportionally based on the age distribution of its participants at each time period.
+                      For example, an activity with 1 Youth and 3 Junior Youth participants contributes 0.25 activities to Youth and 0.75 activities to Junior Youth.
+                    </Box>
+                  }
+                >
+                  <Icon name="status-info" variant="link" />
+                </Popover>
+              )}
+            </SpaceBetween>
+          </Header>
         }>
         {renderWithLoadingState(
           <>
@@ -744,7 +745,11 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
       </Container>
 
       {/* Unique Participants Over Time Chart */}
-      <Container header={renderHeaderWithLoading('Unique Participants Over Time')}>
+        <Container header={
+          <Header variant="h3">
+            {renderHeaderWithLoading('Unique Participants Over Time')}
+          </Header>
+        }>
         {renderWithLoadingState(
           <>
             {appliedViewMode !== 'all' && participantLegendItems.length > 0 && (
@@ -802,7 +807,11 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
       </Container>
 
       {/* Total Participation Over Time Chart */}
-      <Container header={renderHeaderWithLoading('Total Participation Over Time')}>
+        <Container header={
+          <Header variant="h3">
+            {renderHeaderWithLoading('Total Participation Over Time')}
+          </Header>
+        }>
         {renderWithLoadingState(
           <>
             {appliedViewMode !== 'all' && participationLegendItems.length > 0 && (
