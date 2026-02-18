@@ -20,12 +20,13 @@ describe('LoadingSpinner', () => {
 
   it('should render spinner with different sizes', () => {
     const { container, rerender } = render(<LoadingSpinner size="normal" />);
-    expect(container.querySelector('.awsui_root_1612d_1pcpw_183')).toBeInTheDocument();
+    // Verify spinner element exists (class names may vary with themed components)
+    expect(container.querySelector('[class*="awsui"]')).toBeInTheDocument();
 
     rerender(<LoadingSpinner size="big" />);
-    expect(container.querySelector('.awsui_root_1612d_1pcpw_183')).toBeInTheDocument();
+    expect(container.querySelector('[class*="awsui"]')).toBeInTheDocument();
 
     rerender(<LoadingSpinner size="large" />);
-    expect(container.querySelector('.awsui_root_1612d_1pcpw_183')).toBeInTheDocument();
+    expect(container.querySelector('[class*="awsui"]')).toBeInTheDocument();
   });
 });
