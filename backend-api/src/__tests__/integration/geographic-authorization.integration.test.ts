@@ -1,9 +1,10 @@
-import { PrismaClient, AuthorizationRuleType, UserRole } from '@prisma/client';
+import { PrismaClient, AuthorizationRuleType } from '@prisma/client';
 import { GeographicAuthorizationService, AccessLevel } from '../../services/geographic-authorization.service';
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { getPrismaClient } from '../../utils/prisma.client';
+import { TestHelpers } from '../utils';
 
 describe('Geographic Authorization Integration Tests', () => {
     let prisma: PrismaClient;
@@ -11,6 +12,7 @@ describe('Geographic Authorization Integration Tests', () => {
     let authRepo: UserGeographicAuthorizationRepository;
     let areaRepo: GeographicAreaRepository;
     let userRepo: UserRepository;
+    const testSuffix = Date.now();
     let testUserId: string;
     let testAreaId: string;
     let childAreaId: string;
@@ -23,20 +25,14 @@ describe('Geographic Authorization Integration Tests', () => {
         userRepo = new UserRepository(prisma);
         service = new GeographicAuthorizationService(authRepo, areaRepo, userRepo);
 
-        // Create test user
-        const user = await prisma.user.create({
-            data: {
-                email: 'test-auth@example.com',
-                passwordHash: 'hash',
-                role: UserRole.EDITOR,
-            },
-        });
+        // Create test user with unique email
+        const user = await TestHelpers.createTestUser(prisma, 'EDITOR', testSuffix);
         testUserId = user.id;
 
-        // Create test geographic areas (parent -> test -> child)
+        // Create test geographic areas (parent -> test -> child) with unique names
         const parent = await prisma.geographicArea.create({
             data: {
-                name: 'Test Parent Area',
+                name: `GeoAuthTest Parent Area ${testSuffix}`,
                 areaType: 'PROVINCE',
             },
         });
@@ -44,7 +40,7 @@ describe('Geographic Authorization Integration Tests', () => {
 
         const area = await prisma.geographicArea.create({
             data: {
-                name: 'Test Area',
+                name: `GeoAuthTest Area ${testSuffix}`,
                 areaType: 'CITY',
                 parentGeographicAreaId: parentAreaId,
             },
@@ -53,7 +49,7 @@ describe('Geographic Authorization Integration Tests', () => {
 
         const child = await prisma.geographicArea.create({
             data: {
-                name: 'Test Child Area',
+                name: `GeoAuthTest Child Area ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: testAreaId,
             },
@@ -62,12 +58,19 @@ describe('Geographic Authorization Integration Tests', () => {
     });
 
     afterAll(async () => {
-        // Clean up test data
+        // Clean up test data in correct order
         await prisma.userGeographicAuthorization.deleteMany({
             where: { userId: testUserId },
         });
+        // Delete geographic areas (children before parents)
         await prisma.geographicArea.deleteMany({
-            where: { id: { in: [childAreaId, testAreaId, parentAreaId] } },
+            where: { id: childAreaId },
+        });
+        await prisma.geographicArea.deleteMany({
+            where: { id: testAreaId },
+        });
+        await prisma.geographicArea.deleteMany({
+            where: { id: parentAreaId },
         });
         await prisma.user.delete({ where: { id: testUserId } });
         await prisma.$disconnect();

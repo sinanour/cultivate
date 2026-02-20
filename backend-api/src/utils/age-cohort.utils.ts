@@ -196,3 +196,32 @@ export function getEvaluationDate(period: string, periodDate: Date): Date {
             throw new Error(`Invalid period: ${period}`);
     }
 }
+
+/**
+ * Calculate the reference date for age cohort filtering.
+ * Returns the minimum (earliest) of all provided non-null dates.
+ * This ensures age cohorts reflect participant ages at the most restrictive temporal boundary.
+ * 
+ * @param currentDate - The current date (always provided)
+ * @param activityEndDate - The activity's end date (null for ongoing activities)
+ * @param filterEndDate - The date range filter's end date (null if no date filter)
+ * @returns The reference date to use for age cohort calculations
+ */
+export function calculateReferenceDate(
+    currentDate: Date,
+    activityEndDate: Date | null,
+    filterEndDate: Date | null
+): Date {
+    const dates: Date[] = [currentDate];
+
+    if (activityEndDate) {
+        dates.push(activityEndDate);
+    }
+
+    if (filterEndDate) {
+        dates.push(filterEndDate);
+    }
+
+    // Return the minimum (earliest) date
+    return new Date(Math.min(...dates.map(d => d.getTime())));
+}

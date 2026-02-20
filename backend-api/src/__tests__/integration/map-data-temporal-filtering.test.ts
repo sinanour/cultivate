@@ -4,10 +4,12 @@ import { GeographicAreaRepository } from '../../repositories/geographic-area.rep
 import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { TestHelpers } from '../utils/test-helpers';
 
 const prisma = new PrismaClient();
 
 describe('Map Data Temporal Filtering', () => {
+    const testSuffix = Date.now();
     let mapDataService: MapDataService;
     let geographicAreaRepository: GeographicAreaRepository;
     let geoAuthService: GeographicAuthorizationService;
@@ -46,19 +48,13 @@ describe('Map Data Temporal Filtering', () => {
         );
 
         // Create test user
-        const user = await prisma.user.create({
-            data: {
-                email: 'map-temporal-test@test.com',
-                passwordHash: 'hash',
-                role: 'ADMINISTRATOR',
-            },
-        });
+        const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR', testSuffix);
         userId = user.id;
 
         // Create geographic area
         const area = await prisma.geographicArea.create({
             data: {
-                name: 'Test City for Map Temporal',
+                name: `MapTemporalTest City ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -67,7 +63,7 @@ describe('Map Data Temporal Filtering', () => {
         // Create venue
         const venue = await prisma.venue.create({
             data: {
-                name: 'Test Venue for Map Temporal',
+                name: `MapTemporalTest Venue ${testSuffix}`,
                 address: '123 Test St',
                 geographicAreaId,
                 latitude: 40.7128,
@@ -76,26 +72,15 @@ describe('Map Data Temporal Filtering', () => {
         });
         venueId = venue.id;
 
-        // Create activity category and type
-        await prisma.activityCategory.findFirst({
-            where: { name: 'Study Circles' },
-        });
-
-        const type = await prisma.activityType.findFirst({
-            where: { name: 'Ruhi Book 01' },
-        });
-        activityTypeId = type!.id;
-
-        // Create role
-        await prisma.role.findFirst({
-            where: { name: 'Participant' },
-        });
+        // Get predefined activity type deterministically
+        const type = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+        activityTypeId = type.id;
 
         // Create participant
         const participant = await prisma.participant.create({
             data: {
-                name: 'Test Participant for Map Temporal',
-                email: 'map-temporal-participant@test.com',
+                name: `MapTemporalTest Participant ${testSuffix}`,
+                email: `map-temporal-participant-${testSuffix}@test.com`,
             },
         });
         participantId = participant.id;
@@ -106,7 +91,7 @@ describe('Map Data Temporal Filtering', () => {
         // Past activity: ended before query period (2024-01-01 to 2024-05-15)
         const pastActivity = await prisma.activity.create({
             data: {
-                name: 'Past Activity',
+                name: `MapTemporalTest Past Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-01-01'),
                 endDate: new Date('2024-05-15'),
@@ -125,7 +110,7 @@ describe('Map Data Temporal Filtering', () => {
         // Current activity: active during query period (2024-05-01 to 2024-07-31)
         const currentActivity = await prisma.activity.create({
             data: {
-                name: 'Current Activity',
+                name: `MapTemporalTest Current Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-05-01'),
                 endDate: new Date('2024-07-31'),
@@ -144,7 +129,7 @@ describe('Map Data Temporal Filtering', () => {
         // Future activity: starts after query period (2024-09-01 to 2024-12-31)
         const futureActivity = await prisma.activity.create({
             data: {
-                name: 'Future Activity',
+                name: `MapTemporalTest Future Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-09-01'),
                 endDate: new Date('2024-12-31'),
@@ -163,7 +148,7 @@ describe('Map Data Temporal Filtering', () => {
         // Ongoing activity: started during period, no end date (2024-07-01 to null)
         const ongoingActivity = await prisma.activity.create({
             data: {
-                name: 'Ongoing Activity',
+                name: `MapTemporalTest Ongoing Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-07-01'),
                 endDate: null,
@@ -376,7 +361,7 @@ describe('Map Data Temporal Filtering', () => {
             // Create additional venues for address history testing
             const venue2 = await prisma.venue.create({
                 data: {
-                    name: 'Test Venue 2 for Address History',
+                    name: `MapTemporalTest Venue 2 ${testSuffix}`,
                     address: '456 Test Ave',
                     geographicAreaId,
                     latitude: 40.7200,
@@ -387,7 +372,7 @@ describe('Map Data Temporal Filtering', () => {
 
             const venue3 = await prisma.venue.create({
                 data: {
-                    name: 'Test Venue 3 for Address History',
+                    name: `MapTemporalTest Venue 3 ${testSuffix}`,
                     address: '789 Test Blvd',
                     geographicAreaId,
                     latitude: 40.7300,
@@ -399,8 +384,8 @@ describe('Map Data Temporal Filtering', () => {
             // Create participant with multiple addresses
             const participant2 = await prisma.participant.create({
                 data: {
-                    name: 'Participant with Multiple Addresses',
-                    email: 'multi-address@test.com',
+                    name: `MapTemporalTest Participant Multiple Addresses ${testSuffix}`,
+                    email: `multi-address-${testSuffix}@test.com`,
                 },
             });
             participant2Id = participant2.id;
@@ -434,8 +419,8 @@ describe('Map Data Temporal Filtering', () => {
             // Create participant with single address spanning entire period
             const participant3 = await prisma.participant.create({
                 data: {
-                    name: 'Participant with Single Address',
-                    email: 'single-address@test.com',
+                    name: `MapTemporalTest Participant Single Address ${testSuffix}`,
+                    email: `single-address-${testSuffix}@test.com`,
                 },
             });
             await prisma.participantAddressHistory.create({
@@ -449,8 +434,8 @@ describe('Map Data Temporal Filtering', () => {
             // Create participant with null effectiveFrom
             const participant4 = await prisma.participant.create({
                 data: {
-                    name: 'Participant with Null EffectiveFrom',
-                    email: 'null-effective@test.com',
+                    name: `MapTemporalTest Participant Null EffectiveFrom ${testSuffix}`,
+                    email: `null-effective-${testSuffix}@test.com`,
                 },
             });
             await prisma.participantAddressHistory.create({
@@ -473,9 +458,9 @@ describe('Map Data Temporal Filtering', () => {
                 where: {
                     email: {
                         in: [
-                            'multi-address@test.com',
-                            'single-address@test.com',
-                            'null-effective@test.com',
+                            `multi-address-${testSuffix}@test.com`,
+                            `single-address-${testSuffix}@test.com`,
+                            `null-effective-${testSuffix}@test.com`,
                         ],
                     },
                 },

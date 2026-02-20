@@ -23,6 +23,7 @@ describe('Geographic Area Filtering with DENY Rules', () => {
     let prisma: PrismaClient;
     let participantService: ParticipantService;
     let geoAuthService: GeographicAuthorizationService;
+    const testSuffix = Date.now();
     let testUserId: string;
     let cityId: string;
     let allowedNeighbourhoodId: string;
@@ -55,7 +56,7 @@ describe('Geographic Area Filtering with DENY Rules', () => {
         // Create test user
         const user = await prisma.user.create({
             data: {
-                email: `test-geo-filter-${Date.now()}@example.com`,
+                email: `test-geo-filter-${testSuffix}@example.com`,
                 passwordHash: 'hash',
                 role: UserRole.EDITOR,
             },
@@ -65,7 +66,7 @@ describe('Geographic Area Filtering with DENY Rules', () => {
         // Create geographic hierarchy: City -> Allowed Neighbourhood, Denied Neighbourhood
         const city = await prisma.geographicArea.create({
             data: {
-                name: 'Test City for Filtering',
+                name: `Test City for Filtering ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -73,7 +74,7 @@ describe('Geographic Area Filtering with DENY Rules', () => {
 
         const allowedNeighbourhood = await prisma.geographicArea.create({
             data: {
-                name: 'Allowed Neighbourhood',
+                name: `Allowed Neighbourhood ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
@@ -82,7 +83,7 @@ describe('Geographic Area Filtering with DENY Rules', () => {
 
         const deniedNeighbourhood = await prisma.geographicArea.create({
             data: {
-                name: 'Denied Neighbourhood',
+                name: `Denied Neighbourhood ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
@@ -92,7 +93,7 @@ describe('Geographic Area Filtering with DENY Rules', () => {
         // Create venues in each neighbourhood
         const allowedVenue = await prisma.venue.create({
             data: {
-                name: 'Allowed Venue',
+                name: `Allowed Venue ${testSuffix}`,
                 address: '123 Allowed St',
                 geographicAreaId: allowedNeighbourhoodId,
             },
@@ -101,7 +102,7 @@ describe('Geographic Area Filtering with DENY Rules', () => {
 
         const deniedVenue = await prisma.venue.create({
             data: {
-                name: 'Denied Venue',
+                name: `Denied Venue ${testSuffix}`,
                 address: '456 Denied St',
                 geographicAreaId: deniedNeighbourhoodId,
             },
@@ -111,8 +112,8 @@ describe('Geographic Area Filtering with DENY Rules', () => {
         // Create participants with home venues
         const allowedParticipant = await prisma.participant.create({
             data: {
-                name: 'Allowed Participant',
-                email: `allowed-${Date.now()}@example.com`,
+                name: `Allowed Participant ${testSuffix}`,
+                email: `allowed-${testSuffix}@example.com`,
             },
         });
         allowedParticipantId = allowedParticipant.id;
@@ -127,8 +128,8 @@ describe('Geographic Area Filtering with DENY Rules', () => {
 
         const deniedParticipant = await prisma.participant.create({
             data: {
-                name: 'Denied Participant',
-                email: `denied-${Date.now()}@example.com`,
+                name: `Denied Participant ${testSuffix}`,
+                email: `denied-${testSuffix}@example.com`,
             },
         });
         deniedParticipantId = deniedParticipant.id;

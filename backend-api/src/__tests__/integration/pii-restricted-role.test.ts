@@ -4,11 +4,13 @@ import { getPrismaClient } from '../../utils/prisma.client';
 import { UserRole } from '@prisma/client';
 import { AuthService } from '../../services/auth.service';
 import { UserRepository } from '../../repositories/user.repository';
+import { TestHelpers } from '../utils/test-helpers';
 import * as bcrypt from 'bcrypt';
 
 const prisma = getPrismaClient();
 
 describe('PII_RESTRICTED Role Integration Tests', () => {
+    const testSuffix = Date.now();
     let authService: AuthService;
     let userRepository: UserRepository;
     let testParticipantId: string;
@@ -26,7 +28,7 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
         // Create test geographic area
         const geographicArea = await prisma.geographicArea.create({
             data: {
-                name: 'Test Area PII',
+                name: `PIIRestrictedTest Area ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -35,7 +37,7 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
         // Create test venue
         const venue = await prisma.venue.create({
             data: {
-                name: 'Test Community Center PII',
+                name: `PIIRestrictedTest Community Center ${testSuffix}`,
                 address: '123 Test Street',
                 geographicAreaId: testGeographicAreaId,
                 latitude: 40.7128,
@@ -47,8 +49,8 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
         // Create test participant
         const participant = await prisma.participant.create({
             data: {
-                name: 'John Doe PII Test',
-                email: 'john.pii.test@example.com',
+                name: `PIIRestrictedTest John Doe ${testSuffix}`,
+                email: `john.pii.test-${testSuffix}@example.com`,
                 phone: '+1234567890',
                 notes: 'Test notes',
                 dateOfBirth: new Date('1990-01-01'),
@@ -57,14 +59,14 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
         });
         testParticipantId = participant.id;
 
-        // Get activity type for test activity
-        const activityType = await prisma.activityType.findFirst();
-        testActivityTypeId = activityType!.id;
+        // Get predefined activity type deterministically
+        const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+        testActivityTypeId = activityType.id;
 
         // Create test activity
         const activity = await prisma.activity.create({
             data: {
-                name: 'Test Activity PII',
+                name: `PIIRestrictedTest Activity ${testSuffix}`,
                 activityTypeId: testActivityTypeId,
                 startDate: new Date(),
                 status: 'PLANNED',
@@ -76,7 +78,7 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
         const piiRestrictedPasswordHash = await bcrypt.hash('pii123', 10);
         await prisma.user.create({
             data: {
-                email: 'pii.integration@test.com',
+                email: `pii.integration-${testSuffix}@test.com`,
                 passwordHash: piiRestrictedPasswordHash,
                 role: UserRole.PII_RESTRICTED,
                 displayName: 'PII Restricted User',
@@ -87,7 +89,7 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
         const adminPasswordHash = await bcrypt.hash('admin123', 10);
         await prisma.user.create({
             data: {
-                email: 'admin.pii.test@test.com',
+                email: `admin.pii.test-${testSuffix}@test.com`,
                 passwordHash: adminPasswordHash,
                 role: UserRole.ADMINISTRATOR,
                 displayName: 'Admin User',
@@ -96,13 +98,13 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
 
         // Get tokens
         const piiTokens = await authService.login({
-            email: 'pii.integration@test.com',
+            email: `pii.integration-${testSuffix}@test.com`,
             password: 'pii123',
         });
         piiRestrictedToken = piiTokens.accessToken;
 
         const adminTokens = await authService.login({
-            email: 'admin.pii.test@test.com',
+            email: `admin.pii.test-${testSuffix}@test.com`,
             password: 'admin123',
         });
         adminToken = adminTokens.accessToken;
@@ -110,12 +112,12 @@ describe('PII_RESTRICTED Role Integration Tests', () => {
 
     afterAll(async () => {
         // Clean up test data
-        await prisma.activity.deleteMany({ where: { name: { contains: 'Test Activity PII' } } });
-        await prisma.participant.deleteMany({ where: { email: { contains: 'pii.test@example.com' } } });
-        await prisma.venue.deleteMany({ where: { name: { contains: 'Test Community Center PII' } } });
-        await prisma.geographicArea.deleteMany({ where: { name: { contains: 'Test Area PII' } } });
-        await prisma.user.deleteMany({ where: { email: { contains: 'pii.integration@test.com' } } });
-        await prisma.user.deleteMany({ where: { email: { contains: 'admin.pii.test@test.com' } } });
+        await prisma.activity.deleteMany({ where: { name: { contains: `PIIRestrictedTest Activity ${testSuffix}` } } });
+        await prisma.participant.deleteMany({ where: { email: { contains: `john.pii.test-${testSuffix}@example.com` } } });
+        await prisma.venue.deleteMany({ where: { name: { contains: `PIIRestrictedTest Community Center ${testSuffix}` } } });
+        await prisma.geographicArea.deleteMany({ where: { name: { contains: `PIIRestrictedTest Area ${testSuffix}` } } });
+        await prisma.user.deleteMany({ where: { email: { contains: `pii.integration-${testSuffix}@test.com` } } });
+        await prisma.user.deleteMany({ where: { email: { contains: `admin.pii.test-${testSuffix}@test.com` } } });
     });
 
     describe('JWT Token Generation', () => {

@@ -53,25 +53,138 @@ export class TestHelpers {
      * 
      * @param prisma - Prisma client instance
      * @param role - User role (default: EDITOR)
-     * @param displayName - Optional display name
+     * @param uniqueSuffix - Optional unique suffix (default: Date.now())
      * @returns Created user object
      * 
      * @example
-     * const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR', 'Test Admin');
+     * const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR', Date.now());
      */
     static async createTestUser(
         prisma: PrismaClient,
         role: UserRole = 'EDITOR',
-        displayName?: string
+        uniqueSuffix?: string | number
     ): Promise<User> {
+        const suffix = uniqueSuffix || Date.now();
         return prisma.user.create({
             data: {
-                email: this.generateUniqueEmail('user'),
+                email: `test-user-${suffix}@example.com`,
                 passwordHash: 'hashed',
                 role,
-                displayName,
             },
         });
+    }
+    /**
+     * Create a standard geographic hierarchy for testing
+     * Creates a 4-level hierarchy: country → province → city → neighbourhood
+     *
+     * @param prisma - Prisma client instance
+     * @param uniqueSuffix - Optional unique suffix (default: Date.now())
+     * @returns Object with all created geographic area IDs
+     *
+     * @example
+     * const { countryId, provinceId, cityId, neighbourhoodId } =
+     *   await TestHelpers.createTestGeographicHierarchy(prisma, Date.now());
+     */
+    static async createTestGeographicHierarchy(
+        prisma: PrismaClient,
+        uniqueSuffix?: string | number
+    ): Promise<{
+        countryId: string;
+        provinceId: string;
+        cityId: string;
+        neighbourhoodId: string;
+    }> {
+        const suffix = uniqueSuffix || Date.now();
+
+        const country = await prisma.geographicArea.create({
+            data: {
+                name: `Test Country ${suffix}`,
+                areaType: 'COUNTRY',
+            },
+        });
+
+        const province = await prisma.geographicArea.create({
+            data: {
+                name: `Test Province ${suffix}`,
+                areaType: 'PROVINCE',
+                parentGeographicAreaId: country.id,
+            },
+        });
+
+        const city = await prisma.geographicArea.create({
+            data: {
+                name: `Test City ${suffix}`,
+                areaType: 'CITY',
+                parentGeographicAreaId: province.id,
+            },
+        });
+
+        const neighbourhood = await prisma.geographicArea.create({
+            data: {
+                name: `Test Neighbourhood ${suffix}`,
+                areaType: 'NEIGHBOURHOOD',
+                parentGeographicAreaId: city.id,
+            },
+        });
+
+        return {
+            countryId: country.id,
+            provinceId: province.id,
+            cityId: city.id,
+            neighbourhoodId: neighbourhood.id,
+        };
+    }
+    /**
+     * Get a predefined activity type by name
+     * Throws descriptive error if not found
+     *
+     * @param prisma - Prisma client instance
+     * @param name - Name of the predefined activity type
+     * @returns The activity type object
+     * @throws Error if activity type not found
+     *
+     * @example
+     * const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+     */
+    static async getPredefinedActivityType(
+        prisma: PrismaClient,
+        name: string
+    ) {
+        const activityType = await prisma.activityType.findFirst({
+            where: { name, isPredefined: true },
+        });
+
+        if (!activityType) {
+            throw new Error(`Predefined activity type "${name}" not found. Run prisma db seed first.`);
+        }
+
+        return activityType;
+    }
+    /**
+     * Get a predefined role by name
+     * Throws descriptive error if not found
+     *
+     * @param prisma - Prisma client instance
+     * @param name - Name of the predefined role
+     * @returns The role object
+     * @throws Error if role not found
+     *
+     * @example
+     * const tutorRole = await TestHelpers.getPredefinedRole(prisma, 'Tutor');
+     */
+    static async getPredefinedRole(
+        prisma: PrismaClient,
+        name: string
+    ) {
+        const role = await prisma.role.findFirst({
+            where: { name },
+        });
+
+        if (!role) {
+            throw new Error(`Predefined role "${name}" not found. Run prisma db seed first.`);
+        }
+
+        return role;
     }
 
     /**
@@ -89,77 +202,157 @@ export class TestHelpers {
      *   areaIds: [areaId1, areaId2]
      * });
      */
+    /**
+         * Clean up test data in correct order (respecting foreign keys)
+         * Deletes entities in the proper order to avoid foreign key constraint violations
+         * Handles errors gracefully without throwing
+         * 
+         * @param prisma - Prisma client instance
+         * @param options - Object containing arrays of IDs to delete
+         * 
+         * @example
+         * await TestHelpers.cleanupTestData(prisma, {
+         *   assignmentIds: [assignmentId],
+         *   activityIds: [activityId],
+         *   participantIds: [participantId],
+         *   venueIds: [venueId],
+         *   geographicAreaIds: [areaId1, areaId2],
+         *   activityTypeIds: [typeId],
+         *   activityCategoryIds: [categoryId],
+         *   roleIds: [roleId],
+         *   userIds: [userId],
+         *   populationIds: [populationId]
+         * });
+         */
     static async cleanupTestData(
         prisma: PrismaClient,
-        data: {
-            userIds?: string[];
-            activityIds?: string[];
-            participantIds?: string[];
-            venueIds?: string[];
-            areaIds?: string[];
-            populationIds?: string[];
-        }
-    ): Promise<void> {
-        // Delete in order: assignments, activities, participants, venues, areas, populations, users
+            options: {
+                assignmentIds?: string[];
+                activityIds?: string[];
+                participantIds?: string[];
+                venueIds?: string[];
+                geographicAreaIds?: string[];
+                activityTypeIds?: string[];
+                activityCategoryIds?: string[];
+                roleIds?: string[];
+                userIds?: string[];
+                populationIds?: string[];
+            }
+        ): Promise<void> {
+            try {
+            // Delete in reverse dependency order (children before parents)
 
-        if (data.activityIds?.length) {
-            await prisma.assignment.deleteMany({
-                where: { activityId: { in: data.activityIds } },
-            });
-            await prisma.activityVenueHistory.deleteMany({
-                where: { activityId: { in: data.activityIds } },
-            });
-            await prisma.activity.deleteMany({
-                where: { id: { in: data.activityIds } },
-            });
-        }
+                // 1. Assignments (references activities, participants, roles)
+                if (options.assignmentIds?.length) {
+                    await prisma.assignment.deleteMany({
+                        where: { id: { in: options.assignmentIds } },
+                    });
+                }
 
-        if (data.participantIds?.length) {
-            await prisma.participantPopulation.deleteMany({
-                where: { participantId: { in: data.participantIds } },
-            });
-            await prisma.participantAddressHistory.deleteMany({
-                where: { participantId: { in: data.participantIds } },
-            });
-            await prisma.participant.deleteMany({
-                where: { id: { in: data.participantIds } },
-            });
-        }
+                // 2. Activity venue history (references activities, venues)
+                if (options.activityIds?.length) {
+                    await prisma.activityVenueHistory.deleteMany({
+                        where: { activityId: { in: options.activityIds } },
+                    });
+                }
 
-        if (data.venueIds?.length) {
-            await prisma.venue.deleteMany({
-                where: { id: { in: data.venueIds } },
-            });
-        }
+                // 3. Participant address history (references participants, venues)
+                if (options.participantIds?.length) {
+                    await prisma.participantAddressHistory.deleteMany({
+                        where: { participantId: { in: options.participantIds } },
+                    });
+                }
 
-        if (data.areaIds?.length) {
-            // Delete authorization rules referencing these areas first
-            await prisma.userGeographicAuthorization.deleteMany({
-                where: { geographicAreaId: { in: data.areaIds } },
-            });
+                // 4. Participant populations (references participants, populations)
+                if (options.participantIds?.length) {
+                    await prisma.participantPopulation.deleteMany({
+                        where: { participantId: { in: options.participantIds } },
+                    });
+                }
 
-            await prisma.geographicArea.deleteMany({
-                where: { id: { in: data.areaIds } },
-            });
-        }
+                // 5. Activities (references activity types)
+                if (options.activityIds?.length) {
+                    await prisma.activity.deleteMany({
+                        where: { id: { in: options.activityIds } },
+                    });
+                }
 
-        if (data.populationIds?.length) {
-            await prisma.population.deleteMany({
-                where: { id: { in: data.populationIds } },
-            });
-        }
+                // 6. Participants
+                if (options.participantIds?.length) {
+                    await prisma.participant.deleteMany({
+                        where: { id: { in: options.participantIds } },
+                    });
+                }
 
-        if (data.userIds?.length) {
-            await prisma.userGeographicAuthorization.deleteMany({
-                where: { userId: { in: data.userIds } },
-            });
-            await this.safeDelete(() =>
-                prisma.user.deleteMany({
-                    where: { id: { in: data.userIds } },
-                })
-            );
+                // 7. Venues (references geographic areas)
+                if (options.venueIds?.length) {
+                    await prisma.venue.deleteMany({
+                        where: { id: { in: options.venueIds } },
+                    });
+                }
+
+                // 8. Activity types (references activity categories)
+                if (options.activityTypeIds?.length) {
+                    await prisma.activityType.deleteMany({
+                        where: { id: { in: options.activityTypeIds } },
+                    });
+                }
+
+                // 9. Activity categories
+                if (options.activityCategoryIds?.length) {
+                    await prisma.activityCategory.deleteMany({
+                        where: { id: { in: options.activityCategoryIds } },
+                    });
+                }
+
+                // 10. Roles
+                if (options.roleIds?.length) {
+                    await prisma.role.deleteMany({
+                        where: { id: { in: options.roleIds } },
+                    });
+                }
+
+                // 11. Populations
+                if (options.populationIds?.length) {
+                    await prisma.population.deleteMany({
+                        where: { id: { in: options.populationIds } },
+                    });
+                }
+
+                // 12. User geographic authorizations (references users, geographic areas)
+                if (options.userIds?.length || options.geographicAreaIds?.length) {
+                    const where: any = {};
+                    if (options.userIds?.length) {
+                        where.userId = { in: options.userIds };
+                    }
+                    if (options.geographicAreaIds?.length) {
+                        where.geographicAreaId = { in: options.geographicAreaIds };
+                    }
+                    await prisma.userGeographicAuthorization.deleteMany({ where });
+                }
+
+                // 13. Geographic areas (delete children before parents)
+                if (options.geographicAreaIds?.length) {
+                    // Sort by depth (deepest first) - assumes IDs are in creation order
+                    const sortedIds = [...options.geographicAreaIds].reverse();
+                    for (const id of sortedIds) {
+                        await prisma.geographicArea.deleteMany({
+                            where: { id },
+                        });
+                    }
+                }
+
+                // 14. Users
+                if (options.userIds?.length) {
+                    await prisma.user.deleteMany({
+                        where: { id: { in: options.userIds } },
+                    });
+                }
+            } catch (error) {
+                console.error('Cleanup error:', error);
+                // Don't throw - allow other cleanup to proceed
+            }
         }
-    }
 
     /**
      * Create minimal test data for common scenarios

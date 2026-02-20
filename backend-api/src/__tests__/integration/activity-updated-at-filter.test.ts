@@ -13,11 +13,13 @@ import { GeographicAuthorizationService } from '../../services/geographic-author
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { AuditLogRepository } from '../../repositories/audit-log.repository';
+import { TestHelpers } from '../utils';
 
 const prisma = new PrismaClient();
 
 describe('Activity updatedAt Filter Integration Tests', () => {
     let activityService: ActivityService;
+    const testSuffix = Date.now();
     let testAreaId: string;
     let testVenueId: string;
     let testActivityTypeId: string;
@@ -54,7 +56,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
         // Create test data
         const area = await prisma.geographicArea.create({
             data: {
-                name: 'Test City for UpdatedAt Filter',
+                name: `UpdatedAtFilterTest City ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -62,7 +64,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
 
         const venue = await prisma.venue.create({
             data: {
-                name: 'Test Venue for UpdatedAt Filter',
+                name: `UpdatedAtFilterTest Venue ${testSuffix}`,
                 address: '123 Test St',
                 geographicAreaId: testAreaId,
             },
@@ -70,12 +72,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
         testVenueId = venue.id;
 
         // Get a predefined activity type
-        const activityType = await prisma.activityType.findFirst({
-            where: { isPredefined: true },
-        });
-        if (!activityType) {
-            throw new Error('No predefined activity type found');
-        }
+        const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
         testActivityTypeId = activityType.id;
 
         // Create activities with different updatedAt timestamps
@@ -86,7 +83,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
         oldDate.setDate(oldDate.getDate() - 60);
         const oldActivity = await prisma.activity.create({
             data: {
-                name: 'Old Activity',
+                name: `UpdatedAtFilterTest Old Activity ${testSuffix}`,
                 activityTypeId: testActivityTypeId,
                 startDate: new Date('2025-01-01'),
                 status: 'PLANNED',
@@ -100,7 +97,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
         middleDate.setDate(middleDate.getDate() - 30);
         const middleActivity = await prisma.activity.create({
             data: {
-                name: 'Middle Activity',
+                name: `UpdatedAtFilterTest Middle Activity ${testSuffix}`,
                 activityTypeId: testActivityTypeId,
                 startDate: new Date('2025-01-15'),
                 status: 'ACTIVE',
@@ -114,7 +111,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
         recentDate.setDate(recentDate.getDate() - 5);
         const recentActivity = await prisma.activity.create({
             data: {
-                name: 'Recent Activity',
+                name: `UpdatedAtFilterTest Recent Activity ${testSuffix}`,
                 activityTypeId: testActivityTypeId,
                 startDate: new Date('2025-02-01'),
                 status: 'COMPLETED',
@@ -182,6 +179,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: { updatedAt: { gte: cutoffDate.toISOString() } },
             });
 
@@ -202,6 +200,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: { updatedAt: { lte: cutoffDate.toISOString() } },
             });
 
@@ -219,6 +218,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: { updatedAt: { gt: cutoffDate.toISOString() } },
             });
 
@@ -236,6 +236,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: { updatedAt: { lt: cutoffDate.toISOString() } },
             });
 
@@ -259,6 +260,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: {
                     updatedAt: {
                         gte: startDate.toISOString(),
@@ -281,6 +283,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: { updatedAt: { gte: cutoffDate.toISOString() } },
             });
 
@@ -301,6 +304,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: {
                     updatedAt: { gte: cutoffDate.toISOString() },
                     status: ['ACTIVE'],
@@ -329,7 +333,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             // Should return only recent activity (name contains "Recent" and updated 5 days ago)
             expect(result.data.length).toBe(1);
             expect(result.data[0].id).toBe(recentActivityId);
-            expect(result.data[0].name).toBe('Recent Activity');
+            expect(result.data[0].name).toBe(`UpdatedAtFilterTest Recent Activity ${testSuffix}`);
         });
     });
 
@@ -342,6 +346,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: { updatedAt: { gte: dateOnly } },
             });
 
@@ -361,6 +366,7 @@ describe('Activity updatedAt Filter Integration Tests', () => {
             const result = await activityService.getActivitiesFlexible({
                 page: 1,
                 limit: 100,
+                geographicAreaId: testAreaId, // Isolate to this test's data
                 filter: { updatedAt: { gte: cutoffDate.toISOString() } },
             });
 

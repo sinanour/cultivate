@@ -1,13 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 import { AnalyticsService } from '../../services/analytics.service';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
-import { ActivityTypeRepository } from '../../repositories/activity-type.repository';
 import { TimePeriod } from '../../utils/constants';
+import { TestHelpers } from '../utils';
 
 const prisma = new PrismaClient();
 
 describe('Growth Metrics with Additional Participant Count', () => {
   let analyticsService: AnalyticsService;
+  const testSuffix = Date.now();
   let activityTypeId: string;
   let activityId: string;
   let participantId: string;
@@ -15,22 +16,21 @@ describe('Growth Metrics with Additional Participant Count', () => {
 
   beforeAll(async () => {
     const geographicAreaRepository = new GeographicAreaRepository(prisma);
-    const activityTypeRepository = new ActivityTypeRepository(prisma);
 
     analyticsService = new AnalyticsService(prisma, geographicAreaRepository);
 
-    // Get predefined data
-    const activityTypes = await activityTypeRepository.findAll();
-    activityTypeId = activityTypes[0].id;
+    // Get predefined data deterministically
+    const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+    activityTypeId = activityType.id;
 
-    const roles = await prisma.role.findMany();
-    roleId = roles[0].id;
+    const role = await TestHelpers.getPredefinedRole(prisma, 'Participant');
+    roleId = role.id;
 
-    // Create test participant
+    // Create test participant with unique name
     const participant = await prisma.participant.create({
       data: {
-        name: 'Test Participant for Growth',
-        email: `test-growth-${Date.now()}@example.com`,
+        name: `GrowthTest Participant ${testSuffix}`,
+        email: `test-growth-${testSuffix}@example.com`,
       },
     });
     participantId = participant.id;
@@ -38,7 +38,7 @@ describe('Growth Metrics with Additional Participant Count', () => {
     // Create test activity with additionalParticipantCount
     const activity = await prisma.activity.create({
       data: {
-        name: 'Test Activity for Growth Metrics',
+        name: `GrowthTest Activity ${testSuffix}`,
         activityTypeId,
         startDate: new Date('2025-01-15'),
         status: 'ACTIVE',

@@ -18,6 +18,7 @@ import { GeographicAuthorizationService } from '../../services/geographic-author
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { AuditLogRepository } from '../../repositories/audit-log.repository';
+import { TestHelpers } from '../utils';
 
 const prisma = new PrismaClient();
 
@@ -26,6 +27,7 @@ describe('Flexible Filtering Integration Tests', () => {
     let venueService: VenueService;
     let activityService: ActivityService;
     let geographicAreaRepository: GeographicAreaRepository;
+    const testSuffix = Date.now();
     let testAreaId: string;
     let testVenueId: string;
     let testParticipant1Id: string;
@@ -74,7 +76,7 @@ describe('Flexible Filtering Integration Tests', () => {
         // Create test data
         const area = await prisma.geographicArea.create({
             data: {
-                name: 'Test City for Flexible Filtering',
+                name: `FlexFilterTest City ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -82,7 +84,7 @@ describe('Flexible Filtering Integration Tests', () => {
 
         const venue = await prisma.venue.create({
             data: {
-                name: 'Test Venue for Flexible Filtering',
+                name: `FlexFilterTest Venue ${testSuffix}`,
                 address: '123 Test St',
                 geographicAreaId: testAreaId,
             },
@@ -92,8 +94,8 @@ describe('Flexible Filtering Integration Tests', () => {
         // Create participants with different attributes
         const participant1 = await prisma.participant.create({
             data: {
-                name: 'John Doe',
-                email: 'john@gmail.com',
+                name: `FlexFilterTest John Doe ${testSuffix}`,
+                email: `john-${testSuffix}@gmail.com`,
                 phone: '555-1234',
                 nickname: 'Johnny',
             },
@@ -102,8 +104,8 @@ describe('Flexible Filtering Integration Tests', () => {
 
         const participant2 = await prisma.participant.create({
             data: {
-                name: 'Jane Smith',
-                email: 'jane@yahoo.com',
+                name: `FlexFilterTest Jane Smith ${testSuffix}`,
+                email: `jane-${testSuffix}@yahoo.com`,
                 phone: '555-5678',
             },
         });
@@ -127,13 +129,13 @@ describe('Flexible Filtering Integration Tests', () => {
         });
 
         // Get a predefined activity type
-        const activityType = await prisma.activityType.findFirst();
-        testActivityTypeId = activityType!.id;
+        const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+        testActivityTypeId = activityType.id;
 
         // Create activity
         const activity = await prisma.activity.create({
             data: {
-                name: 'Study Circle Meeting',
+                name: `FlexFilterTest Study Circle Meeting ${testSuffix}`,
                 activityTypeId: testActivityTypeId,
                 startDate: new Date(),
                 status: 'ACTIVE',

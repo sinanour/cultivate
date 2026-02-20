@@ -82,6 +82,8 @@ export interface MapFilters {
     activityTypeIds?: string[];
     venueIds?: string[];
     populationIds?: string[];
+    roleIds?: string[]; // NEW
+    ageCohorts?: string[]; // NEW
     startDate?: Date;
     endDate?: Date;
     status?: ActivityStatus;
@@ -159,11 +161,22 @@ export class MapDataService {
             }
         }
 
+        // Calculate reference date for age cohort filtering
+        // Reference date = minimum of (current date, filter endDate)
+        // Note: Activity endDate is handled conservatively in the query
+        const { calculateReferenceDate } = require('../utils/age-cohort.utils');
+        const referenceDate = calculateReferenceDate(
+            new Date(),
+            null, // Conservative: don't use activity endDate in query building
+            filters.endDate || null
+        );
+
         // Build optimized query
         const queryBuilder = new ActivityMarkerQueryBuilder(
             filters,
             effectiveVenueIds,
             boundingBox,
+            referenceDate,
             effectiveLimit,
             skip
         );
@@ -187,10 +200,13 @@ export class MapDataService {
                 totalCount: results.length > 0 ? Number(results[0].total_count) : 0,
                 filters: {
                     hasPopulation: !!filters.populationIds,
+                    hasRole: !!filters.roleIds,
+                    hasAgeCohort: !!filters.ageCohorts,
                     hasGeographic: !!effectiveVenueIds,
                     hasBoundingBox: !!boundingBox,
                     hasDateRange: !!(filters.startDate || filters.endDate),
                 },
+                referenceDate: referenceDate.toISOString(),
             });
         }
 
@@ -298,7 +314,7 @@ export class MapDataService {
      * Uses optimized raw SQL with CTEs to avoid bind variable limits
      */
     async getParticipantHomeMarkers(
-        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds' | 'startDate' | 'endDate'>,
+        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds' | 'roleIds' | 'ageCohorts' | 'startDate' | 'endDate'>,
         userId: string,
         boundingBox?: BoundingBox,
         page: number = 1,
@@ -328,14 +344,26 @@ export class MapDataService {
             };
         }
 
+        // Calculate reference date for age cohort filtering
+        // Reference date = minimum of (current date, filter endDate)
+        const { calculateReferenceDate } = require('../utils/age-cohort.utils');
+        const referenceDate = calculateReferenceDate(
+            new Date(),
+            null, // No activity endDate for participant homes
+            filters.endDate || null
+        );
+
         // Build query using CTE-based query builder
         // Uses array parameters with unnest() to avoid bind variable limits
         const queryBuilder = new ParticipantHomeMarkerQueryBuilder({
             venueIds: effectiveVenueIds,
             populationIds: filters.populationIds,
+            roleIds: filters.roleIds, // NEW
+            ageCohorts: filters.ageCohorts, // NEW
             startDate: filters.startDate,
             endDate: filters.endDate,
             boundingBox,
+            referenceDate, // NEW
             limit: effectiveLimit,
             skip,
         });
@@ -363,9 +391,12 @@ export class MapDataService {
                     geographicAreas: filters.geographicAreaIds?.length || 0,
                     venueIds: effectiveVenueIds?.length || 'all',
                     hasPopulation: !!filters.populationIds,
+                    hasRole: !!filters.roleIds,
+                    hasAgeCohort: !!filters.ageCohorts,
                     hasBoundingBox: !!boundingBox,
                     hasDateRange: !!(filters.startDate || filters.endDate),
                 },
+                referenceDate: referenceDate.toISOString(),
             });
         }
 
@@ -461,12 +492,15 @@ export class MapDataService {
      * Get lightweight venue marker data for map rendering with pagination
      */
     async getVenueMarkers(
-        filters: Pick<MapFilters, 'geographicAreaIds'>,
+        filters: Pick<MapFilters, 'geographicAreaIds' | 'roleIds' | 'ageCohorts'>,
         userId: string,
         boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
     ): Promise<PaginatedResponse<VenueMarker>> {
+        // Silently ignore roleIds and ageCohorts filters - they don't apply to venues
+        const { roleIds, ageCohorts, ...relevantFilters } = filters;
+
         // Enforce maximum limit
         const effectiveLimit = Math.min(limit, 100);
         const skip = (page - 1) * effectiveLimit;
@@ -476,7 +510,7 @@ export class MapDataService {
 
         // Get effective geographic area IDs based on authorization
         const effectiveAreaIds = await this.geographicFilteringService.getEffectiveGeographicAreaIdsForAnalytics(
-            filters.geographicAreaIds,
+            relevantFilters.geographicAreaIds,
             authInfo.authorizedAreaIds,
             authInfo.hasGeographicRestrictions
         );

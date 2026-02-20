@@ -81,7 +81,7 @@ describe('AnalyticsService - Growth Metrics by Age Cohort', () => {
         await prisma.participant.deleteMany({
             where: {
                 name: {
-                    startsWith: 'Age Cohort Test Participant',
+                    contains: 'Age Cohort Test Participant',
                 },
             },
         });
@@ -461,6 +461,14 @@ describe('AnalyticsService - Growth Metrics by Age Cohort', () => {
                 },
             });
 
+            await prisma.activityVenueHistory.create({
+                data: {
+                    activityId: activity.id,
+                    venueId,
+                    effectiveFrom: null,
+                },
+            });
+
             await prisma.assignment.create({
                 data: {
                     activityId: activity.id,
@@ -475,6 +483,7 @@ describe('AnalyticsService - Growth Metrics by Age Cohort', () => {
                     startDate: new Date('2025-01-01'),
                     endDate: new Date('2025-12-31'),
                     groupBy: GroupingDimension.AGE_COHORT,
+                    geographicAreaIds: [geographicAreaId], // Isolate to this test's data
                 }
             );
 
@@ -484,6 +493,7 @@ describe('AnalyticsService - Growth Metrics by Age Cohort', () => {
 
             // Clean up
             await prisma.assignment.deleteMany({ where: { activityId: activity.id } });
+            await prisma.activityVenueHistory.deleteMany({ where: { activityId: activity.id } });
             await prisma.activity.delete({ where: { id: activity.id } });
             await prisma.participant.delete({ where: { id: unknownParticipant.id } });
         });
@@ -499,12 +509,21 @@ describe('AnalyticsService - Growth Metrics by Age Cohort', () => {
                 },
             });
 
+            await prisma.activityVenueHistory.create({
+                data: {
+                    activityId: activity.id,
+                    venueId,
+                    effectiveFrom: null,
+                },
+            });
+
             const result = await analyticsService.getGrowthMetrics(
                 TimePeriod.YEAR,
                 {
                     startDate: new Date('2025-01-01'),
                     endDate: new Date('2025-12-31'),
                     groupBy: GroupingDimension.AGE_COHORT,
+                    geographicAreaIds: [geographicAreaId], // Isolate to this test's data
                 }
             );
 
@@ -517,6 +536,7 @@ describe('AnalyticsService - Growth Metrics by Age Cohort', () => {
             });
 
             // Clean up
+            await prisma.activityVenueHistory.deleteMany({ where: { activityId: activity.id } });
             await prisma.activity.delete({ where: { id: activity.id } });
         });
     });

@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, AuthorizationRuleType } from '@prisma/client';
+import { PrismaClient, AuthorizationRuleType } from '@prisma/client';
 import { AnalyticsService, TimePeriod } from '../../services/analytics.service';
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
@@ -11,6 +11,7 @@ describe('Analytics with DENY Authorization Rules', () => {
     let analyticsService: AnalyticsService;
     let geographicAuthorizationService: GeographicAuthorizationService;
     let geographicAreaRepository: GeographicAreaRepository;
+    const testSuffix = Date.now();
 
     let cityId: string;
     let allowedNeighbourhoodId: string;
@@ -47,13 +48,13 @@ describe('Analytics with DENY Authorization Rules', () => {
 
         // Create geographic hierarchy: City -> Allowed Neighbourhood, Denied Neighbourhood
         const city = await prisma.geographicArea.create({
-            data: { name: 'Richmond City', areaType: 'CITY' },
+            data: { name: `AnalyticsDenyTest Richmond City ${testSuffix}`, areaType: 'CITY' },
         });
         cityId = city.id;
 
         const allowedNeighbourhood = await prisma.geographicArea.create({
             data: {
-                name: 'Steveston',
+                name: `AnalyticsDenyTest Steveston ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
@@ -62,7 +63,7 @@ describe('Analytics with DENY Authorization Rules', () => {
 
         const deniedNeighbourhood = await prisma.geographicArea.create({
             data: {
-                name: 'Thompson',
+                name: `AnalyticsDenyTest Thompson ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
@@ -72,7 +73,7 @@ describe('Analytics with DENY Authorization Rules', () => {
         // Create venues
         const allowedVenue = await prisma.venue.create({
             data: {
-                name: 'Steveston Community Centre',
+                name: `AnalyticsDenyTest Steveston Centre ${testSuffix}`,
                 address: '123 Allowed St',
                 geographicAreaId: allowedNeighbourhoodId,
             },
@@ -81,7 +82,7 @@ describe('Analytics with DENY Authorization Rules', () => {
 
         const deniedVenue = await prisma.venue.create({
             data: {
-                name: 'Thompson Community Centre',
+                name: `AnalyticsDenyTest Thompson Centre ${testSuffix}`,
                 address: '456 Denied St',
                 geographicAreaId: deniedNeighbourhoodId,
             },
@@ -90,13 +91,13 @@ describe('Analytics with DENY Authorization Rules', () => {
 
         // Create activity category and type
         const category = await prisma.activityCategory.create({
-            data: { name: `Test Category ${Date.now()}` },
+            data: { name: `AnalyticsDenyTest Category ${testSuffix}` },
         });
         categoryId = category.id;
 
         const activityType = await prisma.activityType.create({
             data: {
-                name: `Test Type ${Date.now()}`,
+                name: `AnalyticsDenyTest Type ${testSuffix}`,
                 activityCategoryId: categoryId,
             },
         });
@@ -105,7 +106,7 @@ describe('Analytics with DENY Authorization Rules', () => {
         // Create activities
         const allowedActivity = await prisma.activity.create({
             data: {
-                name: 'Activity in Allowed Area',
+                name: `AnalyticsDenyTest Activity in Allowed Area ${testSuffix}`,
                 activityTypeId: activityTypeId,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -123,7 +124,7 @@ describe('Analytics with DENY Authorization Rules', () => {
 
         const deniedActivity = await prisma.activity.create({
             data: {
-                name: 'Activity in Denied Area',
+                name: `AnalyticsDenyTest Activity in Denied Area ${testSuffix}`,
                 activityTypeId: activityTypeId,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -141,7 +142,7 @@ describe('Analytics with DENY Authorization Rules', () => {
 
         // Create participants
         const allowedParticipant = await prisma.participant.create({
-            data: { name: 'Allowed Participant' },
+            data: { name: `AnalyticsDenyTest Allowed Participant ${testSuffix}` },
         });
         allowedParticipantId = allowedParticipant.id;
 
@@ -154,7 +155,7 @@ describe('Analytics with DENY Authorization Rules', () => {
         });
 
         const deniedParticipant = await prisma.participant.create({
-            data: { name: 'Denied Participant' },
+            data: { name: `AnalyticsDenyTest Denied Participant ${testSuffix}` },
         });
         deniedParticipantId = deniedParticipant.id;
 
@@ -168,7 +169,7 @@ describe('Analytics with DENY Authorization Rules', () => {
 
         // Create role and assignments
         const role = await prisma.role.create({
-            data: { name: `Test Role ${Date.now()}` },
+            data: { name: `AnalyticsDenyTest Role ${testSuffix}` },
         });
         roleId = role.id;
 
@@ -189,13 +190,7 @@ describe('Analytics with DENY Authorization Rules', () => {
         });
 
         // Create user with ALLOW city, DENY Thompson neighbourhood
-        const user = await prisma.user.create({
-            data: {
-                email: `test-analytics-deny-${Date.now()}@example.com`,
-                passwordHash: 'hashed',
-                role: UserRole.EDITOR,
-            },
-        });
+        const user = await TestHelpers.createTestUser(prisma, 'EDITOR', testSuffix);
         userId = user.id;
 
         // ALLOW entire city

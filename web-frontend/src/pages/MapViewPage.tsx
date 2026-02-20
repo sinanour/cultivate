@@ -10,6 +10,7 @@ import type { PropertyFilterProps } from '@cloudscape-design/components/property
 import { MapView } from '../components/features/MapView.optimized';
 import { ProgressIndicator } from '../components/common/ProgressIndicator';
 import { PopulationService } from '../services/api/population.service';
+import { ParticipantRoleService } from '../services/api/participant-role.service';
 import { activityCategoryService } from '../services/api/activity-category.service';
 import { ActivityTypeService } from '../services/api/activity-type.service';
 import type { ActivityCategory, ActivityType } from '../types';
@@ -218,6 +219,51 @@ export default function MapViewPage() {
         }));
       },
     },
+    // NEW: Role filter property
+    {
+      key: 'role',
+      propertyLabel: 'Role',
+      groupValuesLabel: 'Role values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        const roles = await ParticipantRoleService.searchRoles(filterText);
+
+        roles.forEach(role => addToCache(role.id, role.name));
+        return roles.map(role => ({
+          propertyKey: 'role',
+          value: role.name,
+          label: role.name,
+          description: role.isPredefined ? 'Predefined role' : 'Custom role',
+        }));
+      },
+    },
+    // NEW: Age Cohort filter property
+    {
+      key: 'ageCohort',
+      propertyLabel: 'Age Cohort',
+      groupValuesLabel: 'Age Cohort values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        const cohorts = [
+          { value: 'Child', label: 'Child' },
+          { value: 'Junior Youth', label: 'Junior Youth' },
+          { value: 'Youth', label: 'Youth' },
+          { value: 'Young Adult', label: 'Young Adult' },
+          { value: 'Adult', label: 'Adult' },
+          { value: 'Unknown', label: 'Unknown' },
+        ];
+
+        const filtered = cohorts.filter(cohort =>
+          !filterText || cohort.label.toLowerCase().includes(filterText.toLowerCase())
+        );
+
+        return filtered.map(cohort => ({
+          propertyKey: 'ageCohort',
+          value: cohort.value,
+          label: cohort.label,
+        }));
+      },
+    },
   ], [addToCache]); // Depend on addToCache which is stable
 
   const groupingDimensionsConfig: FilterGroupingDimension[] = [
@@ -285,13 +331,30 @@ export default function MapViewPage() {
     })
     .filter(Boolean) as string[];
 
+  // NEW: Extract role IDs from filter tokens
+  const selectedRoleIds = propertyFilterQuery.tokens
+    .filter(t => t.propertyKey === 'role' && t.operator === '=')
+    .flatMap(t => extractValuesFromToken(t))
+    .map(label => getUuidFromLabel(label))
+    .filter(Boolean) as string[];
+
+  // NEW: Extract age cohort values from filter tokens
+  const selectedAgeCohorts = propertyFilterQuery.tokens
+    .filter(t => t.propertyKey === 'ageCohort' && t.operator === '=')
+    .flatMap(t => extractValuesFromToken(t))
+    .filter(Boolean) as string[];
+
   // Determine which filters to pass based on map mode
   const getFiltersForMode = () => {
+    const applyParticipantFilters = mapMode !== 'venues';
+
     const baseFilters = {
-      populationIds: selectedPopulationIds,
+      populationIds: applyParticipantFilters ? selectedPopulationIds : [],
       activityCategoryIds: [] as string[],
       activityTypeIds: [] as string[],
       status: undefined as string | undefined,
+      roleIds: applyParticipantFilters ? selectedRoleIds : [], // NEW
+      ageCohorts: applyParticipantFilters ? selectedAgeCohorts : [], // NEW
     };
 
     // Activity category, activity type, and status filters only apply to activity modes
@@ -299,11 +362,6 @@ export default function MapViewPage() {
       baseFilters.activityCategoryIds = selectedActivityCategoryIds;
       baseFilters.activityTypeIds = selectedActivityTypeIds;
       baseFilters.status = selectedStatuses.length > 0 ? selectedStatuses.join(',') : undefined;
-    }
-
-    // Population filter applies to activity modes and participant homes mode
-    if (mapMode === 'venues') {
-      baseFilters.populationIds = [];
     }
 
     return baseFilters;
@@ -429,6 +487,8 @@ export default function MapViewPage() {
                 activityCategoryIds={modeFilters.activityCategoryIds}
                 activityTypeIds={modeFilters.activityTypeIds}
                 status={modeFilters.status}
+                roleIds={modeFilters.roleIds}
+                ageCohorts={modeFilters.ageCohorts}
                 startDate={absoluteDates.startDate}
                 endDate={absoluteDates.endDate}
                 onLoadingStateChange={setMapLoadingState}

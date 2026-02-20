@@ -23,6 +23,7 @@ describe('Geographic Area Ancestral Lineage Filtering', () => {
     let authService: GeographicAuthorizationService;
     let authRepo: UserGeographicAuthorizationRepository;
     let userRepo: UserRepository;
+    const testSuffix = Date.now();
 
     let testUserId: string;
     let adminUserId: string;
@@ -48,7 +49,7 @@ describe('Geographic Area Ancestral Lineage Filtering', () => {
         // Create admin user
         const adminUser = await prisma.user.create({
             data: {
-                email: 'admin-ancestral@test.com',
+                email: `admin-ancestral-${testSuffix}@test.com`,
                 passwordHash: 'hashed',
                 role: 'ADMINISTRATOR',
             },
@@ -58,7 +59,7 @@ describe('Geographic Area Ancestral Lineage Filtering', () => {
         // Create test user with restricted access
         const testUser = await prisma.user.create({
             data: {
-                email: 'user-ancestral@test.com',
+                email: `user-ancestral-${testSuffix}@test.com`,
                 passwordHash: 'hashed',
                 role: 'EDITOR',
             },
@@ -67,42 +68,42 @@ describe('Geographic Area Ancestral Lineage Filtering', () => {
 
         // Create geographic hierarchy: Country → State → Counties (A, B, C) → Cities (A, B, C)
         const country = await prisma.geographicArea.create({
-            data: { name: 'Test Country Ancestral', areaType: 'COUNTRY', parentGeographicAreaId: null },
+            data: { name: `Test Country Ancestral ${testSuffix}`, areaType: 'COUNTRY', parentGeographicAreaId: null },
         });
         countryId = country.id;
 
         const state = await prisma.geographicArea.create({
-            data: { name: 'Test State Ancestral', areaType: 'STATE', parentGeographicAreaId: countryId },
+            data: { name: `Test State Ancestral ${testSuffix}`, areaType: 'STATE', parentGeographicAreaId: countryId },
         });
         stateId = state.id;
 
         const countyA = await prisma.geographicArea.create({
-            data: { name: 'County A Ancestral', areaType: 'COUNTY', parentGeographicAreaId: stateId },
+            data: { name: `County A Ancestral ${testSuffix}`, areaType: 'COUNTY', parentGeographicAreaId: stateId },
         });
         countyAId = countyA.id;
 
         const countyB = await prisma.geographicArea.create({
-            data: { name: 'County B Ancestral', areaType: 'COUNTY', parentGeographicAreaId: stateId },
+            data: { name: `County B Ancestral ${testSuffix}`, areaType: 'COUNTY', parentGeographicAreaId: stateId },
         });
         countyBId = countyB.id;
 
         const countyC = await prisma.geographicArea.create({
-            data: { name: 'County C Ancestral', areaType: 'COUNTY', parentGeographicAreaId: stateId },
+            data: { name: `County C Ancestral ${testSuffix}`, areaType: 'COUNTY', parentGeographicAreaId: stateId },
         });
         countyCId = countyC.id;
 
         const cityA = await prisma.geographicArea.create({
-            data: { name: 'City A Ancestral', areaType: 'CITY', parentGeographicAreaId: countyAId },
+            data: { name: `City A Ancestral ${testSuffix}`, areaType: 'CITY', parentGeographicAreaId: countyAId },
         });
         cityAId = cityA.id;
 
         const cityB = await prisma.geographicArea.create({
-            data: { name: 'City B Ancestral', areaType: 'CITY', parentGeographicAreaId: countyBId },
+            data: { name: `City B Ancestral ${testSuffix}`, areaType: 'CITY', parentGeographicAreaId: countyBId },
         });
         cityBId = cityB.id;
 
         const cityC = await prisma.geographicArea.create({
-            data: { name: 'City C Ancestral', areaType: 'CITY', parentGeographicAreaId: countyCId },
+            data: { name: `City C Ancestral ${testSuffix}`, areaType: 'CITY', parentGeographicAreaId: countyCId },
         });
         cityCId = cityC.id;
 
@@ -213,7 +214,7 @@ describe('Geographic Area Ancestral Lineage Filtering', () => {
     describe('Edge Cases', () => {
         it('should handle unrestricted user (Req 25.42)', async () => {
             const unrestrictedUser = await prisma.user.create({
-                data: { email: 'unrestricted-ancestral@test.com', passwordHash: 'hashed', role: 'EDITOR' },
+                data: { email: `unrestricted-ancestral-${testSuffix}@test.com`, passwordHash: 'hashed', role: 'EDITOR' },
             });
 
             const children = await service.getChildren(stateId, unrestrictedUser.id, 'EDITOR');

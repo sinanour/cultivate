@@ -23,6 +23,7 @@ import { getPrismaClient } from '../../utils/prisma.client';
 describe('Geographic Area Filter Scope Integration Tests', () => {
     let prisma: PrismaClient;
     let geographicAreaService: GeographicAreaService;
+    const testSuffix = Date.now();
     let testAreaIds: {
         world: string;
         northAmerica: string;
@@ -60,7 +61,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const world = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest World',
+                name: `GeoFilterTest World ${testSuffix}`,
                 areaType: 'WORLD',
                 parentGeographicAreaId: null,
             },
@@ -68,7 +69,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const northAmerica = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest North America',
+                name: `GeoFilterTest North America ${testSuffix}`,
                 areaType: 'CONTINENT',
                 parentGeographicAreaId: world.id,
             },
@@ -76,7 +77,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const canada = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest Canada',
+                name: `GeoFilterTest Canada ${testSuffix}`,
                 areaType: 'COUNTRY',
                 parentGeographicAreaId: northAmerica.id,
             },
@@ -84,7 +85,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const bc = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest British Columbia',
+                name: `GeoFilterTest British Columbia ${testSuffix}`,
                 areaType: 'PROVINCE',
                 parentGeographicAreaId: canada.id,
             },
@@ -92,7 +93,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const vancouver = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest Vancouver',
+                name: `GeoFilterTest Vancouver ${testSuffix}`,
                 areaType: 'CITY',
                 parentGeographicAreaId: bc.id,
             },
@@ -100,7 +101,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const downtown = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest Downtown',
+                name: `GeoFilterTest Downtown ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: vancouver.id,
             },
@@ -108,7 +109,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const kitsilano = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest Kitsilano',
+                name: `GeoFilterTest Kitsilano ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: vancouver.id,
             },
@@ -116,7 +117,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const victoria = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest Victoria',
+                name: `GeoFilterTest Victoria ${testSuffix}`,
                 areaType: 'CITY',
                 parentGeographicAreaId: bc.id,
             },
@@ -124,7 +125,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
 
         const jamesBay = await prisma.geographicArea.create({
             data: {
-                name: 'GeoFilterTest James Bay',
+                name: `GeoFilterTest James Bay ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: victoria.id,
             },
@@ -148,7 +149,7 @@ describe('Geographic Area Filter Scope Integration Tests', () => {
         await prisma.geographicArea.deleteMany({
             where: {
                 name: {
-                    startsWith: 'GeoFilterTest ',
+                    contains: 'GeoFilterTest',
                 },
             },
         });

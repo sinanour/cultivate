@@ -98,6 +98,8 @@ interface MapViewProps {
   activityCategoryIds?: string[];
   activityTypeIds?: string[];
   venueIds?: string[];
+  roleIds?: string[]; // NEW
+  ageCohorts?: string[]; // NEW
   startDate?: string;
   endDate?: string;
   status?: string;
@@ -373,6 +375,8 @@ export function MapView({
   activityCategoryIds = [],
   activityTypeIds = [],
   venueIds = [],
+  roleIds = [], // NEW
+  ageCohorts = [], // NEW
   startDate,
   endDate,
   status,
@@ -428,6 +432,8 @@ export function MapView({
     activityTypeIds: activityTypeIds.length > 0 ? activityTypeIds : undefined,
     venueIds: venueIds.length > 0 ? venueIds : undefined,
     populationIds: populationIds.length > 0 ? populationIds : undefined,
+    roleIds: roleIds && roleIds.length > 0 ? roleIds : undefined, // NEW
+    ageCohorts: ageCohorts && ageCohorts.length > 0 ? ageCohorts : undefined, // NEW
     startDate,
     endDate,
     status,
@@ -448,7 +454,8 @@ export function MapView({
     setHasCompletedFetch(false); // Reset fetch completion tracking
     setEmptyStateDismissed(false); // Reset dismissal state
   }, [mode, selectedGeographicAreaId, JSON.stringify(activityCategoryIds), JSON.stringify(activityTypeIds), 
-      JSON.stringify(venueIds), JSON.stringify(populationIds), startDate, endDate, status]);
+    JSON.stringify(venueIds), JSON.stringify(populationIds), JSON.stringify(roleIds), JSON.stringify(ageCohorts),
+    startDate, endDate, status]);
 
   // Handler for viewport bounds changes
   const handleBoundsChange = useCallback((bounds: BoundingBox | undefined) => {
@@ -549,6 +556,8 @@ export function MapView({
         const response = await MapDataService.getParticipantHomeMarkers({
           geographicAreaIds: filters.geographicAreaIds,
           populationIds: filters.populationIds,
+          roleIds: filters.roleIds, // NEW
+          ageCohorts: filters.ageCohorts, // NEW
           startDate: filters.startDate,
           endDate: filters.endDate,
         }, viewportBoundsRef.current, pageToFetch, BATCH_SIZE);
@@ -572,6 +581,8 @@ export function MapView({
       } else if (mode === 'venues') {
         const response = await MapDataService.getVenueMarkers({
           geographicAreaIds: filters.geographicAreaIds,
+          roleIds: filters.roleIds, // NEW: Will be ignored by backend
+          ageCohorts: filters.ageCohorts, // NEW: Will be ignored by backend
         }, viewportBoundsRef.current, pageToFetch, BATCH_SIZE);
         
         // Check if viewport changed while we were fetching (stale fetch)

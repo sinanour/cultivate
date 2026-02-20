@@ -1,4 +1,4 @@
-import { PrismaClient, AuthorizationRuleType, UserRole } from '@prisma/client';
+import { PrismaClient, AuthorizationRuleType } from '@prisma/client';
 import { ParticipantService } from '../../services/participant.service';
 import { ActivityService } from '../../services/activity.service';
 import { VenueService } from '../../services/venue.service';
@@ -16,6 +16,7 @@ import { ActivityTypeRepository } from '../../repositories/activity-type.reposit
 import { AssignmentRepository } from '../../repositories/assignment.repository';
 import { AuditLogRepository } from '../../repositories/audit-log.repository';
 import { getPrismaClient } from '../../utils/prisma.client';
+import { TestHelpers } from '../utils';
 
 /**
  * Tests for individual resource access authorization (GET by ID, PUT, DELETE)
@@ -28,6 +29,7 @@ describe('Individual Resource Access Authorization', () => {
     let venueService: VenueService;
     let geographicAreaService: GeographicAreaService;
     let geoAuthService: GeographicAuthorizationService;
+    const testSuffix = Date.now();
 
     let restrictedUserId: string;
     let adminUserId: string;
@@ -65,25 +67,21 @@ describe('Individual Resource Access Authorization', () => {
         venueService = new VenueService(venueRepo, geoAreaRepo, geoAuthService, prisma);
         geographicAreaService = new GeographicAreaService(geoAreaRepo, prisma, geoAuthService);
 
-        // Create test users
-        const restrictedUser = await prisma.user.create({
-            data: { email: `restricted-${Date.now()}@example.com`, passwordHash: 'hash', role: UserRole.EDITOR },
-        });
+        // Create test users with unique emails
+        const restrictedUser = await TestHelpers.createTestUser(prisma, 'EDITOR', `${testSuffix}-restricted`);
         restrictedUserId = restrictedUser.id;
 
-        const adminUser = await prisma.user.create({
-            data: { email: `admin-${Date.now()}@example.com`, passwordHash: 'hash', role: UserRole.ADMINISTRATOR },
-        });
+        const adminUser = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR', `${testSuffix}-admin`);
         adminUserId = adminUser.id;
 
-        // Create geographic areas
+        // Create geographic areas with unique names
         const allowedArea = await prisma.geographicArea.create({
-            data: { name: 'Allowed Area', areaType: 'CITY' },
+            data: { name: `IndividualAuthTest Allowed Area ${testSuffix}`, areaType: 'CITY' },
         });
         allowedAreaId = allowedArea.id;
 
         const deniedArea = await prisma.geographicArea.create({
-            data: { name: 'Denied Area', areaType: 'CITY' },
+            data: { name: `IndividualAuthTest Denied Area ${testSuffix}`, areaType: 'CITY' },
         });
         deniedAreaId = deniedArea.id;
 
@@ -99,18 +97,18 @@ describe('Individual Resource Access Authorization', () => {
 
         // Create venues
         const allowedVenue = await prisma.venue.create({
-            data: { name: 'Allowed Venue', address: '123 Allowed St', geographicAreaId: allowedAreaId },
+            data: { name: `IndividualAuthTest Allowed Venue ${testSuffix}`, address: '123 Allowed St', geographicAreaId: allowedAreaId },
         });
         allowedVenueId = allowedVenue.id;
 
         const deniedVenue = await prisma.venue.create({
-            data: { name: 'Denied Venue', address: '456 Denied St', geographicAreaId: deniedAreaId },
+            data: { name: `IndividualAuthTest Denied Venue ${testSuffix}`, address: '456 Denied St', geographicAreaId: deniedAreaId },
         });
         deniedVenueId = deniedVenue.id;
 
         // Create participants
         const allowedParticipant = await prisma.participant.create({
-            data: { name: 'Allowed Participant' },
+            data: { name: `IndividualAuthTest Allowed Participant ${testSuffix}` },
         });
         allowedParticipantId = allowedParticipant.id;
 
@@ -119,7 +117,7 @@ describe('Individual Resource Access Authorization', () => {
         });
 
         const deniedParticipant = await prisma.participant.create({
-            data: { name: 'Denied Participant' },
+            data: { name: `IndividualAuthTest Denied Participant ${testSuffix}` },
         });
         deniedParticipantId = deniedParticipant.id;
 
@@ -129,18 +127,18 @@ describe('Individual Resource Access Authorization', () => {
 
         // Create activity type and category
         const category = await prisma.activityCategory.create({
-            data: { name: `Test Category ${Date.now()}`, isPredefined: false },
+            data: { name: `IndividualAuthTest Category ${testSuffix}`, isPredefined: false },
         });
         categoryId = category.id;
 
         const activityType = await prisma.activityType.create({
-            data: { name: `Test Type ${Date.now()}`, activityCategoryId: category.id, isPredefined: false },
+            data: { name: `IndividualAuthTest Type ${testSuffix}`, activityCategoryId: category.id, isPredefined: false },
         });
         activityTypeId = activityType.id;
 
         // Create activities
         const allowedActivity = await prisma.activity.create({
-            data: { name: 'Allowed Activity', activityTypeId: activityType.id, startDate: new Date(), status: 'PLANNED' },
+            data: { name: `IndividualAuthTest Allowed Activity ${testSuffix}`, activityTypeId: activityType.id, startDate: new Date(), status: 'PLANNED' },
         });
         allowedActivityId = allowedActivity.id;
 
@@ -149,7 +147,7 @@ describe('Individual Resource Access Authorization', () => {
         });
 
         const deniedActivity = await prisma.activity.create({
-            data: { name: 'Denied Activity', activityTypeId: activityType.id, startDate: new Date(), status: 'PLANNED' },
+            data: { name: `IndividualAuthTest Denied Activity ${testSuffix}`, activityTypeId: activityType.id, startDate: new Date(), status: 'PLANNED' },
         });
         deniedActivityId = deniedActivity.id;
 
@@ -214,7 +212,7 @@ describe('Individual Resource Access Authorization', () => {
 
         it('should allow access to participant without address history', async () => {
             const noAddressParticipant = await prisma.participant.create({
-                data: { name: 'No Address Participant' },
+                data: { name: `IndividualAuthTest No Address Participant ${testSuffix}` },
             });
 
             const participant = await participantService.getParticipantById(noAddressParticipant.id, restrictedUserId, 'EDITOR');
@@ -244,12 +242,12 @@ describe('Individual Resource Access Authorization', () => {
         });
 
         it('should allow access to activity without venue history', async () => {
-            const activityType = await prisma.activityType.findFirst();
+            const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
 
             const noVenueActivity = await prisma.activity.create({
                 data: {
-                    name: 'No Venue Activity',
-                    activityTypeId: activityType!.id,
+                    name: `IndividualAuthTest No Venue Activity ${testSuffix}`,
+                    activityTypeId: activityType.id,
                     startDate: new Date(),
                     status: 'PLANNED',
                 },
@@ -304,7 +302,7 @@ describe('Individual Resource Access Authorization', () => {
         it('should allow READ_ONLY access to ancestor areas', async () => {
             // Create child area under allowed area
             const childArea = await prisma.geographicArea.create({
-                data: { name: 'Child Area', areaType: 'NEIGHBOURHOOD', parentGeographicAreaId: allowedAreaId },
+                data: { name: `IndividualAuthTest Child Area ${testSuffix}`, areaType: 'NEIGHBOURHOOD', parentGeographicAreaId: allowedAreaId },
             });
 
             // ALLOW child area (note: allowedAreaId already has ALLOW rule from setup)
@@ -353,7 +351,7 @@ describe('Individual Resource Access Authorization', () => {
         it('should allow deleting participant in authorized area', async () => {
             // Create temporary participant
             const tempParticipant = await prisma.participant.create({
-                data: { name: 'Temp Participant' },
+                data: { name: `IndividualAuthTest Temp Participant ${testSuffix}` },
             });
             await prisma.participantAddressHistory.create({
                 data: { participantId: tempParticipant.id, venueId: allowedVenueId, effectiveFrom: null },

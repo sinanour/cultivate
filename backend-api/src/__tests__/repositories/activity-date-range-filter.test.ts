@@ -6,6 +6,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
   let repository: ActivityRepository;
   let activityTypeId: string;
   let activityCategoryId: string;
+  const testSuffix = Date.now(); // Add unique suffix
 
   beforeAll(async () => {
     prisma = new PrismaClient();
@@ -13,13 +14,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
     // Create test activity category and type with unique names
     const category = await prisma.activityCategory.create({
-      data: { name: `Unit Test Category ${Date.now()}` }
+      data: { name: `Unit Test Category ${testSuffix}` }
     });
     activityCategoryId = category.id;
 
     const type = await prisma.activityType.create({
       data: {
-        name: `Unit Test Type ${Date.now()}`,
+        name: `Unit Test Type ${testSuffix}`,
         activityCategoryId: activityCategoryId
       }
     });
@@ -56,7 +57,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Spanning Range',
+          name: `Activity Spanning Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2024-12-01T00:00:00.000Z'),
           endDate: new Date('2025-02-28T23:59:59.999Z'),
@@ -65,13 +66,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Activity Spanning Range');
+      expect(data[0].name).toBe(`Activity Spanning Range ${testSuffix}`);
     });
 
     it('should include activity starting before range, ending during range', async () => {
@@ -82,7 +83,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Ending During Range',
+          name: `Activity Ending During Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2024-12-15T00:00:00.000Z'),
           endDate: new Date('2025-01-15T23:59:59.999Z'),
@@ -91,13 +92,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Activity Ending During Range');
+      expect(data[0].name).toBe(`Activity Ending During Range ${testSuffix}`);
     });
 
     it('should include activity starting during range, ending after range', async () => {
@@ -108,7 +109,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Starting During Range',
+          name: `Activity Starting During Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2025-01-15T00:00:00.000Z'),
           endDate: new Date('2025-02-15T23:59:59.999Z'),
@@ -117,13 +118,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Activity Starting During Range');
+      expect(data[0].name).toBe(`Activity Starting During Range ${testSuffix}`);
     });
 
     it('should include activity entirely contained within range', async () => {
@@ -134,7 +135,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Contained in Range',
+          name: `Activity Contained in Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2025-01-10T00:00:00.000Z'),
           endDate: new Date('2025-01-20T23:59:59.999Z'),
@@ -143,13 +144,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Activity Contained in Range');
+      expect(data[0].name).toBe(`Activity Contained in Range ${testSuffix}`);
     });
 
     it('should exclude activity entirely before range', async () => {
@@ -160,7 +161,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Before Range',
+          name: `Activity Before Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2024-11-01T00:00:00.000Z'),
           endDate: new Date('2024-11-30T23:59:59.999Z'),
@@ -169,7 +170,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
@@ -185,7 +186,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity After Range',
+          name: `Activity After Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2025-03-01T00:00:00.000Z'),
           endDate: new Date('2025-03-31T23:59:59.999Z'),
@@ -194,7 +195,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
@@ -212,7 +213,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Ongoing Activity Before Range',
+          name: `Ongoing Activity Before Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2024-12-01T00:00:00.000Z'),
           endDate: null,
@@ -221,13 +222,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Ongoing Activity Before Range');
+      expect(data[0].name).toBe(`Ongoing Activity Before Range ${testSuffix}`);
     });
 
     it('should include ongoing activity starting during range', async () => {
@@ -238,7 +239,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Ongoing Activity During Range',
+          name: `Ongoing Activity During Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2025-01-15T00:00:00.000Z'),
           endDate: null,
@@ -247,13 +248,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Ongoing Activity During Range');
+      expect(data[0].name).toBe(`Ongoing Activity During Range ${testSuffix}`);
     });
 
     it('should exclude ongoing activity starting after range', async () => {
@@ -264,7 +265,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Ongoing Activity After Range',
+          name: `Ongoing Activity After Range ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2025-02-01T00:00:00.000Z'),
           endDate: null,
@@ -273,7 +274,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
@@ -291,7 +292,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Starting on Filter Start',
+          name: `Activity Starting on Filter Start ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2025-01-01T00:00:00.000Z'),
           endDate: new Date('2025-01-15T23:59:59.999Z'),
@@ -300,13 +301,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Activity Starting on Filter Start');
+      expect(data[0].name).toBe(`Activity Starting on Filter Start ${testSuffix}`);
     });
 
     it('should include activity ending exactly on filter endDate', async () => {
@@ -317,7 +318,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Ending on Filter End',
+          name: `Activity Ending on Filter End ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2025-01-15T00:00:00.000Z'),
           endDate: new Date('2025-01-31T23:59:59.999Z'),
@@ -326,13 +327,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Activity Ending on Filter End');
+      expect(data[0].name).toBe(`Activity Ending on Filter End ${testSuffix}`);
     });
 
     it('should include activity starting exactly on filter endDate', async () => {
@@ -343,7 +344,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Starting on Filter End',
+          name: `Activity Starting on Filter End ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2025-01-31T00:00:00.000Z'),
           endDate: new Date('2025-02-15T23:59:59.999Z'),
@@ -352,13 +353,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Activity Starting on Filter End');
+      expect(data[0].name).toBe(`Activity Starting on Filter End ${testSuffix}`);
     });
 
     it('should include activity ending exactly on filter startDate', async () => {
@@ -369,7 +370,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
 
       await prisma.activity.create({
         data: {
-          name: 'Activity Ending on Filter Start',
+          name: `Activity Ending on Filter Start ${testSuffix}`,
           activityTypeId,
           startDate: new Date('2024-12-15T00:00:00.000Z'),
           endDate: new Date('2025-01-01T00:00:00.000Z'),
@@ -378,13 +379,13 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Activity Ending on Filter Start');
+      expect(data[0].name).toBe(`Activity Ending on Filter Start ${testSuffix}`);
     });
 
     it('should include activities active on single day filter', async () => {
@@ -396,14 +397,14 @@ describe('ActivityRepository - Date Range Filtering', () => {
       await prisma.activity.createMany({
         data: [
           {
-            name: 'Activity Spanning Single Day',
+            name: `Activity Spanning Single Day ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-10T00:00:00.000Z'),
             endDate: new Date('2025-01-20T23:59:59.999Z'),
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Activity Exactly on Single Day',
+            name: `Activity Exactly on Single Day ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-15T00:00:00.000Z'),
             endDate: new Date('2025-01-15T23:59:59.999Z'),
@@ -413,7 +414,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterDate, endDate: filterDate },
+        { startDate: filterDate, endDate: filterDate, activityTypeIds: [activityTypeId] },
         1,
         100
       );
@@ -421,8 +422,8 @@ describe('ActivityRepository - Date Range Filtering', () => {
       expect(data).toHaveLength(2);
       const names = data.map(a => a.name).sort();
       expect(names).toEqual([
-        'Activity Exactly on Single Day',
-        'Activity Spanning Single Day'
+        `Activity Exactly on Single Day ${testSuffix}`,
+        `Activity Spanning Single Day ${testSuffix}`
       ]);
     });
   });
@@ -436,21 +437,21 @@ describe('ActivityRepository - Date Range Filtering', () => {
       await prisma.activity.createMany({
         data: [
           {
-            name: 'Activity Ending After Start',
+            name: `Activity Ending After Start ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-01T00:00:00.000Z'),
             endDate: new Date('2025-01-20T23:59:59.999Z'),
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Activity Ending Before Start',
+            name: `Activity Ending Before Start ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2024-12-01T00:00:00.000Z'),
             endDate: new Date('2025-01-10T23:59:59.999Z'),
             status: ActivityStatus.COMPLETED
           },
           {
-            name: 'Ongoing Activity',
+            name: `Ongoing Activity ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-01T00:00:00.000Z'),
             endDate: null,
@@ -460,7 +461,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart },
+        { startDate: filterStart, activityTypeIds: [activityTypeId] },
         1,
         100
       );
@@ -468,8 +469,8 @@ describe('ActivityRepository - Date Range Filtering', () => {
       expect(data).toHaveLength(2);
       const names = data.map(a => a.name).sort();
       expect(names).toEqual([
-        'Activity Ending After Start',
-        'Ongoing Activity'
+        `Activity Ending After Start ${testSuffix}`,
+        `Ongoing Activity ${testSuffix}`
       ]);
     });
 
@@ -481,21 +482,21 @@ describe('ActivityRepository - Date Range Filtering', () => {
       await prisma.activity.createMany({
         data: [
           {
-            name: 'Activity Starting Before End',
+            name: `Activity Starting Before End ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-10T00:00:00.000Z'),
             endDate: new Date('2025-01-20T23:59:59.999Z'),
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Activity Starting After End',
+            name: `Activity Starting After End ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-20T00:00:00.000Z'),
             endDate: new Date('2025-01-30T23:59:59.999Z'),
             status: ActivityStatus.PLANNED
           },
           {
-            name: 'Ongoing Activity Starting Before',
+            name: `Ongoing Activity Starting Before ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-01T00:00:00.000Z'),
             endDate: null,
@@ -505,7 +506,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { endDate: filterEnd },
+        { endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
@@ -513,8 +514,8 @@ describe('ActivityRepository - Date Range Filtering', () => {
       expect(data).toHaveLength(2);
       const names = data.map(a => a.name).sort();
       expect(names).toEqual([
-        'Activity Starting Before End',
-        'Ongoing Activity Starting Before'
+        `Activity Starting Before End ${testSuffix}`,
+        `Ongoing Activity Starting Before ${testSuffix}`
       ]);
     });
   });
@@ -528,49 +529,49 @@ describe('ActivityRepository - Date Range Filtering', () => {
       await prisma.activity.createMany({
         data: [
           {
-            name: 'Activity 1: Spanning',
+            name: `Activity 1: Spanning ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2024-12-01T00:00:00.000Z'),
             endDate: new Date('2025-02-28T23:59:59.999Z'),
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Activity 2: Before-During',
+            name: `Activity 2: Before-During ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2024-12-15T00:00:00.000Z'),
             endDate: new Date('2025-01-15T23:59:59.999Z'),
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Activity 3: During-After',
+            name: `Activity 3: During-After ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-15T00:00:00.000Z'),
             endDate: new Date('2025-02-15T23:59:59.999Z'),
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Activity 4: Contained',
+            name: `Activity 4: Contained ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-10T00:00:00.000Z'),
             endDate: new Date('2025-01-20T23:59:59.999Z'),
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Activity 5: Ongoing',
+            name: `Activity 5: Ongoing ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2024-12-01T00:00:00.000Z'),
             endDate: null,
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Activity 6: Before (excluded)',
+            name: `Activity 6: Before (excluded) ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2024-11-01T00:00:00.000Z'),
             endDate: new Date('2024-11-30T23:59:59.999Z'),
             status: ActivityStatus.COMPLETED
           },
           {
-            name: 'Activity 7: After (excluded)',
+            name: `Activity 7: After (excluded) ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-03-01T00:00:00.000Z'),
             endDate: new Date('2025-03-31T23:59:59.999Z'),
@@ -580,7 +581,7 @@ describe('ActivityRepository - Date Range Filtering', () => {
       });
 
       const { data } = await repository.findWithFilters(
-        { startDate: filterStart, endDate: filterEnd },
+        { startDate: filterStart, endDate: filterEnd, activityTypeIds: [activityTypeId] },
         1,
         100
       );
@@ -588,11 +589,11 @@ describe('ActivityRepository - Date Range Filtering', () => {
       expect(data).toHaveLength(5);
       const names = data.map(a => a.name).sort();
       expect(names).toEqual([
-        'Activity 1: Spanning',
-        'Activity 2: Before-During',
-        'Activity 3: During-After',
-        'Activity 4: Contained',
-        'Activity 5: Ongoing'
+        `Activity 1: Spanning ${testSuffix}`,
+        `Activity 2: Before-During ${testSuffix}`,
+        `Activity 3: During-After ${testSuffix}`,
+        `Activity 4: Contained ${testSuffix}`,
+        `Activity 5: Ongoing ${testSuffix}`
       ]);
     });
   });
@@ -606,14 +607,14 @@ describe('ActivityRepository - Date Range Filtering', () => {
       await prisma.activity.createMany({
         data: [
           {
-            name: 'Active Activity in Range',
+            name: `Active Activity in Range ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-10T00:00:00.000Z'),
             endDate: new Date('2025-01-20T23:59:59.999Z'),
             status: ActivityStatus.ACTIVE
           },
           {
-            name: 'Completed Activity in Range',
+            name: `Completed Activity in Range ${testSuffix}`,
             activityTypeId,
             startDate: new Date('2025-01-10T00:00:00.000Z'),
             endDate: new Date('2025-01-20T23:59:59.999Z'),
@@ -626,14 +627,15 @@ describe('ActivityRepository - Date Range Filtering', () => {
         {
           startDate: filterStart,
           endDate: filterEnd,
-          status: [ActivityStatus.ACTIVE]
+          status: [ActivityStatus.ACTIVE],
+          activityTypeIds: [activityTypeId]
         },
         1,
         100
       );
 
       expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('Active Activity in Range');
+      expect(data[0].name).toBe(`Active Activity in Range ${testSuffix}`);
       expect(data[0].status).toBe(ActivityStatus.ACTIVE);
     });
   });

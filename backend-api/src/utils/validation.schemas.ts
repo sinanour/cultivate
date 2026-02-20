@@ -576,6 +576,17 @@ export const MapActivityMarkersQuerySchema = z.object({
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid population ID format')).optional()
   ),
+  // NEW: Role and age cohort filters
+  roleIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid role ID format')).optional()
+  ),
+  ageCohorts: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.enum(['Child', 'Junior Youth', 'Youth', 'Young Adult', 'Adult', 'Unknown'], {
+      errorMap: () => ({ message: 'Invalid age cohort. Must be one of: Child, Junior Youth, Youth, Young Adult, Adult, Unknown' })
+    })).optional()
+  ),
   startDate: z.string().refine(
     (val) => !val || /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(val),
     { message: 'Invalid start date format. Use YYYY-MM-DD or ISO-8601 datetime' }
@@ -623,6 +634,17 @@ export const MapParticipantHomeMarkersQuerySchema = z.object({
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid population ID format')).optional()
   ),
+  // NEW: Role and age cohort filters
+  roleIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid role ID format')).optional()
+  ),
+  ageCohorts: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.enum(['Child', 'Junior Youth', 'Youth', 'Young Adult', 'Adult', 'Unknown'], {
+      errorMap: () => ({ message: 'Invalid age cohort. Must be one of: Child, Junior Youth, Youth, Young Adult, Adult, Unknown' })
+    })).optional()
+  ),
   startDate: z.string().refine(
     (val) => !val || /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(val),
     { message: 'Invalid start date format. Use YYYY-MM-DD or ISO-8601 datetime' }
@@ -664,6 +686,17 @@ export const MapVenueMarkersQuerySchema = z.object({
   geographicAreaIds: z.preprocess(
     arrayPreprocessor,
     z.array(z.string().uuid('Invalid geographic area ID format')).optional()
+  ),
+  // NEW: Accept but ignore role and age cohort filters
+  roleIds: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.string().uuid('Invalid role ID format')).optional()
+  ),
+  ageCohorts: z.preprocess(
+    arrayPreprocessor,
+    z.array(z.enum(['Child', 'Junior Youth', 'Youth', 'Young Adult', 'Adult', 'Unknown'], {
+      errorMap: () => ({ message: 'Invalid age cohort. Must be one of: Child, Junior Youth, Youth, Young Adult, Adult, Unknown' })
+    })).optional()
   ),
 }).refine(
   (data) => {

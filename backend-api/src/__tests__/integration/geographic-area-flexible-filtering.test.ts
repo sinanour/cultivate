@@ -14,6 +14,7 @@ describe('Geographic Area Flexible Filtering Integration Tests', () => {
     let prisma: PrismaClient;
     let geographicAreaService: GeographicAreaService;
     let geoAuthService: GeographicAuthorizationService;
+    const testSuffix = Date.now();
     let testAreaIds: string[] = [];
 
     beforeAll(async () => {
@@ -29,13 +30,13 @@ describe('Geographic Area Flexible Filtering Integration Tests', () => {
 
         // Create test geographic areas with various names
         const testAreas = [
-            { name: 'Vancouver City', areaType: 'CITY' as const, parentGeographicAreaId: null },
-            { name: 'Vancouver Island', areaType: 'CITY' as const, parentGeographicAreaId: null },
-            { name: 'Downtown Vancouver', areaType: 'NEIGHBOURHOOD' as const, parentGeographicAreaId: null },
-            { name: 'North Vancouver', areaType: 'CITY' as const, parentGeographicAreaId: null },
-            { name: 'West Vancouver', areaType: 'CITY' as const, parentGeographicAreaId: null },
-            { name: 'Toronto', areaType: 'CITY' as const, parentGeographicAreaId: null },
-            { name: 'Montreal', areaType: 'CITY' as const, parentGeographicAreaId: null },
+            { name: `Vancouver City ${testSuffix}`, areaType: 'CITY' as const, parentGeographicAreaId: null },
+            { name: `Vancouver Island ${testSuffix}`, areaType: 'CITY' as const, parentGeographicAreaId: null },
+            { name: `Downtown Vancouver ${testSuffix}`, areaType: 'NEIGHBOURHOOD' as const, parentGeographicAreaId: null },
+            { name: `North Vancouver ${testSuffix}`, areaType: 'CITY' as const, parentGeographicAreaId: null },
+            { name: `West Vancouver ${testSuffix}`, areaType: 'CITY' as const, parentGeographicAreaId: null },
+            { name: `Toronto ${testSuffix}`, areaType: 'CITY' as const, parentGeographicAreaId: null },
+            { name: `Montreal ${testSuffix}`, areaType: 'CITY' as const, parentGeographicAreaId: null },
         ];
 
         for (const areaData of testAreas) {

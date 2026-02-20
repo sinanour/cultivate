@@ -62,6 +62,8 @@ export interface MapFilters {
     activityTypeIds?: string[];
     venueIds?: string[];
     populationIds?: string[];
+    roleIds?: string[]; // NEW
+    ageCohorts?: string[]; // NEW
     startDate?: string;
     endDate?: string;
     status?: string;
@@ -116,6 +118,14 @@ export class MapDataService {
         if (filters.populationIds) {
             filters.populationIds.forEach(id => params.append('populationIds', id));
         }
+        // NEW: Add role filter
+        if (filters.roleIds) {
+            filters.roleIds.forEach(id => params.append('filter[roleIds]', id));
+        }
+        // NEW: Add age cohort filter
+        if (filters.ageCohorts) {
+            filters.ageCohorts.forEach(cohort => params.append('filter[ageCohorts]', cohort));
+        }
 
         // Add date filters
         if (filters.startDate) {
@@ -146,7 +156,7 @@ export class MapDataService {
      * Get lightweight participant home marker data grouped by venue with pagination
      */
     static async getParticipantHomeMarkers(
-        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds' | 'startDate' | 'endDate'> = {},
+        filters: Pick<MapFilters, 'geographicAreaIds' | 'populationIds' | 'roleIds' | 'ageCohorts' | 'startDate' | 'endDate'> = {},
         boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
@@ -170,6 +180,14 @@ export class MapDataService {
         }
         if (filters.populationIds) {
             filters.populationIds.forEach(id => params.append('populationIds', id));
+        }
+        // NEW: Add role filter
+        if (filters.roleIds) {
+            filters.roleIds.forEach(id => params.append('filter[roleIds]', id));
+        }
+        // NEW: Add age cohort filter
+        if (filters.ageCohorts) {
+            filters.ageCohorts.forEach(cohort => params.append('filter[ageCohorts]', cohort));
         }
 
         // Add date filters
@@ -196,7 +214,7 @@ export class MapDataService {
      * Get lightweight venue marker data for map rendering with pagination
      */
     static async getVenueMarkers(
-        filters: Pick<MapFilters, 'geographicAreaIds'> = {},
+        filters: Pick<MapFilters, 'geographicAreaIds' | 'roleIds' | 'ageCohorts'> = {},
         boundingBox?: BoundingBox,
         page: number = 1,
         limit: number = 100
@@ -217,6 +235,13 @@ export class MapDataService {
 
         if (filters.geographicAreaIds) {
             filters.geographicAreaIds.forEach(id => params.append('geographicAreaIds', id));
+        }
+        // NEW: Add role and age cohort filters (will be ignored by backend)
+        if (filters.roleIds) {
+            filters.roleIds.forEach(id => params.append('filter[roleIds]', id));
+        }
+        if (filters.ageCohorts) {
+            filters.ageCohorts.forEach(cohort => params.append('filter[ageCohorts]', cohort));
         }
 
         const endpoint = `${this.BASE_PATH}/venues?${params.toString()}`;

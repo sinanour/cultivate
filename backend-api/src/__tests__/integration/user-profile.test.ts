@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 describe('User Profile Management Integration Tests', () => {
   let prisma: PrismaClient;
   let userService: UserService;
+  const testSuffix = Date.now();
   let testUserId: string;
 
   beforeAll(async () => {
@@ -20,7 +21,7 @@ describe('User Profile Management Integration Tests', () => {
     const testUser = await prisma.user.create({
       data: {
         displayName: 'Test User',
-        email: `test-profile-${Date.now()}@example.com`,
+        email: `test-profile-${testSuffix}@example.com`,
         passwordHash: hashedPassword,
         role: UserRole.EDITOR,
       },

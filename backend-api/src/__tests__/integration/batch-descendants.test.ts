@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 const repository = new GeographicAreaRepository(prisma);
 
 describe('Batch Descendants Integration Tests', () => {
+    const testSuffix = Date.now();
     let testAreaIds: string[] = [];
 
     beforeAll(async () => {
@@ -12,7 +13,7 @@ describe('Batch Descendants Integration Tests', () => {
         // World -> Country -> Province -> City -> Neighbourhood
         const world = await prisma.geographicArea.create({
             data: {
-                name: 'Test World',
+                name: `BatchDescTest World ${testSuffix}`,
                 areaType: 'WORLD',
             },
         });
@@ -20,7 +21,7 @@ describe('Batch Descendants Integration Tests', () => {
 
         const country = await prisma.geographicArea.create({
             data: {
-                name: 'Test Country',
+                name: `BatchDescTest Country ${testSuffix}`,
                 areaType: 'COUNTRY',
                 parentGeographicAreaId: world.id,
             },
@@ -29,7 +30,7 @@ describe('Batch Descendants Integration Tests', () => {
 
         const province = await prisma.geographicArea.create({
             data: {
-                name: 'Test Province',
+                name: `BatchDescTest Province ${testSuffix}`,
                 areaType: 'PROVINCE',
                 parentGeographicAreaId: country.id,
             },
@@ -38,7 +39,7 @@ describe('Batch Descendants Integration Tests', () => {
 
         const city = await prisma.geographicArea.create({
             data: {
-                name: 'Test City',
+                name: `BatchDescTest City ${testSuffix}`,
                 areaType: 'CITY',
                 parentGeographicAreaId: province.id,
             },
@@ -47,7 +48,7 @@ describe('Batch Descendants Integration Tests', () => {
 
         const neighbourhood = await prisma.geographicArea.create({
             data: {
-                name: 'Test Neighbourhood',
+                name: `BatchDescTest Neighbourhood ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: city.id,
             },

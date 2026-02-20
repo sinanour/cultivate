@@ -1,11 +1,13 @@
 import request from 'supertest';
 import app from '../../index';
 import { PrismaClient } from '@prisma/client';
+import { TestHelpers } from '../utils';
 
 const prisma = new PrismaClient();
 
 describe('Activity Notes Field', () => {
     let authToken: string;
+    const testSuffix = Date.now();
     let activityTypeId: string;
     let venueId: string;
     let geographicAreaId: string;
@@ -25,7 +27,7 @@ describe('Activity Notes Field', () => {
         // Create test geographic area
         const geoArea = await prisma.geographicArea.create({
             data: {
-                name: 'Test Area for Notes',
+                name: `ActivityNotesTest Area ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -34,16 +36,16 @@ describe('Activity Notes Field', () => {
         // Create test venue
         const venue = await prisma.venue.create({
             data: {
-                name: 'Test Venue for Notes',
+                name: `ActivityNotesTest Venue ${testSuffix}`,
                 address: '123 Test St',
                 geographicAreaId,
             },
         });
         venueId = venue.id;
 
-        // Get activity type
-        const activityType = await prisma.activityType.findFirst();
-        activityTypeId = activityType!.id;
+        // Get activity type deterministically
+        const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+        activityTypeId = activityType.id;
     });
 
     afterAll(async () => {

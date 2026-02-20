@@ -12,6 +12,7 @@ import { UserRepository } from '../../repositories/user.repository';
 describe('Participant Population Filtering Integration Tests', () => {
   let prisma: PrismaClient;
   let participantService: ParticipantService;
+  const testSuffix = Date.now();
   
   // Test data IDs
   let geographicAreaId: string;
@@ -57,7 +58,7 @@ describe('Participant Population Filtering Integration Tests', () => {
     // Create test data
     const geographicArea = await prisma.geographicArea.create({
       data: {
-        name: 'Test City for Population Filtering',
+        name: `PopFilterTest City ${testSuffix}`,
         areaType: 'CITY',
       },
     });
@@ -65,7 +66,7 @@ describe('Participant Population Filtering Integration Tests', () => {
 
     const venue = await prisma.venue.create({
       data: {
-        name: 'Test Venue for Population Filtering',
+        name: `PopFilterTest Venue ${testSuffix}`,
         address: '123 Test St',
         geographicAreaId,
       },
@@ -74,23 +75,23 @@ describe('Participant Population Filtering Integration Tests', () => {
 
     // Create populations
     const pop1 = await prisma.population.create({
-      data: { name: 'Youth Population' },
+      data: { name: `PopFilterTest Youth Population ${testSuffix}` },
     });
     population1Id = pop1.id;
 
     const pop2 = await prisma.population.create({
-      data: { name: 'Adult Population' },
+      data: { name: `PopFilterTest Adult Population ${testSuffix}` },
     });
     population2Id = pop2.id;
 
     const pop3 = await prisma.population.create({
-      data: { name: 'Senior Population' },
+      data: { name: `PopFilterTest Senior Population ${testSuffix}` },
     });
     population3Id = pop3.id;
 
     // Create participants
     const p1 = await prisma.participant.create({
-      data: { name: 'Participant 1 - Youth Only' },
+      data: { name: `PopFilterTest Participant 1 - Youth Only ${testSuffix}` },
     });
     participant1Id = p1.id;
     await prisma.participantAddressHistory.create({
@@ -108,7 +109,7 @@ describe('Participant Population Filtering Integration Tests', () => {
     });
 
     const p2 = await prisma.participant.create({
-      data: { name: 'Participant 2 - Adult Only' },
+      data: { name: `PopFilterTest Participant 2 - Adult Only ${testSuffix}` },
     });
     participant2Id = p2.id;
     await prisma.participantAddressHistory.create({
@@ -126,7 +127,7 @@ describe('Participant Population Filtering Integration Tests', () => {
     });
 
     const p3 = await prisma.participant.create({
-      data: { name: 'Participant 3 - Youth and Adult' },
+      data: { name: `PopFilterTest Participant 3 - Youth and Adult ${testSuffix}` },
     });
     participant3Id = p3.id;
     await prisma.participantAddressHistory.create({
@@ -150,7 +151,7 @@ describe('Participant Population Filtering Integration Tests', () => {
     });
 
     const p4 = await prisma.participant.create({
-      data: { name: 'Participant 4 - Senior Only' },
+      data: { name: `PopFilterTest Participant 4 - Senior Only ${testSuffix}` },
     });
     participant4Id = p4.id;
     await prisma.participantAddressHistory.create({
@@ -168,7 +169,7 @@ describe('Participant Population Filtering Integration Tests', () => {
     });
 
     const p5 = await prisma.participant.create({
-      data: { name: 'Participant 5 - No Populations' },
+      data: { name: `PopFilterTest Participant 5 - No Populations ${testSuffix}` },
     });
     participant5Id = p5.id;
     await prisma.participantAddressHistory.create({

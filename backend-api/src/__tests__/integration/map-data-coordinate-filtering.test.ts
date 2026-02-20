@@ -4,6 +4,7 @@ import { GeographicAreaRepository } from '../../repositories/geographic-area.rep
 import { GeographicAuthorizationService } from '../../services/geographic-authorization.service';
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { TestHelpers } from '../utils';
 
 const prisma = new PrismaClient();
 
@@ -11,6 +12,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
     let mapDataService: MapDataService;
     let geographicAreaRepository: GeographicAreaRepository;
     let geoAuthService: GeographicAuthorizationService;
+    const testSuffix = Date.now();
 
     // Test data IDs
     let userId: string;
@@ -56,34 +58,26 @@ describe('Map Data Coordinate-Based Filtering', () => {
         );
 
         // Create test user
-        const user = await prisma.user.create({
-            data: {
-                email: 'map-coordinate-test@test.com',
-                passwordHash: 'hash',
-                role: 'ADMINISTRATOR',
-            },
-        });
+        const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR', testSuffix);
         userId = user.id;
 
         // Create geographic area
         const area = await prisma.geographicArea.create({
             data: {
-                name: 'Test City for Coordinate Filtering',
+                name: `MapCoordTest City ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
         geographicAreaId = area.id;
 
         // Get activity type
-        const type = await prisma.activityType.findFirst({
-            where: { name: 'Ruhi Book 01' },
-        });
-        activityTypeId = type!.id;
+        const type = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+        activityTypeId = type.id;
 
         // Create venues at different coordinates
         const nwVenue = await prisma.venue.create({
             data: {
-                name: 'Northwest Venue',
+                name: `MapCoordTest Northwest Venue ${testSuffix}`,
                 address: '1 NW St',
                 geographicAreaId,
                 latitude: 40.8,
@@ -94,7 +88,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         const neVenue = await prisma.venue.create({
             data: {
-                name: 'Northeast Venue',
+                name: `MapCoordTest Northeast Venue ${testSuffix}`,
                 address: '2 NE St',
                 geographicAreaId,
                 latitude: 40.8,
@@ -105,7 +99,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         const swVenue = await prisma.venue.create({
             data: {
-                name: 'Southwest Venue',
+                name: `MapCoordTest Southwest Venue ${testSuffix}`,
                 address: '3 SW St',
                 geographicAreaId,
                 latitude: 40.6,
@@ -116,7 +110,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         const seVenue = await prisma.venue.create({
             data: {
-                name: 'Southeast Venue',
+                name: `MapCoordTest Southeast Venue ${testSuffix}`,
                 address: '4 SE St',
                 geographicAreaId,
                 latitude: 40.6,
@@ -127,7 +121,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         const centerVenue = await prisma.venue.create({
             data: {
-                name: 'Center Venue',
+                name: `MapCoordTest Center Venue ${testSuffix}`,
                 address: '5 Center St',
                 geographicAreaId,
                 latitude: 40.7,
@@ -139,7 +133,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
         // Create activities at each venue
         const nwActivity = await prisma.activity.create({
             data: {
-                name: 'NW Activity',
+                name: `MapCoordTest NW Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -152,7 +146,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         const neActivity = await prisma.activity.create({
             data: {
-                name: 'NE Activity',
+                name: `MapCoordTest NE Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -165,7 +159,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         const swActivity = await prisma.activity.create({
             data: {
-                name: 'SW Activity',
+                name: `MapCoordTest SW Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -178,7 +172,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         const seActivity = await prisma.activity.create({
             data: {
-                name: 'SE Activity',
+                name: `MapCoordTest SE Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -191,7 +185,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         const centerActivity = await prisma.activity.create({
             data: {
-                name: 'Center Activity',
+                name: `MapCoordTest Center Activity ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -204,7 +198,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
 
         // Create participants at each venue
         const nwParticipant = await prisma.participant.create({
-            data: { name: 'NW Participant', email: 'nw@test.com' },
+            data: { name: `MapCoordTest NW Participant ${testSuffix}`, email: `nw-${testSuffix}@test.com` },
         });
         nwParticipantId = nwParticipant.id;
         await prisma.participantAddressHistory.create({
@@ -212,7 +206,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
         });
 
         const neParticipant = await prisma.participant.create({
-            data: { name: 'NE Participant', email: 'ne@test.com' },
+            data: { name: `MapCoordTest NE Participant ${testSuffix}`, email: `ne-${testSuffix}@test.com` },
         });
         neParticipantId = neParticipant.id;
         await prisma.participantAddressHistory.create({
@@ -220,7 +214,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
         });
 
         const swParticipant = await prisma.participant.create({
-            data: { name: 'SW Participant', email: 'sw@test.com' },
+            data: { name: `MapCoordTest SW Participant ${testSuffix}`, email: `sw-${testSuffix}@test.com` },
         });
         swParticipantId = swParticipant.id;
         await prisma.participantAddressHistory.create({
@@ -228,7 +222,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
         });
 
         const seParticipant = await prisma.participant.create({
-            data: { name: 'SE Participant', email: 'se@test.com' },
+            data: { name: `MapCoordTest SE Participant ${testSuffix}`, email: `se-${testSuffix}@test.com` },
         });
         seParticipantId = seParticipant.id;
         await prisma.participantAddressHistory.create({
@@ -236,7 +230,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
         });
 
         const centerParticipant = await prisma.participant.create({
-            data: { name: 'Center Participant', email: 'center@test.com' },
+            data: { name: `MapCoordTest Center Participant ${testSuffix}`, email: `center-${testSuffix}@test.com` },
         });
         centerParticipantId = centerParticipant.id;
         await prisma.participantAddressHistory.create({
@@ -514,7 +508,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
             // Create venue near international date line (Pacific Ocean)
             const pacificVenue = await prisma.venue.create({
                 data: {
-                    name: 'Pacific Venue',
+                    name: `MapCoordTest Pacific Venue ${testSuffix}`,
                     address: 'Pacific Ocean',
                     geographicAreaId,
                     latitude: 0.0,
@@ -526,7 +520,7 @@ describe('Map Data Coordinate-Based Filtering', () => {
             // Create activity at Pacific venue
             const pacificActivity = await prisma.activity.create({
                 data: {
-                    name: 'Pacific Activity',
+                    name: `MapCoordTest Pacific Activity ${testSuffix}`,
                     activityTypeId,
                     startDate: new Date('2024-01-01'),
                     status: 'ACTIVE',

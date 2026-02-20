@@ -4,8 +4,10 @@ import { UserGeographicAuthorizationRepository } from '../../repositories/user-g
 import { GeographicAreaRepository } from '../../repositories/geographic-area.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { getPrismaClient } from '../../utils/prisma.client';
+import { TestHelpers } from '../utils/test-helpers';
 
 describe('Geographic Authorization - DENY Rule Precedence Tests', () => {
+    const testSuffix = Date.now();
     let prisma: PrismaClient;
     let service: GeographicAuthorizationService;
     let authRepo: UserGeographicAuthorizationRepository;
@@ -22,20 +24,14 @@ describe('Geographic Authorization - DENY Rule Precedence Tests', () => {
         userRepo = new UserRepository(prisma);
         service = new GeographicAuthorizationService(authRepo, areaRepo, userRepo);
 
-        // Create test user
-        const user = await prisma.user.create({
-            data: {
-                email: 'test-deny@example.com',
-                passwordHash: 'hash',
-                role: UserRole.EDITOR,
-            },
-        });
+        // Create test user using TestHelpers
+        const user = await TestHelpers.createTestUser(prisma, UserRole.EDITOR, testSuffix);
         testUserId = user.id;
 
         // Create test geographic areas (city -> neighbourhood)
         const city = await prisma.geographicArea.create({
             data: {
-                name: 'Test City',
+                name: `GeoAuthDenyTest City ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -43,7 +39,7 @@ describe('Geographic Authorization - DENY Rule Precedence Tests', () => {
 
         const neighbourhood = await prisma.geographicArea.create({
             data: {
-                name: 'Denied Neighbourhood',
+                name: `GeoAuthDenyTest Neighbourhood ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },

@@ -202,45 +202,59 @@ npm test -- --testPathPattern="services/.*\.test\.ts$" --no-coverage
 
 ## Integration Test Cleanup
 
-Integration tests MUST clean up ALL created data to avoid database pollution.
+Integration tests MUST clean up ALL created data to avoid database pollution and enable parallel test execution.
 
-### Pattern: Proper Cleanup
+### Test Isolation Requirements
+
+**CRITICAL**: All integration tests must follow these isolation rules to enable reliable parallel execution:
+
+1. **Unique Test Data** - Use timestamps or UUIDs in all test data names
+2. **Deterministic Predefined Data Access** - Query predefined data by specific name, never use `findFirst()` without filters
+3. **Complete Cleanup** - Clean up ALL created data in correct dependency order
+4. **Test-Specific Users** - Each test suite creates its own unique users
+5. **Use TestHelpers** - Leverage the TestHelpers utility for common operations
+
+### Pattern: Proper Cleanup with TestHelpers
 
 ```typescript
+import { TestHelpers } from '../utils';
+
 describe('My Integration Test', () => {
     let prisma: PrismaClient;
+    const testSuffix = Date.now(); // Unique per test file
+    
+    let userId: string;
     let activityTypeId: string;
-    let categoryId: string;
     let activityId: string;
+    let geographicAreaId: string;
 
     beforeAll(async () => {
         prisma = new PrismaClient();
-    });
-
-    afterAll(async () => {
-        await prisma.$disconnect();
-    });
-
-    beforeEach(async () => {
-        // Create test data
-        const category = await prisma.activityCategory.create({
-            data: { name: `Test Category ${Date.now()}`, isPredefined: false },
-        });
-        categoryId = category.id;
-
-        const activityType = await prisma.activityType.create({
+        
+        // Create test user with unique email
+        const user = await TestHelpers.createTestUser(prisma, 'EDITOR', testSuffix);
+        userId = user.id;
+        
+        // Get predefined activity type deterministically
+        const activityType = await TestHelpers.getPredefinedActivityType(
+            prisma, 
+            'Ruhi Book 01'
+        );
+        activityTypeId = activityType.id;
+        
+        // Create test data with unique names
+        const area = await prisma.geographicArea.create({
             data: { 
-                name: `Test Type ${Date.now()}`, 
-                activityCategoryId: category.id, 
-                isPredefined: false 
+                name: `MyTest Area ${testSuffix}`, 
+                areaType: 'CITY' 
             },
         });
-        activityTypeId = activityType.id;
-
+        geographicAreaId = area.id;
+        
         const activity = await prisma.activity.create({
             data: { 
-                name: 'Test Activity', 
-                activityTypeId: activityType.id, 
+                name: `MyTest Activity ${testSuffix}`, 
+                activityTypeId, 
                 startDate: new Date(), 
                 status: 'PLANNED' 
             },
@@ -248,42 +262,172 @@ describe('My Integration Test', () => {
         activityId = activity.id;
     });
 
-    afterEach(async () => {
-        // Clean up in REVERSE order of dependencies
-        await prisma.activity.deleteMany({ where: { id: activityId } });
-        await prisma.activityType.delete({ where: { id: activityTypeId } });
-        await prisma.activityCategory.delete({ where: { id: categoryId } });
+    afterAll(async () => {
+        // Use TestHelpers for cleanup
+        await TestHelpers.cleanupTestData(prisma, {
+            activityIds: [activityId],
+            geographicAreaIds: [geographicAreaId],
+            userIds: [userId]
+        });
+        
+        await prisma.$disconnect();
     });
 
     it('should do something', async () => {
-        // Test uses real database
-        const result = await prisma.activity.findUnique({ where: { id: activityId } });
+        const result = await prisma.activity.findUnique({ 
+            where: { id: activityId } 
+        });
         expect(result).toBeDefined();
     });
 });
 ```
 
+### TestHelpers Utility
+
+The `TestHelpers` class provides reusable methods for common test operations:
+
+```typescript
+// Create test user with unique email
+const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR', testSuffix);
+
+// Create geographic hierarchy
+const { countryId, provinceId, cityId, neighbourhoodId } = 
+    await TestHelpers.createTestGeographicHierarchy(prisma, testSuffix);
+
+// Get predefined activity type (deterministic)
+const activityType = await TestHelpers.getPredefinedActivityType(
+    prisma, 
+    'Ruhi Book 01'
+);
+
+// Get predefined role (deterministic)
+const tutorRole = await TestHelpers.getPredefinedRole(prisma, 'Tutor');
+
+// Clean up test data in correct order
+await TestHelpers.cleanupTestData(prisma, {
+    assignmentIds: [assignmentId],
+    activityIds: [activityId],
+    participantIds: [participantId],
+    venueIds: [venueId],
+    geographicAreaIds: [areaId],
+    userIds: [userId]
+});
+```
+
 ### Critical Cleanup Rules
 
-1. **Store IDs of ALL created entities** - including activity types, categories, roles, etc.
-2. **Clean up in reverse dependency order** - delete children before parents:
-   - Activities → Activity Types → Activity Categories
+1. **Store IDs of ALL created entities** - including users, geographic areas, venues, etc.
+2. **Use unique identifiers** - Add `Date.now()` or UUID to all test data names
+3. **Query predefined data by name** - Never use `findFirst()` without specific filters
+4. **Clean up in reverse dependency order** - delete children before parents:
    - Assignments → Activities/Participants/Roles
-   - Venue History → Activities/Venues
-3. **Use unique names with timestamps** - prevents conflicts: `Test Category ${Date.now()}`
-4. **Clean up in afterEach or afterAll** - never leave test data behind
-5. **Handle cascading deletes** - some entities cascade, others don't
+   - Activity Venue History → Activities/Venues
+   - Participant Address History → Participants/Venues
+   - Participant Populations → Participants/Populations
+   - Activities → Activity Types
+   - Participants → (no dependencies)
+   - Venues → Geographic Areas
+   - Activity Types → Activity Categories (only if custom, not predefined)
+   - User Geographic Authorizations → Users/Geographic Areas
+   - Geographic Areas → Parent Geographic Areas (children first)
+   - Users → (no dependencies after auth rules deleted)
+5. **Use TestHelpers.cleanupTestData()** - Handles correct order automatically
+6. **Handle cascading deletes** - Some entities cascade, others don't
+7. **Disconnect Prisma client** - Always call `prisma.$disconnect()` in `afterAll`
+
+### Unique Test Data Pattern
+
+```typescript
+// ❌ WRONG: Static names cause conflicts in parallel tests
+const area = await prisma.geographicArea.create({
+    data: { name: 'Test City', areaType: 'CITY' }
+});
+
+// ✅ CORRECT: Unique names prevent conflicts
+const testSuffix = Date.now();
+const area = await prisma.geographicArea.create({
+    data: { 
+        name: `MyTest City ${testSuffix}`, 
+        areaType: 'CITY' 
+    }
+});
+```
+
+### Deterministic Predefined Data Access
+
+```typescript
+// ❌ WRONG: Non-deterministic, causes race conditions
+const activityType = await prisma.activityType.findFirst();
+
+// ✅ CORRECT: Deterministic, always gets same entity
+const activityType = await TestHelpers.getPredefinedActivityType(
+    prisma, 
+    'Ruhi Book 01'
+);
+
+// ❌ WRONG: Creates custom role, conflicts with other tests
+const tutorRole = await prisma.role.create({
+    data: { name: 'Tutor' }
+});
+
+// ✅ CORRECT: Uses predefined role
+const tutorRole = await TestHelpers.getPredefinedRole(prisma, 'Tutor');
+```
 
 ### Common Cleanup Order
 
 ```typescript
 // Correct order (children first, parents last)
-await prisma.activityVenueHistory.deleteMany({ where: { activityId } });
 await prisma.assignment.deleteMany({ where: { activityId } });
+await prisma.activityVenueHistory.deleteMany({ where: { activityId } });
+await prisma.participantAddressHistory.deleteMany({ where: { participantId } });
 await prisma.activity.deleteMany({ where: { id: activityId } });
-await prisma.activityType.delete({ where: { id: activityTypeId } });
-await prisma.activityCategory.delete({ where: { id: categoryId } });
+await prisma.participant.deleteMany({ where: { id: participantId } });
+await prisma.venue.deleteMany({ where: { id: venueId } });
+await prisma.geographicArea.deleteMany({ where: { id: geographicAreaId } });
+await prisma.user.deleteMany({ where: { id: userId } });
 ```
+
+### Test Isolation Checklist
+
+Before submitting a new integration test, verify:
+
+- [ ] Uses unique suffix (timestamp or UUID) for all created data
+- [ ] Queries predefined data by specific name, not `findFirst()`
+- [ ] Stores IDs of ALL created entities
+- [ ] Cleans up ALL created data in `afterAll`
+- [ ] Cleanup order respects foreign key constraints
+- [ ] Disconnects Prisma client in `afterAll`
+- [ ] Uses TestHelpers for common operations
+- [ ] No shared state between tests in different files
+- [ ] Test names include descriptive prefix
+
+### Parallel Execution
+
+Tests now run in parallel by default (using 50% of CPU cores). This significantly reduces test execution time but requires proper isolation:
+
+```bash
+# Tests run in parallel automatically
+npm test -- --testPathPattern="integration"
+
+# Force sequential execution (for debugging)
+npm test -- --testPathPattern="integration" --runInBand
+
+# Run with specific worker count
+npm test -- --testPathPattern="integration" --maxWorkers=4
+```
+
+### Debugging Isolation Issues
+
+If a test fails intermittently:
+
+1. Check if test data names are unique (include testSuffix)
+2. Verify cleanup is complete and in correct order
+3. Check for `findFirst()` without specific filters
+4. Look for shared state (users, predefined data)
+5. Run test in isolation: `npm test -- --testPathPattern="specific-test.test.ts"`
+6. Run test multiple times: `for i in {1..10}; do npm test -- --testPathPattern="specific-test.test.ts"; done`
+7. Check database for orphaned test data after test runs
 
 ## Running Tests
 

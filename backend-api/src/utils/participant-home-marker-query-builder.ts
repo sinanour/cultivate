@@ -8,11 +8,14 @@ export interface BoundingBox {
 export interface ParticipantHomeMarkerQueryParams {
     venueIds?: string[];
     populationIds?: string[];
+    roleIds?: string[]; // NEW
+    ageCohorts?: string[]; // NEW
     startDate?: Date;
     endDate?: Date;
     boundingBox?: BoundingBox;
     limit: number;
     skip: number;
+    referenceDate: Date; // NEW: For age cohort calculations
 }
 
 /**
@@ -119,13 +122,20 @@ ${mainQuery}
         pah."venueId",
         pah."effectiveFrom",
         v.latitude,
-        v.longitude
+        v.longitude,
+        p."dateOfBirth"
     FROM participant_address_history pah
-    JOIN venues v ON pah."venueId" = v.id`;
+    JOIN venues v ON pah."venueId" = v.id
+    JOIN participants p ON pah."participantId" = p.id`;
 
         // Join filtered venues CTE if geographic filter provided
         if (this.queryParams.venueIds && this.queryParams.venueIds.length > 0) {
             sql += `\n    JOIN filtered_venues fv ON v.id = fv.id`;
+        }
+
+        // Join assignments if role filter provided
+        if (this.queryParams.roleIds && this.queryParams.roleIds.length > 0) {
+            sql += `\n    JOIN assignments asn ON asn."participantId" = p.id`;
         }
 
         // Start WHERE clause
@@ -138,6 +148,17 @@ ${mainQuery}
         if (this.queryParams.boundingBox) {
             const coordConditions = this.buildCoordinateFilter();
             whereConditions.push(...coordConditions);
+        }
+
+        // Add role filter
+        if (this.queryParams.roleIds && this.queryParams.roleIds.length > 0) {
+            const roleIdList = this.queryParams.roleIds.map(id => `'${id}'`).join(', ');
+            whereConditions.push(`asn."roleId" IN (${roleIdList})`);
+        }
+
+        // Add age cohort filter
+        if (this.queryParams.ageCohorts && this.queryParams.ageCohorts.length > 0) {
+            whereConditions.push(this.buildAgeCohortFilter());
         }
 
         // Add population filter
@@ -301,9 +322,55 @@ LIMIT $${limitParam} OFFSET $${skipParam}`;
 
         if (this.queryParams.venueIds) features.push('geographic');
         if (this.queryParams.populationIds) features.push('population');
+        if (this.queryParams.roleIds) features.push('role');
+        if (this.queryParams.ageCohorts) features.push('ageCohort');
         if (this.queryParams.startDate || this.queryParams.endDate) features.push('temporal');
         if (this.queryParams.boundingBox) features.push('coordinates');
 
         return features.length > 0 ? features.join('+') : 'base';
+    }
+
+    /**
+     * Build age cohort filter SQL fragment
+     * Converts age cohort names to date range conditions on dateOfBirth using reference date
+     */
+    private buildAgeCohortFilter(): string {
+        if (!this.queryParams.ageCohorts || this.queryParams.ageCohorts.length === 0) {
+            return '1=1';
+        }
+
+        // Import the conversion function
+        const { convertCohortToDateRange } = require('./age-cohort.utils');
+
+        const cohortConditions: string[] = [];
+
+        for (const cohortName of this.queryParams.ageCohorts) {
+            if (cohortName === 'Unknown') {
+                cohortConditions.push(`p."dateOfBirth" IS NULL`);
+                continue;
+            }
+
+            const range = convertCohortToDateRange(cohortName, this.queryParams.referenceDate);
+
+            if (!range) {
+                continue;
+            }
+
+            if (range.min && range.max) {
+                // Range with both boundaries
+                cohortConditions.push(
+                    `(p."dateOfBirth" >= '${range.min.toISOString()}' AND p."dateOfBirth" < '${range.max.toISOString()}')`
+                );
+            } else if (range.min) {
+                // Only minimum boundary (Child cohort)
+                cohortConditions.push(`p."dateOfBirth" > '${range.min.toISOString()}'`);
+            } else if (range.max) {
+                // Only maximum boundary (Adult cohort)
+                cohortConditions.push(`p."dateOfBirth" < '${range.max.toISOString()}'`);
+            }
+        }
+
+        // Combine with OR logic
+        return cohortConditions.length > 0 ? `(${cohortConditions.join(' OR ')})` : '1=1';
     }
 }

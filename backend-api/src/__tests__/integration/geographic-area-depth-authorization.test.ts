@@ -15,6 +15,7 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
     let authorizationRepository: UserGeographicAuthorizationRepository;
     let userRepository: UserRepository;
     let auditLogRepository: AuditLogRepository;
+    const testSuffix = Date.now();
 
     // Test data IDs
     let userId: string;
@@ -52,7 +53,7 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
         // Create test user
         const user = await prisma.user.create({
             data: {
-                email: 'test-depth-auth@example.com',
+                email: `test-depth-auth-${testSuffix}-${Date.now()}@example.com`,
                 passwordHash: 'hashed',
                 role: 'EDITOR',
             },
@@ -69,7 +70,7 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
 
         const country = await prisma.geographicArea.create({
             data: {
-                name: 'Test Country 1',
+                name: `Test Country 1 ${testSuffix}`,
                 areaType: 'COUNTRY',
             },
         });
@@ -77,7 +78,7 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
 
         const province = await prisma.geographicArea.create({
             data: {
-                name: 'Test Province 1',
+                name: `Test Province 1 ${testSuffix}`,
                 areaType: 'PROVINCE',
                 parentGeographicAreaId: countryId,
             },
@@ -86,7 +87,7 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
 
         const city = await prisma.geographicArea.create({
             data: {
-                name: 'Test City 1',
+                name: `Test City 1 ${testSuffix}`,
                 areaType: 'CITY',
                 parentGeographicAreaId: provinceId,
             },
@@ -95,7 +96,7 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
 
         const neighbourhood = await prisma.geographicArea.create({
             data: {
-                name: 'Test Neighbourhood 1',
+                name: `Test Neighbourhood 1 ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
@@ -105,7 +106,7 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
         // Create another country hierarchy (not allowed)
         const otherCountry = await prisma.geographicArea.create({
             data: {
-                name: 'Test Country 2',
+                name: `Test Country 2 ${testSuffix}`,
                 areaType: 'COUNTRY',
             },
         });
@@ -113,7 +114,7 @@ describe('Geographic Area Authorization with Depth Parameter', () => {
 
         const otherProvince = await prisma.geographicArea.create({
             data: {
-                name: 'Test Province 2',
+                name: `Test Province 2 ${testSuffix}`,
                 areaType: 'PROVINCE',
                 parentGeographicAreaId: otherCountryId,
             },

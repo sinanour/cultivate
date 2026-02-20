@@ -8,16 +8,17 @@ import { GeographicAuthorizationService } from '../../services/geographic-author
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { AuditLogRepository } from '../../repositories/audit-log.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { TestHelpers } from '../utils';
 
 describe('Participant Role and Activity Date Filtering Integration Tests', () => {
     let prisma: PrismaClient;
     let participantService: ParticipantService;
+    const testSuffix = Date.now();
 
     // Test data IDs
     let geographicAreaId: string;
     let venueId: string;
     let activityTypeId: string;
-    let activityCategoryId: string;
     let tutorRoleId: string;
     let teacherRoleId: string;
     let participantRoleId: string;
@@ -63,7 +64,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
         // Create test data
         const geographicArea = await prisma.geographicArea.create({
             data: {
-                name: 'Test City for Role Date Filtering',
+                name: `RoleDateTest City ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -71,47 +72,31 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
 
         const venue = await prisma.venue.create({
             data: {
-                name: 'Test Venue for Role Date Filtering',
+                name: `RoleDateTest Venue ${testSuffix}`,
                 address: '123 Test St',
                 geographicAreaId,
             },
         });
         venueId = venue.id;
 
-        // Create activity category and type
-        const activityCategory = await prisma.activityCategory.create({
-            data: { name: 'Test Category for Role Date Filtering' },
-        });
-        activityCategoryId = activityCategory.id;
-
-        const activityType = await prisma.activityType.create({
-            data: {
-                name: 'Test Type for Role Date Filtering',
-                activityCategoryId,
-            },
-        });
+        // Get predefined activity type
+        const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
         activityTypeId = activityType.id;
 
-        // Create roles
-        const tutorRole = await prisma.role.create({
-            data: { name: 'Tutor Test Role' },
-        });
+        // Get predefined roles
+        const tutorRole = await TestHelpers.getPredefinedRole(prisma, 'Tutor');
         tutorRoleId = tutorRole.id;
 
-        const teacherRole = await prisma.role.create({
-            data: { name: 'Teacher Test Role' },
-        });
+        const teacherRole = await TestHelpers.getPredefinedRole(prisma, 'Teacher');
         teacherRoleId = teacherRole.id;
 
-        const participantRole = await prisma.role.create({
-            data: { name: 'Participant Test Role' },
-        });
+        const participantRole = await TestHelpers.getPredefinedRole(prisma, 'Participant');
         participantRoleId = participantRole.id;
 
         // Create activities
         const activity1 = await prisma.activity.create({
             data: {
-                name: 'Activity 1 - Jan to Mar 2025',
+                name: `Activity 1 ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2025-01-01'),
                 endDate: new Date('2025-03-31'),
@@ -129,7 +114,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
 
         const activity2 = await prisma.activity.create({
             data: {
-                name: 'Activity 2 - Feb to Apr 2025',
+                name: `Activity 2 ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2025-02-01'),
                 endDate: new Date('2025-04-30'),
@@ -147,7 +132,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
 
         const activity3 = await prisma.activity.create({
             data: {
-                name: 'Activity 3 - Mar 2025 to ongoing',
+                name: `Activity 3 ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2025-03-01'),
                 endDate: null, // Ongoing
@@ -165,7 +150,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
 
         const activity4 = await prisma.activity.create({
             data: {
-                name: 'Activity 4 - Dec 2024',
+                name: `Activity 4 ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2024-12-01'),
                 endDate: new Date('2024-12-31'),
@@ -183,7 +168,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
 
         // Create participants
         const p1 = await prisma.participant.create({
-            data: { name: 'RoleDateTest Participant 1 - Tutor in Activity 1' },
+            data: { name: `RoleDateTest Participant 1 ${testSuffix}` },
         });
         participant1Id = p1.id;
         await prisma.participantAddressHistory.create({
@@ -202,7 +187,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
         });
 
         const p2 = await prisma.participant.create({
-            data: { name: 'RoleDateTest Participant 2 - Teacher in Activity 2' },
+            data: { name: `RoleDateTest Participant 2 ${testSuffix}` },
         });
         participant2Id = p2.id;
         await prisma.participantAddressHistory.create({
@@ -221,7 +206,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
         });
 
         const p3 = await prisma.participant.create({
-            data: { name: 'RoleDateTest Participant 3 - Tutor in Activity 3 (ongoing)' },
+            data: { name: `RoleDateTest Participant 3 ${testSuffix}` },
         });
         participant3Id = p3.id;
         await prisma.participantAddressHistory.create({
@@ -240,7 +225,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
         });
 
         const p4 = await prisma.participant.create({
-            data: { name: 'RoleDateTest Participant 4 - Participant in Activity 4 (Dec 2024)' },
+            data: { name: `RoleDateTest Participant 4 ${testSuffix}` },
         });
         participant4Id = p4.id;
         await prisma.participantAddressHistory.create({
@@ -259,7 +244,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
         });
 
         const p5 = await prisma.participant.create({
-            data: { name: 'RoleDateTest Participant 5 - No Assignments' },
+            data: { name: `RoleDateTest Participant 5 ${testSuffix}` },
         });
         participant5Id = p5.id;
         await prisma.participantAddressHistory.create({
@@ -313,20 +298,6 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
             },
         });
 
-        await prisma.role.deleteMany({
-            where: {
-                id: { in: [tutorRoleId, teacherRoleId, participantRoleId] },
-            },
-        });
-
-        await prisma.activityType.deleteMany({
-            where: { id: activityTypeId },
-        });
-
-        await prisma.activityCategory.deleteMany({
-            where: { id: activityCategoryId },
-        });
-
         await prisma.venue.deleteMany({
             where: { id: venueId },
         });
@@ -343,6 +314,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
             const result = await participantService.getParticipantsFlexible({
                 filter: {
                     roleIds: [tutorRoleId],
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 
@@ -359,6 +331,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
             const result = await participantService.getParticipantsFlexible({
                 filter: {
                     roleIds: [tutorRoleId, teacherRoleId],
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 
@@ -387,6 +360,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
             const result = await participantService.getParticipantsFlexible({
                 filter: {
                     roleIds: tutorRoleId, // Single string, not array
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 
@@ -401,6 +375,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
             const result = await participantService.getParticipantsFlexible({
                 filter: {
                     roleIds: `${tutorRoleId},${teacherRoleId}`, // Comma-separated string
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 
@@ -440,6 +415,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
             const result = await participantService.getParticipantsFlexible({
                 filter: {
                     activityStartDate: '2025-02-01',
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 
@@ -461,6 +437,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
             const result = await participantService.getParticipantsFlexible({
                 filter: {
                     activityEndDate: '2025-01-31',
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 
@@ -544,7 +521,8 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
                 filter: {
                     roleIds: [tutorRoleId],
                     activityStartDate: '2025-01-01',
-                    name: 'Activity 1', // Should match only Participant 1
+                    activityEndDate: '2025-03-31',
+                    name: 'RoleDateTest Participant 1', // Should match only Participant 1
                 },
             });
 
@@ -590,6 +568,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
                 limit: 1,
                 filter: {
                     roleIds: [tutorRoleId],
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 
@@ -606,6 +585,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
                 filter: {
                     activityStartDate: '2025-01-01',
                     activityEndDate: '2025-12-31',
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 
@@ -621,6 +601,7 @@ describe('Participant Role and Activity Date Filtering Integration Tests', () =>
                 geographicAreaId,
                 filter: {
                     roleIds: [tutorRoleId],
+                    name: 'RoleDateTest', // Isolate to this test's participants
                 },
             });
 

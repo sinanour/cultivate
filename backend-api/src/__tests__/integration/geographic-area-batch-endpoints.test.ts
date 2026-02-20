@@ -13,6 +13,7 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
   let authService: GeographicAuthorizationService;
   let authRepo: UserGeographicAuthorizationRepository;
   let userRepo: UserRepository;
+  const testSuffix = Date.now();
   let testUserId: string;
   let countryId: string;
   let provinceId: string;
@@ -30,7 +31,7 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
     // Create test user
     const user = await prisma.user.create({
       data: {
-        email: 'batch-test@test.com',
+        email: `batch-test-${testSuffix}@test.com`,
         passwordHash: 'hash',
         role: 'EDITOR',
       },
@@ -40,14 +41,14 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
     // Create test geographic hierarchy
     // Country (root)
     const country = await repository.create({
-      name: 'Batch Test Country',
+      name: `Batch Test Country ${testSuffix}`,
       areaType: 'COUNTRY',
     });
     countryId = country.id;
 
     // Province (child of country)
     const province = await repository.create({
-      name: 'Batch Test Province',
+      name: `Batch Test Province ${testSuffix}`,
       areaType: 'PROVINCE',
       parentGeographicAreaId: countryId,
     });
@@ -55,7 +56,7 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
 
     // City (child of province)
     const city = await repository.create({
-      name: 'Batch Test City',
+      name: `Batch Test City ${testSuffix}`,
       areaType: 'CITY',
       parentGeographicAreaId: provinceId,
     });
@@ -63,7 +64,7 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
 
     // Neighbourhood (child of city)
     const neighbourhood = await repository.create({
-      name: 'Batch Test Neighbourhood',
+      name: `Batch Test Neighbourhood ${testSuffix}`,
       areaType: 'NEIGHBOURHOOD',
       parentGeographicAreaId: cityId,
     });
@@ -131,7 +132,7 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
       const neighbourhood = result[neighbourhoodId];
       expect(neighbourhood).toBeDefined();
       expect(neighbourhood.id).toBe(neighbourhoodId);
-      expect(neighbourhood.name).toBe('Batch Test Neighbourhood');
+      expect(neighbourhood.name).toBe(`Batch Test Neighbourhood ${testSuffix}`);
       expect(neighbourhood.areaType).toBe('NEIGHBOURHOOD');
       expect(neighbourhood.parentGeographicAreaId).toBe(cityId);
       expect(neighbourhood.childCount).toBe(0);
@@ -142,7 +143,7 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
       const city = result[cityId];
       expect(city).toBeDefined();
       expect(city.id).toBe(cityId);
-      expect(city.name).toBe('Batch Test City');
+      expect(city.name).toBe(`Batch Test City ${testSuffix}`);
       expect(city.areaType).toBe('CITY');
       expect(city.parentGeographicAreaId).toBe(provinceId);
       expect(city.childCount).toBe(1); // Has neighbourhood as child
@@ -153,7 +154,7 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
       const province = result[provinceId];
       expect(province).toBeDefined();
       expect(province.id).toBe(provinceId);
-      expect(province.name).toBe('Batch Test Province');
+      expect(province.name).toBe(`Batch Test Province ${testSuffix}`);
       expect(province.areaType).toBe('PROVINCE');
       expect(province.parentGeographicAreaId).toBe(countryId);
       expect(province.childCount).toBe(1); // Has city as child
@@ -219,14 +220,14 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
 
       // Verify we got complete details for all ancestors
       expect(detailsResult[cityId]).toBeDefined();
-      expect(detailsResult[cityId].name).toBe('Batch Test City');
+      expect(detailsResult[cityId].name).toBe(`Batch Test City ${testSuffix}`);
       expect(detailsResult[cityId].childCount).toBe(1);
 
       expect(detailsResult[provinceId]).toBeDefined();
-      expect(detailsResult[provinceId].name).toBe('Batch Test Province');
+      expect(detailsResult[provinceId].name).toBe(`Batch Test Province ${testSuffix}`);
 
       expect(detailsResult[countryId]).toBeDefined();
-      expect(detailsResult[countryId].name).toBe('Batch Test Country');
+      expect(detailsResult[countryId].name).toBe(`Batch Test Country ${testSuffix}`);
     });
   });
 
@@ -239,7 +240,7 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
       // Create a restricted user
       const user = await prisma.user.create({
         data: {
-          email: 'batch-restricted@test.com',
+          email: `batch-restricted-${testSuffix}@test.com`,
           passwordHash: 'hash',
           role: 'EDITOR',
         },
@@ -248,14 +249,14 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
 
       // Create two cities: one allowed, one denied
       const allowedCity = await repository.create({
-        name: 'Batch Allowed City',
+        name: `Batch Allowed City ${testSuffix}`,
         areaType: 'CITY',
         parentGeographicAreaId: provinceId,
       });
       allowedCityId = allowedCity.id;
 
       const deniedCity = await repository.create({
-        name: 'Batch Denied City',
+        name: `Batch Denied City ${testSuffix}`,
         areaType: 'CITY',
         parentGeographicAreaId: provinceId,
       });
@@ -302,14 +303,14 @@ describe('Geographic Area Batch Endpoints Integration Tests', () => {
 
       // Should include allowed city
       expect(result[allowedCityId]).toBeDefined();
-      expect(result[allowedCityId].name).toBe('Batch Allowed City');
+      expect(result[allowedCityId].name).toBe(`Batch Allowed City ${testSuffix}`);
 
       // Should NOT include denied city
       expect(result[deniedCityId]).toBeUndefined();
 
       // Should include province (ancestor of allowed city, read-only access)
       expect(result[provinceId]).toBeDefined();
-      expect(result[provinceId].name).toBe('Batch Test Province');
+      expect(result[provinceId].name).toBe(`Batch Test Province ${testSuffix}`);
     });
 
     it('should filter batch-ancestors response based on authorization', async () => {

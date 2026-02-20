@@ -12,6 +12,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
     let prisma: PrismaClient;
     let mapDataService: MapDataService;
     let geoAuthService: GeographicAuthorizationService;
+    const testSuffix = Date.now();
     let userId: string;
     let rootAreaId: string;
     const createdIds: {
@@ -120,7 +121,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
         });
 
         // Create test user
-        const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR');
+        const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR', testSuffix);
         userId = user.id;
 
         // Create a large geographic hierarchy to test bind variable limits
@@ -131,7 +132,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
         // Create root area
         const rootArea = await prisma.geographicArea.create({
             data: {
-                name: 'Test Root Country',
+                name: `LargeHierarchyTest Root Country ${testSuffix}`,
                 areaType: 'COUNTRY',
                 parentGeographicAreaId: null,
             },
@@ -144,7 +145,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
         for (let i = 0; i < 10; i++) {
             const area = await prisma.geographicArea.create({
                 data: {
-                    name: `Test Province ${i}`,
+                    name: `LargeHierarchyTest Province ${i} ${testSuffix}`,
                     areaType: 'PROVINCE',
                     parentGeographicAreaId: rootArea.id,
                 },
@@ -159,7 +160,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
             for (let i = 0; i < 10; i++) {
                 const area = await prisma.geographicArea.create({
                     data: {
-                        name: `Test City ${province.name}-${i}`,
+                        name: `LargeHierarchyTest City ${province.name}-${i}`,
                         areaType: 'CITY',
                         parentGeographicAreaId: province.id,
                     },
@@ -175,7 +176,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
             for (let i = 0; i < 10; i++) {
                 const area = await prisma.geographicArea.create({
                     data: {
-                        name: `Test Neighbourhood ${city.name}-${i}`,
+                        name: `LargeHierarchyTest Neighbourhood ${city.name}-${i}`,
                         areaType: 'NEIGHBOURHOOD',
                         parentGeographicAreaId: city.id,
                     },
@@ -190,7 +191,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
             for (let i = 0; i < 3; i++) {
                 const venue = await prisma.venue.create({
                     data: {
-                        name: `Test Venue ${neighbourhood.name}-${i}`,
+                        name: `LargeHierarchyTest Venue ${neighbourhood.name}-${i}`,
                         address: `${i} Test Street`,
                         geographicAreaId: neighbourhood.id,
                         latitude: 49.0 + Math.random() * 0.1,
@@ -205,8 +206,8 @@ describe('Map Data Large Geographic Hierarchy', () => {
         for (let i = 0; i < 10; i++) {
             const participant = await prisma.participant.create({
                 data: {
-                    name: `Test Participant ${i}`,
-                    email: `large-hierarchy-participant-${i}@example.com`,
+                    name: `LargeHierarchyTest Participant ${i} ${testSuffix}`,
+                    email: `large-hierarchy-participant-${i}-${testSuffix}@example.com`,
                 },
             });
             createdIds.participants.push(participant.id);
@@ -333,7 +334,7 @@ describe('Map Data Large Geographic Hierarchy', () => {
             // Create a population and assign some participants
             const population = await prisma.population.create({
                 data: {
-                    name: 'Test Population Large Hierarchy',
+                    name: `LargeHierarchyTest Population ${testSuffix}`,
                 },
             });
 

@@ -10,6 +10,7 @@ const prisma = getPrismaClient();
 describe('Token Invalidation Integration Tests', () => {
     let authService: AuthService;
     let userRepository: UserRepository;
+    const testSuffix = Date.now();
     let testUserId: string;
     let adminUserId: string;
 
@@ -17,12 +18,12 @@ describe('Token Invalidation Integration Tests', () => {
         userRepository = new UserRepository(prisma);
         authService = new AuthService(userRepository);
 
-        // Create test users
+        // Create test users with unique emails and proper password hashing
         const passwordHash = await authService.hashPassword('password123');
 
         const testUser = await prisma.user.create({
             data: {
-                email: 'tokentest@example.com',
+                email: `tokentest-${testSuffix}@example.com`,
                 passwordHash,
                 role: UserRole.EDITOR,
                 displayName: 'Token Test User',
@@ -32,7 +33,7 @@ describe('Token Invalidation Integration Tests', () => {
 
         const adminUser = await prisma.user.create({
             data: {
-                email: 'tokenadmin@example.com',
+                email: `tokenadmin-${testSuffix}@example.com`,
                 passwordHash,
                 role: UserRole.ADMINISTRATOR,
                 displayName: 'Token Admin User',
@@ -45,9 +46,7 @@ describe('Token Invalidation Integration Tests', () => {
         // Clean up test users
         await prisma.user.deleteMany({
             where: {
-                email: {
-                    in: ['tokentest@example.com', 'tokenadmin@example.com'],
-                },
+                id: { in: [testUserId, adminUserId] },
             },
         });
     });
@@ -68,7 +67,7 @@ describe('Token Invalidation Integration Tests', () => {
         it('should invalidate all tokens for current user', async () => {
             // Generate fresh token
             const tokens = await authService.login({
-                email: 'tokentest@example.com',
+                email: `tokentest-${testSuffix}@example.com`,
                 password: 'password123',
             });
 
@@ -90,7 +89,7 @@ describe('Token Invalidation Integration Tests', () => {
         it('should reject invalidated token on subsequent requests', async () => {
             // Generate fresh token
             const tokens = await authService.login({
-                email: 'tokentest@example.com',
+                email: `tokentest-${testSuffix}@example.com`,
                 password: 'password123',
             });
 
@@ -123,7 +122,7 @@ describe('Token Invalidation Integration Tests', () => {
         it('should allow administrator to invalidate tokens for any user', async () => {
             // Generate fresh admin token
             const adminTokens = await authService.login({
-                email: 'tokenadmin@example.com',
+                email: `tokenadmin-${testSuffix}@example.com`,
                 password: 'password123',
             });
 
@@ -144,7 +143,7 @@ describe('Token Invalidation Integration Tests', () => {
         it('should ignore userId parameter for non-administrators', async () => {
             // Generate fresh token for test user
             const tokens = await authService.login({
-                email: 'tokentest@example.com',
+                email: `tokentest-${testSuffix}@example.com`,
                 password: 'password123',
             });
 
@@ -168,7 +167,7 @@ describe('Token Invalidation Integration Tests', () => {
         it('should automatically invalidate tokens when user changes password', async () => {
             // Generate fresh token
             const tokens = await authService.login({
-                email: 'tokentest@example.com',
+                email: `tokentest-${testSuffix}@example.com`,
                 password: 'password123',
             });
 
@@ -203,11 +202,11 @@ describe('Token Invalidation Integration Tests', () => {
         it('should automatically invalidate tokens when admin changes user password', async () => {
             // Generate fresh tokens
             const tokens = await authService.login({
-                email: 'tokentest@example.com',
+                email: `tokentest-${testSuffix}@example.com`,
                 password: 'password123',
             });
             const adminTokens = await authService.login({
-                email: 'tokenadmin@example.com',
+                email: `tokenadmin-${testSuffix}@example.com`,
                 password: 'password123',
             });
 
@@ -243,7 +242,7 @@ describe('Token Invalidation Integration Tests', () => {
         it('should reject invalidated refresh token', async () => {
             // Generate fresh tokens
             const tokens = await authService.login({
-                email: 'tokentest@example.com',
+                email: `tokentest-${testSuffix}@example.com`,
                 password: 'password123',
             });
 

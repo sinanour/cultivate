@@ -22,6 +22,7 @@ describe('Geographic Authorization - Comprehensive Edge Cases', () => {
     let areaRepo: GeographicAreaRepository;
     let userRepo: UserRepository;
     let testUserId: string;
+    const testSuffix = Date.now();
 
     // Hierarchy: country -> province -> city -> neighbourhood -> block
     let countryId: string;
@@ -37,33 +38,33 @@ describe('Geographic Authorization - Comprehensive Edge Cases', () => {
         userRepo = new UserRepository(prisma);
         service = new GeographicAuthorizationService(authRepo, areaRepo, userRepo);
 
-        // Create test user
-        const user = await TestHelpers.createTestUser(prisma, 'EDITOR');
+        // Create test user with unique email
+        const user = await TestHelpers.createTestUser(prisma, 'EDITOR', testSuffix);
         testUserId = user.id;
 
         // Create 5-level hierarchy with unique names
         const country = await prisma.geographicArea.create({
-            data: { name: `Comprehensive Test Country ${Date.now()}`, areaType: 'COUNTRY' },
+            data: { name: `GeoAuthTest Country ${testSuffix}`, areaType: 'COUNTRY' },
         });
         countryId = country.id;
 
         const province = await prisma.geographicArea.create({
-            data: { name: `Comprehensive Test Province ${Date.now()}`, areaType: 'PROVINCE', parentGeographicAreaId: countryId },
+            data: { name: `GeoAuthTest Province ${testSuffix}`, areaType: 'PROVINCE', parentGeographicAreaId: countryId },
         });
         provinceId = province.id;
 
         const city = await prisma.geographicArea.create({
-            data: { name: `Comprehensive Test City ${Date.now()}`, areaType: 'CITY', parentGeographicAreaId: provinceId },
+            data: { name: `GeoAuthTest City ${testSuffix}`, areaType: 'CITY', parentGeographicAreaId: provinceId },
         });
         cityId = city.id;
 
         const neighbourhood = await prisma.geographicArea.create({
-            data: { name: `Comprehensive Test Neighbourhood ${Date.now()}`, areaType: 'NEIGHBOURHOOD', parentGeographicAreaId: cityId },
+            data: { name: `GeoAuthTest Neighbourhood ${testSuffix}`, areaType: 'NEIGHBOURHOOD', parentGeographicAreaId: cityId },
         });
         neighbourhoodId = neighbourhood.id;
 
         const block = await prisma.geographicArea.create({
-            data: { name: `Comprehensive Test Block ${Date.now()}`, areaType: 'COMMUNITY', parentGeographicAreaId: neighbourhoodId },
+            data: { name: `GeoAuthTest Block ${testSuffix}`, areaType: 'COMMUNITY', parentGeographicAreaId: neighbourhoodId },
         });
         blockId = block.id;
     });
@@ -246,14 +247,12 @@ describe('Geographic Authorization - Comprehensive Edge Cases', () => {
         let participantId: string;
         let activityId: string;
         let venueId: string;
-        let activityTypeId: string;
-        let categoryId: string;
 
         beforeEach(async () => {
             // Create venue in the block (deepest level)
             const venue = await prisma.venue.create({
                 data: {
-                    name: 'Test Venue',
+                    name: `GeoAuthTest Venue ${testSuffix}`,
                     address: '123 Test St',
                     geographicAreaId: blockId,
                 },
@@ -262,7 +261,7 @@ describe('Geographic Authorization - Comprehensive Edge Cases', () => {
 
             // Create participant with home venue
             const participant = await prisma.participant.create({
-                data: { name: 'Test Participant' },
+                data: { name: `GeoAuthTest Participant ${testSuffix}` },
             });
             participantId = participant.id;
 
@@ -274,25 +273,13 @@ describe('Geographic Authorization - Comprehensive Edge Cases', () => {
                 },
             });
 
-            // Create activity type and category (use unique names)
-            const category = await prisma.activityCategory.create({
-                data: { name: `Test Category ${Date.now()}`, isPredefined: false },
-            });
-            categoryId = category.id;
-
-            const activityType = await prisma.activityType.create({
-                data: {
-                    name: `Test Type ${Date.now()}`,
-                    activityCategoryId: category.id,
-                    isPredefined: false,
-                },
-            });
-            activityTypeId = activityType.id;
+            // Get predefined activity type
+            const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
 
             // Create activity
             const activity = await prisma.activity.create({
                 data: {
-                    name: 'Test Activity',
+                    name: `GeoAuthTest Activity ${testSuffix}`,
                     activityTypeId: activityType.id,
                     startDate: new Date(),
                     status: 'PLANNED',
@@ -312,8 +299,6 @@ describe('Geographic Authorization - Comprehensive Edge Cases', () => {
         afterEach(async () => {
             await prisma.activityVenueHistory.deleteMany({ where: { activityId } });
             await prisma.activity.deleteMany({ where: { id: activityId } });
-            await prisma.activityType.delete({ where: { id: activityTypeId } });
-            await prisma.activityCategory.delete({ where: { id: categoryId } });
             await prisma.participantAddressHistory.deleteMany({ where: { participantId } });
             await prisma.participant.deleteMany({ where: { id: participantId } });
             await prisma.venue.deleteMany({ where: { id: venueId } });

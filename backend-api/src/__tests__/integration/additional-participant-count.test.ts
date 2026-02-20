@@ -9,11 +9,13 @@ import { GeographicAuthorizationService } from '../../services/geographic-author
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { AuditLogRepository } from '../../repositories/audit-log.repository';
+import { TestHelpers } from '../utils';
 
 const prisma = new PrismaClient();
 
 describe('Additional Participant Count Integration', () => {
   let activityService: ActivityService;
+  const testSuffix = Date.now();
   let activityTypeId: string;
   let activityId: string;
 
@@ -44,8 +46,8 @@ describe('Additional Participant Count Integration', () => {
     );
 
     // Get a predefined activity type for testing
-    const activityTypes = await activityTypeRepository.findAll();
-    activityTypeId = activityTypes[0].id;
+    const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+    activityTypeId = activityType.id;
   });
 
   afterAll(async () => {
@@ -62,7 +64,7 @@ describe('Additional Participant Count Integration', () => {
 
   it('should create activity with additionalParticipantCount', async () => {
     const activity = await activityService.createActivity({
-      name: 'Test Activity with Additional Count',
+      name: `AdditionalCountTest Activity ${testSuffix}`,
       activityTypeId,
       startDate: new Date('2025-02-01'),
       additionalParticipantCount: 25,
@@ -71,7 +73,7 @@ describe('Additional Participant Count Integration', () => {
     activityId = activity.id;
 
     expect(activity.additionalParticipantCount).toBe(25);
-    expect(activity.name).toBe('Test Activity with Additional Count');
+    expect(activity.name).toBe(`AdditionalCountTest Activity ${testSuffix}`);
   });
 
   it('should retrieve activity with additionalParticipantCount', async () => {
@@ -104,7 +106,7 @@ describe('Additional Participant Count Integration', () => {
 
   it('should create activity without additionalParticipantCount (defaults to null)', async () => {
     const activity = await activityService.createActivity({
-      name: 'Test Activity without Additional Count',
+      name: `AdditionalCountTest Activity without Count ${testSuffix}`,
       activityTypeId,
       startDate: new Date('2025-02-01'),
     });

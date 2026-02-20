@@ -17,6 +17,7 @@ import { getPrismaClient } from '../../utils/prisma.client';
 describe('Geographic Area Children Endpoint with Filter Context', () => {
     let prisma: PrismaClient;
     let geographicAreaService: GeographicAreaService;
+    const testSuffix = Date.now();
     let testAreaIds: {
         world: string;
         northAmerica: string;
@@ -57,7 +58,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const world = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest World',
+                name: `ChildrenFilterTest World ${testSuffix}`,
                 areaType: 'WORLD',
                 parentGeographicAreaId: null,
             },
@@ -65,7 +66,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const northAmerica = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest North America',
+                name: `ChildrenFilterTest North America ${testSuffix}`,
                 areaType: 'CONTINENT',
                 parentGeographicAreaId: world.id,
             },
@@ -73,7 +74,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const europe = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest Europe',
+                name: `ChildrenFilterTest Europe ${testSuffix}`,
                 areaType: 'CONTINENT',
                 parentGeographicAreaId: world.id,
             },
@@ -81,7 +82,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const asia = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest Asia',
+                name: `ChildrenFilterTest Asia ${testSuffix}`,
                 areaType: 'CONTINENT',
                 parentGeographicAreaId: world.id,
             },
@@ -89,7 +90,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const canada = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest Canada',
+                name: `ChildrenFilterTest Canada ${testSuffix}`,
                 areaType: 'COUNTRY',
                 parentGeographicAreaId: northAmerica.id,
             },
@@ -97,7 +98,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const usa = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest USA',
+                name: `ChildrenFilterTest USA ${testSuffix}`,
                 areaType: 'COUNTRY',
                 parentGeographicAreaId: northAmerica.id,
             },
@@ -105,7 +106,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const bc = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest British Columbia',
+                name: `ChildrenFilterTest British Columbia ${testSuffix}`,
                 areaType: 'PROVINCE',
                 parentGeographicAreaId: canada.id,
             },
@@ -113,7 +114,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const ontario = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest Ontario',
+                name: `ChildrenFilterTest Ontario ${testSuffix}`,
                 areaType: 'PROVINCE',
                 parentGeographicAreaId: canada.id,
             },
@@ -121,7 +122,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const vancouver = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest Vancouver',
+                name: `ChildrenFilterTest Vancouver ${testSuffix}`,
                 areaType: 'CITY',
                 parentGeographicAreaId: bc.id,
             },
@@ -129,7 +130,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
         const downtown = await prisma.geographicArea.create({
             data: {
-                name: 'ChildrenFilterTest Downtown',
+                name: `ChildrenFilterTest Downtown ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: vancouver.id,
             },
@@ -154,7 +155,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
         await prisma.geographicArea.deleteMany({
             where: {
                 name: {
-                    startsWith: 'ChildrenFilterTest ',
+                    contains: `ChildrenFilterTest`,
                 },
             },
         });
@@ -179,7 +180,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
             // Should include ONLY North America
             expect(childIds).toContain(testAreaIds.northAmerica);
-            expect(childNames).toContain('ChildrenFilterTest North America');
+            expect(childNames).toContain(`ChildrenFilterTest North America ${testSuffix}`);
 
             // Should NOT include Europe or Asia
             expect(childIds).not.toContain(testAreaIds.europe);
@@ -207,7 +208,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
             // Should include ONLY Canada
             expect(childIds).toContain(testAreaIds.canada);
-            expect(childNames).toContain('ChildrenFilterTest Canada');
+            expect(childNames).toContain(`ChildrenFilterTest Canada ${testSuffix}`);
 
             // Should NOT include USA
             expect(childIds).not.toContain(testAreaIds.usa);
@@ -234,7 +235,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
             // Should include ONLY BC
             expect(childIds).toContain(testAreaIds.bc);
-            expect(childNames).toContain('ChildrenFilterTest British Columbia');
+            expect(childNames).toContain(`ChildrenFilterTest British Columbia ${testSuffix}`);
 
             // Should NOT include Ontario
             expect(childIds).not.toContain(testAreaIds.ontario);
@@ -324,7 +325,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
             // Should include Vancouver (the filtered area itself)
             expect(childIds).toContain(testAreaIds.vancouver);
-            expect(childNames).toContain('ChildrenFilterTest Vancouver');
+            expect(childNames).toContain(`ChildrenFilterTest Vancouver ${testSuffix}`);
 
             // Verify exact count (1 child - just Vancouver, not other cities)
             expect(childIds.length).toBe(1);
@@ -348,7 +349,7 @@ describe('Geographic Area Children Endpoint with Filter Context', () => {
 
             // Should include Vancouver (all children of BC)
             expect(childIds).toContain(testAreaIds.vancouver);
-            expect(childNames).toContain('ChildrenFilterTest Vancouver');
+            expect(childNames).toContain(`ChildrenFilterTest Vancouver ${testSuffix}`);
 
             // Verify we get all children, not filtered
             expect(childIds.length).toBe(1); // BC only has 1 child in our test data

@@ -9,6 +9,7 @@ const prisma = new PrismaClient();
 
 describe('Geographic Area Depth Pagination Integration Tests', () => {
     let service: GeographicAreaService;
+    const testSuffix = Date.now();
     let countryId: string;
     let provinceIds: string[] = [];
     let cityIds: string[] = [];
@@ -24,7 +25,7 @@ describe('Geographic Area Depth Pagination Integration Tests', () => {
         // Create test hierarchy: 1 country → 5 provinces → 3 cities each (15 cities total)
         const country = await prisma.geographicArea.create({
             data: {
-                name: 'Test Country Pagination',
+                name: `Test Country Pagination ${testSuffix}`,
                 areaType: 'COUNTRY',
                 parentGeographicAreaId: null,
             },
@@ -35,7 +36,7 @@ describe('Geographic Area Depth Pagination Integration Tests', () => {
         for (let i = 1; i <= 5; i++) {
             const province = await prisma.geographicArea.create({
                 data: {
-                    name: `Test Province ${i}`,
+                    name: `Test Province ${i} ${testSuffix}`,
                     areaType: 'PROVINCE',
                     parentGeographicAreaId: countryId,
                 },
@@ -46,7 +47,7 @@ describe('Geographic Area Depth Pagination Integration Tests', () => {
             for (let j = 1; j <= 3; j++) {
                 const city = await prisma.geographicArea.create({
                     data: {
-                        name: `Test City ${i}-${j}`,
+                        name: `Test City ${i}-${j} ${testSuffix}`,
                         areaType: 'CITY',
                         parentGeographicAreaId: province.id,
                     },

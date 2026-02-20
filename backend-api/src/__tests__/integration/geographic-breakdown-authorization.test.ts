@@ -13,6 +13,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
     let geographicAreaRepository: GeographicAreaRepository;
     let userGeographicAuthorizationRepository: UserGeographicAuthorizationRepository;
     let userRepository: UserRepository;
+    const testSuffix = Date.now();
 
     let cityId: string;
     let neighbourhood1Id: string;
@@ -49,10 +50,9 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         // Create test data
         // City with two neighbourhoods (use unique names to avoid conflicts)
-        const timestamp = Date.now();
         const city = await prisma.geographicArea.create({
             data: {
-                name: `GeoBreakdown Test City ${timestamp}`,
+                name: `GeoBreakdown Test City ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
@@ -61,7 +61,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         const neighbourhood1 = await prisma.geographicArea.create({
             data: {
-                name: `GeoBreakdown Allowed Neighbourhood ${timestamp}`,
+                name: `GeoBreakdown Allowed Neighbourhood ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
@@ -71,7 +71,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         const neighbourhood2 = await prisma.geographicArea.create({
             data: {
-                name: `GeoBreakdown Denied Neighbourhood ${timestamp}`,
+                name: `GeoBreakdown Denied Neighbourhood ${testSuffix}`,
                 areaType: 'NEIGHBOURHOOD',
                 parentGeographicAreaId: cityId,
             },
@@ -82,7 +82,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         // Create venues in each neighbourhood
         const venue1 = await prisma.venue.create({
             data: {
-                name: `GeoBreakdown Venue in Allowed Area ${timestamp}`,
+                name: `GeoBreakdown Venue in Allowed Area ${testSuffix}`,
                 address: '123 Allowed St',
                 geographicAreaId: neighbourhood1Id,
             },
@@ -91,7 +91,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         const venue2 = await prisma.venue.create({
             data: {
-                name: `GeoBreakdown Venue in Denied Area ${timestamp}`,
+                name: `GeoBreakdown Venue in Denied Area ${testSuffix}`,
                 address: '456 Denied St',
                 geographicAreaId: neighbourhood2Id,
             },
@@ -99,13 +99,13 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         createdIds.venues.push(venue2.id);
 
         // Create activity type
-        const categoryName = `Test Category ${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const categoryName = `Test Category ${testSuffix}`;
         const category = await prisma.activityCategory.create({
             data: { name: categoryName },
         });
         createdIds.categories.push(category.id);
 
-        const typeName = `Test Type ${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const typeName = `Test Type ${testSuffix}`;
         const activityType = await prisma.activityType.create({
             data: {
                 name: typeName,
@@ -117,7 +117,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         // Create activities in each venue
         const activity1 = await prisma.activity.create({
             data: {
-                name: `GeoBreakdown Activity in Allowed Area ${timestamp}`,
+                name: `GeoBreakdown Activity in Allowed Area ${testSuffix}`,
                 activityTypeId: activityType.id,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -135,7 +135,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         const activity2 = await prisma.activity.create({
             data: {
-                name: `GeoBreakdown Activity in Denied Area ${timestamp}`,
+                name: `GeoBreakdown Activity in Denied Area ${testSuffix}`,
                 activityTypeId: activityType.id,
                 startDate: new Date('2024-01-01'),
                 status: 'ACTIVE',
@@ -153,7 +153,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         // Create participants
         const participant1 = await prisma.participant.create({
-            data: { name: `GeoBreakdown Participant in Allowed Area ${timestamp}` },
+            data: { name: `GeoBreakdown Participant in Allowed Area ${testSuffix}` },
         });
         createdIds.participants.push(participant1.id);
 
@@ -166,7 +166,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         });
 
         const participant2 = await prisma.participant.create({
-            data: { name: `GeoBreakdown Participant in Denied Area ${timestamp}` },
+            data: { name: `GeoBreakdown Participant in Denied Area ${testSuffix}` },
         });
         createdIds.participants.push(participant2.id);
 
@@ -180,7 +180,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
 
         // Create role
         const role = await prisma.role.create({
-            data: { name: `Test Role ${Date.now()}` },
+            data: { name: `Test Role ${testSuffix}` },
         });
         createdIds.roles.push(role.id);
 
@@ -202,7 +202,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
         });
 
         // Create test user with authorization rules
-        const user = await TestHelpers.createTestUser(prisma, 'EDITOR');
+        const user = await TestHelpers.createTestUser(prisma, 'EDITOR', testSuffix);
         userId = user.id;
         createdIds.users.push(user.id);
 
@@ -234,7 +234,7 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
             activityIds: createdIds.activities,
             participantIds: createdIds.participants,
             venueIds: createdIds.venues,
-            areaIds: createdIds.areas,
+            geographicAreaIds: createdIds.areas, // Fixed: was 'areaIds'
         });
 
         // Clean up roles, activity types, and categories separately
@@ -306,8 +306,8 @@ describe('Geographic Breakdown Authorization Integration Tests', () => {
     });
 
     it('should work correctly for users without geographic restrictions', async () => {
-        // Create unrestricted user
-        const unrestrictedUser = await TestHelpers.createTestUser(prisma, 'EDITOR');
+        // Create unrestricted user with unique suffix
+        const unrestrictedUser = await TestHelpers.createTestUser(prisma, 'EDITOR', `${testSuffix}-unrestricted`);
 
         // Get geographic breakdown (should show all neighbourhoods)
         const result = await analyticsService.getGeographicBreakdown(

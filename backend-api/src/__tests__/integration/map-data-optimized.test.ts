@@ -5,6 +5,7 @@ import { GeographicAuthorizationService } from '../../services/geographic-author
 import { UserGeographicAuthorizationRepository } from '../../repositories/user-geographic-authorization.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { ActivityStatus } from '../../utils/constants';
+import { TestHelpers } from '../utils';
 
 const prisma = new PrismaClient();
 
@@ -13,6 +14,7 @@ describe('Map Data Optimized Implementation', () => {
     let userId: string;
     let geographicAreaId: string;
     let activityTypeId: string;
+    const testSuffix = Date.now();
 
     // Test data IDs
     let activity1Id: string;
@@ -34,36 +36,24 @@ describe('Map Data Optimized Implementation', () => {
         mapDataService = new MapDataService(prisma, geoAuthService);
 
         // Create test data
-        const user = await prisma.user.create({
-            data: {
-                email: `test-map-opt-${Date.now()}@example.com`,
-                passwordHash: 'hash',
-                role: 'ADMINISTRATOR',
-            },
-        });
+        const user = await TestHelpers.createTestUser(prisma, 'ADMINISTRATOR', testSuffix);
         userId = user.id;
 
         const area = await prisma.geographicArea.create({
             data: {
-                name: `Test Area ${Date.now()}`,
+                name: `MapOptTest Area ${testSuffix}`,
                 areaType: 'CITY',
             },
         });
         geographicAreaId = area.id;
 
-        const category = await prisma.activityCategory.findFirst({
-            where: { isPredefined: true },
-        });
-
-        const activityType = await prisma.activityType.findFirst({
-            where: { activityCategoryId: category!.id },
-        });
-        activityTypeId = activityType!.id;
+        const activityType = await TestHelpers.getPredefinedActivityType(prisma, 'Ruhi Book 01');
+        activityTypeId = activityType.id;
 
         // Create venues with coordinates
         const venue1 = await prisma.venue.create({
             data: {
-                name: 'Venue 1',
+                name: `Venue 1 ${testSuffix}`,
                 address: '123 Main St',
                 geographicAreaId,
                 latitude: 40.7,
@@ -73,7 +63,7 @@ describe('Map Data Optimized Implementation', () => {
 
         const venue2 = await prisma.venue.create({
             data: {
-                name: 'Venue 2',
+                name: `Venue 2 ${testSuffix}`,
                 address: '456 Oak Ave',
                 geographicAreaId,
                 latitude: 40.8,
@@ -83,7 +73,7 @@ describe('Map Data Optimized Implementation', () => {
 
         const venue3 = await prisma.venue.create({
             data: {
-                name: 'Venue 3',
+                name: `Venue 3 ${testSuffix}`,
                 address: '789 Pine Rd',
                 geographicAreaId,
                 latitude: 40.6,
@@ -94,7 +84,7 @@ describe('Map Data Optimized Implementation', () => {
         // Create activities
         const activity1 = await prisma.activity.create({
             data: {
-                name: 'Activity 1',
+                name: `Activity 1 ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2025-01-01'),
                 endDate: new Date('2025-12-31'),
@@ -105,7 +95,7 @@ describe('Map Data Optimized Implementation', () => {
 
         const activity2 = await prisma.activity.create({
             data: {
-                name: 'Activity 2',
+                name: `Activity 2 ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2025-01-01'),
                 endDate: new Date('2025-12-31'),
@@ -116,7 +106,7 @@ describe('Map Data Optimized Implementation', () => {
 
         const activity3 = await prisma.activity.create({
             data: {
-                name: 'Activity 3',
+                name: `Activity 3 ${testSuffix}`,
                 activityTypeId,
                 startDate: new Date('2025-01-01'),
                 endDate: new Date('2025-12-31'),
