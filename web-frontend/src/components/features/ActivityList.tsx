@@ -182,6 +182,50 @@ export function ActivityList() {
       },
     },
     {
+      key: 'role',
+      propertyLabel: 'Role',
+      groupValuesLabel: 'Role values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        const { ParticipantRoleService } = await import('../../services/api/participant-role.service');
+        const roles = await ParticipantRoleService.searchRoles(filterText || '');
+
+        roles.forEach((role: any) => addToCache(role.id, role.name));
+        return roles.map((role: any) => ({
+          propertyKey: 'role',
+          value: role.name, // Store label as value for display in tokens
+          label: role.name, // Display label in dropdown
+          description: role.isPredefined ? 'Predefined role' : 'Custom role',
+        }));
+      },
+    },
+    {
+      key: 'ageCohort',
+      propertyLabel: 'Age Cohort',
+      groupValuesLabel: 'Age Cohort values',
+      operators: ['='],
+      loadItems: async (filterText: string) => {
+        const cohorts = [
+          { value: 'Child', label: 'Child' },
+          { value: 'Junior Youth', label: 'Junior Youth' },
+          { value: 'Youth', label: 'Youth' },
+          { value: 'Young Adult', label: 'Young Adult' },
+          { value: 'Adult', label: 'Adult' },
+          { value: 'Unknown', label: 'Unknown' },
+        ];
+        const filtered = cohorts.filter(c =>
+          !filterText || c.label.toLowerCase().includes(filterText.toLowerCase())
+        );
+
+        // Age cohorts don't need UUID mapping (they're used directly)
+        return filtered.map(c => ({
+          propertyKey: 'ageCohort',
+          value: c.value, // Store cohort name as value
+          label: c.label, // Display label in dropdown
+        }));
+      },
+    },
+    {
       key: 'lastUpdated',
       propertyLabel: 'Last Updated',
       groupValuesLabel: 'Last Updated value',
@@ -293,6 +337,23 @@ export function ActivityList() {
       params.filter!.populationIds = populationIds.join(',');
     }
     
+    // Role filter - convert labels to UUIDs
+    const roleLabels = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'role' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    const roleIds = roleLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
+    if (roleIds.length > 0) {
+      params.filter!.roleIds = roleIds.join(',');
+    }
+
+    // Age Cohort filter - use cohort names directly (no UUID conversion needed)
+    const ageCohortValues = propertyFilterQuery.tokens
+      .filter(t => t.propertyKey === 'ageCohort' && t.operator === '=')
+      .flatMap(t => extractValuesFromToken(t));
+    if (ageCohortValues.length > 0) {
+      params.filter!.ageCohorts = ageCohortValues.join(',');
+    }
+
     // Name filter - use the search text directly (no UUID conversion needed)
     const nameValues = propertyFilterQuery.tokens
       .filter(t => t.propertyKey === 'name' && t.operator === '=')

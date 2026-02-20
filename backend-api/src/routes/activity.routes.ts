@@ -194,6 +194,16 @@ export class ActivityRoutes {
                 });
                 return;
             }
+            // Handle AppError for validation errors
+            const AppError = (await import('../types/errors.types')).AppError;
+            if (error instanceof AppError && error.statusCode === 400) {
+                res.status(400).json({
+                    code: error.code,
+                    message: error.message,
+                    details: error.details,
+                });
+                return;
+            }
             if (error instanceof Error && error.message.includes('Page')) {
                 res.status(400).json({
                     code: 'VALIDATION_ERROR',

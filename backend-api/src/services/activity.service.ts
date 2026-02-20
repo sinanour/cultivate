@@ -280,7 +280,26 @@ export class ActivityService {
       startDate: startDate ? new Date(startDate) : (filter?.startDate ? new Date(filter.startDate) : undefined),
       endDate: endDate ? new Date(endDate) : (filter?.endDate ? new Date(filter.endDate) : undefined),
       geographicAreaIds: effectiveAreaIds,
+      roleIds: this.normalizeToArray(filter?.roleIds),
+      ageCohorts: this.normalizeToArray(filter?.ageCohorts),
     };
+
+    // Validate roleIds are valid UUIDs
+    if (repositoryFilters.roleIds && repositoryFilters.roleIds.length > 0) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const invalidRoleIds = repositoryFilters.roleIds.filter((id: string) => !uuidRegex.test(id));
+      if (invalidRoleIds.length > 0) {
+        throw new AppError('VALIDATION_ERROR', `Invalid role ID format: ${invalidRoleIds.join(', ')}`, 400);
+      }
+    }
+
+    // Validate ageCohorts are valid cohort names
+    if (repositoryFilters.ageCohorts && repositoryFilters.ageCohorts.length > 0) {
+      const { validateAgeCohorts } = await import('../utils/age-cohort.utils');
+      if (!validateAgeCohorts(repositoryFilters.ageCohorts)) {
+        throw new AppError('VALIDATION_ERROR', 'Invalid age cohort name. Must be one of: Child, Junior Youth, Youth, Young Adult, Adult, Unknown', 400);
+      }
+    }
 
     // Add name filter if provided (high-cardinality text field)
     if (filter?.name) {

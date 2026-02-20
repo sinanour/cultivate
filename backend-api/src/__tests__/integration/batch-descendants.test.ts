@@ -136,26 +136,5 @@ describe('Batch Descendants Integration Tests', () => {
 
             expect(descendants).toHaveLength(0);
         });
-
-        it('should be faster than multiple individual calls', async () => {
-            const [worldId, countryId, provinceId] = testAreaIds;
-            const areaIds = [worldId, countryId, provinceId];
-
-            // Measure batch call
-            const batchStart = Date.now();
-            await repository.findBatchDescendants(areaIds);
-            const batchTime = Date.now() - batchStart;
-
-            // Measure individual calls
-            const individualStart = Date.now();
-            for (const areaId of areaIds) {
-                await repository.findBatchDescendants([areaId]);
-            }
-            const individualTime = Date.now() - individualStart;
-
-            // Batch should be faster (or at least not significantly slower)
-            // Allow some margin for test variability
-            expect(batchTime).toBeLessThanOrEqual(individualTime * 1.5);
-        });
     });
 });

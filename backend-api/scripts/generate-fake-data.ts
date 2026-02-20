@@ -294,15 +294,17 @@ async function generateParticipants(prisma: PrismaClient, config: GenerationConf
         return [];
     }
 
-    const participants: Array<{ id: string; name: string }> = [];
+    const participants: Array<{ id: string; name: string; dateOfBirth: Date }> = [];
     const addressHistory: Array<{ id: string; participantId: string; venueId: string; effectiveFrom: null }> = [];
     const participantIds: string[] = [];
 
     for (let i = 0; i < config.participants; i++) {
         const name = `Participant ${String(i).padStart(8, '0')}`;
         const id = generateDeterministicUUID(name);
+        const ageInDays = assignToEntity(name, 30000);
+        const dateOfBirth = new Date(new Date().getTime() - (ageInDays * 86400000));
 
-        participants.push({ id, name });
+        participants.push({ id, name, dateOfBirth });
         participantIds.push(id);
 
         // Assign to venue

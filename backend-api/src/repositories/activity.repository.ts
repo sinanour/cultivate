@@ -1,4 +1,5 @@
 import { PrismaClient, Activity, ActivityStatus } from '@prisma/client';
+import { calculateReferenceDate, convertCohortToDateRange, AgeCohort } from '../utils/age-cohort.utils';
 
 export interface CreateActivityData {
   name: string;
@@ -25,6 +26,8 @@ export interface ActivityFilters {
   startDate?: Date;
   endDate?: Date;
   geographicAreaIds?: string[];
+  roleIds?: string[];
+  ageCohorts?: string[];
 }
 
 export class ActivityRepository {
@@ -277,6 +280,95 @@ export class ActivityRepository {
       });
     }
 
+    // Role filter (activities with at least one participant having specified roles)
+    if (filters.roleIds && filters.roleIds.length > 0) {
+      // Check if we already have an assignments filter from population
+      const existingAssignmentsCondition = andConditions.find(
+        cond => cond.assignments?.some
+      );
+
+      if (existingAssignmentsCondition) {
+        // Merge with existing assignments filter
+        existingAssignmentsCondition.assignments.some.roleId = { in: filters.roleIds };
+      } else {
+        // Add new assignments filter
+        andConditions.push({
+          assignments: {
+            some: {
+              roleId: { in: filters.roleIds }
+            }
+          }
+        });
+      }
+    }
+
+    // Age cohort filter (activities with at least one participant in specified age cohorts)
+    if (filters.ageCohorts && filters.ageCohorts.length > 0) {
+      // Calculate reference date for age cohort filtering
+      const referenceDate = calculateReferenceDate(
+        new Date(),
+        null, // Conservative: use single reference date for all activities
+        filters.endDate || null
+      );
+
+      // Convert cohorts to date range conditions
+      const cohortConditions = filters.ageCohorts.map(cohortName => {
+        const cohort = cohortName as AgeCohort;
+
+        if (cohort === AgeCohort.UNKNOWN) {
+          return { dateOfBirth: null };
+        }
+
+        const range = convertCohortToDateRange(cohort, referenceDate);
+        if (!range) {
+          return { dateOfBirth: null };
+        }
+
+        const condition: any = {};
+
+        if (range.min && range.max) {
+          // Range with both boundaries
+          return {
+            AND: [
+              { dateOfBirth: { gte: range.min } },
+              { dateOfBirth: { lt: range.max } },
+            ],
+          };
+        } else if (range.min) {
+          // Only minimum boundary (Child cohort)
+          condition.gte = range.min;
+        } else if (range.max) {
+          // Only maximum boundary (Adult cohort)
+          condition.lt = range.max;
+        }
+
+        return { dateOfBirth: condition };
+      });
+
+      // Check if we already have an assignments filter
+      const existingAssignmentsCondition = andConditions.find(
+        cond => cond.assignments?.some
+      );
+
+      if (existingAssignmentsCondition) {
+        // Merge with existing assignments filter
+        existingAssignmentsCondition.assignments.some.participant = {
+          OR: cohortConditions
+        };
+      } else {
+        // Add new assignments filter
+        andConditions.push({
+          assignments: {
+            some: {
+              participant: {
+                OR: cohortConditions
+              }
+            }
+          }
+        });
+      }
+    }
+
     // Geographic area filter (activities at venues in specified areas)
     if (filters.geographicAreaIds && filters.geographicAreaIds.length > 0) {
       andConditions.push({
@@ -300,12 +392,20 @@ export class ActivityRepository {
       ? { updatedAt: 'desc' as const }
       : { startDate: 'desc' as const };
 
+    // Determine if we need DISTINCT (when role or age cohort filters are present)
+    const needsDistinct = !!(filters.roleIds || filters.ageCohorts || filters.populationIds);
+
     const queryOptions: any = {
       where,
       skip,
       take: limit,
       orderBy,
     };
+
+    // Add DISTINCT when filtering by participant-related criteria to avoid duplicates
+    if (needsDistinct) {
+      queryOptions.distinct = ['id'];
+    }
 
     if (select) {
       queryOptions.select = select;
