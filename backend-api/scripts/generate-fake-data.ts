@@ -301,8 +301,10 @@ async function generateParticipants(prisma: PrismaClient, config: GenerationConf
     for (let i = 0; i < config.participants; i++) {
         const name = `Participant ${String(i).padStart(8, '0')}`;
         const id = generateDeterministicUUID(name);
-        const ageInDays = assignToEntity(name, 30000);
-        const dateOfBirth = new Date(new Date().getTime() - (ageInDays * 86400000));
+        const ageInMillis = assignToEntity(name, 30000) * 86400000;
+        const nowInMillis = new Date().getTime();
+        const todayInMillis = nowInMillis - (nowInMillis % 86400000)
+        const dateOfBirth = new Date(todayInMillis - ageInMillis);
 
         participants.push({ id, name, dateOfBirth });
         participantIds.push(id);
