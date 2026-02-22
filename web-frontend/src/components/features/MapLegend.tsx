@@ -1,3 +1,4 @@
+import { ExpandableSection } from '@cloudscape-design/components';
 import Table from '@cloudscape-design/components/table';
 
 interface LegendItem {
@@ -9,9 +10,11 @@ interface LegendItem {
 interface MapLegendProps {
   title: string;
   items: LegendItem[];
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
-export function MapLegend({ title, items }: MapLegendProps) {
+export function MapLegend({ title, items, expanded, onExpandedChange }: MapLegendProps) {
   if (items.length === 0) {
     return null;
   }
@@ -23,13 +26,20 @@ export function MapLegend({ title, items }: MapLegendProps) {
       right: '10px',
       zIndex: 1000,
       pointerEvents: 'auto',
-      maxWidth: '200px',
+      maxWidth: '240px',
       maxHeight: 'calc(100% - 20px)', // Fit within map container with margins
-      backgroundColor: 'rgba(255, 255, 255, 0.625)',
-      borderRadius: '8px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
       overflow: 'auto', // Prevent content from spilling out
     }}>
+      <div style={{
+        opacity: 0.75,
+        padding: '0px',
+      }}>
+        <ExpandableSection
+          headerText="Legend"
+          variant="stacked"
+          expanded={expanded}
+          onChange={({ detail }) => onExpandedChange?.(detail.expanded)}
+        >
       <Table
         columnDefinitions={[
           {
@@ -70,6 +80,8 @@ export function MapLegend({ title, items }: MapLegendProps) {
         stripedRows={false}
         wrapLines={false}
       />
+      </ExpandableSection>
+      </div>
     </div>
   );
 }

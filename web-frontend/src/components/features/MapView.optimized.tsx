@@ -412,6 +412,9 @@ export function MapView({
   // Track if user dismissed the empty state alert for current generation
   const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
 
+  // State for legend expanded/collapsed
+  const [legendExpanded, setLegendExpanded] = useState(true);
+
   const BATCH_SIZE = 100;
 
   // Use external cancelled state
@@ -850,6 +853,8 @@ export function MapView({
             name: type.name,
             color: getActivityTypeColor(type.id),
           }))}
+          expanded={legendExpanded}
+          onExpandedChange={setLegendExpanded}
         />
       )}
 
@@ -861,6 +866,8 @@ export function MapView({
             name: category.name,
             color: getActivityCategoryColor(category.id),
           }))}
+          expanded={legendExpanded}
+          onExpandedChange={setLegendExpanded}
         />
       )}
       
