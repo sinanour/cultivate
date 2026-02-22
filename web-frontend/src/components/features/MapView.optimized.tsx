@@ -682,8 +682,8 @@ export function MapView({
 
   // Trigger fetch when viewport changes (after state is reset)
   useEffect(() => {
-    // Only trigger if we have viewport bounds, page is 1, and we're not already loading
-    if (viewportBoundsRef.current && currentPageRef.current === 1 && !isLoadingBatch && !isFetchingRef.current && hasMorePages && readyToFetch && !isCancelled) {
+    // Only trigger if we have viewport bounds, page is 1, we're not already loading, and no error
+    if (viewportBoundsRef.current && currentPageRef.current === 1 && !isLoadingBatch && !isFetchingRef.current && hasMorePages && readyToFetch && !isCancelled && !loadingError) {
       const hasAnyMarkers = allActivityMarkers.length > 0 || allParticipantHomeMarkers.length > 0 || allVenueMarkers.length > 0;
       if (!hasAnyMarkers) {
         // Small delay to ensure state is fully reset
@@ -693,7 +693,7 @@ export function MapView({
         return () => clearTimeout(timer);
       }
     }
-  }, [viewportChangeCounter, isLoadingBatch, hasMorePages, readyToFetch, isCancelled, allActivityMarkers.length, allParticipantHomeMarkers.length, allVenueMarkers.length, fetchNextBatch]);
+  }, [viewportChangeCounter, isLoadingBatch, hasMorePages, readyToFetch, isCancelled, loadingError, allActivityMarkers.length, allParticipantHomeMarkers.length, allVenueMarkers.length, fetchNextBatch]);
 
   // Retry function
   const handleRetry = useCallback(() => {
