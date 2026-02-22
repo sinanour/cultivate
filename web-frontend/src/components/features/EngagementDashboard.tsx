@@ -484,7 +484,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
   }, [appliedDateRange, appliedFilterQuery, selectedGeographicAreaId, getUuidFromLabel]);
 
   // Fetch optimized wire format data
-  const { data: wireFormat, isLoading } = useQuery({
+  const { data: wireFormat, isFetching: isFetchingMain } = useQuery({
     queryKey: ['engagementMetricsOptimized', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, appliedGroupByDimensions, currentPage, pageSize, runReportTrigger],
     queryFn: () => {
       const params: EngagementMetricsParams = {
@@ -503,7 +503,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
   // Separate queries for activity type and category breakdowns (for charts)
   // Always fetch these when report has run to ensure charts populate correctly
   // Use same query key elements as main query to ensure they refetch together
-  const { data: typeBreakdownWireFormat } = useQuery({
+  const { data: typeBreakdownWireFormat, isFetching: isFetchingTypeBreakdown } = useQuery({
     queryKey: ['engagementTypeBreakdown', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, runReportTrigger],
     queryFn: () => {
       const params: EngagementMetricsParams = {
@@ -516,7 +516,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
     placeholderData: (previousData) => previousData, // Prevent flicker and ensure charts have data
   });
 
-  const { data: categoryBreakdownWireFormat } = useQuery({
+  const { data: categoryBreakdownWireFormat, isFetching: isFetchingCategoryBreakdown } = useQuery({
     queryKey: ['engagementCategoryBreakdown', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, runReportTrigger],
     queryFn: () => {
       const params: EngagementMetricsParams = {
@@ -530,7 +530,7 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
   });
 
   // Separate query for role distribution
-  const { data: roleDistributionWireFormat } = useQuery({
+  const { data: roleDistributionWireFormat, isFetching: isFetchingRoleDistribution } = useQuery({
     queryKey: ['roleDistribution', appliedDateRange, selectedGeographicAreaId, appliedFilterQuery, runReportTrigger],
     queryFn: () => {
       return AnalyticsService.getRoleDistribution(baseQueryParams);
@@ -785,6 +785,9 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
     return geographicBreakdownResponse?.pagination;
   }, [geographicBreakdownResponse?.pagination]);
 
+  // Combine all fetching states - show loading when ANY query is fetching
+  const isLoading = isFetchingMain || isFetchingTypeBreakdown || isFetchingCategoryBreakdown || isFetchingRoleDistribution || isGeographicBreakdownFetching;
+
   // Handler for Run Report button (triggered by parent via runReportTrigger prop)
   useEffect(() => {
     if (runReportTrigger > 0) {
@@ -797,13 +800,6 @@ export function EngagementDashboard({ runReportTrigger = 0, onLoadingChange }: E
       }
     }
   }, [runReportTrigger]);
-
-  // Notify parent of loading state changes
-  useEffect(() => {
-    if (onLoadingChange) {
-      onLoadingChange(isLoading);
-    }
-  }, [isLoading, onLoadingChange]);
 
   // Update the renderWithLoadingState helper to use actual isLoading state
   const renderWithLoadingState = (content: React.ReactNode, emptyMessage: string = 'Click "Run Report" to view data') => {

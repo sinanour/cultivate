@@ -317,7 +317,7 @@ export function GrowthDashboard({ runReportTrigger = 0, onLoadingChange }: Growt
     }
   }, [viewMode]);
 
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isFetching: isLoading } = useQuery({
     queryKey: ['growthMetrics', appliedDateRange, appliedPeriod, selectedGeographicAreaId, appliedFilterQuery, appliedViewMode],
     queryFn: () => {
       // Convert date range to ISO datetime format for API
