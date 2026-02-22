@@ -904,7 +904,7 @@ export function MapView({
               position={marker.position}
               icon={marker.icon || DefaultIcon}
             >
-              <Popup>
+              <Popup autoPan={false}>
                 <LazyPopupContent 
                   markerId={marker.id} 
                   mode={mode}
