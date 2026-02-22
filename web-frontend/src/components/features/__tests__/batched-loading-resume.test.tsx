@@ -163,11 +163,11 @@ describe('Batched Loading with Resume', () => {
       expect(screen.getByText(/Loading 100 \/ 200 participants\.\.\./)).toBeInTheDocument();
     });
 
-    it('should not render when totalCount is 0', () => {
+    it('should render in indeterminate mode when totalCount is 0', () => {
       const onCancel = vi.fn();
       const onResume = vi.fn();
 
-      const { container } = render(
+      render(
         <ProgressIndicator
           loadedCount={0}
           totalCount={0}
@@ -178,8 +178,16 @@ describe('Batched Loading with Resume', () => {
         />
       );
 
-      // Component should return null when there's nothing to load
-      expect(container.firstChild).toBeNull();
+      // Should display loading text in indeterminate mode
+      expect(screen.getByText(/Loading participants\.\.\./i)).toBeInTheDocument();
+      // Should have pause button
+      expect(screen.getByRole('button', { name: /Pause loading/i })).toBeInTheDocument();
+      // Should have Spinner (rendered as SVG)
+      const svg = document.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+      // Should NOT have progress element
+      const progressElement = document.querySelector('progress');
+      expect(progressElement).toBeNull();
     });
   });
 });

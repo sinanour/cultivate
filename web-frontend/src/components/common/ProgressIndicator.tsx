@@ -1,6 +1,8 @@
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import ProgressBar from '@cloudscape-design/components/progress-bar';
+import Spinner from '@cloudscape-design/components/spinner';
+import Box from '@cloudscape-design/components/box';
 
 interface ProgressIndicatorProps {
   loadedCount: number;
@@ -22,6 +24,28 @@ export function ProgressIndicator({
   // Unmount completely when loading is complete
   if (loadedCount >= totalCount && totalCount > 0) {
     return null;
+  }
+
+  // Determine mode based on totalCount
+  const mode = totalCount > 0 ? 'determinate' : 'indeterminate';
+
+  // Render indeterminate mode
+  if (mode === 'indeterminate') {
+    return (
+      <SpaceBetween direction="horizontal" size="xs">
+        <Button
+          iconName={isCancelled ? "play" : "pause"}
+          onClick={isCancelled ? onResume : onCancel}
+          ariaLabel={isCancelled ? `Resume loading ${entityName}` : "Pause loading"}
+        />
+        <Box padding={{ top: "xs" }}>
+          {!isCancelled && <Spinner size="normal" variant="disabled" />}
+          <Box margin={{ left: "xs" }} display="inline-block" color="text-status-inactive">
+            {isCancelled ? `Loading paused` : `Loading ${entityName}...`}
+          </Box>
+        </Box>
+      </SpaceBetween>
+    );
   }
 
   // Calculate progress percentage
