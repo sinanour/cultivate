@@ -128,4 +128,10 @@
   .awsui-cards {
     gap: 12px !important;
   }
+
+  [class*="awsui_button-dropdown"] [class*="awsui_item"] {
+    min-height: 24px !important;
+    padding: 8px !important;
+    padding-bottom: 8px !important;
+  }
 }
