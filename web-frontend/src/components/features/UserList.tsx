@@ -143,20 +143,20 @@ export function UserList() {
               id: 'actions',
               header: 'Actions',
               cell: (item) => (
-                <Box>
+                <SpaceBetween direction="horizontal" size="xs">
                   <Button 
-                    variant="inline-link" 
+                    variant="normal" 
                     iconName="edit"
                     onClick={() => handleEdit(item)}
                     ariaLabel={`Edit ${getDisplayName(item)}`}
                   />
                   <Button 
-                    variant="inline-link" 
+                    variant="normal" 
                     iconName="remove"
                     onClick={() => handleDeleteClick(item)}
                     ariaLabel={`Remove ${getDisplayName(item)}`}
                   />
-                </Box>
+                </SpaceBetween>
               ),
             },
           ]}

@@ -273,7 +273,7 @@ export function GeographicAreaList() {
         <SpaceBetween direction="horizontal" size="xs">
           {canEdit() && (
             <Button
-              variant="inline-link"
+              variant="normal"
               iconName="edit"
               onClick={() => navigate(`/geographic-areas/${item.id}/edit`)}
               ariaLabel={`Edit ${item.name}`}
@@ -281,7 +281,7 @@ export function GeographicAreaList() {
           )}
           {canDelete() && (
             <Button
-              variant="inline-link"
+              variant="normal"
               iconName="remove"
               onClick={() => setConfirmDelete(item)}
               ariaLabel={`Remove ${item.name}`}

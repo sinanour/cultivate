@@ -107,26 +107,26 @@ export function PopulationList() {
             header: 'Actions',
             cell: (item) => (
               isAdmin ? (
-                <Box>
+                <SpaceBetween direction="horizontal" size="xs">
                   <Button 
-                    variant="inline-link" 
+                    variant="normal" 
                     iconName="edit"
                     onClick={() => handleEdit(item)}
                     ariaLabel={`Edit ${item.name}`}
                   />
                   <Button 
-                    variant="inline-link" 
+                    variant="normal" 
                     iconName="shrink"
                     onClick={() => handleMerge(item)}
                     ariaLabel={`Merge ${item.name}`}
                   />
                   <Button
-                    variant="inline-link" 
+                    variant="normal" 
                     iconName="remove"
                     onClick={() => handleDelete(item)}
                     ariaLabel={`Remove ${item.name}`}
                   />
-                </Box>
+                </SpaceBetween>
               ) : null
             ),
           },

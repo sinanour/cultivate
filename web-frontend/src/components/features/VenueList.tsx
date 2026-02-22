@@ -407,10 +407,10 @@ export function VenueList() {
             cell: (item) => {
               const displayName = user?.role === 'PII_RESTRICTED' ? item.address : item.name;
               return (
-                <Box>
+                <SpaceBetween direction="horizontal" size="xs">
                   {canEdit() && (
                     <Button
-                      variant="inline-link"
+                      variant="normal"
                       iconName="edit"
                       onClick={() => handleEdit(item)}
                       ariaLabel={`Edit ${displayName}`}
@@ -418,14 +418,13 @@ export function VenueList() {
                   )}
                   {canDelete() && (
                     <Button
-                      variant="inline-link"
+                      variant="normal"
                       iconName="remove"
                       onClick={() => handleDelete(item)}
                       ariaLabel={`Remove ${displayName}`}
                     />
                   )}
-                </Box>
-              );
+                </SpaceBetween>);
             },
           },
         ]}

@@ -626,7 +626,7 @@ export function UserFormWithAuthorization({ user, onSuccess, onCancel }: UserFor
                 header: 'Actions',
                 cell: (item) => (
                   <Button
-                    variant="icon"
+                    variant="normal"
                     iconName="remove"
                     onClick={() => handleDeleteRule(item.id)}
                     formAction="none"

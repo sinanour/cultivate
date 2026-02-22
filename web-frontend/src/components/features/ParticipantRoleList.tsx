@@ -111,10 +111,10 @@ export function ParticipantRoleList() {
             id: 'actions',
             header: 'Actions',
             cell: (item) => (
-              <Box>
+              <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
                   <Button
-                    variant="inline-link"
+                    variant="normal"
                     iconName="edit"
                     onClick={() => handleEdit(item)}
                     ariaLabel={`Edit ${item.name}`}
@@ -122,13 +122,13 @@ export function ParticipantRoleList() {
                 )}
                 {canDelete() && !item.isPredefined && (
                   <Button
-                    variant="inline-link"
+                    variant="normal"
                     iconName="remove"
                     onClick={() => handleDelete(item)}
                     ariaLabel={`Remove ${item.name}`}
                   />
                 )}
-              </Box>
+              </SpaceBetween>
             ),
           },
         ]}

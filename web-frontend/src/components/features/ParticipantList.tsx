@@ -558,10 +558,10 @@ export function ParticipantList() {
                 const displayName =
                   user?.role === "PII_RESTRICTED" ? item.id : item.name;
                 return (
-                  <Box>
+                  <SpaceBetween direction="horizontal" size="xs">
                     {canEdit() && (
                       <Button
-                        variant="inline-link"
+                        variant="normal"
                         iconName="edit"
                         onClick={() => handleEdit(item)}
                         ariaLabel={`Edit ${displayName}`}
@@ -569,13 +569,13 @@ export function ParticipantList() {
                     )}
                     {canDelete() && (
                       <Button
-                        variant="inline-link"
+                        variant="normal"
                         iconName="remove"
                         onClick={() => handleDelete(item)}
                         ariaLabel={`Remove ${displayName}`}
                       />
                     )}
-                  </Box>
+                  </SpaceBetween>
                 );
               },
             },

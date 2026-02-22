@@ -14,6 +14,7 @@ import { ResponsiveButton } from '../common/ResponsiveButton';
 import { useNotification } from '../../hooks/useNotification';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import { SpaceBetween } from '@cloudscape-design/components';
 
 export function ActivityCategoryList() {
     const navigate = useNavigate();
@@ -103,22 +104,22 @@ export function ActivityCategoryList() {
                         header: 'Actions',
                         cell: (item) =>
                             canEdit() ? (
-                                <Box>
+                                <SpaceBetween direction="horizontal" size="xs">
                                     <Button 
-                                        variant="inline-link" 
+                                        variant="normal" 
                                         iconName="edit"
                                         onClick={() => handleEdit(item)}
                                         ariaLabel={`Edit ${item.name}`}
                                     />
                                     {!item.isPredefined && (
                                         <Button 
-                                            variant="inline-link" 
+                                            variant="normal" 
                                             iconName="remove"
                                             onClick={() => handleDelete(item)}
                                             ariaLabel={`Remove ${item.name}`}
                                         />
                                     )}
-                                </Box>
+                                </SpaceBetween>
                             ) : null,
                     },
                 ]}

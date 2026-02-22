@@ -135,17 +135,17 @@ export function ActivityTypeList() {
             id: 'actions',
             header: 'Actions',
             cell: (item) => (
-              <Box>
+              <SpaceBetween direction="horizontal" size="xs">
                 {canEdit() && (
                   <>
                     <Button
-                      variant="inline-link"
+                      variant="normal"
                       iconName="edit"
                       onClick={() => handleEdit(item)}
                       ariaLabel={`Edit ${item.name}`}
                     />
                     <Button
-                      variant="inline-link"
+                      variant="normal"
                       iconName="shrink"
                       onClick={() => handleMerge(item)}
                       ariaLabel={`Merge ${item.name}`}
@@ -154,13 +154,13 @@ export function ActivityTypeList() {
                 )}
                 {canDelete() && !item.isPredefined && (
                   <Button
-                    variant="inline-link"
+                    variant="normal"
                     iconName="remove"
                     onClick={() => handleDelete(item)}
                     ariaLabel={`Remove ${item.name}`}
                   />
                 )}
-              </Box>
+              </SpaceBetween>
             ),
           },
         ]}
