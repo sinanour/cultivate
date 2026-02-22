@@ -20,6 +20,8 @@ import { MapLegend } from './MapLegend';
 // Fix for default marker icons in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { BREAKPOINTS } from '../../utils/responsive';
 
 const DefaultIcon = new Icon({
   iconUrl: icon,
@@ -413,7 +415,7 @@ export function MapView({
   const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
 
   // State for legend expanded/collapsed
-  const [legendExpanded, setLegendExpanded] = useState(true);
+  const [legendExpanded, setLegendExpanded] = useState(!useMediaQuery(BREAKPOINTS.mobile));
 
   const BATCH_SIZE = 100;
 
