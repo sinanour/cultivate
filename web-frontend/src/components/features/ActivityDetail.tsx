@@ -548,7 +548,7 @@ export function ActivityDetail() {
               cell: (item) =>
                 canEdit() && (
                   <Button
-                    variant="inline-link"
+                    variant="normal"
                     iconName="remove"
                     onClick={() => handleRemoveAssignment(item.participantId)}
                     ariaLabel="Remove"

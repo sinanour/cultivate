@@ -116,7 +116,7 @@ export const ActivityVenueHistoryTable: React.FC<
           header: "Actions",
           cell: (item: ActivityVenueHistoryRecord) => (
             <Button
-              variant="inline-link"
+              variant="normal"
               iconName="remove"
               onClick={() => onDelete(item.id)}
               ariaLabel="Remove"

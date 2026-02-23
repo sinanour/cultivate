@@ -75,18 +75,18 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
           id: 'actions',
           header: 'Actions',
           cell: (item: ParticipantAddressHistory) => (
-            <Box>
+            <SpaceBetween direction="horizontal" size="xs">
               <Button
-                variant="inline-link"
+                variant="normal"
                 onClick={() => onEdit(item)}
                 iconName="edit"
               />
               <Button
-                variant="inline-link"
+                variant="normal"
                 onClick={() => onDelete(item.id)}
                 iconName="remove"
               />
-            </Box>
+            </SpaceBetween>
           ),
         },
       ]}
