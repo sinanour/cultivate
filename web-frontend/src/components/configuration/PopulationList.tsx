@@ -4,9 +4,9 @@ import {
   Table,
   Box,
   SpaceBetween,
-  Button,
   Header,
   Link,
+  ButtonDropdown,
 } from '@cloudscape-design/components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PopulationService } from '../../services/api/population.service';
@@ -105,28 +105,27 @@ export function PopulationList() {
           {
             id: 'actions',
             header: 'Actions',
+            minWidth: 200,
             cell: (item) => (
               isAdmin ? (
-                <SpaceBetween direction="horizontal" size="xs">
-                  <Button 
-                    variant="normal" 
-                    iconName="edit"
-                    onClick={() => handleEdit(item)}
-                    ariaLabel={`Edit ${item.name}`}
-                  />
-                  <Button 
-                    variant="normal" 
-                    iconName="shrink"
-                    onClick={() => handleMerge(item)}
-                    ariaLabel={`Merge ${item.name}`}
-                  />
-                  <Button
-                    variant="normal" 
-                    iconName="remove"
-                    onClick={() => handleDelete(item)}
-                    ariaLabel={`Remove ${item.name}`}
-                  />
-                </SpaceBetween>
+                <ButtonDropdown
+                  variant="normal"
+                  expandToViewport
+                  mainAction={{
+                    text: "Edit",
+                    onClick: () => handleEdit(item),
+                    iconName: "edit",
+                  }}
+                  items={[
+                    { id: "merge", text: "Merge", iconName: "shrink" },
+                    { id: "remove", text: "Remove", iconName: "remove" }
+                  ]}
+                  onItemClick={({ detail }) => {
+                    if (detail.id === "merge") handleMerge(item);
+                    if (detail.id === "remove") handleDelete(item);
+                  }}
+                  ariaLabel={`Edit ${item.name}`}
+                />
               ) : null
             ),
           },

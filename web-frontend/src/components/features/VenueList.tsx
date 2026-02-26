@@ -25,6 +25,7 @@ import { validateCSVFile } from '../../utils/csv.utils';
 import type { ImportResult } from '../../types/csv.types';
 import { invalidatePageCaches, getListPageQueryKeys } from '../../utils/cache-invalidation.utils';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import { ButtonDropdown } from '@cloudscape-design/components';
 
 const ITEMS_PER_PAGE = 100;
 
@@ -404,27 +405,22 @@ export function VenueList() {
           {
             id: 'actions',
             header: 'Actions',
+            minWidth: 200,
             cell: (item) => {
               const displayName = user?.role === 'PII_RESTRICTED' ? item.address : item.name;
               return (
-                <SpaceBetween direction="horizontal" size="xs">
-                  {canEdit() && (
-                    <Button
-                      variant="normal"
-                      iconName="edit"
-                      onClick={() => handleEdit(item)}
-                      ariaLabel={`Edit ${displayName}`}
-                    />
-                  )}
-                  {canDelete() && (
-                    <Button
-                      variant="normal"
-                      iconName="remove"
-                      onClick={() => handleDelete(item)}
-                      ariaLabel={`Remove ${displayName}`}
-                    />
-                  )}
-                </SpaceBetween>);
+                <ButtonDropdown
+                  variant="normal"
+                  expandToViewport
+                  mainAction={{
+                    text: "Edit",
+                    onClick: () => handleEdit(item),
+                    iconName: "edit"
+                  }}
+                  items={[{ id: "remove", text: "Remove", iconName: "remove", ariaLabel: `Remove ${displayName}` }]}
+                  onItemClick={({ }) => handleDelete(item)}
+                  ariaLabel={`Edit ${displayName}`}
+                />);
             },
           },
         ]}

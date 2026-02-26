@@ -9,6 +9,7 @@ import Header from "@cloudscape-design/components/header";
 import Link from "@cloudscape-design/components/link";
 import Pagination from "@cloudscape-design/components/pagination";
 import Alert from "@cloudscape-design/components/alert";
+import ButtonDropdown from "@cloudscape-design/components/button-dropdown";
 import type { PropertyFilterProps } from "@cloudscape-design/components/property-filter";
 import type { Participant } from "../../types";
 import { ParticipantService } from "../../services/api/participant.service";
@@ -39,7 +40,7 @@ const ITEMS_PER_PAGE = 100;
 export function ParticipantList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { canCreate, canEdit, canDelete } = usePermissions();
+  const { canCreate, canEdit } = usePermissions();
   const { user } = useAuth();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState("");
@@ -554,28 +555,25 @@ export function ParticipantList() {
             {
               id: "actions",
               header: "Actions",
+              minWidth: 200,
               cell: (item) => {
                 const displayName =
                   user?.role === "PII_RESTRICTED" ? item.id : item.name;
                 return (
-                  <SpaceBetween direction="horizontal" size="xs">
-                    {canEdit() && (
-                      <Button
-                        variant="normal"
-                        iconName="edit"
-                        onClick={() => handleEdit(item)}
-                        ariaLabel={`Edit ${displayName}`}
-                      />
-                    )}
-                    {canDelete() && (
-                      <Button
-                        variant="normal"
-                        iconName="remove"
-                        onClick={() => handleDelete(item)}
-                        ariaLabel={`Remove ${displayName}`}
-                      />
-                    )}
-                  </SpaceBetween>
+                  canEdit() ? (
+                    <ButtonDropdown
+                      variant="normal"
+                      expandToViewport
+                      mainAction={{
+                        text: "Edit",
+                        onClick: () => handleEdit(item),
+                        iconName: "edit"
+                      }}
+                      items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
+                      onItemClick={() => handleDelete(item)}
+                      ariaLabel={`Edit ${displayName}`}
+                    />
+                  ) : null
                 );
               },
             },

@@ -10,6 +10,7 @@ import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import Link from '@cloudscape-design/components/link';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import type { ParticipantRole } from '../../types';
 import { ParticipantRoleService } from '../../services/api/participant-role.service';
 import { ParticipantRoleForm } from './ParticipantRoleForm';
@@ -20,7 +21,7 @@ import { ConfirmationDialog } from '../common/ConfirmationDialog';
 export function ParticipantRoleList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { canCreate, canEdit, canDelete } = usePermissions();
+  const { canCreate, canEdit } = usePermissions();
   const [selectedRole, setSelectedRole] = useState<ParticipantRole | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -110,26 +111,40 @@ export function ParticipantRoleList() {
           {
             id: 'actions',
             header: 'Actions',
-            cell: (item) => (
-              <SpaceBetween direction="horizontal" size="xs">
-                {canEdit() && (
+            minWidth: 200,
+            cell: (item) => {
+              if (!canEdit()) return null;
+
+              // If predefined (no Remove action), show simple Edit button
+              if (item.isPredefined) {
+                return (
                   <Button
                     variant="normal"
                     iconName="edit"
                     onClick={() => handleEdit(item)}
                     ariaLabel={`Edit ${item.name}`}
-                  />
-                )}
-                {canDelete() && !item.isPredefined && (
-                  <Button
-                    variant="normal"
-                    iconName="remove"
-                    onClick={() => handleDelete(item)}
-                    ariaLabel={`Remove ${item.name}`}
-                  />
-                )}
-              </SpaceBetween>
-            ),
+                  >
+                    Edit
+                  </Button>
+                );
+              }
+
+              // Otherwise show ButtonDropdown with Edit + Remove
+              return (
+                <ButtonDropdown
+                  variant="normal"
+                  expandToViewport
+                  mainAction={{
+                    text: "Edit",
+                    onClick: () => handleEdit(item),
+                    iconName: "edit"
+                  }}
+                  items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
+                  onItemClick={() => handleDelete(item)}
+                  ariaLabel={`Edit ${item.name}`}
+                />
+              );
+            },
           },
         ]}
         items={roles}

@@ -4,12 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Table from '@cloudscape-design/components/table';
 import Box from '@cloudscape-design/components/box';
 import SpaceBetween from '@cloudscape-design/components/space-between';
-import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import Link from '@cloudscape-design/components/link';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import type { ActivityType } from '../../types';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { ActivityTypeForm } from './ActivityTypeForm';
@@ -21,7 +21,7 @@ import { MergeInitiationModal } from '../merge/MergeInitiationModal';
 export function ActivityTypeList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { canCreate, canEdit, canDelete } = usePermissions();
+  const { canCreate, canEdit } = usePermissions();
   const [selectedType, setSelectedType] = useState<ActivityType | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -134,34 +134,35 @@ export function ActivityTypeList() {
           {
             id: 'actions',
             header: 'Actions',
-            cell: (item) => (
-              <SpaceBetween direction="horizontal" size="xs">
-                {canEdit() && (
-                  <>
-                    <Button
-                      variant="normal"
-                      iconName="edit"
-                      onClick={() => handleEdit(item)}
-                      ariaLabel={`Edit ${item.name}`}
-                    />
-                    <Button
-                      variant="normal"
-                      iconName="shrink"
-                      onClick={() => handleMerge(item)}
-                      ariaLabel={`Merge ${item.name}`}
-                    />
-                  </>
-                )}
-                {canDelete() && !item.isPredefined && (
-                  <Button
-                    variant="normal"
-                    iconName="remove"
-                    onClick={() => handleDelete(item)}
-                    ariaLabel={`Remove ${item.name}`}
-                  />
-                )}
-              </SpaceBetween>
-            ),
+            minWidth: 200,
+            cell: (item) => {
+              if (!canEdit()) return null;
+
+              // Build items array dynamically
+              const items = [
+                { id: "merge", text: "Merge", iconName: "shrink" },
+                ...(!item.isPredefined ? [{ id: "remove", text: "Remove", iconName: "remove" }] : [])
+              ];
+
+              // Always show ButtonDropdown since Merge is always available
+              return (
+                <ButtonDropdown
+                  variant="normal"
+                  expandToViewport
+                  mainAction={{
+                    text: "Edit",
+                    onClick: () => handleEdit(item),
+                    iconName: "edit"
+                  }}
+                  items={items}
+                  onItemClick={({ detail }) => {
+                    if (detail.id === "merge") handleMerge(item);
+                    if (detail.id === "remove") handleDelete(item);
+                  }}
+                  ariaLabel={`Edit ${item.name}`}
+                />
+              );
+            },
           },
         ]}
         items={activityTypes}

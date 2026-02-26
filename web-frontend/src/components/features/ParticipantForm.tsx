@@ -15,6 +15,7 @@ import Box from '@cloudscape-design/components/box';
 import DatePicker from '@cloudscape-design/components/date-picker';
 import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import type { Participant, ParticipantAddressHistory } from '../../types';
 import { ParticipantService } from '../../services/api/participant.service';
 import { VenueService } from '../../services/api/venue.service';
@@ -875,30 +876,44 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                     id: 'actions',
                     header: 'Actions',
                     cell: (item) => (
-                      <SpaceBetween direction="horizontal" size="xs">
-                        {participant && (
-                          <Button
-                            variant="inline-icon"
-                            iconName="edit"
-                            onClick={(e) => handleEditAddress(item, e)}
-                            disabled={isSubmitting}
-                          />
-                        )}
+                      participant ? (
+                        <ButtonDropdown
+                          variant="normal"
+                          expandToViewport
+                          mainAction={{
+                            text: "Edit",
+                            onClick: (e) => {
+                              e?.preventDefault();
+                              e?.stopPropagation();
+                              handleEditAddress(item, e);
+                            },
+                            iconName: "edit"
+                          }}
+                          items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
+                          onItemClick={(e) => {
+                            e.detail.event?.preventDefault();
+                            e.detail.event?.stopPropagation();
+                            if (participant) {
+                              handleDeleteAddress(item.id);
+                            } else {
+                              setAddressHistory(prev => prev.filter(a => a.id !== item.id));
+                            }
+                          }}
+                          disabled={isSubmitting}
+                          ariaLabel="Edit address"
+                        />
+                      ) : (
                         <Button
                           variant="inline-icon"
                           iconName="remove"
                           onClick={(e) => {
                             e?.preventDefault();
                             e?.stopPropagation();
-                            if (participant) {
-                              handleDeleteAddress(item.id, e);
-                            } else {
-                              setAddressHistory(prev => prev.filter(a => a.id !== item.id));
-                            }
+                            setAddressHistory(prev => prev.filter(a => a.id !== item.id));
                           }}
                           disabled={isSubmitting}
                         />
-                      </SpaceBetween>
+                        )
                     ),
                   },
                 ]}

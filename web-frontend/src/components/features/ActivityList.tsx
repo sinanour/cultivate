@@ -12,6 +12,7 @@ import Pagination from '@cloudscape-design/components/pagination';
 import Alert from '@cloudscape-design/components/alert';
 import DatePicker from '@cloudscape-design/components/date-picker';
 import FormField from '@cloudscape-design/components/form-field';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
 import type { Activity } from '../../types';
 import { ActivityService, type ActivityFilterParams } from '../../services/api/activity.service';
@@ -46,7 +47,7 @@ function toISODateTime(dateString: string, isEndOfDay = false): string {
 export function ActivityList() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { canCreate, canEdit, canDelete } = usePermissions();
+  const { canCreate, canEdit } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
   const [deleteError, setDeleteError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<Activity | null>(null);
@@ -635,25 +636,22 @@ export function ActivityList() {
           {
             id: 'actions',
             header: 'Actions',
+            minWidth: 200,
             cell: (item) => (
-              <SpaceBetween direction="horizontal" size="xs">
-                {canEdit() && (
-                  <Button
-                    variant="normal"
-                    iconName="edit"
-                    onClick={() => handleEdit(item)}
-                    ariaLabel={`Edit ${item.name}`}
-                  />
-                )}
-                {canDelete() && (
-                  <Button
-                    variant="normal"
-                    iconName="remove"
-                    onClick={() => handleDelete(item)}
-                    ariaLabel={`Remove ${item.name}`}
-                  />
-                )}
-              </SpaceBetween>
+              canEdit() ? (
+                <ButtonDropdown
+                  variant="normal"
+                  expandToViewport
+                  mainAction={{
+                    text: "Edit",
+                    onClick: () => handleEdit(item),
+                    iconName: "edit"
+                  }}
+                  items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
+                  onItemClick={() => handleDelete(item)}
+                  ariaLabel={`Edit ${item.name}`}
+                />
+              ) : null
             ),
           },
         ]}

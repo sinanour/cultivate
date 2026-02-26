@@ -31,6 +31,7 @@ import {
   type FilterGroupingState,
   type FilterPropertyWithLoader,
 } from "../common/FilterGroupingPanel";
+import { ButtonDropdown } from "@cloudscape-design/components";
 
 interface TableRow extends GeographicArea {
   children?: TableRow[];
@@ -269,25 +270,20 @@ export function GeographicAreaList() {
     {
       id: "actions",
       header: "Actions",
+      minWidth: 200,
       cell: (item) => (
-        <SpaceBetween direction="horizontal" size="xs">
-          {canEdit() && (
-            <Button
-              variant="normal"
-              iconName="edit"
-              onClick={() => navigate(`/geographic-areas/${item.id}/edit`)}
-              ariaLabel={`Edit ${item.name}`}
-            />
-          )}
-          {canDelete() && (
-            <Button
-              variant="normal"
-              iconName="remove"
-              onClick={() => setConfirmDelete(item)}
-              ariaLabel={`Remove ${item.name}`}
-            />
-          )}
-        </SpaceBetween>
+        <ButtonDropdown
+          variant="normal"
+          expandToViewport
+          mainAction={{
+            text: "Edit",
+            onClick: () => navigate(`/geographic-areas/${item.id}/edit`),
+            iconName: "edit"
+          }}
+          items={[{ id: "remove", text: "Remove", iconName: "remove", ariaLabel: `Remove ${item.name}` }]}
+          onItemClick={({ }) => setConfirmDelete(item)}
+          ariaLabel={`Edit ${item.name}`}
+        />
       ),
     },
   ];

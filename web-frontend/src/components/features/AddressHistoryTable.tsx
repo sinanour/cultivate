@@ -5,7 +5,7 @@ import {
   SpaceBetween,
   Badge,
   Link,
-  Button,
+  ButtonDropdown,
 } from '@cloudscape-design/components';
 import type { ParticipantAddressHistory } from '../../types';
 import { formatDate } from '../../utils/date.utils';
@@ -74,19 +74,20 @@ export const AddressHistoryTable: React.FC<AddressHistoryTableProps> = ({
         {
           id: 'actions',
           header: 'Actions',
+          minWidth: 200,
           cell: (item: ParticipantAddressHistory) => (
-            <SpaceBetween direction="horizontal" size="xs">
-              <Button
-                variant="normal"
-                onClick={() => onEdit(item)}
-                iconName="edit"
-              />
-              <Button
-                variant="normal"
-                onClick={() => onDelete(item.id)}
-                iconName="remove"
-              />
-            </SpaceBetween>
+            <ButtonDropdown
+              variant="normal"
+              expandToViewport
+              mainAction={{
+                text: "Edit",
+                onClick: () => onEdit(item),
+                iconName: "edit"
+              }}
+              items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
+              onItemClick={() => onDelete(item.id)}
+              ariaLabel="Edit address history"
+            />
           ),
         },
       ]}

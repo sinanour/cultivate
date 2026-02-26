@@ -14,7 +14,7 @@ import { ResponsiveButton } from '../common/ResponsiveButton';
 import { useNotification } from '../../hooks/useNotification';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ConfirmationDialog } from '../common/ConfirmationDialog';
-import { SpaceBetween } from '@cloudscape-design/components';
+import { ButtonDropdown } from '@cloudscape-design/components';
 
 export function ActivityCategoryList() {
     const navigate = useNavigate();
@@ -102,25 +102,40 @@ export function ActivityCategoryList() {
                     {
                         id: 'actions',
                         header: 'Actions',
-                        cell: (item) =>
-                            canEdit() ? (
-                                <SpaceBetween direction="horizontal" size="xs">
-                                    <Button 
-                                        variant="normal" 
+                        minWidth: 200,
+                        cell: (item) => {
+                            if (!canEdit()) return null;
+
+                            // If predefined (no Remove action), show simple Edit button
+                            if (item.isPredefined) {
+                                return (
+                                    <Button
+                                        variant="normal"
                                         iconName="edit"
                                         onClick={() => handleEdit(item)}
                                         ariaLabel={`Edit ${item.name}`}
-                                    />
-                                    {!item.isPredefined && (
-                                        <Button 
-                                            variant="normal" 
-                                            iconName="remove"
-                                            onClick={() => handleDelete(item)}
-                                            ariaLabel={`Remove ${item.name}`}
-                                        />
-                                    )}
-                                </SpaceBetween>
-                            ) : null,
+                                    >
+                                        Edit
+                                    </Button>
+                                );
+                            }
+
+                            // Otherwise show ButtonDropdown with Edit + Remove
+                            return (
+                                <ButtonDropdown
+                                    variant="normal"
+                                    expandToViewport
+                                    mainAction={{
+                                        text: "Edit",
+                                        onClick: () => handleEdit(item),
+                                        iconName: "edit"
+                                    }}
+                                    items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
+                                    onItemClick={() => handleDelete(item)}
+                                    ariaLabel={`Edit ${item.name}`}
+                                />
+                            );
+                        },
                     },
                 ]}
                 items={categories}
