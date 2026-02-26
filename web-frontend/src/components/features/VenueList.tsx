@@ -407,7 +407,25 @@ export function VenueList() {
             header: 'Actions',
             minWidth: 200,
             cell: (item) => {
+              if (!canEdit()) return null;
+
               const displayName = user?.role === 'PII_RESTRICTED' ? item.address : item.name;
+
+              // If not allowed to delete, show simple Edit button
+              if (!canDelete()) {
+                return (
+                  <Button
+                    variant="normal"
+                    iconName="edit"
+                    onClick={() => handleEdit(item)}
+                    ariaLabel={`Edit ${displayName}`}
+                  >
+                    Edit
+                  </Button>
+                );
+              }
+
+              // Otherwise show ButtonDropdown with Edit + Remove
               return (
                 <ButtonDropdown
                   variant="normal"

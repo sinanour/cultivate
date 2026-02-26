@@ -875,6 +875,7 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                   {
                     id: 'actions',
                     header: 'Actions',
+                    minWidth: 200,
                     cell: (item) => (
                       participant ? (
                         <ButtonDropdown
@@ -882,17 +883,10 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                           expandToViewport
                           mainAction={{
                             text: "Edit",
-                            onClick: (e) => {
-                              e?.preventDefault();
-                              e?.stopPropagation();
-                              handleEditAddress(item, e);
-                            },
-                            iconName: "edit"
+                            onClick: () => handleEditAddress(item)
                           }}
                           items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
-                          onItemClick={(e) => {
-                            e.detail.event?.preventDefault();
-                            e.detail.event?.stopPropagation();
+                          onItemClick={() => {
                             if (participant) {
                               handleDeleteAddress(item.id);
                             } else {
@@ -903,16 +897,18 @@ export function ParticipantForm({ participant, onSuccess, onCancel }: Participan
                           ariaLabel="Edit address"
                         />
                       ) : (
-                        <Button
-                          variant="inline-icon"
-                          iconName="remove"
-                          onClick={(e) => {
-                            e?.preventDefault();
-                            e?.stopPropagation();
-                            setAddressHistory(prev => prev.filter(a => a.id !== item.id));
-                          }}
-                          disabled={isSubmitting}
-                        />
+                          <Button
+                            variant="normal"
+                            iconName="remove"
+                            onClick={(e) => {
+                              e?.preventDefault();
+                              e?.stopPropagation();
+                              setAddressHistory(prev => prev.filter(a => a.id !== item.id));
+                            }}
+                            disabled={isSubmitting}
+                          >
+                            Remove
+                          </Button>
                         )
                     ),
                   },

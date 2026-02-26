@@ -9,7 +9,7 @@ import Badge from '@cloudscape-design/components/badge';
 import Modal from '@cloudscape-design/components/modal';
 import Alert from '@cloudscape-design/components/alert';
 import Link from '@cloudscape-design/components/link';
-import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
+import ButtonDropdown, { type ButtonDropdownProps } from '@cloudscape-design/components/button-dropdown';
 import type { ActivityType } from '../../types';
 import { ActivityTypeService } from '../../services/api/activity-type.service';
 import { ActivityTypeForm } from './ActivityTypeForm';
@@ -138,11 +138,13 @@ export function ActivityTypeList() {
             cell: (item) => {
               if (!canEdit()) return null;
 
-              // Build items array dynamically
-              const items = [
-                { id: "merge", text: "Merge", iconName: "shrink" },
-                ...(!item.isPredefined ? [{ id: "remove", text: "Remove", iconName: "remove" }] : [])
-              ];
+              // Build items array based on whether item is predefined
+              const items: ButtonDropdownProps.Items = item.isPredefined
+                ? [{ id: "merge", text: "Merge", iconName: "shrink" }]
+                : [
+                  { id: "merge", text: "Merge", iconName: "shrink" },
+                  { id: "remove", text: "Remove", iconName: "remove" }
+                ];
 
               // Always show ButtonDropdown since Merge is always available
               return (

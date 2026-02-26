@@ -271,20 +271,39 @@ export function GeographicAreaList() {
       id: "actions",
       header: "Actions",
       minWidth: 200,
-      cell: (item) => (
-        <ButtonDropdown
-          variant="normal"
-          expandToViewport
-          mainAction={{
-            text: "Edit",
-            onClick: () => navigate(`/geographic-areas/${item.id}/edit`),
-            iconName: "edit"
-          }}
-          items={[{ id: "remove", text: "Remove", iconName: "remove", ariaLabel: `Remove ${item.name}` }]}
-          onItemClick={({ }) => setConfirmDelete(item)}
-          ariaLabel={`Edit ${item.name}`}
-        />
-      ),
+      cell: (item) => {
+        if (!canEdit()) return null;
+
+        // If not allowed to delete, show simple Edit button
+        if (!canDelete()) {
+          return (
+            <Button
+              variant="normal"
+              iconName="edit"
+              onClick={() => navigate(`/geographic-areas/${item.id}/edit`)}
+              ariaLabel={`Edit ${item.name}`}
+            >
+              Edit
+            </Button>
+          );
+        }
+
+        // Otherwise show ButtonDropdown with Edit + Remove
+        return (
+          <ButtonDropdown
+            variant="normal"
+            expandToViewport
+            mainAction={{
+              text: "Edit",
+              onClick: () => navigate(`/geographic-areas/${item.id}/edit`),
+              iconName: "edit"
+            }}
+            items={[{ id: "remove", text: "Remove", iconName: "remove", ariaLabel: `Remove ${item.name}` }]}
+            onItemClick={({ }) => setConfirmDelete(item)}
+            ariaLabel={`Edit ${item.name}`}
+          />
+        );
+      },
     },
   ];
 
