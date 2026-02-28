@@ -1,22 +1,23 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import Table from '@cloudscape-design/components/table';
-import Box from '@cloudscape-design/components/box';
-import SpaceBetween from '@cloudscape-design/components/space-between';
-import Button from '@cloudscape-design/components/button';
-import Header from '@cloudscape-design/components/header';
-import Badge from '@cloudscape-design/components/badge';
-import Link from '@cloudscape-design/components/link';
-import Alert from '@cloudscape-design/components/alert';
-import Modal from '@cloudscape-design/components/modal';
-import type { User } from '../../types';
-import { UserService } from '../../services/api/user.service';
-import { useNotification } from '../../hooks/useNotification';
-import { ResponsiveButton } from '../common/ResponsiveButton';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import Table from "@cloudscape-design/components/table";
+import Box from "@cloudscape-design/components/box";
+import SpaceBetween from "@cloudscape-design/components/space-between";
+import Button from "@cloudscape-design/components/button";
+import Header from "@cloudscape-design/components/header";
+import Badge from "@cloudscape-design/components/badge";
+import Link from "@cloudscape-design/components/link";
+import Alert from "@cloudscape-design/components/alert";
+import Modal from "@cloudscape-design/components/modal";
+import type { User } from "../../types";
+import { UserService } from "../../services/api/user.service";
+import { useNotification } from "../../hooks/useNotification";
+import { ResponsiveButton } from "../common/ResponsiveButton";
+import ButtonDropdown from "@cloudscape-design/components/button-dropdown";
 
 export function UserList() {
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const navigate = useNavigate();
@@ -24,20 +25,20 @@ export function UserList() {
   const { showSuccess, showError } = useNotification();
 
   const { data: users = [], isLoading } = useQuery({
-    queryKey: ['users'],
+    queryKey: ["users"],
     queryFn: () => UserService.getUsers(),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (userId: string) => UserService.deleteUser(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      showSuccess('User deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      showSuccess("User deleted successfully");
       setShowDeleteConfirmation(false);
       setUserToDelete(null);
     },
     onError: (err: Error) => {
-      const message = err.message || 'Failed to remove user';
+      const message = err.message || "Failed to remove user";
       setError(message);
       showError(message);
       setShowDeleteConfirmation(false);
@@ -46,7 +47,7 @@ export function UserList() {
   });
 
   const handleCreate = () => {
-    navigate('/users/new');
+    navigate("/users/new");
   };
 
   const handleEdit = (user: User) => {
@@ -71,25 +72,25 @@ export function UserList() {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'ADMINISTRATOR':
-        return 'red';
-      case 'EDITOR':
-        return 'blue';
-      case 'READ_ONLY':
-        return 'grey';
+      case "ADMINISTRATOR":
+        return "red";
+      case "EDITOR":
+        return "blue";
+      case "READ_ONLY":
+        return "grey";
       default:
-        return 'grey';
+        return "grey";
     }
   };
 
   const formatRoleDisplay = (role: string) => {
     switch (role) {
-      case 'READ_ONLY':
-        return 'READ ONLY';
-      case 'ADMINISTRATOR':
-        return 'ADMINISTRATOR';
-      case 'EDITOR':
-        return 'EDITOR';
+      case "READ_ONLY":
+        return "READ ONLY";
+      case "ADMINISTRATOR":
+        return "ADMINISTRATOR";
+      case "EDITOR":
+        return "EDITOR";
       default:
         return role;
     }
@@ -103,11 +104,7 @@ export function UserList() {
     <>
       <SpaceBetween size="l">
         {error && (
-          <Alert
-            type="error"
-            dismissible
-            onDismiss={() => setError('')}
-          >
+          <Alert type="error" dismissible onDismiss={() => setError("")}>
             {error}
           </Alert>
         )}
@@ -115,24 +112,24 @@ export function UserList() {
           wrapLines={false}
           columnDefinitions={[
             {
-              id: 'displayName',
-              header: 'Name',
+              id: "displayName",
+              header: "Name",
               cell: (item) => (
                 <Link onFollow={() => handleEdit(item)}>
                   {getDisplayName(item)}
                 </Link>
               ),
-              sortingField: 'displayName',
+              sortingField: "displayName",
             },
             {
-              id: 'email',
-              header: 'Email',
+              id: "email",
+              header: "Email",
               cell: (item) => item.email,
-              sortingField: 'email',
+              sortingField: "email",
             },
             {
-              id: 'role',
-              header: 'Role',
+              id: "role",
+              header: "Role",
               cell: (item) => (
                 <Badge color={getRoleBadgeColor(item.role)}>
                   {formatRoleDisplay(item.role)}
@@ -140,23 +137,21 @@ export function UserList() {
               ),
             },
             {
-              id: 'actions',
-              header: 'Actions',
+              id: "actions",
+              header: "Actions",
               cell: (item) => (
-                <SpaceBetween direction="horizontal" size="xs">
-                  <Button 
-                    variant="normal" 
-                    iconName="edit"
-                    onClick={() => handleEdit(item)}
-                    ariaLabel={`Edit ${getDisplayName(item)}`}
-                  />
-                  <Button 
-                    variant="normal" 
-                    iconName="remove"
-                    onClick={() => handleDeleteClick(item)}
-                    ariaLabel={`Remove ${getDisplayName(item)}`}
-                  />
-                </SpaceBetween>
+                <ButtonDropdown
+                  variant="normal"
+                  expandToViewport
+                  mainAction={{
+                    text: "Edit",
+                    onClick: () => handleEdit(item),
+                    iconName: "edit",
+                  }}
+                  items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
+                  onItemClick={() => handleDeleteClick(item)}
+                  ariaLabel={`Edit ${getDisplayName(item)}`}
+                />
               ),
             },
           ]}
@@ -167,7 +162,7 @@ export function UserList() {
           empty={
             <Box textAlign="center" color="inherit">
               <b>No users</b>
-              <Box padding={{ bottom: 's' }} variant="p" color="inherit">
+              <Box padding={{ bottom: "s" }} variant="p" color="inherit">
                 No users to display.
               </Box>
               <Button onClick={handleCreate}>Create user</Button>
@@ -177,7 +172,11 @@ export function UserList() {
             <Header
               counter={`(${users.length})`}
               actions={
-                <ResponsiveButton mobileIcon="add-plus" variant="primary" onClick={handleCreate}>
+                <ResponsiveButton
+                  mobileIcon="add-plus"
+                  variant="primary"
+                  onClick={handleCreate}
+                >
                   Create user
                 </ResponsiveButton>
               }
@@ -199,8 +198,8 @@ export function UserList() {
               <Button variant="link" onClick={handleCancelDelete}>
                 Cancel
               </Button>
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 onClick={handleConfirmDelete}
                 loading={deleteMutation.isPending}
               >
@@ -210,7 +209,8 @@ export function UserList() {
           </Box>
         }
       >
-        Are you sure you want to remove user <strong>{userToDelete ? getDisplayName(userToDelete) : ''}</strong>? 
+        Are you sure you want to remove user{" "}
+        <strong>{userToDelete ? getDisplayName(userToDelete) : ""}</strong>?
         This action cannot be undone.
       </Modal>
     </>
