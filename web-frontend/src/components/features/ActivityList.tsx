@@ -625,8 +625,11 @@ export function ActivityList() {
   }, [queryClient, refetch]);
 
   return (
-    <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
-      <SpaceBetween size="l">
+    <PullToRefreshWrapper
+      key="activity-list-pull-to-refresh"
+      onRefresh={handlePullToRefresh}
+    >
+      <SpaceBetween key="activity-list-space-between" size="l">
         {deleteError && (
           <Alert
             type="error"
@@ -667,6 +670,7 @@ export function ActivityList() {
 
         <Table
           wrapLines={false}
+          key="activity-table"
           columnDefinitions={[
             {
               id: "name",
@@ -856,11 +860,13 @@ export function ActivityList() {
           }
         />
         <ImportResultsModal
+          key="import-results-modal"
           visible={showImportResults}
           result={importResult}
           onDismiss={() => setShowImportResults(false)}
         />
         <ConfirmationDialog
+          key="delete-confirmation-dialog"
           visible={confirmDelete !== null}
           title="Remove Activity"
           message={`Are you sure you want to remove "${confirmDelete?.name}"?`}
