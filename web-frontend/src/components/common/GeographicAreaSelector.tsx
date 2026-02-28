@@ -1,16 +1,22 @@
-import { useMemo } from 'react';
-import Select, { type SelectProps } from '@cloudscape-design/components/select';
-import Badge from '@cloudscape-design/components/badge';
-import Box from '@cloudscape-design/components/box';
-import { getAreaTypeBadgeColor } from '../../utils/geographic-area.utils';
-import type { AreaType, GeographicAreaWithHierarchy } from '../../types';
+import { useMemo } from "react";
+import Select, { type SelectProps } from "@cloudscape-design/components/select";
+import Badge from "@cloudscape-design/components/badge";
+import Box from "@cloudscape-design/components/box";
+import { getAreaTypeBadgeColor } from "../../utils/geographic-area.utils";
+import type { AreaType, GeographicAreaWithHierarchy } from "../../types";
 
 interface HierarchicalOption extends SelectProps.Option {
   hierarchyPath?: string;
   areaType?: AreaType;
 }
 
-const OptionLabel = ({ name, areaType }: { name: string; areaType?: AreaType }) => (
+const OptionLabel = ({
+  name,
+  areaType,
+}: {
+  name: string;
+  areaType?: AreaType;
+}) => (
   <Box display="block" variant="div">
     {/* Left: area name */}
     <Box>{name}</Box>
@@ -34,7 +40,7 @@ export interface GeographicAreaSelectorProps {
   inlineLabelText?: string;
   ariaLabel?: string;
   onLoadItems?: (filteringText: string) => void;
-  filteringType?: 'auto' | 'manual';
+  filteringType?: "auto" | "manual";
 }
 
 export function GeographicAreaSelector({
@@ -44,23 +50,25 @@ export function GeographicAreaSelector({
   loading = false,
   disabled = false,
   error,
-  placeholder = 'Select a geographic area',
+  placeholder = "Select a geographic area",
   inlineLabelText,
-  ariaLabel = 'Geographic area',
+  ariaLabel = "Geographic area",
   onLoadItems,
-  filteringType = 'auto',
+  filteringType = "auto",
 }: GeographicAreaSelectorProps) {
   const options = useMemo((): HierarchicalOption[] => {
-    return areas.map(area => {
-      const description = area.hierarchyPath || 'No parent areas';
-      
+    return areas.map((area) => {
+      const description = area.hierarchyPath || "No parent areas";
       return {
         label: area.name,
-        labelContent: <OptionLabel name={area.name} areaType={area.areaType} /> as any,
+        labelContent: (
+          <OptionLabel name={area.name} areaType={area.areaType} />
+        ) as any,
         value: area.id,
         description,
         hierarchyPath: area.hierarchyPath,
         areaType: area.areaType,
+        key: area.id,
       };
     });
   }, [areas]);
@@ -69,15 +77,15 @@ export function GeographicAreaSelector({
     if (!value) {
       return null;
     }
-    return options.find(opt => opt.value === value) || null;
+    return options.find((opt) => opt.value === value) || null;
   }, [value, options]);
 
-  const handleChange: SelectProps['onChange'] = ({ detail }) => {
+  const handleChange: SelectProps["onChange"] = ({ detail }) => {
     const newValue = detail.selectedOption.value || null;
     onChange(newValue);
   };
 
-  const handleLoadItems: SelectProps['onLoadItems'] = ({ detail }) => {
+  const handleLoadItems: SelectProps["onLoadItems"] = ({ detail }) => {
     if (onLoadItems) {
       onLoadItems(detail.filteringText);
     }
@@ -94,11 +102,11 @@ export function GeographicAreaSelector({
       <Select
         selectedOption={selectedOption}
         onChange={handleChange}
-        onLoadItems={filteringType === 'manual' ? handleLoadItems : undefined}
+        onLoadItems={filteringType === "manual" ? handleLoadItems : undefined}
         options={options}
         placeholder={placeholder}
         loadingText="Loading areas..."
-        statusType={loading ? 'loading' : 'finished'}
+        statusType={loading ? "loading" : "finished"}
         disabled={disabled || loading}
         filteringType={filteringType}
         expandToViewport
@@ -106,12 +114,18 @@ export function GeographicAreaSelector({
         inlineLabelText={inlineLabelText}
         ariaLabel={ariaLabel}
         invalid={!!error}
-        renderHighlightedAriaLive={(highlighted) => 
-          highlighted ? `${highlighted.label}${highlighted.description ? `, ${highlighted.description}` : ''}` : ''
+        renderHighlightedAriaLive={(highlighted) =>
+          highlighted
+            ? `${highlighted.label}${highlighted.description ? `, ${highlighted.description}` : ""}`
+            : ""
         }
       />
       {error && (
-        <Box color="text-status-error" fontSize="body-s" margin={{ top: 'xxxs' }}>
+        <Box
+          color="text-status-error"
+          fontSize="body-s"
+          margin={{ top: "xxxs" }}
+        >
           {error}
         </Box>
       )}

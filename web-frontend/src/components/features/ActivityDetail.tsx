@@ -29,10 +29,9 @@ import {
   invalidatePageCaches,
   getDetailPageQueryKeys,
 } from "../../utils/cache-invalidation.utils";
-import Button from "@cloudscape-design/components/button";
 import ButtonDropdown from "@cloudscape-design/components/button-dropdown";
 import { ConfirmationDialog } from "../common/ConfirmationDialog";
-import { MergeInitiationModal } from '../merge/MergeInitiationModal';
+import { MergeInitiationModal } from "../merge/MergeInitiationModal";
 
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -44,9 +43,15 @@ export function ActivityDetail() {
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [isVenueFormOpen, setIsVenueFormOpen] = useState(false);
   const [error, setError] = useState("");
-  const [confirmUpdateStatus, setConfirmUpdateStatus] = useState<string | null>(null);
-  const [confirmRemoveAssignment, setConfirmRemoveAssignment] = useState<string | null>(null);
-  const [confirmDeleteVenue, setConfirmDeleteVenue] = useState<string | null>(null);
+  const [confirmUpdateStatus, setConfirmUpdateStatus] = useState<string | null>(
+    null,
+  );
+  const [confirmRemoveAssignment, setConfirmRemoveAssignment] = useState<
+    string | null
+  >(null);
+  const [confirmDeleteVenue, setConfirmDeleteVenue] = useState<string | null>(
+    null,
+  );
   const [confirmDeleteActivity, setConfirmDeleteActivity] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
 
@@ -159,7 +164,10 @@ export function ActivityDetail() {
       };
 
       // When marking as COMPLETED or CANCELLED, implicitly set endDate to today if null
-      if (confirmUpdateStatus === "COMPLETED" || confirmUpdateStatus === "CANCELLED") {
+      if (
+        confirmUpdateStatus === "COMPLETED" ||
+        confirmUpdateStatus === "CANCELLED"
+      ) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayISO = today.toISOString();
@@ -234,25 +242,25 @@ export function ActivityDetail() {
     const items = [];
 
     // Add lifecycle actions based on current status
-    if (activity.status !== 'COMPLETED') {
+    if (activity.status !== "COMPLETED") {
       items.push({
         id: "complete",
         text: "Mark Complete",
-        iconName: "status-positive" as const
+        iconName: "status-positive" as const,
       });
     }
-    if (activity.status !== 'CANCELLED') {
+    if (activity.status !== "CANCELLED") {
       items.push({
         id: "cancel",
         text: "Cancel Activity",
-        iconName: "status-negative" as const
+        iconName: "status-negative" as const,
       });
     }
-    if (activity.status !== 'ACTIVE') {
+    if (activity.status !== "ACTIVE") {
       items.push({
         id: "active",
         text: "Set Active",
-        iconName: "status-in-progress" as const
+        iconName: "status-in-progress" as const,
       });
     }
 
@@ -347,7 +355,7 @@ export function ActivityDetail() {
                       variant="primary"
                       mainAction={{
                         text: "Edit",
-                        onClick: () => navigate(`/activities/${id}/edit`)
+                        onClick: () => navigate(`/activities/${id}/edit`),
                       }}
                       items={buildDropdownItems()}
                       onItemClick={({ detail }) => handleItemClick(detail.id)}
@@ -431,7 +439,7 @@ export function ActivityDetail() {
 
         {(activity as any).notes && (
           <Container header={<Header variant="h3">Notes</Header>}>
-            <div style={{ whiteSpace: 'pre-wrap' }}>
+            <div style={{ whiteSpace: "pre-wrap" }}>
               {(activity as any).notes}
             </div>
           </Container>
@@ -547,12 +555,14 @@ export function ActivityDetail() {
               header: "Actions",
               cell: (item) =>
                 canEdit() && (
-                  <Button
-                    variant="normal"
-                    iconName="remove"
+                  <ResponsiveButton
                     onClick={() => handleRemoveAssignment(item.participantId)}
-                    ariaLabel="Remove"
-                  />
+                    iconName="remove"
+                    mobileIcon="remove"
+                    mobileAriaLabel="Remove"
+                  >
+                    Remove
+                  </ResponsiveButton>
                 ),
             },
           ]}

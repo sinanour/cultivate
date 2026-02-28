@@ -5,11 +5,11 @@ import {
   Badge,
   Link,
   SpaceBetween,
-  Button,
 } from "@cloudscape-design/components";
 import { formatDate } from "../../utils/date.utils";
 import { VenueDisplay } from "../common/VenueDisplay";
 import { useAuth } from "../../hooks/useAuth";
+import { ResponsiveButton } from "../common/ResponsiveButton";
 
 interface ActivityVenueHistoryRecord {
   id: string;
@@ -76,11 +76,19 @@ export const ActivityVenueHistoryTable: React.FC<
               "Unknown Venue"
             );
 
+            // Add key props to children inside SpaceBetween
             return (
               <SpaceBetween direction="horizontal" size="xs">
-                <Link href={`/venues/${item.venueId}`}>{displayContent}</Link>
+                <Link
+                  key={`venue-link-${item.venueId}`}
+                  href={`/venues/${item.venueId}`}
+                >
+                  {displayContent}
+                </Link>
                 {sortedHistory.indexOf(item) === 0 && (
-                  <Badge color="green">Current</Badge>
+                  <Badge key={`current-badge-${item.venueId}`} color="green">
+                    Current
+                  </Badge>
                 )}
               </SpaceBetween>
             );
@@ -101,9 +109,15 @@ export const ActivityVenueHistoryTable: React.FC<
               formatDate(item.effectiveFrom)
             ) : (
               <SpaceBetween direction="horizontal" size="xs">
-                <Badge color="blue">Since Activity Start</Badge>
+                <Badge key={`since-activity-badge-${item.id}`} color="blue">
+                  Since Activity Start
+                </Badge>
                 {activityStartDate && (
-                  <Box variant="small" color="text-body-secondary">
+                  <Box
+                    key={`activity-date-box-${item.id}`}
+                    variant="small"
+                    color="text-body-secondary"
+                  >
                     ({formatDate(activityStartDate)})
                   </Box>
                 )}
@@ -115,12 +129,14 @@ export const ActivityVenueHistoryTable: React.FC<
           id: "actions",
           header: "Actions",
           cell: (item: ActivityVenueHistoryRecord) => (
-            <Button
-              variant="normal"
-              iconName="remove"
+            <ResponsiveButton
               onClick={() => onDelete(item.id)}
-              ariaLabel="Remove"
-            />
+              iconName="remove"
+              mobileIcon="remove"
+              mobileAriaLabel="Remove"
+            >
+              Remove
+            </ResponsiveButton>
           ),
         },
       ]}

@@ -1,35 +1,51 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import Table from '@cloudscape-design/components/table';
-import Box from '@cloudscape-design/components/box';
-import SpaceBetween from '@cloudscape-design/components/space-between';
-import Button from '@cloudscape-design/components/button';
-import Header from '@cloudscape-design/components/header';
-import Badge from '@cloudscape-design/components/badge';
-import Link from '@cloudscape-design/components/link';
-import Pagination from '@cloudscape-design/components/pagination';
-import Alert from '@cloudscape-design/components/alert';
-import DatePicker from '@cloudscape-design/components/date-picker';
-import FormField from '@cloudscape-design/components/form-field';
-import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
-import type { PropertyFilterProps } from '@cloudscape-design/components/property-filter';
-import type { Activity } from '../../types';
-import { ActivityService, type ActivityFilterParams } from '../../services/api/activity.service';
-import { ActivityTypeService } from '../../services/api/activity-type.service';
-import { activityCategoryService } from '../../services/api/activity-category.service';
-import { PopulationService } from '../../services/api/population.service';
-import { usePermissions } from '../../hooks/usePermissions';
-import { useGlobalGeographicFilter } from '../../hooks/useGlobalGeographicFilter';
-import { formatDate } from '../../utils/date.utils';
-import { ImportResultsModal } from '../common/ImportResultsModal';
-import { FilterGroupingPanel, type FilterGroupingState, type FilterProperty } from '../common/FilterGroupingPanel';
-import { ResponsiveButton } from '../common/ResponsiveButton';
-import { PullToRefreshWrapper } from '../common/PullToRefreshWrapper';
-import { validateCSVFile } from '../../utils/csv.utils';
-import type { ImportResult } from '../../types/csv.types';
-import { invalidatePageCaches, getListPageQueryKeys } from '../../utils/cache-invalidation.utils';
-import { ConfirmationDialog } from '../common/ConfirmationDialog';
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import Table from "@cloudscape-design/components/table";
+import Box from "@cloudscape-design/components/box";
+import SpaceBetween from "@cloudscape-design/components/space-between";
+import Button from "@cloudscape-design/components/button";
+import Header from "@cloudscape-design/components/header";
+import Badge from "@cloudscape-design/components/badge";
+import Link from "@cloudscape-design/components/link";
+import Pagination from "@cloudscape-design/components/pagination";
+import Alert from "@cloudscape-design/components/alert";
+import DatePicker from "@cloudscape-design/components/date-picker";
+import FormField from "@cloudscape-design/components/form-field";
+import ButtonDropdown from "@cloudscape-design/components/button-dropdown";
+import type { PropertyFilterProps } from "@cloudscape-design/components/property-filter";
+import type { Activity } from "../../types";
+import {
+  ActivityService,
+  type ActivityFilterParams,
+} from "../../services/api/activity.service";
+import { ActivityTypeService } from "../../services/api/activity-type.service";
+import { activityCategoryService } from "../../services/api/activity-category.service";
+import { PopulationService } from "../../services/api/population.service";
+import { usePermissions } from "../../hooks/usePermissions";
+import { useGlobalGeographicFilter } from "../../hooks/useGlobalGeographicFilter";
+import { formatDate } from "../../utils/date.utils";
+import { ImportResultsModal } from "../common/ImportResultsModal";
+import {
+  FilterGroupingPanel,
+  type FilterGroupingState,
+  type FilterProperty,
+} from "../common/FilterGroupingPanel";
+import { ResponsiveButton } from "../common/ResponsiveButton";
+import { PullToRefreshWrapper } from "../common/PullToRefreshWrapper";
+import { validateCSVFile } from "../../utils/csv.utils";
+import type { ImportResult } from "../../types/csv.types";
+import {
+  invalidatePageCaches,
+  getListPageQueryKeys,
+} from "../../utils/cache-invalidation.utils";
+import { ConfirmationDialog } from "../common/ConfirmationDialog";
 
 const ITEMS_PER_PAGE = 100;
 
@@ -49,215 +65,251 @@ export function ActivityList() {
   const navigate = useNavigate();
   const { canCreate, canEdit } = usePermissions();
   const { selectedGeographicAreaId } = useGlobalGeographicFilter();
-  const [deleteError, setDeleteError] = useState('');
+  const [deleteError, setDeleteError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<Activity | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showImportResults, setShowImportResults] = useState(false);
-  const [csvError, setCsvError] = useState('');
+  const [csvError, setCsvError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Separate state variables (like EngagementDashboard) - NOT a single filterState object
-  const [dateRange, setDateRange] = useState<FilterGroupingState['dateRange']>(null);
-  const [propertyFilterQuery, setPropertyFilterQuery] = useState<PropertyFilterProps.Query>({
-    tokens: [],
-    operation: 'and',
-  });
+  const [dateRange, setDateRange] =
+    useState<FilterGroupingState["dateRange"]>(null);
+  const [propertyFilterQuery, setPropertyFilterQuery] =
+    useState<PropertyFilterProps.Query>({
+      tokens: [],
+      operation: "and",
+    });
 
   // Bidirectional cache: label ↔ UUID (for converting labels to UUIDs for API calls)
-  const [labelToUuid, setLabelToUuid] = useState<Map<string, string>>(new Map());
+  const [labelToUuid, setLabelToUuid] = useState<Map<string, string>>(
+    new Map(),
+  );
 
   const [filtersReady, setFiltersReady] = useState(false); // Track if initial filters are resolved
 
   // Helper to add to cache (label -> UUID mapping)
   const addToCache = (uuid: string, label: string) => {
-    setLabelToUuid(prev => new Map(prev).set(label, uuid));
+    setLabelToUuid((prev) => new Map(prev).set(label, uuid));
   };
 
   // Extract individual values from consolidated tokens
-  const extractValuesFromToken = (token: PropertyFilterProps.Token): string[] => {
+  const extractValuesFromToken = (
+    token: PropertyFilterProps.Token,
+  ): string[] => {
     if (!token.value) return [];
-    return token.value.split(',').map((v: string) => v.trim()).filter((v: string) => v.length > 0);
+    return token.value
+      .split(",")
+      .map((v: string) => v.trim())
+      .filter((v: string) => v.length > 0);
   };
 
   // Filter properties configuration with loadItems callbacks
-  const filterProperties: FilterProperty[] = useMemo(() => [
-    {
-      key: 'name',
-      propertyLabel: 'Name',
-      groupValuesLabel: 'Name values',
-      operators: ['='],
-      loadItems: async (filterText: string) => {
-        // For name filtering, we use the search text directly (no need to fetch from backend)
-        // The backend will handle partial matching on activity names
-        if (!filterText) return [];
+  const filterProperties: FilterProperty[] = useMemo(
+    () => [
+      {
+        key: "name",
+        propertyLabel: "Name",
+        groupValuesLabel: "Name values",
+        operators: ["="],
+        loadItems: async (filterText: string) => {
+          // For name filtering, we use the search text directly (no need to fetch from backend)
+          // The backend will handle partial matching on activity names
+          if (!filterText) return [];
 
-        return [{
-          propertyKey: 'name',
-          value: filterText, // Use the search text directly
-          label: filterText,
-        }];
+          return [
+            {
+              propertyKey: "name",
+              value: filterText, // Use the search text directly
+              label: filterText,
+            },
+          ];
+        },
       },
-    },
-    {
-      key: 'activityCategory',
-      propertyLabel: 'Activity Category',
-      groupValuesLabel: 'Activity Category values',
-      operators: ['='],
-      loadItems: async (filterText: string) => {
-        const categories = await activityCategoryService.getActivityCategories();
-        const filtered = categories.filter((cat: any) => 
-          !filterText || cat.name.toLowerCase().includes(filterText.toLowerCase())
-        );
-        
-        filtered.forEach((cat: any) => addToCache(cat.id, cat.name));
-        return filtered.map((cat: any) => ({
-          propertyKey: 'activityCategory',
-          value: cat.name, // Store label as value for display in tokens
-          label: cat.name, // Display label in dropdown
-        }));
-      },
-    },
-    {
-      key: 'activityType',
-      propertyLabel: 'Activity Type',
-      groupValuesLabel: 'Activity Type values',
-      operators: ['='],
-      loadItems: async (filterText: string) => {
-        const types = await ActivityTypeService.getActivityTypes();
-        const filtered = types.filter((type: any) => 
-          !filterText || type.name.toLowerCase().includes(filterText.toLowerCase())
-        );
-        
-        filtered.forEach((type: any) => addToCache(type.id, type.name));
-        return filtered.map((type: any) => ({
-          propertyKey: 'activityType',
-          value: type.name, // Store label as value for display in tokens
-          label: type.name, // Display label in dropdown
-        }));
-      },
-    },
-    {
-      key: 'status',
-      propertyLabel: 'Status',
-      groupValuesLabel: 'Status values',
-      operators: ['='],
-      loadItems: async (filterText: string) => {
-        const statuses = [
-          { value: 'PLANNED', label: 'Planned' },
-          { value: 'ACTIVE', label: 'Active' },
-          { value: 'COMPLETED', label: 'Completed' },
-          { value: 'CANCELLED', label: 'Cancelled' },
-        ];
-        const filtered = statuses.filter(s => 
-          !filterText || s.label.toLowerCase().includes(filterText.toLowerCase())
-        );
-        
-        filtered.forEach(s => addToCache(s.value, s.label));
-        return filtered.map(s => ({
-          propertyKey: 'status',
-          value: s.label, // Store label as value for display in tokens
-          label: s.label, // Display label in dropdown
-        }));
-      },
-    },
-    {
-      key: 'population',
-      propertyLabel: 'Population',
-      groupValuesLabel: 'Population values',
-      operators: ['='],
-      loadItems: async (filterText: string) => {
-        const populations = await PopulationService.getPopulations();
-        const filtered = populations.filter((pop: any) => 
-          !filterText || pop.name.toLowerCase().includes(filterText.toLowerCase())
-        );
-        
-        filtered.forEach((pop: any) => addToCache(pop.id, pop.name));
-        return filtered.map((pop: any) => ({
-          propertyKey: 'population',
-          value: pop.name, // Store label as value for display in tokens
-          label: pop.name, // Display label in dropdown
-        }));
-      },
-    },
-    {
-      key: 'role',
-      propertyLabel: 'Role',
-      groupValuesLabel: 'Role values',
-      operators: ['='],
-      loadItems: async (filterText: string) => {
-        const { ParticipantRoleService } = await import('../../services/api/participant-role.service');
-        const roles = await ParticipantRoleService.searchRoles(filterText || '');
+      {
+        key: "activityCategory",
+        propertyLabel: "Activity Category",
+        groupValuesLabel: "Activity Category values",
+        operators: ["="],
+        loadItems: async (filterText: string) => {
+          const categories =
+            await activityCategoryService.getActivityCategories();
+          const filtered = categories.filter(
+            (cat: any) =>
+              !filterText ||
+              cat.name.toLowerCase().includes(filterText.toLowerCase()),
+          );
 
-        roles.forEach((role: any) => addToCache(role.id, role.name));
-        return roles.map((role: any) => ({
-          propertyKey: 'role',
-          value: role.name, // Store label as value for display in tokens
-          label: role.name, // Display label in dropdown
-          description: role.isPredefined ? 'Predefined role' : 'Custom role',
-        }));
+          filtered.forEach((cat: any) => addToCache(cat.id, cat.name));
+          return filtered.map((cat: any) => ({
+            propertyKey: "activityCategory",
+            value: cat.name, // Store label as value for display in tokens
+            label: cat.name, // Display label in dropdown
+          }));
+        },
       },
-    },
-    {
-      key: 'ageCohort',
-      propertyLabel: 'Age Cohort',
-      groupValuesLabel: 'Age Cohort values',
-      operators: ['='],
-      loadItems: async (filterText: string) => {
-        const cohorts = [
-          { value: 'Child', label: 'Child' },
-          { value: 'Junior Youth', label: 'Junior Youth' },
-          { value: 'Youth', label: 'Youth' },
-          { value: 'Young Adult', label: 'Young Adult' },
-          { value: 'Adult', label: 'Adult' },
-          { value: 'Unknown', label: 'Unknown' },
-        ];
-        const filtered = cohorts.filter(c =>
-          !filterText || c.label.toLowerCase().includes(filterText.toLowerCase())
-        );
+      {
+        key: "activityType",
+        propertyLabel: "Activity Type",
+        groupValuesLabel: "Activity Type values",
+        operators: ["="],
+        loadItems: async (filterText: string) => {
+          const types = await ActivityTypeService.getActivityTypes();
+          const filtered = types.filter(
+            (type: any) =>
+              !filterText ||
+              type.name.toLowerCase().includes(filterText.toLowerCase()),
+          );
 
-        // Age cohorts don't need UUID mapping (they're used directly)
-        return filtered.map(c => ({
-          propertyKey: 'ageCohort',
-          value: c.value, // Store cohort name as value
-          label: c.label, // Display label in dropdown
-        }));
+          filtered.forEach((type: any) => addToCache(type.id, type.name));
+          return filtered.map((type: any) => ({
+            propertyKey: "activityType",
+            value: type.name, // Store label as value for display in tokens
+            label: type.name, // Display label in dropdown
+          }));
+        },
       },
-    },
-    {
-      key: 'lastUpdated',
-      propertyLabel: 'Last Updated',
-      groupValuesLabel: 'Last Updated value',
-      operators: ['<=', '<', '>=', '>'].map(operator => ({
-        operator,
-        form: ({ value, onChange }: { value?: string; onChange: (value: string) => void }) => (
-          <FormField>
-            <DatePicker
-              value={value ?? ''}
-              onChange={event => onChange(event.detail.value)}
-              placeholder="YYYY/MM/DD"
-              expandToViewport={true}
-            />
-          </FormField>
-        ),
-        match: 'date' as const,
-      })) as any, // Cast to any to bypass type checking for custom form operators
-      loadItems: async () => [], // No async loading for date picker
-    },
-  ], []); // Empty deps - functions are stable
+      {
+        key: "status",
+        propertyLabel: "Status",
+        groupValuesLabel: "Status values",
+        operators: ["="],
+        loadItems: async (filterText: string) => {
+          const statuses = [
+            { value: "PLANNED", label: "Planned" },
+            { value: "ACTIVE", label: "Active" },
+            { value: "COMPLETED", label: "Completed" },
+            { value: "CANCELLED", label: "Cancelled" },
+          ];
+          const filtered = statuses.filter(
+            (s) =>
+              !filterText ||
+              s.label.toLowerCase().includes(filterText.toLowerCase()),
+          );
+
+          filtered.forEach((s) => addToCache(s.value, s.label));
+          return filtered.map((s) => ({
+            propertyKey: "status",
+            value: s.label, // Store label as value for display in tokens
+            label: s.label, // Display label in dropdown
+          }));
+        },
+      },
+      {
+        key: "population",
+        propertyLabel: "Population",
+        groupValuesLabel: "Population values",
+        operators: ["="],
+        loadItems: async (filterText: string) => {
+          const populations = await PopulationService.getPopulations();
+          const filtered = populations.filter(
+            (pop: any) =>
+              !filterText ||
+              pop.name.toLowerCase().includes(filterText.toLowerCase()),
+          );
+
+          filtered.forEach((pop: any) => addToCache(pop.id, pop.name));
+          return filtered.map((pop: any) => ({
+            propertyKey: "population",
+            value: pop.name, // Store label as value for display in tokens
+            label: pop.name, // Display label in dropdown
+          }));
+        },
+      },
+      {
+        key: "role",
+        propertyLabel: "Role",
+        groupValuesLabel: "Role values",
+        operators: ["="],
+        loadItems: async (filterText: string) => {
+          const { ParticipantRoleService } =
+            await import("../../services/api/participant-role.service");
+          const roles = await ParticipantRoleService.searchRoles(
+            filterText || "",
+          );
+
+          roles.forEach((role: any) => addToCache(role.id, role.name));
+          return roles.map((role: any) => ({
+            propertyKey: "role",
+            value: role.name, // Store label as value for display in tokens
+            label: role.name, // Display label in dropdown
+            description: role.isPredefined ? "Predefined role" : "Custom role",
+          }));
+        },
+      },
+      {
+        key: "ageCohort",
+        propertyLabel: "Age Cohort",
+        groupValuesLabel: "Age Cohort values",
+        operators: ["="],
+        loadItems: async (filterText: string) => {
+          const cohorts = [
+            { value: "Child", label: "Child" },
+            { value: "Junior Youth", label: "Junior Youth" },
+            { value: "Youth", label: "Youth" },
+            { value: "Young Adult", label: "Young Adult" },
+            { value: "Adult", label: "Adult" },
+            { value: "Unknown", label: "Unknown" },
+          ];
+          const filtered = cohorts.filter(
+            (c) =>
+              !filterText ||
+              c.label.toLowerCase().includes(filterText.toLowerCase()),
+          );
+
+          // Age cohorts don't need UUID mapping (they're used directly)
+          return filtered.map((c) => ({
+            propertyKey: "ageCohort",
+            value: c.value, // Store cohort name as value
+            label: c.label, // Display label in dropdown
+          }));
+        },
+      },
+      {
+        key: "lastUpdated",
+        propertyLabel: "Last Updated",
+        groupValuesLabel: "Last Updated value",
+        operators: ["<=", "<", ">=", ">"].map((operator) => ({
+          operator,
+          form: ({
+            value,
+            onChange,
+          }: {
+            value?: string;
+            onChange: (value: string) => void;
+          }) => (
+            <FormField>
+              <DatePicker
+                value={value ?? ""}
+                onChange={(event) => onChange(event.detail.value)}
+                placeholder="YYYY/MM/DD"
+                expandToViewport={true}
+              />
+            </FormField>
+          ),
+          match: "date" as const,
+        })) as any, // Cast to any to bypass type checking for custom form operators
+        loadItems: async () => [], // No async loading for date picker
+      },
+    ],
+    [],
+  ); // Empty deps - functions are stable
 
   // Pre-populate cache when filter tokens are restored from URL
   useEffect(() => {
     const populateCache = async () => {
       // Check if we have any filter tokens that need cache population
-      const needsCache = propertyFilterQuery.tokens.some(
-        t => ['activityCategory', 'activityType', 'status', 'population'].includes(t.propertyKey || '')
+      const needsCache = propertyFilterQuery.tokens.some((t) =>
+        ["activityCategory", "activityType", "status", "population"].includes(
+          t.propertyKey || "",
+        ),
       );
-      
+
       if (!needsCache) return;
-      
+
       try {
         // Fetch all reference data to populate the cache
         const [categories, types, populations] = await Promise.all([
@@ -265,24 +317,24 @@ export function ActivityList() {
           ActivityTypeService.getActivityTypes(),
           PopulationService.getPopulations(),
         ]);
-        
+
         categories.forEach((cat: any) => addToCache(cat.id, cat.name));
         types.forEach((type: any) => addToCache(type.id, type.name));
         populations.forEach((pop: any) => addToCache(pop.id, pop.name));
-        
+
         // Add status mappings
         const statuses = [
-          { value: 'PLANNED', label: 'Planned' },
-          { value: 'ACTIVE', label: 'Active' },
-          { value: 'COMPLETED', label: 'Completed' },
-          { value: 'CANCELLED', label: 'Cancelled' },
+          { value: "PLANNED", label: "Planned" },
+          { value: "ACTIVE", label: "Active" },
+          { value: "COMPLETED", label: "Completed" },
+          { value: "CANCELLED", label: "Cancelled" },
         ];
-        statuses.forEach(s => addToCache(s.value, s.label));
+        statuses.forEach((s) => addToCache(s.value, s.label));
       } catch (error) {
-        console.error('Error pre-populating filter cache:', error);
+        console.error("Error pre-populating filter cache:", error);
       }
     };
-    
+
     populateCache();
   }, []); // Only run once on mount
 
@@ -304,113 +356,133 @@ export function ActivityList() {
       geographicAreaId: selectedGeographicAreaId,
       filter: {}, // Initialize filter object
     };
-    
+
     // Extract filters from propertyFilterQuery tokens (convert labels to UUIDs)
     const activityCategoryLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'activityCategory' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const activityCategoryIds = activityCategoryLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
+      .filter((t) => t.propertyKey === "activityCategory" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
+    const activityCategoryIds = activityCategoryLabels
+      .map((label) => labelToUuid.get(label))
+      .filter(Boolean) as string[];
     if (activityCategoryIds.length > 0) {
-      params.filter!.activityCategoryIds = activityCategoryIds.join(',');
+      params.filter!.activityCategoryIds = activityCategoryIds.join(",");
     }
-    
+
     const activityTypeLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'activityType' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const activityTypeIds = activityTypeLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
+      .filter((t) => t.propertyKey === "activityType" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
+    const activityTypeIds = activityTypeLabels
+      .map((label) => labelToUuid.get(label))
+      .filter(Boolean) as string[];
     if (activityTypeIds.length > 0) {
-      params.filter!.activityTypeIds = activityTypeIds.join(',');
+      params.filter!.activityTypeIds = activityTypeIds.join(",");
     }
-    
+
     const statusLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'status' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const statusValues = statusLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
+      .filter((t) => t.propertyKey === "status" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
+    const statusValues = statusLabels
+      .map((label) => labelToUuid.get(label))
+      .filter(Boolean) as string[];
     if (statusValues.length > 0) {
-      params.filter!.status = statusValues.join(',');
+      params.filter!.status = statusValues.join(",");
     }
-    
+
     const populationLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'population' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const populationIds = populationLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
+      .filter((t) => t.propertyKey === "population" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
+    const populationIds = populationLabels
+      .map((label) => labelToUuid.get(label))
+      .filter(Boolean) as string[];
     if (populationIds.length > 0) {
-      params.filter!.populationIds = populationIds.join(',');
+      params.filter!.populationIds = populationIds.join(",");
     }
-    
+
     // Role filter - convert labels to UUIDs
     const roleLabels = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'role' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
-    const roleIds = roleLabels.map(label => labelToUuid.get(label)).filter(Boolean) as string[];
+      .filter((t) => t.propertyKey === "role" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
+    const roleIds = roleLabels
+      .map((label) => labelToUuid.get(label))
+      .filter(Boolean) as string[];
     if (roleIds.length > 0) {
-      params.filter!.roleIds = roleIds.join(',');
+      params.filter!.roleIds = roleIds.join(",");
     }
 
     // Age Cohort filter - use cohort names directly (no UUID conversion needed)
     const ageCohortValues = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'ageCohort' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
+      .filter((t) => t.propertyKey === "ageCohort" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
     if (ageCohortValues.length > 0) {
-      params.filter!.ageCohorts = ageCohortValues.join(',');
+      params.filter!.ageCohorts = ageCohortValues.join(",");
     }
 
     // Name filter - use the search text directly (no UUID conversion needed)
     const nameValues = propertyFilterQuery.tokens
-      .filter(t => t.propertyKey === 'name' && t.operator === '=')
-      .flatMap(t => extractValuesFromToken(t));
+      .filter((t) => t.propertyKey === "name" && t.operator === "=")
+      .flatMap((t) => extractValuesFromToken(t));
     if (nameValues.length > 0) {
       // For name filtering, we use the first value (typically only one name filter at a time)
       params.filter!.name = nameValues[0];
     }
 
     // Last Updated filter - convert PropertyFilter tokens to updatedAt query parameters
-    const lastUpdatedTokens = propertyFilterQuery.tokens.filter(t => t.propertyKey === 'lastUpdated');
+    const lastUpdatedTokens = propertyFilterQuery.tokens.filter(
+      (t) => t.propertyKey === "lastUpdated",
+    );
     if (lastUpdatedTokens.length > 0) {
       if (!params.filter!.updatedAt) {
         params.filter!.updatedAt = {};
       }
 
-      lastUpdatedTokens.forEach(token => {
+      lastUpdatedTokens.forEach((token) => {
         const operator = token.operator;
         const value = token.value;
 
         if (!value) return;
 
         // Convert operator to backend format and convert date to ISO datetime
-        if (operator === '<=') {
+        if (operator === "<=") {
           params.filter!.updatedAt.lte = toISODateTime(value, true); // End of day
-        } else if (operator === '<') {
+        } else if (operator === "<") {
           params.filter!.updatedAt.lt = toISODateTime(value, false); // Start of day
-        } else if (operator === '>=') {
+        } else if (operator === ">=") {
           params.filter!.updatedAt.gte = toISODateTime(value, false); // Start of day
-        } else if (operator === '>') {
+        } else if (operator === ">") {
           params.filter!.updatedAt.gt = toISODateTime(value, true); // End of day
         }
       });
     }
 
     // Date range - convert to ISO datetime format and add to filter
-    if (dateRange?.type === 'absolute' && dateRange.startDate && dateRange.endDate) {
+    if (
+      dateRange?.type === "absolute" &&
+      dateRange.startDate &&
+      dateRange.endDate
+    ) {
       params.filter!.startDate = toISODateTime(dateRange.startDate, false);
       params.filter!.endDate = toISODateTime(dateRange.endDate, true);
-    } else if (dateRange?.type === 'relative' && dateRange.amount && dateRange.unit) {
+    } else if (
+      dateRange?.type === "relative" &&
+      dateRange.amount &&
+      dateRange.unit
+    ) {
       // Convert relative date range to absolute dates
       const now = new Date();
       const endDate = now;
       const startDate = new Date(now);
 
       switch (dateRange.unit) {
-        case 'day':
+        case "day":
           startDate.setDate(now.getDate() - dateRange.amount);
           break;
-        case 'week':
-          startDate.setDate(now.getDate() - (dateRange.amount * 7));
+        case "week":
+          startDate.setDate(now.getDate() - dateRange.amount * 7);
           break;
-        case 'month':
+        case "month":
           startDate.setMonth(now.getMonth() - dateRange.amount);
           break;
-        case 'year':
+        case "year":
           startDate.setFullYear(now.getFullYear() - dateRange.amount);
           break;
       }
@@ -418,12 +490,12 @@ export function ActivityList() {
       params.filter!.startDate = startDate.toISOString();
       params.filter!.endDate = endDate.toISOString();
     }
-    
+
     // Remove empty filter object if no filters
     if (Object.keys(params.filter!).length === 0) {
       delete params.filter;
     }
-    
+
     return params;
   }, [dateRange, propertyFilterQuery, selectedGeographicAreaId, labelToUuid]);
 
@@ -434,17 +506,12 @@ export function ActivityList() {
     error,
     refetch,
   } = useQuery({
-    queryKey: [
-      "activities",
-      currentPageIndex,
-      ITEMS_PER_PAGE,
-      filterParams,
-    ],
+    queryKey: ["activities", currentPageIndex, ITEMS_PER_PAGE, filterParams],
     queryFn: async () => {
       const response = await ActivityService.getActivitiesFlexible({
         page: currentPageIndex,
         limit: ITEMS_PER_PAGE,
-        ...filterParams
+        ...filterParams,
       });
       return response;
     },
@@ -460,12 +527,12 @@ export function ActivityList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => ActivityService.deleteActivity(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
-      setDeleteError('');
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      setDeleteError("");
       setCurrentPageIndex(1); // Reset to page 1 after deletion
     },
     onError: (error: Error) => {
-      setDeleteError(error.message || 'Failed to remove activity.');
+      setDeleteError(error.message || "Failed to remove activity.");
     },
   });
 
@@ -474,7 +541,7 @@ export function ActivityList() {
   };
 
   const handleCreate = () => {
-    navigate('/activities/new');
+    navigate("/activities/new");
   };
 
   const handleDelete = async (activity: Activity) => {
@@ -490,29 +557,33 @@ export function ActivityList() {
 
   const handleExport = async () => {
     setIsExporting(true);
-    setCsvError('');
-    
+    setCsvError("");
+
     try {
       await ActivityService.exportActivities(selectedGeographicAreaId);
     } catch (error) {
-      setCsvError(error instanceof Error ? error.message : 'Failed to export activities');
+      setCsvError(
+        error instanceof Error ? error.message : "Failed to export activities",
+      );
     } finally {
       setIsExporting(false);
     }
   };
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const validation = validateCSVFile(file);
     if (!validation.valid) {
-      setCsvError(validation.error || 'Invalid file');
+      setCsvError(validation.error || "Invalid file");
       return;
     }
 
     setIsImporting(true);
-    setCsvError('');
+    setCsvError("");
 
     try {
       const result = await ActivityService.importActivities(file);
@@ -520,27 +591,30 @@ export function ActivityList() {
       setShowImportResults(true);
 
       if (result.successCount > 0) {
-        queryClient.invalidateQueries({ queryKey: ['activities'] });
+        queryClient.invalidateQueries({ queryKey: ["activities"] });
         setCurrentPageIndex(1); // Reset to page 1 after import
       }
     } catch (error) {
-      setCsvError(error instanceof Error ? error.message : 'Failed to import activities');
+      setCsvError(
+        error instanceof Error ? error.message : "Failed to import activities",
+      );
     } finally {
       setIsImporting(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
 
-  const hasActiveFilters = propertyFilterQuery.tokens.length > 0 || dateRange !== null;
+  const hasActiveFilters =
+    propertyFilterQuery.tokens.length > 0 || dateRange !== null;
 
   // Pull-to-refresh handler
   const handlePullToRefresh = useCallback(async () => {
     // Invalidate caches (but preserve auth tokens)
     await invalidatePageCaches(queryClient, {
-      queryKeys: getListPageQueryKeys('activities'),
-      clearLocalStorage: false // Don't clear localStorage to preserve auth
+      queryKeys: getListPageQueryKeys("activities"),
+      clearLocalStorage: false, // Don't clear localStorage to preserve auth
     });
 
     // Reset pagination
@@ -553,209 +627,239 @@ export function ActivityList() {
   return (
     <PullToRefreshWrapper onRefresh={handlePullToRefresh}>
       <SpaceBetween size="l">
-      {deleteError && (
-        <Alert
-          type="error"
-          dismissible
-          onDismiss={() => setDeleteError('')}
-        >
-          {deleteError}
-        </Alert>
-      )}
-      {csvError && (
-        <Alert
-          type="error"
-          dismissible
-          onDismiss={() => setCsvError('')}
-        >
-          {csvError}
-        </Alert>
-      )}
+        {deleteError && (
+          <Alert
+            type="error"
+            dismissible
+            onDismiss={() => setDeleteError("")}
+            key="delete-error-alert"
+          >
+            {deleteError}
+          </Alert>
+        )}
+        {csvError && (
+          <Alert
+            type="error"
+            dismissible
+            onDismiss={() => setCsvError("")}
+            key="csv-error-alert"
+          >
+            {csvError}
+          </Alert>
+        )}
         {error && (
-        <Alert
-          type="error"
-          dismissible
-            onDismiss={() => { }}
-          action={
-            <Button onClick={() => refetch()} iconName="refresh">
-              Retry
-            </Button>
-          }
-        >
-            {error instanceof Error ? error.message : 'Failed to load activities'}
-        </Alert>
-      )}
-      
-      <Table
-        wrapLines={false}
-        columnDefinitions={[
-          {
-            id: 'name',
-            header: 'Name',
-            cell: (item) => (
-              <Link href={`/activities/${item.id}`}>
-                {item.name}
-              </Link>
-            ),
-            sortingField: 'name',
-          },
-          {
-            id: 'type',
-            header: 'Type',
-            cell: (item) => item.activityType?.name || '-',
-          },
-          {
-            id: 'dates',
-            header: 'Dates',
-            cell: (item) => {
-              const start = formatDate(item.startDate);
-              const end = item.endDate ? formatDate(item.endDate) : 'Ongoing';
-              return `${start} - ${end}`;
-            },
-          },
-          {
-            id: 'status',
-            header: 'Status',
-            cell: (item) => {
-              const statusColors: Record<string, 'green' | 'grey' | 'blue' | 'red'> = {
-                PLANNED: 'blue',
-                ACTIVE: 'green',
-                COMPLETED: 'grey',
-                CANCELLED: 'red',
-              };
-              return (
-                <SpaceBetween direction="horizontal" size="xs">
-                  <Badge color={statusColors[item.status] || 'grey'}>
-                    {item.status}
-                  </Badge>
-                  {item.isOngoing && <Badge color="blue">Ongoing</Badge>}
-                </SpaceBetween>
-              );
-            },
-          },
-          {
-            id: 'actions',
-            header: 'Actions',
-            minWidth: 200,
-            cell: (item) => (
-              canEdit() ? (
-                <ButtonDropdown
-                  variant="normal"
-                  expandToViewport
-                  mainAction={{
-                    text: "Edit",
-                    onClick: () => handleEdit(item),
-                    iconName: "edit"
-                  }}
-                  items={[{ id: "remove", text: "Remove", iconName: "remove" }]}
-                  onItemClick={() => handleDelete(item)}
-                  ariaLabel={`Edit ${item.name}`}
-                />
-              ) : null
-            ),
-          },
-        ]}
-          items={activities}
-        loading={isLoading}
-        loadingText="Loading activities"
-        sortingDisabled
-        empty={
-          <Box textAlign="center" color="inherit">
-            <b>No activities</b>
-            <Box padding={{ bottom: 's' }} variant="p" color="inherit">
-              {hasActiveFilters ? 'No activities match your filters.' : 'No activities to display.'}
-            </Box>
-            {canCreate() && !hasActiveFilters && (
-              <ResponsiveButton 
-                onClick={handleCreate}
-                mobileIcon="add-plus"
-                mobileAriaLabel="Create new activity"
-              >
-                Create activity
-              </ResponsiveButton>
-            )}
-          </Box>
-        }
-        filter={
-          <FilterGroupingPanel
-            filterProperties={filterProperties}
-            groupingMode="none"
-            includeDateRange={true}
-            initialDateRange={dateRange}
-            initialFilterTokens={propertyFilterQuery}
-            onUpdate={handleFilterUpdate}
-            onInitialResolutionComplete={handleInitialResolutionComplete}
-            isLoading={isLoading}
-          />
-        }
-        header={
-          <Header
-            actions={
-              <SpaceBetween direction="horizontal" size="xs">
-                {canEdit() && (
-                  <React.Fragment key="edit-actions">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".csv"
-                      style={{ display: 'none' }}
-                      onChange={handleFileSelect}
-                    />
-                    <ResponsiveButton
-                      iconName="upload"
-                      onClick={() => fileInputRef.current?.click()}
-                      loading={isImporting}
-                      disabled={isImporting}
-                      mobileAriaLabel="Import activities from CSV"
-                    >
-                      Import CSV
-                    </ResponsiveButton>
-                    <ResponsiveButton
-                      iconName="download"
-                      onClick={handleExport}
-                      loading={isExporting}
-                      disabled={isExporting}
-                      mobileAriaLabel="Export activities to CSV"
-                    >
-                      Export CSV
-                    </ResponsiveButton>
-                  </React.Fragment>)}
-                {canCreate() && (
-                  <ResponsiveButton 
-                    variant="primary" 
-                    onClick={handleCreate}
-                    mobileIcon="add-plus"
-                    mobileAriaLabel="Create new activity"
-                  >
-                    Create activity
-                  </ResponsiveButton>
-                )}
-              </SpaceBetween>
+          <Alert
+            type="error"
+            dismissible
+            onDismiss={() => {}}
+            key="retry-alert"
+            action={
+              <Button onClick={() => refetch()} iconName="refresh">
+                Retry
+              </Button>
             }
           >
-            <Box display="inline" fontSize="heading-l" fontWeight="bold">
-              Activities {totalCount > 0 && `(${totalCount.toLocaleString()})`}
+            {error instanceof Error
+              ? error.message
+              : "Failed to load activities"}
+          </Alert>
+        )}
+
+        <Table
+          wrapLines={false}
+          columnDefinitions={[
+            {
+              id: "name",
+              header: "Name",
+              cell: (item) => (
+                <Link href={`/activities/${item.id}`}>{item.name}</Link>
+              ),
+              sortingField: "name",
+            },
+            {
+              id: "type",
+              header: "Type",
+              cell: (item) => item.activityType?.name || "-",
+            },
+            {
+              id: "dates",
+              header: "Dates",
+              cell: (item) => {
+                const start = formatDate(item.startDate);
+                const end = item.endDate ? formatDate(item.endDate) : "Ongoing";
+                return `${start} - ${end}`;
+              },
+            },
+            {
+              id: "status",
+              header: "Status",
+              cell: (item) => {
+                const statusColors: Record<
+                  string,
+                  "green" | "grey" | "blue" | "red"
+                > = {
+                  PLANNED: "blue",
+                  ACTIVE: "green",
+                  COMPLETED: "grey",
+                  CANCELLED: "red",
+                };
+                // Always pass an array of children with unique keys to SpaceBetween
+                const children = [
+                  <Badge
+                    key={`status-badge-${item.id}`}
+                    color={statusColors[item.status] || "grey"}
+                  >
+                    {item.status}
+                  </Badge>,
+                ];
+                if (item.isOngoing) {
+                  children.push(
+                    <Badge key={`ongoing-badge-${item.id}`} color="blue">
+                      Ongoing
+                    </Badge>,
+                  );
+                }
+                return (
+                  <SpaceBetween direction="horizontal" size="xs">
+                    {children}
+                  </SpaceBetween>
+                );
+              },
+            },
+            {
+              id: "actions",
+              header: "Actions",
+              minWidth: 200,
+              cell: (item) =>
+                canEdit() ? (
+                  <ButtonDropdown
+                    variant="normal"
+                    expandToViewport
+                    mainAction={{
+                      text: "Edit",
+                      onClick: () => handleEdit(item),
+                      iconName: "edit",
+                    }}
+                    items={[
+                      { id: "remove", text: "Remove", iconName: "remove" },
+                    ]}
+                    onItemClick={() => handleDelete(item)}
+                    ariaLabel={`Edit ${item.name}`}
+                  />
+                ) : null,
+            },
+          ]}
+          items={activities}
+          trackBy={(item) => item.id}
+          loading={isLoading}
+          loadingText="Loading activities"
+          sortingDisabled
+          empty={
+            <Box textAlign="center" color="inherit">
+              <b>No activities</b>
+              <Box padding={{ bottom: "s" }} variant="p" color="inherit">
+                {hasActiveFilters
+                  ? "No activities match your filters."
+                  : "No activities to display."}
+              </Box>
+              {canCreate() && !hasActiveFilters && (
+                <ResponsiveButton
+                  onClick={handleCreate}
+                  mobileIcon="add-plus"
+                  mobileAriaLabel="Create new activity"
+                >
+                  Create activity
+                </ResponsiveButton>
+              )}
             </Box>
-          </Header>
-        }
-        pagination={
-          <Pagination
-            currentPageIndex={currentPageIndex}
-            pagesCount={totalPages}
-            onChange={({ detail }) => setCurrentPageIndex(detail.currentPageIndex)}
-            ariaLabels={{
-              nextPageLabel: "Next page",
-              previousPageLabel: "Previous page",
-              pageLabel: (pageNumber) => `Page ${pageNumber}`,
-            }}
-          />
-        }
-      />
-      <ImportResultsModal
-        visible={showImportResults}
-        result={importResult}
-        onDismiss={() => setShowImportResults(false)}
-      />
+          }
+          filter={
+            <FilterGroupingPanel
+              filterProperties={filterProperties}
+              groupingMode="none"
+              includeDateRange={true}
+              initialDateRange={dateRange}
+              initialFilterTokens={propertyFilterQuery}
+              onUpdate={handleFilterUpdate}
+              onInitialResolutionComplete={handleInitialResolutionComplete}
+              isLoading={isLoading}
+            />
+          }
+          header={
+            <Header
+              actions={
+                <SpaceBetween direction="horizontal" size="xs">
+                  {canEdit() && (
+                    <React.Fragment key="edit-actions">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv"
+                        style={{ display: "none" }}
+                        onChange={handleFileSelect}
+                      />
+                      <ResponsiveButton
+                        key="import-csv-btn"
+                        iconName="upload"
+                        onClick={() => fileInputRef.current?.click()}
+                        loading={isImporting}
+                        disabled={isImporting}
+                        mobileAriaLabel="Import activities from CSV"
+                      >
+                        Import CSV
+                      </ResponsiveButton>
+                      <ResponsiveButton
+                        key="export-csv-btn"
+                        iconName="download"
+                        onClick={handleExport}
+                        loading={isExporting}
+                        disabled={isExporting}
+                        mobileAriaLabel="Export activities to CSV"
+                      >
+                        Export CSV
+                      </ResponsiveButton>
+                    </React.Fragment>
+                  )}
+                  {canCreate() && (
+                    <ResponsiveButton
+                      key="create-activity-btn"
+                      variant="primary"
+                      onClick={handleCreate}
+                      mobileIcon="add-plus"
+                      mobileAriaLabel="Create new activity"
+                    >
+                      Create activity
+                    </ResponsiveButton>
+                  )}
+                </SpaceBetween>
+              }
+            >
+              <Box display="inline" fontSize="heading-l" fontWeight="bold">
+                Activities{" "}
+                {totalCount > 0 && `(${totalCount.toLocaleString()})`}
+              </Box>
+            </Header>
+          }
+          pagination={
+            <Pagination
+              currentPageIndex={currentPageIndex}
+              pagesCount={totalPages}
+              onChange={({ detail }) =>
+                setCurrentPageIndex(detail.currentPageIndex)
+              }
+              ariaLabels={{
+                nextPageLabel: "Next page",
+                previousPageLabel: "Previous page",
+                pageLabel: (pageNumber) => `Page ${pageNumber}`,
+              }}
+            />
+          }
+        />
+        <ImportResultsModal
+          visible={showImportResults}
+          result={importResult}
+          onDismiss={() => setShowImportResults(false)}
+        />
         <ConfirmationDialog
           visible={confirmDelete !== null}
           title="Remove Activity"
@@ -766,7 +870,7 @@ export function ActivityList() {
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmDelete(null)}
         />
-    </SpaceBetween>
+      </SpaceBetween>
     </PullToRefreshWrapper>
   );
 }
