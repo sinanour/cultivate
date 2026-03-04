@@ -143,7 +143,8 @@ DELETE /api/v1/activities/:id/participants/:participantId -> Remove participant
 // Activity Venue Association Routes
 GET    /api/v1/activities/:id/venues                 -> List activity venues
 POST   /api/v1/activities/:id/venues                 -> Associate venue with activity
-DELETE /api/v1/activities/:id/venues/:venueId        -> Remove venue association
+PUT    /api/v1/activities/:id/venues/:venueHistoryId -> Update venue association
+DELETE /api/v1/activities/:id/venues/:venueHistoryId -> Remove venue association
 
 // Venue Routes
 GET    /api/v1/venues                  -> List all venues (supports ?geographicAreaId=<id>, ?filter[fieldName]=<value>, and ?fields=<comma-separated-fields> parameters)

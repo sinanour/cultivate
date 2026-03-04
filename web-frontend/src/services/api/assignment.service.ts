@@ -31,6 +31,14 @@ export class AssignmentService {
     });
   }
 
+  static async updateAssignment(
+    activityId: string,
+    participantId: string,
+    data: { roleId?: string; notes?: string | null }
+  ): Promise<Assignment> {
+    return ApiClient.put<Assignment>(`/activities/${activityId}/participants/${participantId}`, data);
+  }
+
   static async removeParticipant(activityId: string, participantId: string): Promise<void> {
     return ApiClient.delete<void>(`/activities/${activityId}/participants/${participantId}`);
   }

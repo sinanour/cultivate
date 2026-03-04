@@ -210,13 +210,43 @@ The Backend API package provides the RESTful API service that implements all bus
 11. WHEN creating or updating an activity, THE API SHALL accept one or more venue IDs
 12. THE API SHALL provide a GET /api/activities/:id/venues endpoint that returns all venues associated with an activity ordered by effective start date descending
 13. THE API SHALL provide a POST /api/activities/:id/venues endpoint that associates a venue with an activity
-14. THE API SHALL provide a DELETE /api/activities/:id/venues/:venueId endpoint that removes a venue association
-15. THE API SHALL track the effective start date for each activity-venue association to support venue changes over time
-16. WHEN creating an activity-venue association, THE API SHALL accept an optional effective start date (effectiveFrom)
-17. WHEN creating an activity-venue association with a null effectiveFrom date, THE API SHALL treat the venue association start date as the same as the activity start date
-18. THE API SHALL enforce that at most one activity-venue association can have a null effectiveFrom date for any given activity
-19. WHEN creating an activity-venue association, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same activity
-20. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only activities whose current venue is in the specified geographic area or its descendants
+14. THE API SHALL provide a PUT /api/activities/:id/venues/:venueHistoryId endpoint that updates an existing venue association
+15. THE API SHALL provide a DELETE /api/activities/:id/venues/:venueHistoryId endpoint that removes a venue association
+16. THE API SHALL track the effective start date for each activity-venue association to support venue changes over time
+17. WHEN creating an activity-venue association, THE API SHALL accept an optional effective start date (effectiveFrom)
+18. WHEN updating an activity-venue association, THE API SHALL accept an optional venueId to change the venue
+19. WHEN updating an activity-venue association, THE API SHALL accept an optional effectiveFrom to change the effective start date
+20. WHEN updating an activity-venue association with a null effectiveFrom date, THE API SHALL treat the venue association start date as the same as the activity start date
+21. WHEN creating an activity-venue association with a null effectiveFrom date, THE API SHALL treat the venue association start date as the same as the activity start date
+22. THE API SHALL enforce that at most one activity-venue association can have a null effectiveFrom date for any given activity
+23. WHEN creating or updating an activity-venue association, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same activity
+24. WHEN updating an activity-venue association, THE API SHALL validate that the venue history record exists and belongs to the specified activity
+25. WHEN updating an activity-venue association, THE API SHALL validate that the new venue exists if venueId is provided
+26. WHEN a geographic area filter is provided via geographicAreaId query parameter, THE API SHALL return only activities whose current venue is in the specified geographic area or its descendants
+
+### Requirement 4C: Update Activity Venue Associations
+
+**User Story:** As a community organizer, I want to edit existing venue associations for activities, so that I can correct mistakes or update venue information without having to delete and recreate the association.
+
+#### Acceptance Criteria
+
+1. THE API SHALL provide a PUT /api/v1/activities/:id/venues/:venueHistoryId endpoint that updates an existing venue association
+2. WHEN updating a venue association, THE API SHALL accept an optional venueId to change the venue
+3. WHEN updating a venue association, THE API SHALL accept an optional effectiveFrom to change the effective start date
+4. WHEN updating a venue association, THE API SHALL validate that the venue history record exists
+5. WHEN updating a venue association, THE API SHALL validate that the venue history record belongs to the specified activity
+6. WHEN updating a venue association with a new venueId, THE API SHALL validate that the new venue exists
+7. WHEN updating a venue association with a new effectiveFrom date, THE API SHALL prevent duplicate records with the same effectiveFrom date (including null) for the same activity
+8. WHEN updating a venue association to have a null effectiveFrom date, THE API SHALL enforce that at most one venue association can have a null effectiveFrom date for any given activity
+9. WHEN updating a venue association, THE API SHALL allow changing only the venue (keeping same effectiveFrom)
+10. WHEN updating a venue association, THE API SHALL allow changing only the effectiveFrom date (keeping same venue)
+11. WHEN updating a venue association, THE API SHALL allow changing both venue and effectiveFrom date simultaneously
+12. WHEN updating a venue association, THE API SHALL return the updated venue association with venue details
+13. WHEN updating a venue association fails validation, THE API SHALL return 400 Bad Request with a descriptive error message
+14. WHEN updating a non-existent venue association, THE API SHALL return 404 Not Found
+15. WHEN updating a venue association that belongs to a different activity, THE API SHALL return 404 Not Found
+16. THE API SHALL restrict venue association updates to EDITOR and ADMINISTRATOR roles only
+17. THE API SHALL audit all venue association updates in the audit log
 
 ### Requirement 4A: Filter Activities by Last Updated Timestamp
 

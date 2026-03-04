@@ -155,6 +155,18 @@ export class ActivityService {
         return ApiClient.post<any>(`/activities/${activityId}/venues`, { venueId, effectiveFrom });
     }
 
+    static async updateActivityVenue(
+        activityId: string,
+        venueHistoryId: string,
+        venueId?: string,
+        effectiveFrom?: string | null
+    ): Promise<any> {
+        const data: any = {};
+        if (venueId !== undefined) data.venueId = venueId;
+        if (effectiveFrom !== undefined) data.effectiveFrom = effectiveFrom;
+        return ApiClient.put<any>(`/activities/${activityId}/venues/${venueHistoryId}`, data);
+    }
+
     static async deleteActivityVenue(activityId: string, venueHistoryId: string): Promise<void> {
         return ApiClient.delete<void>(`/activities/${activityId}/venue-history/${venueHistoryId}`);
     }

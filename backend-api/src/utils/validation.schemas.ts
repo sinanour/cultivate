@@ -225,6 +225,14 @@ export const ActivityVenueAssociationSchema = z.object({
   effectiveFrom: z.string().datetime('Invalid effectiveFrom date format').nullable().optional(),
 });
 
+export const ActivityVenueAssociationUpdateSchema = z.object({
+  venueId: z.string().uuid('Invalid venue ID format').optional(),
+  effectiveFrom: z.string().datetime('Invalid effectiveFrom date format').nullable().optional(),
+}).refine(
+  (data) => data.venueId !== undefined || data.effectiveFrom !== undefined,
+  { message: 'At least one field (venueId or effectiveFrom) must be provided' }
+);
+
 // Assignment schemas
 export const AssignmentCreateSchema = z.object({
   participantId: z.string().uuid('Invalid participant ID format'),
@@ -775,6 +783,7 @@ export type ActivityCreateInput = z.infer<typeof ActivityCreateSchema>;
 export type ActivityUpdateInput = z.infer<typeof ActivityUpdateSchema>;
 export type ActivityQueryInput = z.infer<typeof ActivityQuerySchema>;
 export type ActivityVenueAssociationInput = z.infer<typeof ActivityVenueAssociationSchema>;
+export type ActivityVenueAssociationUpdateInput = z.infer<typeof ActivityVenueAssociationUpdateSchema>;
 export type AssignmentCreateInput = z.infer<typeof AssignmentCreateSchema>;
 export type AssignmentUpdateInput = z.infer<typeof AssignmentUpdateSchema>;
 export type EngagementQuery = z.infer<typeof EngagementQuerySchema>;

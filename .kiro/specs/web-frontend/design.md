@@ -490,7 +490,7 @@ src/
 - Displays validation errors when notes exceeds 2000 characters
 - Includes embedded venue history management section within the form
 - Allows adding new venue associations with effective start dates
-- Allows editing existing venue associations (edit mode only)
+- Allows editing existing venue associations (edit mode only) - can change venue and/or effective start date
 - Allows deleting existing venue associations (edit mode only)
 - Displays venue history table in reverse chronological order within the form
 - Validates venue associations for required fields and duplicate prevention
@@ -498,7 +498,7 @@ src/
 - Displays venue name in venue history table by accessing venue object from temporary records
 - Includes embedded participant assignment management section within the form
 - Allows adding new participant assignments with participant, role, and optional notes
-- Allows editing existing participant assignments (edit mode only)
+- Allows editing existing participant assignments (edit mode only) - can change role and/or notes
 - Allows removing existing participant assignments (edit mode only)
 - Displays participant assignments table in reverse chronological order or by participant name within the form
 - Validates participant assignments for required fields (participant, role) and duplicate prevention (same participant + role)

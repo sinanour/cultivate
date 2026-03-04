@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Form from '@cloudscape-design/components/form';
 import FormField from '@cloudscape-design/components/form-field';
@@ -20,9 +20,22 @@ interface AssignmentFormProps {
   existingAssignments: Assignment[];
   onSuccess: () => void;
   onCancel: () => void;
+  editMode?: boolean;
+  initialParticipantId?: string;
+  initialRoleId?: string;
+  initialNotes?: string | null;
 }
 
-export function AssignmentForm({ activityId, existingAssignments, onSuccess, onCancel }: AssignmentFormProps) {
+export function AssignmentForm({
+  activityId,
+  existingAssignments,
+  onSuccess,
+  onCancel,
+  editMode = false,
+  initialParticipantId,
+  initialRoleId,
+  initialNotes,
+}: AssignmentFormProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [participantId, setParticipantId] = useState('');
@@ -44,6 +57,22 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
     label: r.name,
     value: r.id,
   }));
+
+  // Initialize form with edit values
+  useEffect(() => {
+    if (editMode && initialParticipantId && initialRoleId) {
+      setParticipantId(initialParticipantId);
+      setRoleId(initialRoleId);
+      setNotes(initialNotes || '');
+    } else {
+      setParticipantId('');
+      setRoleId('');
+      setNotes('');
+    }
+    setError('');
+    setParticipantError('');
+    setRoleError('');
+  }, [editMode, initialParticipantId, initialRoleId, initialNotes]);
 
   const handleRefreshParticipants = async () => {
     setIsRefreshingParticipants(true);
@@ -82,6 +111,25 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (data: {
+      activityId: string;
+      participantId: string;
+      roleId?: string;
+      notes?: string | null;
+    }) => AssignmentService.updateAssignment(data.activityId, data.participantId, {
+      roleId: data.roleId,
+      notes: data.notes,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activity-participants', activityId] });
+      onSuccess();
+    },
+    onError: (err: Error) => {
+      setError(err.message || 'Failed to update assignment');
+    },
+  });
+
   const validateParticipant = (value: string): boolean => {
     if (!value) {
       setParticipantError('Participant is required');
@@ -101,8 +149,10 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
   };
 
   const checkDuplicate = (pId: string, rId: string): boolean => {
+    // In edit mode, skip the current assignment when checking for duplicates
     const duplicate = existingAssignments.find(
-      (a) => a.participantId === pId && a.roleId === rId
+      (a) => a.participantId === pId && a.roleId === rId &&
+        !(editMode && a.participantId === initialParticipantId)
     );
     if (duplicate) {
       setError('This participant is already assigned with this role');
@@ -126,15 +176,26 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
       return;
     }
 
-    assignMutation.mutate({
-      activityId,
-      participantId,
-      roleId,
-      notes: notes.trim() || undefined,
-    });
+    if (editMode) {
+      // Update existing assignment
+      updateMutation.mutate({
+        activityId,
+        participantId,
+        roleId,
+        notes: notes.trim() || null,
+      });
+    } else {
+    // Create new assignment
+      assignMutation.mutate({
+        activityId,
+        participantId,
+        roleId,
+        notes: notes.trim() || undefined,
+      });
+    }
   };
 
-  const isSubmitting = assignMutation.isPending;
+  const isSubmitting = assignMutation.isPending || updateMutation.isPending;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -145,7 +206,7 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
               Cancel
             </Button>
             <Button variant="primary" loading={isSubmitting} disabled={isSubmitting} formAction="submit">
-              Assign
+              {editMode ? "Save" : "Assign"}
             </Button>
           </SpaceBetween>
         }
@@ -189,7 +250,7 @@ export function AssignmentForm({ activityId, existingAssignments, onSuccess, onC
                   description: p.email || undefined,
                 })}
                 placeholder="Search for a participant"
-                disabled={isSubmitting}
+                disabled={isSubmitting || editMode} // Disable in edit mode - can't change participant
                 invalid={!!participantError}
                 ariaLabel="Select participant"
               />

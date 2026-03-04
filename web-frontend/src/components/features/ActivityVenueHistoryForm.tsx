@@ -22,6 +22,9 @@ interface ActivityVenueHistoryFormProps {
   existingDates?: (string | null)[]; // Array of existing effective dates to check for duplicates (including null)
   activityStartDate?: string; // Activity start date for display context
   loading?: boolean;
+  editMode?: boolean;
+  initialVenueId?: string;
+  initialEffectiveFrom?: string | null;
 }
 
 export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> = ({
@@ -31,6 +34,9 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
   existingDates = [],
   activityStartDate,
   loading = false,
+  editMode = false,
+  initialVenueId,
+  initialEffectiveFrom,
 }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -54,11 +60,18 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
 
   useEffect(() => {
     if (visible) {
-      setVenueId('');
-      setEffectiveFrom('');
+      if (editMode && initialVenueId) {
+        // Edit mode - populate with initial values
+        setVenueId(initialVenueId);
+        setEffectiveFrom(initialEffectiveFrom ? initialEffectiveFrom.split('T')[0] : '');
+      } else {
+      // Add mode - clear form
+        setVenueId('');
+        setEffectiveFrom('');
+      }
       setErrors({});
     }
-  }, [visible]);
+  }, [visible, editMode, initialVenueId, initialEffectiveFrom]);
 
   const validate = (): boolean => {
     const newErrors: { venue?: string; effectiveFrom?: string; duplicate?: string } = {};
@@ -69,9 +82,11 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
 
     // effectiveFrom is now optional - only validate for duplicates if provided
     if (effectiveFrom) {
-      // Check for duplicate dates
+      // Check for duplicate dates (excluding the current record in edit mode)
       const isDuplicate = existingDates.some(date => {
         if (date === null) return false; // Skip null dates in this check
+        // In edit mode, skip the initial date (we're allowed to keep the same date)
+        if (editMode && initialEffectiveFrom && date === initialEffectiveFrom) return false;
         const existingDate = date.split('T')[0];
         return existingDate === effectiveFrom;
       });
@@ -80,8 +95,11 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
         newErrors.duplicate = 'A venue association with this effective date already exists';
       }
     } else {
-      // Check if a null effectiveFrom already exists
-      const hasNullDate = existingDates.some(date => date === null);
+      // Check if a null effectiveFrom already exists (excluding current record in edit mode)
+      const hasNullDate = existingDates.some(date => {
+        if (editMode && initialEffectiveFrom === null) return false; // Skip current record
+        return date === null;
+      });
 
       if (hasNullDate) {
         newErrors.duplicate = 'Only one venue association can have no effective date (since activity start) per activity';
@@ -104,7 +122,7 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
       await onSubmit({ venueId, effectiveFrom: isoDate });
       onDismiss();
     } catch (error) {
-      console.error('Failed to add venue association:', error);
+      console.error('Failed to save venue association:', error);
     } finally {
       setSubmitting(false);
     }
@@ -114,7 +132,7 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
     <Modal
       visible={visible}
       onDismiss={onDismiss}
-      header="Add Venue Association"
+      header={editMode ? "Edit Venue Association" : "Add Venue Association"}
       footer={
         <Box float="right">
           <SpaceBetween direction="horizontal" size="xs">
@@ -127,7 +145,7 @@ export const ActivityVenueHistoryForm: React.FC<ActivityVenueHistoryFormProps> =
               disabled={submitting || loading}
               loading={submitting}
             >
-              Add
+              {editMode ? "Save" : "Add"}
             </Button>
           </SpaceBetween>
         </Box>

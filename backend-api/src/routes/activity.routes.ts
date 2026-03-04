@@ -10,6 +10,7 @@ import {
     ActivityUpdateSchema,
     ActivityQuerySchema,
     ActivityVenueAssociationSchema,
+    ActivityVenueAssociationUpdateSchema,
     UuidParamSchema,
 } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
@@ -90,6 +91,15 @@ export class ActivityRoutes {
           this.auditLoggingMiddleware.logEntityModification('ACTIVITY'),
           this.associateVenue.bind(this)
       );
+
+        this.router.put(
+            '/:id/venues/:venueHistoryId',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateBody(ActivityVenueAssociationUpdateSchema),
+            this.auditLoggingMiddleware.logEntityModification('ACTIVITY'),
+            this.updateVenueAssociation.bind(this)
+        );
 
       this.router.put(
           '/:id',
@@ -488,6 +498,66 @@ export class ActivityRoutes {
           });
       }
   }
+
+    private async updateVenueAssociation(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const { id, venueHistoryId } = req.params;
+            const { venueId, effectiveFrom } = req.body;
+
+            // Convert effectiveFrom to Date if provided
+            const updateData: any = {};
+            if (venueId !== undefined) {
+                updateData.venueId = venueId;
+            }
+            if (effectiveFrom !== undefined) {
+                updateData.effectiveFrom = effectiveFrom ? new Date(effectiveFrom) : null;
+            }
+
+            // Extract authorization context
+            const { authorizedAreaIds, hasGeographicRestrictions } = extractAuthorizationContext(req);
+
+            const association = await this.activityService.updateVenueAssociation(
+                id,
+                venueHistoryId,
+                updateData,
+                authorizedAreaIds,
+                hasGeographicRestrictions
+            );
+            res.status(200).json({ success: true, data: association });
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('GEOGRAPHIC_AUTHORIZATION_DENIED')) {
+                    res.status(403).json({
+                        code: 'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        message: error.message,
+                        details: {},
+                    });
+                    return;
+                }
+                if (error.message.includes('not found')) {
+                    res.status(404).json({
+                        code: 'NOT_FOUND',
+                        message: error.message,
+                        details: {},
+                    });
+                    return;
+                }
+                if (error.message.includes('already exists')) {
+                    res.status(400).json({
+                        code: 'DUPLICATE_ASSOCIATION',
+                        message: error.message,
+                        details: {},
+                    });
+                    return;
+                }
+            }
+            res.status(500).json({
+                code: 'INTERNAL_ERROR',
+                message: 'An error occurred while updating venue association',
+                details: {},
+            });
+        }
+    }
 
     private async removeVenue(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {

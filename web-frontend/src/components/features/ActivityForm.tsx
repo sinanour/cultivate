@@ -8,6 +8,7 @@ import Select from '@cloudscape-design/components/select';
 import DatePicker from '@cloudscape-design/components/date-picker';
 import Checkbox from '@cloudscape-design/components/checkbox';
 import Button from '@cloudscape-design/components/button';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Alert from '@cloudscape-design/components/alert';
 import Container from '@cloudscape-design/components/container';
@@ -71,6 +72,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   // Venue history state
   const [venueHistory, setVenueHistory] = useState<ActivityVenueHistory[]>([]);
   const [showVenueForm, setShowVenueForm] = useState(false);
+  const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
   const [newVenueId, setNewVenueId] = useState('');
   const [newVenueEffectiveFrom, setNewVenueEffectiveFrom] = useState('');
   const [venueFormErrors, setVenueFormErrors] = useState<{ venue?: string; effectiveFrom?: string; duplicate?: string }>({});
@@ -79,6 +81,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   // Participant assignment state
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [newParticipantId, setNewParticipantId] = useState('');
   const [newRoleId, setNewRoleId] = useState('');
   const [newNotes, setNewNotes] = useState('');
@@ -413,10 +416,24 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const handleAddVenue = (e?: any) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
+    setEditingVenueId(null);
     setNewVenueId('');
     setNewVenueEffectiveFrom('');
     setVenueFormErrors({});
     setShowVenueForm(true);
+  };
+
+  const handleEditVenue = (venueHistoryId: string, e?: any) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    const venue = venueHistory.find(v => v.id === venueHistoryId);
+    if (venue) {
+      setEditingVenueId(venueHistoryId);
+      setNewVenueId(venue.venueId);
+      setNewVenueEffectiveFrom(venue.effectiveFrom ? venue.effectiveFrom.split('T')[0] : '');
+      setShowVenueForm(true);
+      setVenueFormErrors({});
+    }
   };
 
   const handleDeleteVenue = async (venueHistoryId: string, e?: any) => {
@@ -480,7 +497,18 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     // Convert to ISO date or null if empty
     const isoDate = newVenueEffectiveFrom ? new Date(newVenueEffectiveFrom).toISOString() : null;
 
-    if (activity) {
+    if (activity && editingVenueId) {
+      // Update existing venue association
+      try {
+        await ActivityService.updateActivityVenue(activity.id, editingVenueId, newVenueId, isoDate);
+        const updated = await ActivityService.getActivityVenues(activity.id);
+        setVenueHistory(updated);
+        setShowVenueForm(false);
+        setEditingVenueId(null);
+      } catch (err) {
+        setError('Failed to update venue association');
+      }
+    } else if (activity) {
       // Add venue to existing activity
       try {
         await ActivityService.addActivityVenue(activity.id, newVenueId, isoDate);
@@ -489,6 +517,20 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         setShowVenueForm(false);
       } catch (err) {
         setError('Failed to add venue association');
+      }
+    } else if (editingVenueId) {
+      // Update in pending list for new activity
+      try {
+        const venue = await VenueService.getVenue(newVenueId);
+        setVenueHistory(prev => prev.map(v =>
+          v.id === editingVenueId
+            ? { ...v, venueId: newVenueId, effectiveFrom: isoDate, venue }
+            : v
+        ));
+        setShowVenueForm(false);
+        setEditingVenueId(null);
+      } catch (err) {
+        setError('Failed to fetch venue details');
       }
     } else {
       // Add to pending list for new activity (will be created after activity is created)
@@ -515,6 +557,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     e?.preventDefault?.();
     e?.stopPropagation?.();
     setShowVenueForm(false);
+    setEditingVenueId(null);
     setVenueFormErrors({});
   };
 
@@ -522,11 +565,26 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
   const handleAddAssignment = (e?: any) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
+    setEditingAssignmentId(null);
     setNewParticipantId('');
     setNewRoleId('');
     setNewNotes('');
     setAssignmentFormErrors({});
     setShowAssignmentForm(true);
+  };
+
+  const handleEditAssignment = (assignmentId: string, e?: any) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    const assignment = assignments.find(a => a.id === assignmentId);
+    if (assignment) {
+      setEditingAssignmentId(assignmentId);
+      setNewParticipantId(assignment.participantId);
+      setNewRoleId(assignment.roleId);
+      setNewNotes(assignment.notes || '');
+      setShowAssignmentForm(true);
+      setAssignmentFormErrors({});
+    }
   };
 
   const handleDeleteAssignment = async (assignmentId: string, participantId: string, e?: any) => {
@@ -581,7 +639,28 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
       return;
     }
 
-    if (activity) {
+    if (activity && editingAssignmentId) {
+      // Update existing assignment
+      const assignment = assignments.find(a => a.id === editingAssignmentId);
+      if (assignment) {
+        try {
+          await AssignmentService.updateAssignment(
+            activity.id,
+            assignment.participantId,
+            {
+              roleId: newRoleId,
+              notes: newNotes.trim() || null,
+            }
+          );
+          const updated = await ActivityService.getActivityParticipants(activity.id);
+          setAssignments(updated);
+          setShowAssignmentForm(false);
+          setEditingAssignmentId(null);
+        } catch (err) {
+          setError('Failed to update participant assignment');
+        }
+      }
+    } else if (activity) {
       // Add assignment to existing activity
       try {
         await AssignmentService.addParticipant(
@@ -595,6 +674,27 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
         setShowAssignmentForm(false);
       } catch (err) {
         setError('Failed to add participant assignment');
+      }
+    } else if (editingAssignmentId) {
+      // Update in pending list for new activity
+      try {
+        const participant = await ParticipantService.getParticipant(newParticipantId);
+        const role = roles.find(r => r.id === newRoleId);
+
+        if (!role) {
+          setError('Selected role not found');
+          return;
+        }
+
+        setAssignments(prev => prev.map(a =>
+          a.id === editingAssignmentId
+            ? { ...a, roleId: newRoleId, notes: newNotes.trim() || undefined, role, participant }
+            : a
+        ));
+        setShowAssignmentForm(false);
+        setEditingAssignmentId(null);
+      } catch (err) {
+        setError('Failed to fetch participant details');
       }
     } else {
       // Add to pending list for new activity (will be created after activity is created)
@@ -630,6 +730,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
     e?.preventDefault?.();
     e?.stopPropagation?.();
     setShowAssignmentForm(false);
+    setEditingAssignmentId(null);
     setAssignmentFormErrors({});
   };
 
@@ -978,7 +1079,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                     <SpaceBetween direction="horizontal" size="xs">
                       <Button onClick={(e) => handleCancelVenueForm(e)}>Cancel</Button>
                       <Button variant="primary" onClick={(e) => handleSaveVenue(e)}>
-                        Add
+                        {editingVenueId ? "Save" : "Add"}
                       </Button>
                     </SpaceBetween>
                   </SpaceBetween>
@@ -1028,10 +1129,22 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                     id: 'actions',
                     header: 'Actions',
                     cell: (item) => (
-                      <Button
-                        variant="inline-icon"
-                        iconName="remove"
-                        onClick={(e) => handleDeleteVenue(item.id, e)}
+                      <ButtonDropdown
+                        variant="normal"
+                        expandToViewport
+                        mainAction={{
+                          text: "Edit",
+                          onClick: (e) => handleEditVenue(item.id, e),
+                        }}
+                        items={[
+                          {
+                            id: "delete",
+                            text: "Remove",
+                            iconName: "remove",
+                          },
+                        ]}
+                        onItemClick={() => handleDeleteVenue(item.id, item.venueId)}
+                        ariaLabel="Venue actions"
                         disabled={isSubmitting}
                       />
                     ),
@@ -1097,6 +1210,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                           placeholder="Search for a participant"
                           invalid={!!assignmentFormErrors.participant}
                           ariaLabel="Select participant"
+                          disabled={!!editingAssignmentId}
                         />
                       </EntitySelectorWithActions>
                     </FormField>
@@ -1138,7 +1252,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                     <SpaceBetween direction="horizontal" size="xs">
                       <Button onClick={(e) => handleCancelAssignmentForm(e)}>Cancel</Button>
                       <Button variant="primary" onClick={(e) => handleSaveAssignment(e)}>
-                        Add
+                        {editingAssignmentId ? "Save" : "Add"}
                       </Button>
                     </SpaceBetween>
                   </SpaceBetween>
@@ -1220,10 +1334,22 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                     id: 'actions',
                     header: 'Actions',
                     cell: (item) => (
-                      <Button
-                        variant="inline-icon"
-                        iconName="remove"
-                        onClick={(e) => handleDeleteAssignment(item.id, item.participantId, e)}
+                      <ButtonDropdown
+                        variant="normal"
+                        expandToViewport
+                        mainAction={{
+                          text: "Edit",
+                          onClick: (e) => handleEditAssignment(item.id, e),
+                        }}
+                        items={[
+                          {
+                            id: "delete",
+                            text: "Remove",
+                            iconName: "remove",
+                          },
+                        ]}
+                        onItemClick={() => handleDeleteAssignment(item.id, item.participantId)}
+                        ariaLabel="Assignment actions"
                         disabled={isSubmitting}
                       />
                     ),

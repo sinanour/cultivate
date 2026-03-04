@@ -41,7 +41,17 @@ export function ActivityDetail() {
   const queryClient = useQueryClient();
 
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<{
+    participantId: string;
+    roleId: string;
+    notes: string | null;
+  } | null>(null);
   const [isVenueFormOpen, setIsVenueFormOpen] = useState(false);
+  const [editingVenueHistory, setEditingVenueHistory] = useState<{
+    id: string;
+    venueId: string;
+    effectiveFrom: string | null;
+  } | null>(null);
   const [error, setError] = useState("");
   const [confirmUpdateStatus, setConfirmUpdateStatus] = useState<string | null>(
     null,
@@ -133,6 +143,28 @@ export function ActivityDetail() {
     },
   });
 
+  const updateVenueMutation = useMutation({
+    mutationFn: (data: {
+      venueHistoryId: string;
+      venueId?: string;
+      effectiveFrom?: string | null;
+    }) =>
+      ActivityService.updateActivityVenue(
+        id!,
+        data.venueHistoryId,
+        data.venueId,
+        data.effectiveFrom,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activity-venues", id] });
+      setEditingVenueHistory(null);
+      setError("");
+    },
+    onError: (err: Error) => {
+      setError(err.message || "Failed to update venue association");
+    },
+  });
+
   const deleteVenueMutation = useMutation({
     mutationFn: (venueHistoryId: string) =>
       ActivityService.deleteActivityVenue(id!, venueHistoryId),
@@ -195,6 +227,17 @@ export function ActivityDetail() {
     setConfirmRemoveAssignment(participantId);
   };
 
+  const handleEditAssignment = (participantId: string) => {
+    const assignment = assignments.find((a) => a.participantId === participantId);
+    if (assignment) {
+      setEditingAssignment({
+        participantId: assignment.participantId,
+        roleId: assignment.roleId,
+        notes: assignment.notes || null,
+      });
+    }
+  };
+
   const handleConfirmRemoveAssignment = () => {
     if (confirmRemoveAssignment) {
       removeAssignmentMutation.mutate(confirmRemoveAssignment);
@@ -204,6 +247,17 @@ export function ActivityDetail() {
 
   const handleAddVenue = () => {
     setIsVenueFormOpen(true);
+  };
+
+  const handleEditVenue = (venueHistoryId: string) => {
+    const venueRecord = venueHistory.find((v) => v.id === venueHistoryId);
+    if (venueRecord) {
+      setEditingVenueHistory({
+        id: venueRecord.id,
+        venueId: venueRecord.venueId,
+        effectiveFrom: venueRecord.effectiveFrom,
+      });
+    }
   };
 
   const handleDeleteVenue = (venueHistoryId: string) => {
@@ -232,7 +286,17 @@ export function ActivityDetail() {
     venueId: string;
     effectiveFrom: string | null;
   }) => {
-    await addVenueMutation.mutateAsync(data);
+    if (editingVenueHistory) {
+      // Update existing venue history
+      await updateVenueMutation.mutateAsync({
+        venueHistoryId: editingVenueHistory.id,
+        venueId: data.venueId,
+        effectiveFrom: data.effectiveFrom,
+      });
+    } else {
+    // Add new venue history
+      await addVenueMutation.mutateAsync(data);
+    }
   };
 
   // Build dropdown items based on activity status
@@ -448,6 +512,7 @@ export function ActivityDetail() {
         <ActivityVenueHistoryTable
           venueHistory={venueHistory}
           activityStartDate={activity.startDate}
+          onEdit={handleEditVenue}
           onDelete={handleDeleteVenue}
           loading={isLoadingVenues}
           header={
@@ -555,14 +620,23 @@ export function ActivityDetail() {
               header: "Actions",
               cell: (item) =>
                 canEdit() && (
-                  <ResponsiveButton
-                    onClick={() => handleRemoveAssignment(item.participantId)}
-                    iconName="remove"
-                    mobileIcon="remove"
-                    mobileAriaLabel="Remove"
-                  >
-                    Remove
-                  </ResponsiveButton>
+                  <ButtonDropdown
+                    variant="normal"
+                    expandToViewport
+                    mainAction={{
+                      text: "Edit",
+                      onClick: () => handleEditAssignment(item.participantId),
+                    }}
+                    items={[
+                      {
+                        id: "delete",
+                        text: "Remove",
+                        iconName: "remove",
+                      },
+                    ]}
+                    onItemClick={() => handleRemoveAssignment(item.participantId)}
+                    ariaLabel="Assignment actions"
+                  />
                 ),
             },
           ]}
@@ -578,26 +652,45 @@ export function ActivityDetail() {
         />
 
         <Modal
-          visible={isAssignmentFormOpen}
-          onDismiss={() => setIsAssignmentFormOpen(false)}
-          header="Assign Participant"
+          visible={isAssignmentFormOpen || editingAssignment !== null}
+          onDismiss={() => {
+            setIsAssignmentFormOpen(false);
+            setEditingAssignment(null);
+          }}
+          header={editingAssignment ? "Edit Assignment" : "Assign Participant"}
         >
-          {isAssignmentFormOpen && (
+          {(isAssignmentFormOpen || editingAssignment) && (
             <AssignmentForm
               activityId={activity.id}
               existingAssignments={assignments}
-              onSuccess={() => setIsAssignmentFormOpen(false)}
-              onCancel={() => setIsAssignmentFormOpen(false)}
+              onSuccess={() => {
+                setIsAssignmentFormOpen(false);
+                setEditingAssignment(null);
+              }}
+              onCancel={() => {
+                setIsAssignmentFormOpen(false);
+                setEditingAssignment(null);
+              }}
+              editMode={editingAssignment !== null}
+              initialParticipantId={editingAssignment?.participantId}
+              initialRoleId={editingAssignment?.roleId}
+              initialNotes={editingAssignment?.notes}
             />
           )}
         </Modal>
 
         <ActivityVenueHistoryForm
-          visible={isVenueFormOpen}
-          onDismiss={() => setIsVenueFormOpen(false)}
+          visible={isVenueFormOpen || editingVenueHistory !== null}
+          onDismiss={() => {
+            setIsVenueFormOpen(false);
+            setEditingVenueHistory(null);
+          }}
           onSubmit={handleSubmitVenue}
           existingDates={existingDates}
-          loading={addVenueMutation.isPending}
+          loading={addVenueMutation.isPending || updateVenueMutation.isPending}
+          editMode={editingVenueHistory !== null}
+          initialVenueId={editingVenueHistory?.venueId}
+          initialEffectiveFrom={editingVenueHistory?.effectiveFrom}
         />
 
         {/* Update Status Confirmation */}

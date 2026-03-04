@@ -599,6 +599,69 @@ export class ActivityService {
     await this.venueHistoryRepository.delete(venueHistoryId);
   }
 
+  async updateVenueAssociation(
+    activityId: string,
+    venueHistoryId: string,
+    data: {
+      venueId?: string;
+      effectiveFrom?: Date | null;
+    },
+    authorizedAreaIds: string[] = [],
+    hasGeographicRestrictions: boolean = false
+  ) {
+    // Validate activity exists
+    const activity = await this.activityRepository.findById(activityId);
+    if (!activity) {
+      throw new Error('Activity not found');
+    }
+
+    // Validate venue history record exists and belongs to this activity
+    const venueHistory = await this.venueHistoryRepository.findById(venueHistoryId);
+    if (!venueHistory || venueHistory.activityId !== activityId) {
+      throw new Error('Venue association not found');
+    }
+
+    // Validate new venue exists if venueId is provided
+    if (data.venueId) {
+      const venue = await this.venueRepository.findById(data.venueId);
+      if (!venue) {
+        throw new Error('Venue not found');
+      }
+
+      // Validate user has access to the new venue's geographic area
+      if (hasGeographicRestrictions && !authorizedAreaIds.includes(venue.geographicAreaId)) {
+        throw new Error('GEOGRAPHIC_AUTHORIZATION_DENIED: You do not have permission to associate this venue with the activity');
+      }
+    }
+
+    // Determine the effective date to use for duplicate checking
+    const effectiveDate = data.effectiveFrom !== undefined ? data.effectiveFrom : venueHistory.effectiveFrom;
+
+    // Check for duplicate effectiveFrom (excluding the current record)
+    const hasDuplicate = await this.venueHistoryRepository.hasDuplicateEffectiveFrom(
+      activityId,
+      effectiveDate,
+      venueHistoryId
+    );
+    if (hasDuplicate) {
+      throw new Error(
+        effectiveDate === null
+          ? 'A venue association with null effective date (activity start) already exists'
+          : 'A venue association already exists with this effective date'
+      );
+    }
+
+    // Validate at most one null effectiveFrom per activity (excluding current record)
+    if (effectiveDate === null) {
+      const hasNullDate = await this.venueHistoryRepository.hasNullEffectiveFrom(activityId, venueHistoryId);
+      if (hasNullDate) {
+        throw new Error('Only one venue association can have a null effective date per activity');
+      }
+    }
+
+    return this.venueHistoryRepository.update(venueHistoryId, data);
+  }
+
   async getActivityVenues(activityId: string, userId?: string, userRole?: string) {
     // Validate authorization by calling getActivityById (which enforces geographic authorization)
     await this.getActivityById(activityId, userId, userRole);

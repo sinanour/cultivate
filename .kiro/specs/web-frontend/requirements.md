@@ -312,15 +312,20 @@ The Web Frontend package provides a responsive React-based web application that 
 30. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and deleting venue associations within the activity edit page
 31. WHEN adding a venue association to a new activity before the activity is created, THE Web_App SHALL fetch and display the venue name in the venue history table
 32. WHEN a venue is selected for a new venue association, THE Web_App SHALL retrieve the venue details from the backend and store them for display purposes
-33. WHEN a venue association has a null effective start date, THE Web_App SHALL treat the venue association start date as the same as the activity start date
-34. THE Web_App SHALL enforce that at most one venue association can have a null effective start date for any given activity
-35. THE Web_App SHALL prevent duplicate venue associations with the same effective start date (including null) for the same activity
-36. WHEN creating a new activity, THE Web_App SHALL allow assigning participants with roles and optional notes within the activity creation page
-37. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit page
-38. WHEN adding a participant assignment to a new activity before the activity is created, THE Web_App SHALL fetch and display the participant name and role in the participant assignments table
-39. WHEN a participant is selected for a new assignment, THE Web_App SHALL retrieve the participant details from the backend and store them for display purposes
-40. THE Web_App SHALL display the venue associations table and participant assignments table stacked vertically within the activity form page, with venue associations appearing above participant assignments
-41. THE Web_App SHALL provide an atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
+33. WHEN editing an existing venue association, THE Web_App SHALL allow changing the venue and/or the effective start date
+34. WHEN editing an existing venue association, THE Web_App SHALL display the current venue and effective start date in an edit form
+35. WHEN editing an existing venue association, THE Web_App SHALL validate the updated values before submitting to the backend
+36. WHEN a venue association has a null effective start date, THE Web_App SHALL treat the venue association start date as the same as the activity start date
+37. THE Web_App SHALL enforce that at most one venue association can have a null effective start date for any given activity
+38. THE Web_App SHALL prevent duplicate venue associations with the same effective start date (including null) for the same activity
+39. WHEN creating a new activity, THE Web_App SHALL allow assigning participants with roles and optional notes within the activity creation page
+40. WHEN editing an existing activity, THE Web_App SHALL allow adding, editing, and removing participant assignments within the activity edit page
+41. WHEN editing an existing participant assignment, THE Web_App SHALL allow changing the role and/or notes
+42. WHEN editing an existing participant assignment, THE Web_App SHALL display the current role and notes in an edit form
+43. WHEN editing an existing participant assignment, THE Web_App SHALL validate the updated values before submitting to the backend
+40. WHEN a participant is selected for a new assignment, THE Web_App SHALL retrieve the participant details from the backend and store them for display purposes
+41. THE Web_App SHALL display the venue associations table and participant assignments table stacked vertically within the activity form page, with venue associations appearing above participant assignments
+42. THE Web_App SHALL provide an atomic user experience where all activity details, venue associations, and participant assignments can be configured before the activity is persisted to the backend
 
 ### Requirement 5C: Track Additional Participant Count
 

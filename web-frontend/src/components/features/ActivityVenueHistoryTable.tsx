@@ -5,11 +5,11 @@ import {
   Badge,
   Link,
   SpaceBetween,
+  ButtonDropdown,
 } from "@cloudscape-design/components";
 import { formatDate } from "../../utils/date.utils";
 import { VenueDisplay } from "../common/VenueDisplay";
 import { useAuth } from "../../hooks/useAuth";
-import { ResponsiveButton } from "../common/ResponsiveButton";
 
 interface ActivityVenueHistoryRecord {
   id: string;
@@ -29,6 +29,7 @@ interface ActivityVenueHistoryRecord {
 interface ActivityVenueHistoryTableProps {
   venueHistory: ActivityVenueHistoryRecord[];
   activityStartDate?: string; // For displaying null dates
+  onEdit: (venueHistoryId: string) => void;
   onDelete: (venueHistoryId: string) => void;
   loading?: boolean;
   header?: React.ReactNode;
@@ -39,6 +40,7 @@ export const ActivityVenueHistoryTable: React.FC<
 > = ({
   venueHistory,
   activityStartDate,
+  onEdit,
   onDelete,
   loading = false,
   header,
@@ -129,14 +131,23 @@ export const ActivityVenueHistoryTable: React.FC<
           id: "actions",
           header: "Actions",
           cell: (item: ActivityVenueHistoryRecord) => (
-            <ResponsiveButton
-              onClick={() => onDelete(item.id)}
-              iconName="remove"
-              mobileIcon="remove"
-              mobileAriaLabel="Remove"
-            >
-              Remove
-            </ResponsiveButton>
+            <ButtonDropdown
+              variant="normal"
+              expandToViewport
+              mainAction={{
+                text: "Edit",
+                onClick: () => onEdit(item.id),
+              }}
+              items={[
+                {
+                  id: "delete",
+                  text: "Remove",
+                  iconName: "remove",
+                },
+              ]}
+              onItemClick={() => onDelete(item.id)}
+              ariaLabel="Venue history actions"
+            />
           ),
         },
       ]}
