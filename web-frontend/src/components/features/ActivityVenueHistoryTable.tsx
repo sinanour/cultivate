@@ -130,6 +130,7 @@ export const ActivityVenueHistoryTable: React.FC<
         {
           id: "actions",
           header: "Actions",
+          minWidth: 160,
           cell: (item: ActivityVenueHistoryRecord) => (
             <ButtonDropdown
               variant="normal"

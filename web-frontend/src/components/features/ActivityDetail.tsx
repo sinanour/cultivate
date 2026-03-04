@@ -618,6 +618,7 @@ export function ActivityDetail() {
             {
               id: "actions",
               header: "Actions",
+              minWidth: 160,
               cell: (item) =>
                 canEdit() && (
                   <ButtonDropdown

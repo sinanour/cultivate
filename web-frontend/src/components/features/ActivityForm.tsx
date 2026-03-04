@@ -1128,6 +1128,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                   {
                     id: 'actions',
                     header: 'Actions',
+                    minWidth: 160,
                     cell: (item) => (
                       <ButtonDropdown
                         variant="normal"
@@ -1333,6 +1334,7 @@ export function ActivityForm({ activity, onSuccess, onCancel }: ActivityFormProp
                   {
                     id: 'actions',
                     header: 'Actions',
+                    minWidth: 160,
                     cell: (item) => (
                       <ButtonDropdown
                         variant="normal"
