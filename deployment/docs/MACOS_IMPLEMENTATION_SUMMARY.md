@@ -1,5 +1,7 @@
 # macOS/Finch Filesystem Boundary Implementation Summary
 
+> **Current deployment behavior:** PostgreSQL data now uses a bind mount at the target's deployment volume path on both Linux and macOS (under `/Users` on macOS). Only the Unix socket uses a named volume. The historical macOS named-data-volume examples below are superseded; see `MACOS_DEPLOYMENT.md` for the current configuration.
+
 ## Overview
 
 This document summarizes the implementation of macOS/Finch filesystem boundary handling in the production deployment system, including the critical Unix domain socket volume constraint.
@@ -22,8 +24,7 @@ Implemented automatic OS-specific path selection and volume strategy:
 
 **Volume Strategy:**
 - **Socket volumes**: ALWAYS use Docker named volumes (Unix sockets don't work on mounted filesystems)
-- **Data volumes on Linux**: Use host paths for easier backup/management
-- **Data volumes on macOS**: Use named volumes to avoid filesystem boundary issues
+- **Data volumes on Linux and macOS**: Use target-host bind mounts for persistence and direct backup access; macOS paths are under `/Users`
 
 ## Implementation Details
 
@@ -50,13 +51,8 @@ Created a new utility module that provides:
 
 ```typescript
 function generateDockerComposeFile(version: string, deploymentPaths: DeploymentPathStrategy): string {
-    // For macOS, use named volumes for both data and socket
-    // For Linux, use host path for data (easier backup) and named volume for socket
-    const useNamedVolumes = deploymentPaths.targetOS === 'macos';
-    
-    const dbDataVolume = useNamedVolumes 
-        ? 'db_data'  // Named volume on macOS
-        : path.join(deploymentPaths.volumePath, 'db_data');  // Host path on Linux
+    // Database data is a host bind mount on both platforms.
+    const dbDataVolume = path.join(deploymentPaths.volumePath, 'db_data');
     
     // Socket MUST always be a named volume (Unix sockets don't work on mounted filesystems)
     const dbSocketVolume = 'db_socket';

@@ -40,10 +40,11 @@ export interface DeploymentPathStrategy {
  */
 export function getDeploymentPaths(
   osResult: OSDetectionResult,
-  username?: string
+  username?: string,
+  targetHomeDirectory?: string
 ): DeploymentPathStrategy {
   if (osResult.isMacOS) {
-    return getMacOSPaths(username);
+    return getMacOSPaths(username, targetHomeDirectory);
   } else {
     return getLinuxPaths();
   }
@@ -72,8 +73,11 @@ function getLinuxPaths(): DeploymentPathStrategy {
  * host directories by default (typically /Users, sometimes /Volumes).
  * Paths like /opt are NOT mounted, so we use the home directory instead.
  */
-function getMacOSPaths(username?: string): DeploymentPathStrategy {
-  const homeDir = username ? `/Users/${username}` : '~';
+function getMacOSPaths(username?: string, targetHomeDirectory?: string): DeploymentPathStrategy {
+  const accessibleHome = targetHomeDirectory?.startsWith('/Users/') || targetHomeDirectory?.startsWith('/Volumes/')
+    ? targetHomeDirectory
+    : undefined;
+  const homeDir = accessibleHome || (username ? `/Users/${username}` : '/Users/Shared');
   
   logger.info(`Using macOS deployment paths (home directory: ${homeDir})`);
   logger.info('Note: Finch VM only mounts /Users by default, avoiding /opt paths');

@@ -309,7 +309,11 @@ async function checkAndInstallDependencies(
 
     // Get deployment paths based on OS
     const username = getUsername(options.sshConfig?.username);
-    const deploymentPaths = getDeploymentPaths(osResult, username);
+    const targetHomeResult = osResult.isMacOS
+        ? await sshClient.executeCommand('printf "%s" "$HOME"')
+        : undefined;
+    const targetHomeDirectory = targetHomeResult?.stdout.trim();
+    const deploymentPaths = getDeploymentPaths(osResult, username, targetHomeDirectory);
 
     logger.info(`Detected OS: ${osResult.distribution} ${osResult.version || ''}`);
     logger.info(`Using deployment paths for ${deploymentPaths.targetOS}`);
@@ -436,6 +440,9 @@ async function deployConfiguration(
 
     // Transfer configuration files
     const configTransfer = new ConfigTransfer(sshClient);
+    // PostgreSQL data must live on the target host filesystem so it survives
+    // container recreation and can be backed up independently of the runtime.
+    await configTransfer.ensureRemoteDirectory(path.join(deploymentPaths.volumePath, 'db_data'));
 
     // Determine local certificate path if HTTPS is enabled
     let localCertPath: string | undefined;
@@ -488,25 +495,21 @@ async function deployConfiguration(
  * For socket volumes, we ALWAYS use Docker named volumes (not host paths)
  * because Unix domain sockets don't work on macOS filesystems mounted into Finch VM.
  * 
- * For data volumes, we use host paths on Linux for easier backup/management,
- * but named volumes on macOS to avoid filesystem boundary issues.
+ * PostgreSQL data uses a host bind mount on both operating systems so it
+ * persists at a predictable target-host path. The socket stays in a named
+ * volume because Unix sockets do not work reliably on macOS host mounts.
  * 
  * @param version - Deployment version for image tags
  * @param deploymentPaths - OS-specific deployment paths
  * @param config - Deployment configuration with port and certificate settings
  */
-function generateDockerComposeFile(
+export function generateDockerComposeFile(
     version: string,
     deploymentPaths: DeploymentPathStrategy,
     config: any
 ): string {
-    // For macOS, use named volumes for both data and socket
-    // For Linux, use host path for data (easier backup) and named volume for socket
-    const useNamedVolumes = deploymentPaths.targetOS === 'macos';
-
-    const dbDataVolume = useNamedVolumes
-        ? 'db_data'
-        : path.join(deploymentPaths.volumePath, 'db_data');
+    // Keep PostgreSQL data on the target host for persistence and backups.
+    const dbDataPath = path.join(deploymentPaths.volumePath, 'db_data');
 
     // Socket MUST always be a named volume (Unix sockets don't work on mounted filesystems)
     const dbSocketVolume = 'db_socket';
@@ -516,13 +519,15 @@ function generateDockerComposeFile(
     const httpsPort = config.network?.httpsPort || 443;
 
     // Determine if HTTPS is enabled and certificates are provided
-    const enableHttps = config.network?.enableHttps && config.volumes?.certPath;
+    const enableHttps = Boolean(config.network?.enableHttps && config.volumes?.certPath);
+    const httpsPortMapping = enableHttps ? `      - "0.0.0.0:${httpsPort}:443"\n` : '';
+    const frontendHttpsEnvironment = `      - ENABLE_HTTPS=${enableHttps}\n`;
 
     // Build certificate volume mount if HTTPS is enabled
     // Certificates are transferred to {configPath}/certs on the remote host
     const remoteCertPath = path.join(deploymentPaths.configPath, 'certs');
-    const certVolumeMount = enableHttps
-        ? `      - ${remoteCertPath}:/etc/nginx/certs:ro\n`
+    const certVolumeConfig = enableHttps
+        ? `    volumes:\n      - ${remoteCertPath}:/etc/nginx/certs:ro\n`
         : '';
 
     return `version: '3.8'
@@ -532,7 +537,7 @@ services:
     image: cultivate_database:${version}
     container_name: cultivate_database
     volumes:
-      - ${dbDataVolume}:/var/lib/postgresql/data
+      - ${dbDataPath}:/var/lib/postgresql/data
       - ${dbSocketVolume}:/var/run/postgresql
     environment:
       - POSTGRES_USER=apiuser
@@ -588,11 +593,9 @@ services:
         condition: service_healthy
     ports:
       - "0.0.0.0:${httpPort}:80"
-      - "0.0.0.0:${httpsPort}:443"
-    volumes:
-${certVolumeMount}    environment:
-      - VITE_BACKEND_URL=/api/v1
-    networks:
+${httpsPortMapping}    environment:
+${frontendHttpsEnvironment}      - VITE_BACKEND_URL=/api/v1
+${certVolumeConfig}    networks:
       - backend
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
@@ -606,8 +609,6 @@ networks:
     driver: bridge
 
 volumes:
-  db_data:
-    driver: local
   db_socket:
     driver: local
 `;

@@ -42,10 +42,10 @@ describe('DeploymentPaths', () => {
       const paths = getDeploymentPaths(osResult);
 
       expect(paths.targetOS).toBe('macos');
-      expect(paths.deploymentBasePath).toBe('~/cultivate');
-      expect(paths.configPath).toBe('~/cultivate/config');
-      expect(paths.logPath).toBe('~/cultivate/logs');
-      expect(paths.volumePath).toBe('~/cultivate/volumes');
+      expect(paths.deploymentBasePath).toBe('/Users/Shared/cultivate');
+      expect(paths.configPath).toBe('/Users/Shared/cultivate/config');
+      expect(paths.logPath).toBe('/Users/Shared/cultivate/logs');
+      expect(paths.volumePath).toBe('/Users/Shared/cultivate/volumes');
       expect(paths.vmAccessible).toBe(true);
     });
 
@@ -66,6 +66,20 @@ describe('DeploymentPaths', () => {
       expect(paths.logPath).toBe('/Users/testuser/cultivate/logs');
       expect(paths.volumePath).toBe('/Users/testuser/cultivate/volumes');
       expect(paths.vmAccessible).toBe(true);
+    });
+
+    it('should prefer the target host home directory when provided', () => {
+      const osResult: OSDetectionResult = {
+        distribution: 'macos',
+        version: '14.0',
+        packageManager: 'brew',
+        supported: true,
+        isMacOS: true,
+      };
+
+      const paths = getDeploymentPaths(osResult, 'sshuser', '/Users/targetuser');
+
+      expect(paths.volumePath).toBe('/Users/targetuser/cultivate/volumes');
     });
 
     it('should handle different Linux distributions', () => {

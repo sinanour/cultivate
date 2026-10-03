@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Database service with PostgreSQL and peer authentication
   database:
@@ -9,7 +7,7 @@ services:
     container_name: cultivate_database
     volumes:
       # Data volume for PostgreSQL persistence
-      - db_data:/var/lib/postgresql/data
+      - ${DATA_VOLUME_PATH:-../volumes/db_data}:/var/lib/postgresql/data
       # Socket volume for Unix domain socket communication
       - db_socket:/var/run/postgresql
     environment:
@@ -43,7 +41,7 @@ services:
       - db_socket:/var/run/postgresql:rw
     environment:
       # Database connection URL using Unix socket for peer authentication
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-apiuser}@/cultivate?host=/var/run/postgresql
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-apiuser}@localhost/cultivate?host=/var/run/postgresql
       # Node environment
       - NODE_ENV=${NODE_ENV:-production}
       # Backend API port
@@ -52,7 +50,15 @@ services:
       - backend
     healthcheck:
       # Health check to verify backend API is responding
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -73,18 +79,25 @@ services:
       # Expose HTTP and HTTPS ports to the host
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
-    volumes:
-      # Optional certificate mount for HTTPS (only if CERT_PATH is set)
-      # Uncomment the line below and set CERT_PATH in .env to enable HTTPS
-      # - ${CERT_PATH}:/etc/nginx/certs:ro
     environment:
+      - ENABLE_HTTPS=${ENABLE_HTTPS:-false}
       # Backend API URL for frontend to connect to (Vite requires VITE_ prefix)
       - VITE_BACKEND_URL=${VITE_BACKEND_URL}
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
     networks:
       - backend
     healthcheck:
       # Health check to verify frontend is serving content
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -98,7 +111,8 @@ networks:
     # Internal network - not exposed to external networks
     internal: false
 
-# Persistent volumes for data and socket sharing
+# Persistent named volume for Unix socket sharing. PostgreSQL data is stored
+# in DATA_VOLUME_PATH on the target host (defaults to ../volumes/db_data).
 volumes:
-  # Data volume for PostgreSQL persistence
-  # This volume persists database d
+  db_socket:
+    driver: local

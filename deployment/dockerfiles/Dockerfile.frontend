@@ -28,6 +28,9 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy custom Nginx configuration
 COPY deployment/dockerfiles/nginx.conf /etc/nginx/nginx.conf
+COPY deployment/dockerfiles/nginx-https.conf.template /etc/nginx/nginx-https.conf.template
+COPY deployment/dockerfiles/configure-https.sh /docker-entrypoint.d/30-configure-https.sh
+RUN chmod +x /docker-entrypoint.d/30-configure-https.sh
 
 # Expose HTTP and HTTPS ports
 EXPOSE 80 443

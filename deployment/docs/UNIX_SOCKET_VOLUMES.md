@@ -35,6 +35,7 @@ Named volumes exist inside the VM's native Linux filesystem where Unix sockets w
 services:
   database:
     volumes:
+      - /Users/username/cultivate/volumes/db_data:/var/lib/postgresql/data  # Host-persistent data
       - db_socket:/var/run/postgresql  # ✅ Named volume
 
   backend:
@@ -68,11 +69,8 @@ function generateDockerComposeFile(version: string, deploymentPaths: DeploymentP
     // Socket MUST always be a named volume
     const dbSocketVolume = 'db_socket';
     
-    // Data can use host paths on Linux, named volumes on macOS
-    const useNamedVolumes = deploymentPaths.targetOS === 'macos';
-    const dbDataVolume = useNamedVolumes 
-        ? 'db_data' 
-        : path.join(deploymentPaths.volumePath, 'db_data');
+    // Database files use a target-host bind mount on both platforms.
+    const dbDataVolume = path.join(deploymentPaths.volumePath, 'db_data');
     
     return `
 services:
@@ -84,7 +82,6 @@ services:
 volumes:
   db_socket:
     driver: local  # Required for socket support
-${useNamedVolumes ? '  db_data:\n    driver: local' : ''}
 `;
 }
 ```
@@ -94,7 +91,7 @@ ${useNamedVolumes ? '  db_data:\n    driver: local' : ''}
 | Volume Type | Linux Strategy | macOS Strategy | Reason |
 |-------------|---------------|----------------|---------|
 | Socket | Named volume | Named volume | Unix sockets require native filesystem |
-| Data | Host path | Named volume | Host paths easier for backup on Linux; avoid boundary on macOS |
+| Data | Host path | Host path under `/Users` | Keeps database files on the target host; macOS data files are regular files |
 | Logs | Host path | Host path or named | Logs are regular files, work on mounted FS |
 | Config | Host path | Host path | Config files are regular files |
 
@@ -109,31 +106,20 @@ The implementation includes tests that verify:
 
 ## Backup Considerations
 
-### Named Volumes on macOS
+### Host-Bind Data on macOS and Linux
 
-Since macOS uses named volumes for data persistence, backups require different commands:
+The database directory is stored under the target's deployment volume path (`/Users/<user>/cultivate/volumes/db_data` on macOS and `/opt/cultivate/volumes/db_data` on Linux), so it can be backed up directly from the host. Stop the database before making a filesystem-level backup.
 
-```bash
-# List volumes
-finch volume ls
+The socket volume remains VM/runtime managed and does not contain persistent application data.
 
-# Backup a named volume
-finch run --rm -v db_data:/data -v $(pwd):/backup alpine tar czf /backup/db_data.tar.gz -C /data .
-
-# Restore a named volume
-finch run --rm -v db_data:/data -v $(pwd):/backup alpine tar xzf /backup/db_data.tar.gz -C /data
-```
-
-### Host Paths on Linux
-
-On Linux, data volumes use host paths for easier backup:
+For older deployments that still have a named `db_data` volume, migrate its contents before switching to the host bind mount; the old volume is not deleted automatically.
 
 ```bash
-# Backup
-tar czf db_data.tar.gz /opt/cultivate/volumes/db_data
+# Stop the database first, then back up the host data directory.
+# macOS:
+tar czf db_data.tar.gz /Users/username/cultivate/volumes/db_data
 
-# Restore
-tar xzf db_data.tar.gz -C /
+# Linux uses /opt/cultivate/volumes/db_data instead.
 ```
 
 ## Troubleshooting
@@ -190,8 +176,8 @@ backend:
 ## Best Practices
 
 1. **Always use named volumes for sockets** - Never use host path mounts
-2. **Use named volumes on macOS for data** - Avoid filesystem boundary issues
-3. **Use host paths on Linux for data** - Easier backup and management
+2. **Keep database data on the target host** - The configured macOS path must be under a Finch-mounted directory such as `/Users`
+3. **Back up the host data directory** - Stop PostgreSQL before filesystem-level backups
 4. **Document volume strategy** - Make it clear why each volume type is used
 5. **Test on target platform** - Socket issues only appear on actual macOS/Finch deployments
 

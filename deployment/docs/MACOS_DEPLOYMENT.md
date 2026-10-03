@@ -308,12 +308,10 @@ volumes:
 services:
   database:
     volumes:
-      - db_data:/var/lib/postgresql/data  # Named volume
+      - /Users/username/cultivate/volumes/db_data:/var/lib/postgresql/data  # Host path
       - db_socket:/var/run/postgresql  # Named volume (required for sockets)
 
 volumes:
-  db_data:
-    driver: local
   db_socket:
     driver: local
 ```
@@ -333,7 +331,8 @@ FATAL: could not create any Unix-domain sockets
 
 **Impact:**
 - Socket volumes: MUST use named volumes on all platforms
-- Data volumes: Can use host paths on Linux (easier backups), named volumes on macOS
+- Data volumes: Use target-host bind mounts on both platforms. On macOS, the deployment path is under `/Users` so Finch can access it; PostgreSQL data files are regular files, unlike Unix sockets.
+- The deployment creates the database directory before starting Compose. Back up the host directory shown in the generated Compose file.
 
 ## Best Practices
 

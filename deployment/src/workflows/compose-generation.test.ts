@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import * as path from 'path';
+import { generateDockerComposeFile } from './deploy.js';
 
 // Mock deployment paths and config for testing
 const mockLinuxPaths = {
@@ -65,8 +65,7 @@ const mockConfigWithoutCertPath = {
 };
 
 describe('Docker Compose Generation Integration', () => {
-    // Helper function to simulate generateDockerComposeFile
-    // (We can't import it directly since it's not exported)
+    // Use the production generator so these tests validate deployed Compose.
     function simulateComposeGeneration(
         version: string,
         deploymentPaths: { targetOS: 'linux' | 'macos'; configPath: string; volumePath: string },
@@ -75,40 +74,7 @@ describe('Docker Compose Generation Integration', () => {
             volumes?: { certPath?: string };
         }
     ): string {
-        const useNamedVolumes = deploymentPaths.targetOS === 'macos';
-        const dbDataVolume = useNamedVolumes
-            ? 'db_data'
-            : path.join(deploymentPaths.volumePath, 'db_data');
-        const dbSocketVolume = 'db_socket';
-
-        const httpPort = config.network?.httpPort || 80;
-        const httpsPort = config.network?.httpsPort || 443;
-        const enableHttps = config.network?.enableHttps && config.volumes?.certPath;
-        const remoteCertPath = path.join(deploymentPaths.configPath, 'certs');
-        const certVolumeMount = enableHttps
-            ? `      - ${remoteCertPath}:/etc/nginx/certs:ro\n`
-            : '';
-
-        return `version: '3.8'
-
-services:
-  database:
-    image: cultivate_database:${version}
-    container_name: cultivate_database
-    volumes:
-      - ${dbDataVolume}:/var/lib/postgresql/data
-      - ${dbSocketVolume}:/var/run/postgresql
-
-  frontend:
-    image: cultivate_frontend:${version}
-    container_name: cultivate_frontend
-    ports:
-      - "0.0.0.0:${httpPort}:80"
-      - "0.0.0.0:${httpsPort}:443"
-    volumes:
-${certVolumeMount}    environment:
-      - VITE_BACKEND_URL=/api/v1
-`;
+            return generateDockerComposeFile(version, deploymentPaths as any, config);
     }
 
     describe('Port Configuration', () => {
@@ -137,7 +103,7 @@ ${certVolumeMount}    environment:
             const compose = simulateComposeGeneration('1.0.0', mockLinuxPaths, configWithDefaults);
 
             expect(compose).toContain('"0.0.0.0:80:80"');
-            expect(compose).toContain('"0.0.0.0:443:443"');
+            expect(compose).not.toContain('"0.0.0.0:443:443"');
         });
 
         it('should bind to 0.0.0.0 for public accessibility', () => {
@@ -156,10 +122,12 @@ ${certVolumeMount}    environment:
             expect(compose).toContain('/opt/cultivate/config/certs:/etc/nginx/certs:ro');
         });
 
-        it('should not include certificate volume when HTTPS disabled', () => {
+        it('should not include certificate mount or HTTPS port when HTTPS disabled', () => {
             const compose = simulateComposeGeneration('1.0.0', mockLinuxPaths, mockConfigWithoutHttps);
 
             expect(compose).not.toContain('/etc/nginx/certs');
+            expect(compose).not.toContain('0.0.0.0:1443:443');
+            expect(compose).toContain('ENABLE_HTTPS=false');
         });
 
         it('should not include certificate volume when cert path not set', () => {
@@ -176,17 +144,17 @@ ${certVolumeMount}    environment:
     });
 
     describe('Volume Strategy', () => {
-        it('should use host path for data volume on Linux', () => {
+        it('should use a persistent host path for data volume on Linux', () => {
             const compose = simulateComposeGeneration('1.0.0', mockLinuxPaths, mockConfigWithHttps);
 
             expect(compose).toContain('/opt/cultivate/volumes/db_data:/var/lib/postgresql/data');
         });
 
-        it('should use named volume for data on macOS', () => {
+        it('should use a persistent host path for data volume on macOS', () => {
             const compose = simulateComposeGeneration('1.0.0', mockMacOSPaths, mockConfigWithHttps);
 
-            expect(compose).toContain('db_data:/var/lib/postgresql/data');
-            expect(compose).not.toContain('/Users/testuser/cultivate/volumes/db_data');
+            expect(compose).toContain('/Users/testuser/cultivate/volumes/db_data:/var/lib/postgresql/data');
+            expect(compose).not.toContain('db_data:\n    driver: local');
         });
 
         it('should always use named volume for socket', () => {
@@ -195,6 +163,7 @@ ${certVolumeMount}    environment:
 
             expect(composeLinux).toContain('db_socket:/var/run/postgresql');
             expect(composeMacOS).toContain('db_socket:/var/run/postgresql');
+            expect(composeLinux).toContain('volumes:\n  db_socket:\n    driver: local');
         });
     });
 });
