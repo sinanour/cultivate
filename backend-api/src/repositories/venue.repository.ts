@@ -121,6 +121,44 @@ export class VenueRepository {
     });
   }
 
+  /**
+   * Transaction-aware version-checked update used by the bulk mutation flow.
+   * Uses `updateMany` with the expected version in the where clause so the
+   * conflict check and the write happen in a single statement; a `count` of
+   * 0 means the row no longer exists at the expected version and is treated
+   * as a VERSION_CONFLICT. Re-fetches the updated row with its relations so
+   * the caller receives the same shape as `update()`.
+   */
+  async updateWithVersion(
+    tx: Pick<PrismaClient, 'venue'>,
+    id: string,
+    expectedVersion: number,
+    data: Omit<UpdateVenueData, 'version'>
+  ): Promise<Venue> {
+    const result = await tx.venue.updateMany({
+      where: { id, version: expectedVersion },
+      data: {
+        ...data,
+        version: { increment: 1 },
+      },
+    });
+
+    if (result.count === 0) {
+      throw new Error('VERSION_CONFLICT');
+    }
+
+    const updated = await tx.venue.findUnique({
+      where: { id },
+      include: { geographicArea: true },
+    });
+
+    if (!updated) {
+      throw new Error('Venue not found');
+    }
+
+    return updated;
+  }
+
   async delete(id: string): Promise<Venue> {
     return this.prisma.venue.delete({
       where: { id },

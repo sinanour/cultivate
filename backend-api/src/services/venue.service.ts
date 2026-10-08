@@ -11,6 +11,16 @@ import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../util
 import { transformParticipantResponses } from '../utils/participant.utils';
 import { GeographicFilteringService } from './geographic-filtering.service';
 import { PrismaClient } from '@prisma/client';
+import {
+    BulkEntityAdapter,
+    BulkMutationService,
+} from './bulk-mutation.service';
+import {
+    BulkMutationRequest,
+    BulkMutationResponse,
+} from '../types/bulk-mutation.types';
+import { AuthorizationContext } from '../utils/auth.utils';
+import { BULK_MUTATION_MAX_CHANGES } from '../utils/validation.schemas';
 
 export interface CreateVenueInput {
     name: string;
@@ -416,4 +426,186 @@ export class VenueService {
 
         return result;
     }
+
+    /**
+     * Bulk-editing entry point for Venues. See bulk-mutation.service.ts and
+     * requirements 9/10/11/12 for the end-to-end contract. All validation,
+     * geo-auth, and version checks happen inside a single prisma.$transaction,
+     * so a partial failure rolls back every change.
+     */
+    async bulkMutate(
+        req: BulkMutationRequest<VenueBulkCreateData, VenueBulkUpdateData>,
+        authCtx: AuthorizationContext,
+        bulkService: BulkMutationService
+    ): Promise<BulkMutationResponse> {
+        const adapter: BulkEntityAdapter<VenueBulkCreateData, VenueBulkUpdateData> = {
+            entityType: 'VENUE',
+            maxChanges: BULK_MUTATION_MAX_CHANGES,
+
+            validateCreate: async (_tx, data, auth) => {
+                if (!data.name || data.name.trim().length === 0) {
+                    throw new AppError('VALIDATION_ERROR', 'Venue name is required', 422);
+                }
+                if (!data.address || data.address.trim().length === 0) {
+                    throw new AppError('VALIDATION_ERROR', 'Venue address is required', 422);
+                }
+                if (!data.geographicAreaId) {
+                    throw new AppError('VALIDATION_ERROR', 'Geographic area ID is required', 422);
+                }
+                const areaExists = await this.geographicAreaRepository.exists(data.geographicAreaId);
+                if (!areaExists) {
+                    throw new AppError('INVALID_REFERENCE', 'Geographic area not found', 422);
+                }
+                // Reuse single-record geo-auth check (R12.2).
+                if (auth.hasGeographicRestrictions && !auth.authorizedAreaIds.includes(data.geographicAreaId)) {
+                    await this.logGeoDenial(auth.userId, 'VENUE', 'BULK_CREATE');
+                    throw new AppError(
+                        'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        'You do not have permission to create venues in this geographic area',
+                        403
+                    );
+                }
+                if (data.latitude !== undefined && data.latitude !== null && (data.latitude < -90 || data.latitude > 90)) {
+                    throw new AppError('VALIDATION_ERROR', 'Latitude must be between -90 and 90', 422);
+                }
+                if (data.longitude !== undefined && data.longitude !== null && (data.longitude < -180 || data.longitude > 180)) {
+                    throw new AppError('VALIDATION_ERROR', 'Longitude must be between -180 and 180', 422);
+                }
+            },
+
+            validateUpdate: async (tx, id, _expectedVersion, data, auth) => {
+                const existing = await tx.venue.findUnique({
+                    where: { id },
+                    select: { id: true, geographicAreaId: true, version: true },
+                });
+                if (!existing) {
+                    throw new AppError('NOT_FOUND', `Venue ${id} not found`, 422);
+                }
+                // Geo-auth against current area (R12.3).
+                if (auth.hasGeographicRestrictions && !auth.authorizedAreaIds.includes(existing.geographicAreaId)) {
+                    await this.logGeoDenial(auth.userId, 'VENUE', 'BULK_UPDATE');
+                    throw new AppError(
+                        'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        'You do not have permission to update this venue',
+                        403
+                    );
+                }
+                // Geo-auth against target area if changed (R12.2).
+                if (data.geographicAreaId && data.geographicAreaId !== existing.geographicAreaId) {
+                    const areaExists = await this.geographicAreaRepository.exists(data.geographicAreaId);
+                    if (!areaExists) {
+                        throw new AppError('INVALID_REFERENCE', 'Geographic area not found', 422);
+                    }
+                    if (auth.hasGeographicRestrictions && !auth.authorizedAreaIds.includes(data.geographicAreaId)) {
+                        await this.logGeoDenial(auth.userId, 'VENUE', 'BULK_UPDATE');
+                        throw new AppError(
+                            'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                            'You do not have permission to move this venue to the specified geographic area',
+                            403
+                        );
+                    }
+                }
+                if (data.latitude !== undefined && data.latitude !== null && (data.latitude < -90 || data.latitude > 90)) {
+                    throw new AppError('VALIDATION_ERROR', 'Latitude must be between -90 and 90', 422);
+                }
+                if (data.longitude !== undefined && data.longitude !== null && (data.longitude < -180 || data.longitude > 180)) {
+                    throw new AppError('VALIDATION_ERROR', 'Longitude must be between -180 and 180', 422);
+                }
+            },
+
+            validateDelete: async (tx, id, _expectedVersion, auth) => {
+                const existing = await tx.venue.findUnique({
+                    where: { id },
+                    select: { id: true, geographicAreaId: true },
+                });
+                if (!existing) {
+                    throw new AppError('NOT_FOUND', `Venue ${id} not found`, 422);
+                }
+                if (auth.hasGeographicRestrictions && !auth.authorizedAreaIds.includes(existing.geographicAreaId)) {
+                    await this.logGeoDenial(auth.userId, 'VENUE', 'BULK_DELETE');
+                    throw new AppError(
+                        'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                        'You do not have permission to delete this venue',
+                        403
+                    );
+                }
+                // Mirror the single-record delete reference check.
+                const [activityCount, participantCount] = await Promise.all([
+                    tx.activityVenueHistory.count({ where: { venueId: id } }),
+                    tx.participantAddressHistory.count({ where: { venueId: id } }),
+                ]);
+                if (activityCount > 0 || participantCount > 0) {
+                    const refs: string[] = [];
+                    if (activityCount > 0) refs.push(`${activityCount} activity(ies)`);
+                    if (participantCount > 0) refs.push(`${participantCount} participant(s)`);
+                    throw new AppError(
+                        'REFERENCED_ENTITY',
+                        `Cannot delete venue. It is referenced by ${refs.join(' and ')}`,
+                        422
+                    );
+                }
+            },
+
+            create: async (tx, data) => {
+                return tx.venue.create({
+                    data: {
+                        name: data.name,
+                        address: data.address,
+                        geographicAreaId: data.geographicAreaId,
+                        latitude: data.latitude ?? null,
+                        longitude: data.longitude ?? null,
+                        venueType: data.venueType ?? null,
+                    },
+                    include: { geographicArea: true },
+                });
+            },
+
+            updateWithVersion: async (tx, id, expectedVersion, data) => {
+                return this.venueRepository.updateWithVersion(tx, id, expectedVersion, data);
+            },
+
+            delete: async (tx, id) => {
+                await tx.venue.delete({ where: { id } });
+            },
+        };
+
+        return bulkService.bulkMutate(req, authCtx, adapter);
+    }
+
+    private async logGeoDenial(userId: string, resourceType: string, action: string): Promise<void> {
+        if (!userId) return;
+        try {
+            await this.geographicAuthorizationService.logAuthorizationDenial(
+                userId,
+                resourceType,
+                'bulk',
+                action
+            );
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to log geographic authorization denial:', err);
+        }
+    }
+}
+
+/**
+ * Shape of a venue payload coming through the bulk endpoint. Mirrors the
+ * subset of fields a bulk create accepts (see spec section 2.7).
+ */
+export interface VenueBulkCreateData {
+    name: string;
+    address: string;
+    geographicAreaId: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    venueType?: VenueType | null;
+}
+
+export interface VenueBulkUpdateData {
+    name?: string;
+    address?: string;
+    geographicAreaId?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    venueType?: VenueType | null;
 }

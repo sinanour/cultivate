@@ -729,6 +729,143 @@ export const MapVenueMarkersQuerySchema = z.object({
   }
 );
 
+// Bulk mutation (bulk editing) schemas
+//
+// The frontend sends a staged change set in one POST /{entity}/bulk request.
+// Each create carries a client-generated `clientKey` purely for response
+// correlation; each update and delete carries the record `id` and the
+// expected `version` for optimistic concurrency.
+//
+// Editable fields are restricted to the per-entity subsets defined in the
+// spec (requirements.md section 2.7); system-managed fields and relationship
+// fields outside those subsets are rejected.
+export const BULK_MUTATION_MAX_CHANGES = 500;
+
+// Venue bulk editable-field schemas (match spec 2.7).
+// Creates reuse VenueCreateSchema (name, address, geographicAreaId required;
+// latitude/longitude/venueType optional). Updates are a partial over the same
+// editable fields and MUST NOT allow `version` or system-managed fields in
+// `data` - version is carried at the item level.
+export const VenueBulkUpdateDataSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
+  address: z.string().min(1, 'Address is required').max(500, 'Address must be at most 500 characters').optional(),
+  geographicAreaId: z.string().uuid('Invalid geographic area ID format').optional(),
+  latitude: z.union([z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90'), z.null()]).optional(),
+  longitude: z.union([z.number().min(-180, 'Longitude must be >= -180').max(180, 'Longitude must be <= 180'), z.null()]).optional(),
+  venueType: z.union([z.nativeEnum(VenueType), z.null()]).optional(),
+}).strict();
+
+export const ParticipantBulkCreateDataSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),
+  email: z.string().email('Invalid email format').optional(),
+  phone: z.string().max(20, 'Phone must be at most 20 characters').optional(),
+  nickname: z.string().max(100, 'Nickname must be at most 100 characters').optional(),
+  dateOfBirth: z.string().datetime('Invalid date of birth format').optional().refine(
+    (date) => !date || new Date(date) < new Date(),
+    { message: 'Date of birth must be in the past' }
+  ),
+  dateOfRegistration: z.string().datetime('Invalid date of registration format').optional(),
+  notes: z.string().max(1000, 'Notes must be at most 1000 characters').optional(),
+}).strict();
+
+export const ParticipantBulkUpdateDataSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
+  email: z.union([z.string().email('Invalid email format'), z.null()]).optional(),
+  phone: z.union([z.string().max(20, 'Phone must be at most 20 characters'), z.null()]).optional(),
+  nickname: z.union([z.string().max(100, 'Nickname must be at most 100 characters'), z.null()]).optional(),
+  dateOfBirth: z.union([
+    z.string().datetime('Invalid date of birth format').refine(
+      (date) => new Date(date) < new Date(),
+      { message: 'Date of birth must be in the past' }
+    ),
+    z.null()
+  ]).optional(),
+  dateOfRegistration: z.union([z.string().datetime('Invalid date of registration format'), z.null()]).optional(),
+  notes: z.union([z.string().max(1000, 'Notes must be at most 1000 characters'), z.null()]).optional(),
+}).strict();
+
+export const ActivityBulkCreateDataSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters'),
+  activityTypeId: z.string().uuid('Invalid activity type ID format'),
+  startDate: z.string().datetime('Invalid start date format'),
+  endDate: z.string().datetime('Invalid end date format').optional(),
+  status: z.nativeEnum(ActivityStatus).optional(),
+  additionalParticipantCount: z.number().int().positive('Additional participant count must be a positive integer').nullable().optional(),
+  notes: z.string().max(2000, 'Notes must be at most 2000 characters').nullable().optional(),
+}).strict();
+
+export const ActivityBulkUpdateDataSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be at most 200 characters').optional(),
+  activityTypeId: z.string().uuid('Invalid activity type ID format').optional(),
+  startDate: z.string().datetime('Invalid start date format').optional(),
+  endDate: z.union([z.string().datetime('Invalid end date format'), z.null()]).optional(),
+  status: z.nativeEnum(ActivityStatus).optional(),
+  additionalParticipantCount: z.number().int().positive('Additional participant count must be a positive integer').nullable().optional(),
+  notes: z.string().max(2000, 'Notes must be at most 2000 characters').nullable().optional(),
+}).strict();
+
+/**
+ * Build a BulkMutationSchema given the per-entity create and update data schemas.
+ * Enforces: array shape, `clientKey` on creates, `version` on updates/deletes,
+ * and a top-level item-count ceiling. The schema also rejects a request with
+ * zero changes to help callers avoid empty submits (empty is allowed in the
+ * service for backward compat; the schema cap is applied before body parsing).
+ */
+function buildBulkMutationSchema<TCreate extends z.ZodTypeAny, TUpdate extends z.ZodTypeAny>(
+  createData: TCreate,
+  updateData: TUpdate
+) {
+  return z.object({
+    creates: z.array(
+      z.object({
+        clientKey: z.string().min(1, 'clientKey is required for bulk creates'),
+        data: createData,
+      }).strict()
+    ).default([]),
+    updates: z.array(
+      z.object({
+        id: z.string().uuid('Invalid ID format'),
+        version: z.number().int().positive('version must be a positive integer'),
+        data: updateData,
+      }).strict()
+    ).default([]),
+    deletes: z.array(
+      z.object({
+        id: z.string().uuid('Invalid ID format'),
+        version: z.number().int().positive('version must be a positive integer'),
+      }).strict()
+    ).default([]),
+  })
+    .strict()
+    .refine(
+      (req) =>
+        req.creates.length + req.updates.length + req.deletes.length <=
+        BULK_MUTATION_MAX_CHANGES,
+      {
+        message: `Bulk request exceeds the maximum of ${BULK_MUTATION_MAX_CHANGES} total changes`,
+      }
+    );
+}
+
+export const VenueBulkMutationSchema = buildBulkMutationSchema(
+  VenueCreateSchema,
+  VenueBulkUpdateDataSchema
+);
+
+export const ParticipantBulkMutationSchema = buildBulkMutationSchema(
+  ParticipantBulkCreateDataSchema,
+  ParticipantBulkUpdateDataSchema
+);
+
+export const ActivityBulkMutationSchema = buildBulkMutationSchema(
+  ActivityBulkCreateDataSchema,
+  ActivityBulkUpdateDataSchema
+);
+
+export type VenueBulkMutationInput = z.infer<typeof VenueBulkMutationSchema>;
+export type ParticipantBulkMutationInput = z.infer<typeof ParticipantBulkMutationSchema>;
+export type ActivityBulkMutationInput = z.infer<typeof ActivityBulkMutationSchema>;
+
 // Sync schemas
 export const SyncOperationSchema = z.object({
   operation: z.nativeEnum(SyncOperation),

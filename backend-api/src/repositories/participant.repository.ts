@@ -130,6 +130,37 @@ export class ParticipantRepository {
     });
   }
 
+  /**
+   * Transaction-aware version-checked update used by the bulk mutation flow.
+   * See VenueRepository.updateWithVersion for the rationale.
+   */
+  async updateWithVersion(
+    tx: Pick<PrismaClient, 'participant'>,
+    id: string,
+    expectedVersion: number,
+    data: Omit<UpdateParticipantData, 'version'>
+  ): Promise<Participant> {
+    const result = await tx.participant.updateMany({
+      where: { id, version: expectedVersion },
+      data: {
+        ...data,
+        version: { increment: 1 },
+      },
+    });
+
+    if (result.count === 0) {
+      throw new Error('VERSION_CONFLICT');
+    }
+
+    const updated = await tx.participant.findUnique({ where: { id } });
+
+    if (!updated) {
+      throw new Error('Participant not found');
+    }
+
+    return updated;
+  }
+
   async delete(id: string): Promise<Participant> {
     return this.prisma.participant.delete({
       where: { id },

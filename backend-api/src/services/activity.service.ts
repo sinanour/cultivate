@@ -11,6 +11,16 @@ import { ActivityImportSchema } from '../utils/validation.schemas';
 import { AppError } from '../types/errors.types';
 import { buildSelectClause, getValidFieldNames } from '../utils/query-builder.util';
 import { GeographicFilteringService } from './geographic-filtering.service';
+import {
+  BulkEntityAdapter,
+  BulkMutationService,
+} from './bulk-mutation.service';
+import {
+  BulkMutationRequest,
+  BulkMutationResponse,
+} from '../types/bulk-mutation.types';
+import { AuthorizationContext } from '../utils/auth.utils';
+import { BULK_MUTATION_MAX_CHANGES } from '../utils/validation.schemas';
 
 export interface CreateActivityInput {
   name: string;
@@ -794,4 +804,214 @@ export class ActivityService {
 
     return result;
   }
+
+  /**
+   * Bulk-editing entry point for Activities. See bulk-mutation.service.ts.
+   *
+   * Activity geographic authorization is derived from the activity's current
+   * venue (most-recent `activityVenueHistory` entry) just like
+   * `getActivityById`. Bulk create has no venue association, so there is no
+   * geo-auth gate on create - matching single-record `createActivity`.
+   */
+  async bulkMutate(
+    req: BulkMutationRequest<ActivityBulkCreateData, ActivityBulkUpdateData>,
+    authCtx: AuthorizationContext,
+    bulkService: BulkMutationService
+  ): Promise<BulkMutationResponse> {
+    const adapter: BulkEntityAdapter<ActivityBulkCreateData, ActivityBulkUpdateData> = {
+      entityType: 'ACTIVITY',
+      maxChanges: BULK_MUTATION_MAX_CHANGES,
+
+      validateCreate: async (tx, data, _auth) => {
+        if (!data.name || data.name.trim().length === 0) {
+          throw new AppError('VALIDATION_ERROR', 'Activity name is required', 422);
+        }
+        if (!data.activityTypeId) {
+          throw new AppError('VALIDATION_ERROR', 'Activity type ID is required', 422);
+        }
+        if (!data.startDate) {
+          throw new AppError('VALIDATION_ERROR', 'Start date is required', 422);
+        }
+        const typeExists = await tx.activityType.findUnique({
+          where: { id: data.activityTypeId },
+          select: { id: true },
+        });
+        if (!typeExists) {
+          throw new AppError('INVALID_REFERENCE', 'Activity type not found', 422);
+        }
+        const start = new Date(data.startDate);
+        if (data.endDate) {
+          const end = new Date(data.endDate);
+          if (end < start) {
+            throw new AppError('VALIDATION_ERROR', 'End date must be on or after start date', 422);
+          }
+        }
+        if (data.additionalParticipantCount !== undefined && data.additionalParticipantCount !== null) {
+          if (!Number.isInteger(data.additionalParticipantCount) || data.additionalParticipantCount <= 0) {
+            throw new AppError('VALIDATION_ERROR', 'Additional participant count must be a positive integer', 422);
+          }
+        }
+        if (data.notes && data.notes.length > 2000) {
+          throw new AppError('VALIDATION_ERROR', 'Notes must be at most 2000 characters', 422);
+        }
+      },
+
+      validateUpdate: async (tx, id, _expectedVersion, data, auth) => {
+        const existing = await tx.activity.findUnique({
+          where: { id },
+          select: { id: true, startDate: true, endDate: true, version: true },
+        });
+        if (!existing) {
+          throw new AppError('NOT_FOUND', `Activity ${id} not found`, 422);
+        }
+        await this.assertActivityGeoAccess(tx, id, auth, 'BULK_UPDATE');
+
+        if (data.activityTypeId) {
+          const typeExists = await tx.activityType.findUnique({
+            where: { id: data.activityTypeId },
+            select: { id: true },
+          });
+          if (!typeExists) {
+            throw new AppError('INVALID_REFERENCE', 'Activity type not found', 422);
+          }
+        }
+        const effectiveStart = data.startDate ? new Date(data.startDate) : existing.startDate;
+        if (data.endDate !== undefined && data.endDate !== null) {
+          const end = new Date(data.endDate);
+          if (end < effectiveStart) {
+            throw new AppError('VALIDATION_ERROR', 'End date must be on or after start date', 422);
+          }
+        }
+        if (data.additionalParticipantCount !== undefined && data.additionalParticipantCount !== null) {
+          if (!Number.isInteger(data.additionalParticipantCount) || data.additionalParticipantCount <= 0) {
+            throw new AppError('VALIDATION_ERROR', 'Additional participant count must be a positive integer', 422);
+          }
+        }
+        if (data.notes !== undefined && data.notes !== null && data.notes.length > 2000) {
+          throw new AppError('VALIDATION_ERROR', 'Notes must be at most 2000 characters', 422);
+        }
+      },
+
+      validateDelete: async (tx, id, _expectedVersion, auth) => {
+        const existing = await tx.activity.findUnique({
+          where: { id },
+          select: { id: true },
+        });
+        if (!existing) {
+          throw new AppError('NOT_FOUND', `Activity ${id} not found`, 422);
+        }
+        await this.assertActivityGeoAccess(tx, id, auth, 'BULK_DELETE');
+      },
+
+      create: async (tx, data) => {
+        return tx.activity.create({
+          data: {
+            name: data.name,
+            activityTypeId: data.activityTypeId,
+            startDate: new Date(data.startDate),
+            endDate: data.endDate ? new Date(data.endDate) : null,
+            status: data.status ?? ActivityStatus.PLANNED,
+            additionalParticipantCount: data.additionalParticipantCount ?? null,
+            notes: data.notes ?? null,
+          },
+          include: {
+            activityType: {
+              include: { activityCategory: true },
+            },
+          },
+        });
+      },
+
+      updateWithVersion: async (tx, id, expectedVersion, data) => {
+        const updateData: Record<string, unknown> = {};
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.activityTypeId !== undefined) updateData.activityTypeId = data.activityTypeId;
+        if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
+        if ('endDate' in data) {
+          updateData.endDate = data.endDate ? new Date(data.endDate) : null;
+        }
+        if (data.status !== undefined) updateData.status = data.status;
+        if ('additionalParticipantCount' in data) {
+          updateData.additionalParticipantCount = data.additionalParticipantCount ?? null;
+        }
+        if ('notes' in data) updateData.notes = data.notes ?? null;
+        return this.activityRepository.updateWithVersion(tx, id, expectedVersion, updateData);
+      },
+
+      delete: async (tx, id) => {
+        await tx.activity.delete({ where: { id } });
+      },
+    };
+
+    return bulkService.bulkMutate(req, authCtx, adapter);
+  }
+
+  /**
+   * Mirror getActivityById's geo-auth logic inside the transaction. The
+   * activity's current venue (most-recent venue-history row) supplies the
+   * geographicAreaId used to evaluate access against authorizedAreaIds.
+   */
+  private async assertActivityGeoAccess(
+    tx: Parameters<Parameters<PrismaClient['$transaction']>[0]>[0],
+    activityId: string,
+    auth: AuthorizationContext,
+    action: string
+  ): Promise<void> {
+    if (!auth.hasGeographicRestrictions) return;
+    if (auth.userRole === 'ADMINISTRATOR') return;
+
+    const currentVenue = await tx.activityVenueHistory.findFirst({
+      where: { activityId },
+      orderBy: { effectiveFrom: 'desc' },
+      include: { venue: { select: { geographicAreaId: true } } },
+    });
+
+    if (!currentVenue || !currentVenue.venue) {
+      // Activity has no venue association yet - matches single-record flow
+      // (`getActivityById` allows access when there is no venue history).
+      return;
+    }
+
+    if (!auth.authorizedAreaIds.includes(currentVenue.venue.geographicAreaId)) {
+      try {
+        await this.geographicAuthorizationService.logAuthorizationDenial(
+          auth.userId,
+          'ACTIVITY',
+          activityId,
+          action
+        );
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to log geographic authorization denial:', err);
+      }
+      throw new AppError(
+        'GEOGRAPHIC_AUTHORIZATION_DENIED',
+        'You do not have permission to modify this activity',
+        403
+      );
+    }
+  }
+}
+
+/**
+ * Bulk payload shapes for Activities (spec section 2.7 editable fields).
+ */
+export interface ActivityBulkCreateData {
+  name: string;
+  activityTypeId: string;
+  startDate: string;
+  endDate?: string | null;
+  status?: ActivityStatus;
+  additionalParticipantCount?: number | null;
+  notes?: string | null;
+}
+
+export interface ActivityBulkUpdateData {
+  name?: string;
+  activityTypeId?: string;
+  startDate?: string;
+  endDate?: string | null;
+  status?: ActivityStatus;
+  additionalParticipantCount?: number | null;
+  notes?: string | null;
 }

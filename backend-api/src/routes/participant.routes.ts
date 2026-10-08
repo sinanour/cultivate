@@ -10,6 +10,7 @@ import {
     ParticipantUpdateSchema,
     ParticipantAddressHistoryCreateSchema,
     ParticipantAddressHistoryUpdateSchema,
+    ParticipantBulkMutationSchema,
     UuidParamSchema,
 } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
@@ -18,6 +19,8 @@ import { generateCSVFilename } from '../utils/csv.utils';
 import { csvUpload } from '../middleware/upload.middleware';
 import { parsePaginationParams, QUERY_PARAMS } from '../utils/query-params.utils';
 import { extractAuthorizationContext } from '../utils/auth.utils';
+import { BulkMutationService } from '../services/bulk-mutation.service';
+import { handleBulkError } from './venue.routes';
 
 export class ParticipantRoutes {
     private router: Router;
@@ -26,7 +29,8 @@ export class ParticipantRoutes {
         private participantService: ParticipantService,
         private authMiddleware: AuthMiddleware,
         private authorizationMiddleware: AuthorizationMiddleware,
-        private auditLoggingMiddleware: AuditLoggingMiddleware
+        private auditLoggingMiddleware: AuditLoggingMiddleware,
+        private bulkMutationService: BulkMutationService
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -54,6 +58,14 @@ export class ParticipantRoutes {
             this.authorizationMiddleware.requireEditor(),
             csvUpload.single('file'),
             this.importCSV.bind(this)
+        );
+
+        this.router.post(
+            '/bulk',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateBody(ParticipantBulkMutationSchema),
+            this.bulkMutate.bind(this)
         );
 
         // Removed deprecated GET /search endpoint - use unified filter[] API with GET / instead
@@ -652,6 +664,20 @@ export class ParticipantRoutes {
                 message: 'An error occurred while importing participants',
                 details: {},
             });
+        }
+    }
+
+    private async bulkMutate(req: AuthenticatedRequest, res: Response) {
+        try {
+            const authCtx = extractAuthorizationContext(req);
+            const result = await this.participantService.bulkMutate(
+                req.body,
+                authCtx,
+                this.bulkMutationService
+            );
+            return res.status(200).json(result);
+        } catch (error) {
+            return handleBulkError(res, error, 'participants');
         }
     }
 

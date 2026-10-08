@@ -8,6 +8,7 @@ import { parseFilterParameters, ParsedFilterRequest } from '../middleware/filter
 import {
     VenueCreateSchema,
     VenueUpdateSchema,
+    VenueBulkMutationSchema,
     UuidParamSchema,
 } from '../utils/validation.schemas';
 import { AuthenticatedRequest } from '../types/express.types';
@@ -15,6 +16,9 @@ import { generateCSVFilename } from '../utils/csv.utils';
 import { csvUpload } from '../middleware/upload.middleware';
 import { parsePaginationParams, QUERY_PARAMS } from '../utils/query-params.utils';
 import { extractAuthorizationContext } from '../utils/auth.utils';
+import { BulkMutationService } from '../services/bulk-mutation.service';
+import { BulkError } from '../types/bulk-mutation.types';
+import { AppError } from '../types/errors.types';
 
 export class VenueRoutes {
     private router: Router;
@@ -23,7 +27,8 @@ export class VenueRoutes {
         private venueService: VenueService,
         private authMiddleware: AuthMiddleware,
         private authorizationMiddleware: AuthorizationMiddleware,
-        private auditLoggingMiddleware: AuditLoggingMiddleware
+        private auditLoggingMiddleware: AuditLoggingMiddleware,
+        private bulkMutationService: BulkMutationService
     ) {
         this.router = Router();
         this.initializeRoutes();
@@ -51,6 +56,14 @@ export class VenueRoutes {
             this.authorizationMiddleware.requireEditor(),
             csvUpload.single('file'),
             this.importCSV.bind(this)
+        );
+
+        this.router.post(
+            '/bulk',
+            this.authMiddleware.authenticate(),
+            this.authorizationMiddleware.requireEditor(),
+            ValidationMiddleware.validateBody(VenueBulkMutationSchema),
+            this.bulkMutate.bind(this)
         );
 
         // Removed deprecated GET /search endpoint - use unified filter[] API with GET / instead
@@ -529,7 +542,57 @@ export class VenueRoutes {
         }
     }
 
+    private async bulkMutate(req: AuthenticatedRequest, res: Response) {
+        try {
+            const authCtx = extractAuthorizationContext(req);
+            const result = await this.venueService.bulkMutate(
+                req.body,
+                authCtx,
+                this.bulkMutationService
+            );
+            return res.status(200).json(result);
+        } catch (error) {
+            return handleBulkError(res, error, 'venues');
+        }
+    }
+
     getRouter(): Router {
         return this.router;
     }
+}
+
+/**
+ * Map a BulkError or AppError into the HTTP response envelope for bulk mutations.
+ * Exported helper lives at module scope so Participant and Activity routes can
+ * share the exact same mapping logic.
+ */
+export function handleBulkError(res: Response, error: unknown, entity: string): Response {
+    if (error instanceof BulkError) {
+        return res.status(error.statusCode).json({
+            success: false,
+            applied: { created: 0, updated: 0, deleted: 0 },
+            code: error.code,
+            message: error.message,
+            errors: error.errors,
+        });
+    }
+    if (error instanceof AppError) {
+        return res.status(error.statusCode).json({
+            success: false,
+            applied: { created: 0, updated: 0, deleted: 0 },
+            code: error.code,
+            message: error.message,
+            errors: [],
+            details: error.details,
+        });
+    }
+    // eslint-disable-next-line no-console
+    console.error(`Unexpected error in bulk ${entity} mutation:`, error);
+    return res.status(500).json({
+        success: false,
+        applied: { created: 0, updated: 0, deleted: 0 },
+        code: 'INTERNAL_ERROR',
+        message: `An error occurred while processing the bulk ${entity} request`,
+        errors: [],
+    });
 }

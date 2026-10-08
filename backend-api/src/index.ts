@@ -37,6 +37,7 @@ import { SyncService } from './services/sync.service';
 import { GeocodingService } from './services/geocoding.service';
 import { GeographicAuthorizationService } from './services/geographic-authorization.service';
 import { PIIRedactionService } from './services/pii-redaction.service';
+import { BulkMutationService } from './services/bulk-mutation.service';
 import { AuthMiddleware } from './middleware/auth.middleware';
 import { AuthorizationMiddleware } from './middleware/authorization.middleware';
 import { ErrorHandlerMiddleware } from './middleware/error-handler.middleware';
@@ -138,6 +139,7 @@ const analyticsService = new AnalyticsService(prisma, geographicAreaRepository, 
 const mapDataService = new MapDataService(prisma, geographicAuthorizationService);
 const syncService = new SyncService(prisma);
 const geocodingService = new GeocodingService();
+const bulkMutationService = new BulkMutationService(prisma, auditLogRepository);
 
 // Initialize middleware
 const authMiddleware = new AuthMiddleware(authService, userRepository);
@@ -171,7 +173,8 @@ const participantRoutes = new ParticipantRoutes(
   participantService,
   authMiddleware,
   authorizationMiddleware,
-  auditLoggingMiddleware
+  auditLoggingMiddleware,
+  bulkMutationService
 );
 const geographicAreaRoutes = new GeographicAreaRoutes(
   geographicAreaService,
@@ -179,8 +182,8 @@ const geographicAreaRoutes = new GeographicAreaRoutes(
   authorizationMiddleware,
   auditLoggingMiddleware
 );
-const venueRoutes = new VenueRoutes(venueService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
-const activityRoutes = new ActivityRoutes(activityService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware);
+const venueRoutes = new VenueRoutes(venueService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware, bulkMutationService);
+const activityRoutes = new ActivityRoutes(activityService, authMiddleware, authorizationMiddleware, auditLoggingMiddleware, bulkMutationService);
 const assignmentRoutes = new AssignmentRoutes(
   assignmentService,
   authMiddleware,

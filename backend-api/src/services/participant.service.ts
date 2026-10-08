@@ -13,6 +13,16 @@ import { buildWhereClause, buildSelectClause, getValidFieldNames } from '../util
 import { transformParticipantResponses, transformParticipantResponse } from '../utils/participant.utils';
 import { GeographicFilteringService } from './geographic-filtering.service';
 import { calculateAgeCohort, buildAgeCohortFilter, AgeCohort } from '../utils/age-cohort.utils';
+import {
+    BulkEntityAdapter,
+    BulkMutationService,
+} from './bulk-mutation.service';
+import {
+    BulkMutationRequest,
+    BulkMutationResponse,
+} from '../types/bulk-mutation.types';
+import { AuthorizationContext } from '../utils/auth.utils';
+import { BULK_MUTATION_MAX_CHANGES } from '../utils/validation.schemas';
 
 export interface CreateParticipantInput {
     name: string;
@@ -955,4 +965,191 @@ export class ParticipantService {
 
         return {};
     }
+
+    /**
+     * Bulk-editing entry point for Participants. See bulk-mutation.service.ts.
+     *
+     * Participant geographic authorization is derived from the participant's
+     * most-recent address-history entry (same as `getParticipantById`). Bulk
+     * create has no venue association, so there is no geo-auth gate on create
+     * - matching the single-record create behaviour.
+     */
+    async bulkMutate(
+        req: BulkMutationRequest<ParticipantBulkCreateData, ParticipantBulkUpdateData>,
+        authCtx: AuthorizationContext,
+        bulkService: BulkMutationService
+    ): Promise<BulkMutationResponse> {
+        const adapter: BulkEntityAdapter<ParticipantBulkCreateData, ParticipantBulkUpdateData> = {
+            entityType: 'PARTICIPANT',
+            maxChanges: BULK_MUTATION_MAX_CHANGES,
+
+            validateCreate: async (tx, data, _auth) => {
+                if (!data.name || data.name.trim().length === 0) {
+                    throw new AppError('VALIDATION_ERROR', 'Participant name is required', 422);
+                }
+                if (data.email) {
+                    const existing = await tx.participant.findUnique({
+                        where: { email: data.email },
+                        select: { id: true },
+                    });
+                    if (existing) {
+                        throw new AppError(
+                            'DUPLICATE_EMAIL',
+                            'Participant with this email already exists',
+                            422
+                        );
+                    }
+                }
+                if (data.dateOfBirth && new Date(data.dateOfBirth) >= new Date()) {
+                    throw new AppError('VALIDATION_ERROR', 'Date of birth must be in the past', 422);
+                }
+            },
+
+            validateUpdate: async (tx, id, _expectedVersion, data, auth) => {
+                const existing = await tx.participant.findUnique({
+                    where: { id },
+                    select: { id: true, email: true, version: true },
+                });
+                if (!existing) {
+                    throw new AppError('NOT_FOUND', `Participant ${id} not found`, 422);
+                }
+                await this.assertParticipantGeoAccess(tx, id, auth, 'BULK_UPDATE');
+
+                if (data.email && data.email !== existing.email) {
+                    const duplicate = await tx.participant.findUnique({
+                        where: { email: data.email },
+                        select: { id: true },
+                    });
+                    if (duplicate && duplicate.id !== id) {
+                        throw new AppError(
+                            'DUPLICATE_EMAIL',
+                            'Participant with this email already exists',
+                            422
+                        );
+                    }
+                }
+                if (data.dateOfBirth && new Date(data.dateOfBirth) >= new Date()) {
+                    throw new AppError('VALIDATION_ERROR', 'Date of birth must be in the past', 422);
+                }
+            },
+
+            validateDelete: async (tx, id, _expectedVersion, auth) => {
+                const existing = await tx.participant.findUnique({
+                    where: { id },
+                    select: { id: true },
+                });
+                if (!existing) {
+                    throw new AppError('NOT_FOUND', `Participant ${id} not found`, 422);
+                }
+                await this.assertParticipantGeoAccess(tx, id, auth, 'BULK_DELETE');
+            },
+
+            create: async (tx, data) => {
+                return tx.participant.create({
+                    data: {
+                        name: data.name,
+                        email: data.email ?? null,
+                        phone: data.phone ?? null,
+                        nickname: data.nickname ?? null,
+                        notes: data.notes ?? null,
+                        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+                        dateOfRegistration: data.dateOfRegistration ? new Date(data.dateOfRegistration) : null,
+                    },
+                });
+            },
+
+            updateWithVersion: async (tx, id, expectedVersion, data) => {
+                const updateData: Record<string, unknown> = {};
+                if ('name' in data) updateData.name = data.name;
+                if ('email' in data) updateData.email = data.email;
+                if ('phone' in data) updateData.phone = data.phone;
+                if ('nickname' in data) updateData.nickname = data.nickname;
+                if ('notes' in data) updateData.notes = data.notes;
+                if ('dateOfBirth' in data) {
+                    updateData.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+                }
+                if ('dateOfRegistration' in data) {
+                    updateData.dateOfRegistration = data.dateOfRegistration ? new Date(data.dateOfRegistration) : null;
+                }
+                return this.participantRepository.updateWithVersion(tx, id, expectedVersion, updateData);
+            },
+
+            delete: async (tx, id) => {
+                await tx.participant.delete({ where: { id } });
+            },
+        };
+
+        return bulkService.bulkMutate(req, authCtx, adapter);
+    }
+
+    /**
+     * Mirror getParticipantById's geo-auth logic inside a transaction. Finds
+     * the participant's most-recent address-history entry; if there is a
+     * current venue, the venue's geographicAreaId must be in the user's
+     * authorized set when restrictions apply.
+     */
+    private async assertParticipantGeoAccess(
+        tx: Parameters<Parameters<PrismaClient['$transaction']>[0]>[0],
+        participantId: string,
+        auth: AuthorizationContext,
+        action: string
+    ): Promise<void> {
+        if (!auth.hasGeographicRestrictions) return;
+        if (auth.userRole === 'ADMINISTRATOR') return;
+
+        const currentAddress = await tx.participantAddressHistory.findFirst({
+            where: { participantId },
+            orderBy: { effectiveFrom: 'desc' },
+            include: { venue: { select: { geographicAreaId: true } } },
+        });
+
+        if (!currentAddress || !currentAddress.venue) {
+            // No venue association yet: single-record flow allows access, so
+            // we do too (matches getParticipantById comment "If no address
+            // history, allow access").
+            return;
+        }
+
+        if (!auth.authorizedAreaIds.includes(currentAddress.venue.geographicAreaId)) {
+            try {
+                await this.geographicAuthorizationService.logAuthorizationDenial(
+                    auth.userId,
+                    'PARTICIPANT',
+                    participantId,
+                    action
+                );
+            } catch (err) {
+                // eslint-disable-next-line no-console
+                console.error('Failed to log geographic authorization denial:', err);
+            }
+            throw new AppError(
+                'GEOGRAPHIC_AUTHORIZATION_DENIED',
+                'You do not have permission to modify this participant',
+                403
+            );
+        }
+    }
+}
+
+/**
+ * Bulk payload shapes for Participants (spec section 2.7 editable fields).
+ */
+export interface ParticipantBulkCreateData {
+    name: string;
+    email?: string;
+    phone?: string;
+    nickname?: string;
+    dateOfBirth?: string;
+    dateOfRegistration?: string;
+    notes?: string;
+}
+
+export interface ParticipantBulkUpdateData {
+    name?: string;
+    email?: string | null;
+    phone?: string | null;
+    nickname?: string | null;
+    dateOfBirth?: string | null;
+    dateOfRegistration?: string | null;
+    notes?: string | null;
 }
