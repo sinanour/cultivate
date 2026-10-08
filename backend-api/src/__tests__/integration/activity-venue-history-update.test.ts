@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../../index';
 import { PrismaClient } from '@prisma/client';
+import { TestHelpers } from '../utils';
 
 const prisma = new PrismaClient();
 
@@ -15,15 +16,10 @@ describe('Activity Venue History Update Integration Tests', () => {
     const testSuffix = Date.now();
 
     beforeAll(async () => {
-        // Login as admin to get token
-        const loginResponse = await request(app)
-            .post('/api/v1/auth/login')
-            .send({
-                email: process.env.SRP_ROOT_ADMIN_EMAIL,
-                password: process.env.SRP_ROOT_ADMIN_PASSWORD,
-            });
-
-        editorToken = loginResponse.body.data.accessToken;
+        // Create a dedicated admin user and mint a token (self-contained; no
+        // dependency on a seeded root admin or SRP_ROOT_ADMIN_* env vars).
+        const auth = await TestHelpers.createAuthenticatedUser(prisma, 'ADMINISTRATOR', testSuffix);
+        editorToken = auth.accessToken;
 
         // Create geographic area
         geographicAreaId = (await prisma.geographicArea.create({

@@ -14,15 +14,10 @@ describe('Activity Notes Field', () => {
     let activityId: string;
 
     beforeAll(async () => {
-        // Create test user
-        const userResponse = await request(app)
-            .post('/api/v1/auth/login')
-            .send({
-                email: process.env.SRP_ROOT_ADMIN_EMAIL,
-                password: process.env.SRP_ROOT_ADMIN_PASSWORD,
-            });
-
-        authToken = userResponse.body.data.accessToken;
+        // Create a dedicated admin user and mint a token (self-contained; no
+        // dependency on a seeded root admin or SRP_ROOT_ADMIN_* env vars).
+        const auth = await TestHelpers.createAuthenticatedUser(prisma, 'ADMINISTRATOR', testSuffix);
+        authToken = auth.accessToken;
 
         // Create test geographic area
         const geoArea = await prisma.geographicArea.create({

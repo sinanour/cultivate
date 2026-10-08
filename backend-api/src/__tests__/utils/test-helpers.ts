@@ -1,4 +1,6 @@
 import { PrismaClient, UserRole, User } from '@prisma/client';
+import { AuthService } from '../../services/auth.service';
+import { UserRepository } from '../../repositories/user.repository';
 
 /**
  * Test helper utilities for backend API tests
@@ -72,6 +74,56 @@ export class TestHelpers {
                 role,
             },
         });
+    }
+
+    /**
+     * Create a user and return it together with a valid access token for HTTP
+     * (supertest) requests.
+     *
+     * This is self-contained: it provisions its own user and mints a JWT with
+     * the real AuthService, so the suite does NOT depend on a pre-seeded root
+     * administrator or on SRP_ROOT_ADMIN_* environment variables being set.
+     * Use this for integration tests that drive the API over HTTP and need a
+     * bearer token.
+     *
+     * @param prisma - Prisma client instance
+     * @param role - Role for the created user (default: ADMINISTRATOR, which has
+     *               no geographic restrictions)
+     * @param uniqueSuffix - Optional unique suffix for the email
+     * @returns The created user and a signed access token
+     *
+     * @example
+     * const { user, accessToken } =
+     *   await TestHelpers.createAuthenticatedUser(prisma, 'ADMINISTRATOR');
+     * await request(app).get('/api/v1/activities')
+     *   .set('Authorization', `Bearer ${accessToken}`);
+     */
+    static async createAuthenticatedUser(
+        prisma: PrismaClient,
+        role: UserRole = 'ADMINISTRATOR',
+        uniqueSuffix?: string | number
+    ): Promise<{ user: User; accessToken: string }> {
+        const suffix = uniqueSuffix || `${Date.now()}-${++this.emailCounter}`;
+        const user = await prisma.user.create({
+            data: {
+                email: `test-auth-${suffix}@example.com`,
+                passwordHash: 'hashed',
+                role,
+                displayName: 'Test Authenticated User',
+            },
+        });
+
+        const authService = new AuthService(new UserRepository(prisma));
+        const accessToken = authService.generateAccessToken({
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            authorizedAreaIds: [],
+            readOnlyAreaIds: [],
+            hasGeographicRestrictions: false,
+        });
+
+        return { user, accessToken };
     }
     /**
      * Create a standard geographic hierarchy for testing

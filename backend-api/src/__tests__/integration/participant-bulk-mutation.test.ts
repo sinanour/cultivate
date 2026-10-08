@@ -10,7 +10,7 @@
  *
  * Follows the project isolation rules.
  */
-import { PrismaClient, AuthorizationRuleType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { ParticipantService } from '../../services/participant.service';
 import { ParticipantRepository } from '../../repositories/participant.repository';
 import { ParticipantAddressHistoryRepository } from '../../repositories/participant-address-history.repository';
