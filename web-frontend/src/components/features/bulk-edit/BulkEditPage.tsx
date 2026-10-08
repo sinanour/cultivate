@@ -28,7 +28,7 @@ import type {
 export interface BulkEditPageProps<T> {
     config: BulkEntityConfig<T>;
     /** Fetches a paginated page of records for this entity. */
-    fetchPage: (args: { page: number; limit: number }) => Promise<{
+    fetchPage: (args: { page: number; limit: number; geographicAreaId?: string | null }) => Promise<{
         data: T[];
         pagination: { page: number; limit: number; total: number; totalPages: number };
     }>;
@@ -36,6 +36,16 @@ export interface BulkEditPageProps<T> {
     listQueryKeyPrefix: string;
     /** How many rows per page in the bulk editor. Defaults to 50. */
     pageSize?: number;
+    /**
+     * The globally-selected geographic area filter. The bulk editor MUST
+     * respect this exactly like the list views do: it scopes the fetched rows
+     * to the active area (an unset value means "all authorized areas"). It is
+     * also part of the query key so changing the filter refetches, and a
+     * change discards the staged change set because staged edits are keyed to
+     * rows that may no longer be in scope (a staged edit against a now-hidden
+     * row must never be silently applied).
+     */
+    geographicAreaId?: string | null;
 }
 
 /**
@@ -54,6 +64,7 @@ export function BulkEditPage<T extends { id: string; version: number }>({
     fetchPage,
     listQueryKeyPrefix,
     pageSize = 50,
+    geographicAreaId = null,
 }: BulkEditPageProps<T>) {
     const navigate = useNavigate();
     const { canEdit } = usePermissions();
@@ -70,13 +81,36 @@ export function BulkEditPage<T extends { id: string; version: number }>({
         isLoading,
         error,
     } = useQuery({
-        queryKey: [listQueryKeyPrefix, 'bulk-page', currentPage, pageSize],
-        queryFn: () => fetchPage({ page: currentPage, limit: pageSize }),
+        queryKey: [listQueryKeyPrefix, 'bulk-page', currentPage, pageSize, geographicAreaId ?? null],
+        queryFn: () => fetchPage({ page: currentPage, limit: pageSize, geographicAreaId }),
         staleTime: 10000,
     });
 
     const pageRows = useMemo(() => data?.data ?? [], [data]);
     const totalPages = data?.pagination.totalPages ?? 0;
+
+    // When the global geographic filter changes, the set of visible rows
+    // changes underneath us. Reset to page 1 and discard any staged change
+    // set: staged edits are keyed to rows that may no longer be in scope, and
+    // silently applying an edit to a now-hidden (out-of-boundary) row would
+    // re-introduce the very authorization-boundary violation this scoping
+    // fixes. We use React's "adjust state while rendering on a changed prop"
+    // pattern (https://react.dev/reference/react/useState#storing-information-from-previous-renders)
+    // rather than an effect, so the reset happens before paint without an
+    // extra render and without a setState-in-effect.
+    const geoKey = geographicAreaId ?? null;
+    const [prevGeoKey, setPrevGeoKey] = useState<string | null>(geoKey);
+    if (prevGeoKey !== geoKey) {
+        setPrevGeoKey(geoKey);
+        setCurrentPage(1);
+        if (staged.isDirty) {
+            staged.discardAll();
+            setApplyError(null);
+            setSuccessMessage(
+                'The geographic area filter changed, so pending staged changes were discarded.'
+            );
+        }
+    }
 
     // Warn before unload when there is a dirty staged change set.
     useEffect(() => {
@@ -227,7 +261,12 @@ export function BulkEditPage<T extends { id: string; version: number }>({
             header={
                 <Header
                     variant="h1"
-                    description={`Bulk edit ${config.entityName.toLowerCase()}. Changes are staged until you apply them.`}
+                    description={
+                        `Bulk edit ${config.entityName.toLowerCase()}. Changes are staged until you apply them.` +
+                        (geographicAreaId
+                            ? ' Scoped to the selected geographic area.'
+                            : '')
+                    }
                     actions={
                         <BulkEditToolbar
                             summary={staged.summary}

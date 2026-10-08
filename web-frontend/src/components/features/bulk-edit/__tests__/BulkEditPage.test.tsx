@@ -262,3 +262,113 @@ describe('BulkEditPage - request serialization (frontend/backend contract)', () 
         expect(dob).toMatch(/T\d{2}:\d{2}:\d{2}/);
     });
 });
+
+describe('BulkEditPage - respects the global geographic filter (authorization boundary)', () => {
+    beforeEach(() => {
+        vi.mocked(BulkService.submit).mockReset();
+    });
+
+    it('passes the selected geographic area to fetchPage', async () => {
+        const fetchPage = vi.fn().mockResolvedValue({
+            data: sampleVenues,
+            pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+        });
+
+        render(
+            <Wrapper>
+                <BulkEditPage<Venue>
+                    config={venueBulkConfig}
+                    listQueryKeyPrefix="venues"
+                    fetchPage={fetchPage}
+                    geographicAreaId="area-99"
+                />
+            </Wrapper>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bulk-edit-table')).toBeInTheDocument();
+        });
+
+        expect(fetchPage).toHaveBeenCalledWith(
+            expect.objectContaining({ geographicAreaId: 'area-99' })
+        );
+    });
+
+    it('refetches with the new area when the filter changes (filter is in the query key)', async () => {
+        const fetchPage = vi.fn().mockResolvedValue({
+            data: sampleVenues,
+            pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+        });
+
+        // A single QueryClient must survive the rerender so caching is realistic.
+        const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+        const ui = (geo: string | null) => (
+            <QueryClientProvider client={queryClient}>
+                <BrowserRouter>
+                    <BulkEditPage<Venue>
+                        config={venueBulkConfig}
+                        listQueryKeyPrefix="venues"
+                        fetchPage={fetchPage}
+                        geographicAreaId={geo}
+                    />
+                </BrowserRouter>
+            </QueryClientProvider>
+        );
+
+        const { rerender } = render(ui('area-1'));
+        await waitFor(() => {
+            expect(fetchPage).toHaveBeenCalledWith(
+                expect.objectContaining({ geographicAreaId: 'area-1' })
+            );
+        });
+
+        rerender(ui('area-2'));
+        await waitFor(() => {
+            expect(fetchPage).toHaveBeenCalledWith(
+                expect.objectContaining({ geographicAreaId: 'area-2' })
+            );
+        });
+    });
+
+    it('discards staged changes when the geographic filter changes', async () => {
+        const user = userEvent.setup();
+        const fetchPage = vi.fn().mockResolvedValue({
+            data: sampleVenues,
+            pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+        });
+
+        const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+        const ui = (geo: string | null) => (
+            <QueryClientProvider client={queryClient}>
+                <BrowserRouter>
+                    <BulkEditPage<Venue>
+                        config={venueBulkConfig}
+                        listQueryKeyPrefix="venues"
+                        fetchPage={fetchPage}
+                        geographicAreaId={geo}
+                    />
+                </BrowserRouter>
+            </QueryClientProvider>
+        );
+
+        const { rerender } = render(ui('area-1'));
+        await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeInTheDocument());
+
+        // Stage an edit against the in-scope row.
+        const nameInput = screen.getByDisplayValue('Alpha');
+        await user.clear(nameInput);
+        await user.type(nameInput, 'Beta');
+        await waitFor(() => {
+            expect(screen.getByTestId('bulk-edit-summary').textContent).toContain('1 updates');
+        });
+
+        // Change the geographic filter - the staged edit (keyed to a row that
+        // may be out of the new scope) must be discarded, not carried over.
+        rerender(ui('area-2'));
+        await waitFor(() => {
+            expect(screen.getByTestId('bulk-edit-summary').textContent).toContain('0 updates');
+        });
+        // And no POST was ever made (nothing applied).
+        expect(BulkService.submit).not.toHaveBeenCalled();
+    });
+});
