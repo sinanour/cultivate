@@ -1365,6 +1365,133 @@ POST /geographic-areas/batch-ancestors
 
 **Note**: The `geographicAreaId` filter parameter is not currently implemented for this endpoint.
 
+## Bulk Editing
+
+The bulk editing endpoints apply a staged change set (creates + updates +
+deletes) for a single entity type atomically in one database transaction.
+Nothing is persisted until the entire change set validates and applies
+successfully; on any partial failure the entire request rolls back and no
+record is modified.
+
+Three endpoints are exposed, one per supported entity:
+
+- `POST /venues/bulk`
+- `POST /participants/bulk`
+- `POST /activities/bulk`
+
+All three share the same request and response envelope. All three require
+`ADMINISTRATOR` or `EDITOR` role; a `READ_ONLY` or `PII_RESTRICTED` caller
+receives `403 FORBIDDEN`.
+
+### Editable fields
+
+Only the following fields may appear in a bulk create or update:
+
+| Entity      | Editable fields                                                            |
+|-------------|----------------------------------------------------------------------------|
+| Venue       | `name`, `address`, `geographicAreaId`, `latitude`, `longitude`, `venueType` |
+| Participant | `name`, `email`, `phone`, `nickname`, `dateOfBirth`, `dateOfRegistration`, `notes` |
+| Activity    | `name`, `activityTypeId`, `startDate`, `endDate`, `status`, `additionalParticipantCount`, `notes` |
+
+System-managed fields (`id`, `version`, `createdAt`, `updatedAt`) and
+relationship fields outside this subset (e.g. Participant `homeVenueId` or
+Activity `venueIds`) are rejected with `VALIDATION_ERROR`.
+
+### Request body
+
+```jsonc
+{
+  "creates": [
+    {
+      // Client-generated correlation id. Returned verbatim in results/errors.
+      "clientKey": "new-abc",
+      "data": { /* entity create fields */ }
+    }
+  ],
+  "updates": [
+    {
+      "id": "uuid",
+      "version": 3,              // expected version for optimistic concurrency
+      "data": { /* only the changed fields */ }
+    }
+  ],
+  "deletes": [
+    { "id": "uuid", "version": 5 }
+  ]
+}
+```
+
+Constraints:
+
+- Any of the three arrays may be empty, but the overall request may not
+  exceed **500 total changes** (`creates.length + updates.length + deletes.length`).
+  Over-cap requests return `400 BULK_TOO_LARGE` before any DB work.
+- `updates[].version` and `deletes[].version` are REQUIRED and are compared
+  against the stored `version` for optimistic concurrency.
+
+### Success response (`200 OK`)
+
+```jsonc
+{
+  "success": true,
+  "applied": { "created": 1, "updated": 2, "deleted": 1 },
+  "results": {
+    "creates": [
+      { "ref": { "clientKey": "new-abc" }, "status": "created", "record": { /* ... */ } }
+    ],
+    "updates": [
+      { "ref": { "id": "uuid" }, "status": "updated", "record": { /* ... */ } }
+    ],
+    "deletes": [
+      { "ref": { "id": "uuid" }, "status": "deleted" }
+    ]
+  }
+}
+```
+
+Each `record` has the same shape as the corresponding single-record
+`POST`/`PUT` response for that entity.
+
+### Failure response (no changes applied)
+
+On any validation, version, authorization, or persistence failure the entire
+transaction rolls back and the response reports every failing row via its
+stable `ref` (either `id` for existing rows or `clientKey` for staged creates).
+
+```jsonc
+{
+  "success": false,
+  "applied": { "created": 0, "updated": 0, "deleted": 0 },
+  "code": "BULK_VALIDATION_FAILED",
+  "message": "No changes were applied. 2 of 4 changes failed validation.",
+  "errors": [
+    { "ref": { "id": "uuid" },         "code": "VERSION_CONFLICT",              "message": "..." },
+    { "ref": { "clientKey": "new-x" }, "code": "GEOGRAPHIC_AUTHORIZATION_DENIED", "message": "..." }
+  ]
+}
+```
+
+Status codes:
+
+| Status | `code`                      | When                                                    |
+|--------|-----------------------------|---------------------------------------------------------|
+| 200    | n/a                         | Every change applied successfully.                      |
+| 400    | `VALIDATION_ERROR`          | Request body malformed (Zod schema).                    |
+| 400    | `BULK_TOO_LARGE`            | More than 500 total changes.                            |
+| 403    | `FORBIDDEN`                 | Caller is not an Editor or Administrator.               |
+| 409    | `BULK_VERSION_CONFLICT`     | At least one update/delete had a stale `version`.       |
+| 422    | `BULK_VALIDATION_FAILED`    | Validation, reference-integrity, or field-rule failure. |
+| 422    | `BULK_AUTHORIZATION_DENIED` | Geographic authorization denied for at least one row.   |
+| 500    | `INTERNAL_ERROR`            | Unexpected failure (transaction already rolled back).   |
+
+### Atomicity and audit
+
+The server applies every change inside a single `prisma.$transaction`. On any
+failure the transaction rolls back, no audit log entry is written, and the
+response's `applied` counts are all zero. On success a per-applied-change
+audit entry is written with `actionType` of `BULK_CREATE_<ENTITY>`,
+`BULK_UPDATE_<ENTITY>`, or `BULK_DELETE_<ENTITY>`.
+
 ## Synchronization
 
 ### Batch Sync
