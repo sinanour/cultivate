@@ -822,6 +822,14 @@ export function ActivityList() {
                       >
                         Export CSV
                       </ResponsiveButton>
+                      <ResponsiveButton
+                        key="bulk-edit-btn"
+                        iconName="edit"
+                        onClick={() => navigate('/activities/bulk-edit')}
+                        mobileAriaLabel="Open activities bulk edit"
+                      >
+                        Bulk Edit
+                      </ResponsiveButton>
                     </React.Fragment>
                   )}
                   {canCreate() && (

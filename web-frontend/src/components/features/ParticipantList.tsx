@@ -644,6 +644,13 @@ export function ParticipantList() {
                       >
                         Export CSV
                       </ResponsiveButton>
+                      <ResponsiveButton
+                        iconName="edit"
+                        onClick={() => navigate('/participants/bulk-edit')}
+                        mobileAriaLabel="Open participants bulk edit"
+                      >
+                        Bulk Edit
+                      </ResponsiveButton>
                     </React.Fragment>
                   )}
                   {canCreate() && (

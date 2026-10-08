@@ -30,6 +30,9 @@ const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const ServiceWorkerDebugPage = lazy(() => import('../pages/ServiceWorkerDebugPage'));
 const ReconciliationPage = lazy(() => import('../pages/merge/ReconciliationPage'));
+const VenueBulkEditPage = lazy(() => import('../pages/VenueBulkEditPage'));
+const ParticipantBulkEditPage = lazy(() => import('../pages/ParticipantBulkEditPage'));
+const ActivityBulkEditPage = lazy(() => import('../pages/ActivityBulkEditPage'));
 
 export const router = createBrowserRouter([
   {
@@ -67,6 +70,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'participants/bulk-edit',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR']}>
+            <ParticipantBulkEditPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'participants/new',
         element: (
           <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
@@ -99,6 +110,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'activities/bulk-edit',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR']}>
+            <ActivityBulkEditPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'activities/new',
         element: (
           <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
@@ -127,6 +146,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR', 'READ_ONLY']}>
             <VenuesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'venues/bulk-edit',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'EDITOR']}>
+            <VenueBulkEditPage />
           </ProtectedRoute>
         ),
       },

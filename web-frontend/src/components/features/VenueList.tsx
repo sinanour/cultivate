@@ -494,6 +494,13 @@ export function VenueList() {
                     >
                       Export CSV
                     </ResponsiveButton>
+                    <ResponsiveButton
+                      iconName="edit"
+                      onClick={() => navigate('/venues/bulk-edit')}
+                      mobileAriaLabel="Open venues bulk edit"
+                    >
+                      Bulk Edit
+                    </ResponsiveButton>
                   </React.Fragment>
                 )}
                 {canCreate() && (
