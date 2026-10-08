@@ -89,6 +89,10 @@ export const activityBulkConfig: BulkEntityConfig<Activity> = {
                 { value: 'COMPLETED', label: 'Completed' },
                 { value: 'CANCELLED', label: 'Cancelled' },
             ],
+            // status is `enum().optional()` on the backend (not nullable): a
+            // cleared Select stages `null`, which the schema rejects, so omit
+            // the field entirely when empty instead of sending `null`.
+            serialize: (v) => (v === null || v === undefined || v === '' ? undefined : v),
         },
         {
             field: 'additionalParticipantCount',

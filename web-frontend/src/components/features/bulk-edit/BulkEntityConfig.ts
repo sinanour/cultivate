@@ -64,6 +64,20 @@ export interface BulkColumnDef<T> {
     required?: boolean;
     /** Minimum column width in CloudScape Table (defaults to 160). */
     minWidth?: number;
+    /**
+     * Optional transform applied to a field value when the staged change set
+     * is serialized into a POST /{entity}/bulk request (see
+     * {@link serializeBulkValue}). The editors keep display-friendly values in
+     * the staged state (e.g. a CloudScape DatePicker stores `YYYY-MM-DD`, a
+     * cleared text Input stores `''`); this hook converts them to exactly what
+     * the backend Zod schema expects on the wire (e.g. a full ISO 8601
+     * date-time, or `null` for a cleared optional field).
+     *
+     * When omitted, a type-based default is applied: `date` columns are
+     * converted to a full ISO 8601 string, and an empty string is converted to
+     * `null`. Return `undefined` to omit the field from the request entirely.
+     */
+    serialize?: (value: unknown) => unknown;
 }
 
 export interface BulkEntityConfig<T> {
@@ -117,4 +131,89 @@ export interface BulkTableRow<T> {
     tempKey?: TempKey;
     version?: number;
     data: Partial<T>;
+}
+
+/**
+ * Convert a date-only (`YYYY-MM-DD`) or already-ISO string to a full ISO 8601
+ * date-time string, matching the convention the single-record forms use
+ * (`new Date(value).toISOString()`). The backend bulk schemas validate every
+ * date field with Zod `z.string().datetime()`, which rejects a bare
+ * `YYYY-MM-DD`, so this normalization is required before sending.
+ *
+ * `null`/`undefined`/`''` pass through as `null` (a cleared optional date).
+ * An unparseable value is returned unchanged so the backend produces its
+ * normal validation error rather than this helper masking it.
+ */
+export function toIsoDateTime(value: unknown): string | null {
+    if (value === null || value === undefined || value === '') return null;
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? (value as unknown as string) : value.toISOString();
+    }
+    if (typeof value === 'string') {
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? value : d.toISOString();
+    }
+    return value as string;
+}
+
+/**
+ * Serialize a single staged field value to its wire representation, honoring
+ * the column's explicit `serialize` hook first and otherwise applying a
+ * type-based default:
+ *   - `date` columns  -> full ISO 8601 date-time (or `null`/omitted when empty)
+ *   - everything else -> an empty string becomes `null` (update) or is
+ *     omitted (create)
+ *
+ * `mode` reflects the backend's two schema shapes: create fields are
+ * `optional()` and generally NOT nullable (so a cleared optional field must be
+ * omitted), while update fields are `union([..., null])` (so a cleared field
+ * is sent as `null` to null it out). Return `undefined` to omit the field.
+ *
+ * Keeping this at the serialization boundary means the staged state and the
+ * editors continue to hold display-friendly values; only the outbound request
+ * is normalized to what the backend schema expects.
+ */
+export function serializeBulkValue<T>(
+    col: BulkColumnDef<T>,
+    value: unknown,
+    mode: 'create' | 'update'
+): unknown {
+    if (col.serialize) return col.serialize(value);
+    const isEmpty = value === '' || value === null || value === undefined;
+    if (col.type === 'date') {
+        if (isEmpty) return mode === 'create' ? undefined : null;
+        return toIsoDateTime(value);
+    }
+    if (isEmpty) return mode === 'create' ? undefined : value === '' ? null : value;
+    return value;
+}
+
+/**
+ * Serialize a partial row (a staged create's `values` or an update's
+ * `changes`) into the shape the backend bulk endpoint expects. Only fields
+ * present on the input are emitted; a field whose serialized value is
+ * `undefined` is dropped so it is not sent at all. `mode` selects create vs
+ * update null/omit semantics (see {@link serializeBulkValue}).
+ */
+export function serializeBulkRow<T>(
+    columns: BulkColumnDef<T>[],
+    row: Partial<T>,
+    mode: 'create' | 'update'
+): Record<string, unknown> {
+    const byField = new Map<string, BulkColumnDef<T>>(
+        columns.map((c) => [c.field as string, c])
+    );
+    const out: Record<string, unknown> = {};
+    for (const [field, value] of Object.entries(row)) {
+        const col = byField.get(field);
+        const serialized = col
+            ? serializeBulkValue(col, value, mode)
+            : value === ''
+            ? mode === 'create'
+                ? undefined
+                : null
+            : value;
+        if (serialized !== undefined) out[field] = serialized;
+    }
+    return out;
 }

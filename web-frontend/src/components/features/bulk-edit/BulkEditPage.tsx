@@ -19,6 +19,7 @@ import { ConfirmationDialog } from '../../common/ConfirmationDialog';
 import { BulkEditTable, type BulkEditTableRow } from './BulkEditTable';
 import { BulkEditToolbar } from './BulkEditToolbar';
 import type { BulkEntityConfig } from './BulkEntityConfig';
+import { serializeBulkRow } from './BulkEntityConfig';
 import type {
     BulkMutationFailureResponse,
     BulkMutationSuccessResponse,
@@ -176,17 +177,17 @@ export function BulkEditPage<T extends { id: string; version: number }>({
         const request = {
             creates: snapshot.creates.map((c) => ({
                 clientKey: c.tempKey,
-                data: c.values as Partial<T>,
+                data: serializeBulkRow(config.columns, c.values, 'create') as Partial<T>,
             })),
             updates: snapshot.updates.map((u) => ({
                 id: u.id,
                 version: u.version,
-                data: u.changes as Partial<T>,
+                data: serializeBulkRow(config.columns, u.changes, 'update') as Partial<T>,
             })),
             deletes: snapshot.deletes.map((d) => ({ id: d.id, version: d.version })),
         };
         mutation.mutate(request);
-    }, [staged, mutation]);
+    }, [staged, mutation, config]);
 
     const onEditField = useCallback(
         (row: BulkEditTableRow<T>, field: keyof T, nextValue: unknown) => {

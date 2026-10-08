@@ -7,8 +7,9 @@ import type { ReactNode } from 'react';
 
 import { BulkEditPage } from '../BulkEditPage';
 import { venueBulkConfig } from '../configs/venueBulkConfig';
+import { participantBulkConfig } from '../configs/participantBulkConfig';
 import { BulkService } from '../../../../services/api/bulk.service';
-import type { Venue } from '../../../../types';
+import type { Venue, Participant } from '../../../../types';
 
 /**
  * BulkEditPage behavioural tests (requirement 14.6).
@@ -195,3 +196,69 @@ describe('BulkEditPage - two-step persistence', () => {
 
 // Guard against unused imports in some environments
 void act;
+
+const sampleParticipants: Participant[] = [
+    {
+        id: 'p1',
+        name: 'Jordan',
+        dateOfBirth: '1990-05-20T00:00:00.000Z',
+        dateOfRegistration: null,
+        version: 3,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    } as unknown as Participant,
+];
+
+describe('BulkEditPage - request serialization (frontend/backend contract)', () => {
+    beforeEach(() => {
+        vi.mocked(BulkService.submit).mockReset();
+    });
+
+    it('sends dateOfBirth as a full ISO 8601 string, not a bare YYYY-MM-DD', async () => {
+        const user = userEvent.setup();
+        vi.mocked(BulkService.submit).mockResolvedValue({
+            success: true,
+            applied: { created: 0, updated: 1, deleted: 0 },
+            results: { creates: [], updates: [], deletes: [] },
+        });
+
+        const fetchPage = vi.fn().mockResolvedValue({
+            data: sampleParticipants,
+            pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+        });
+
+        render(
+            <Wrapper>
+                <BulkEditPage<Participant>
+                    config={participantBulkConfig}
+                    listQueryKeyPrefix="participants"
+                    fetchPage={fetchPage}
+                />
+            </Wrapper>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByDisplayValue('Jordan')).toBeInTheDocument();
+        });
+
+        // The DatePicker renders the stored value as date-only (YYYY/MM/DD).
+        const dobInput = screen.getByDisplayValue('1990/05/20');
+        await user.clear(dobInput);
+        await user.type(dobInput, '1991/06/21');
+
+        await user.click(screen.getByTestId('bulk-edit-apply'));
+        await user.click(screen.getByText('Apply'));
+
+        await waitFor(() => {
+            expect(BulkService.submit).toHaveBeenCalledTimes(1);
+        });
+
+        const [, request] = vi.mocked(BulkService.submit).mock.calls[0];
+        expect(request.updates).toHaveLength(1);
+        const dob = (request.updates[0].data as { dateOfBirth?: string }).dateOfBirth;
+        // Must be a full ISO 8601 date-time (what z.string().datetime() accepts),
+        // never a bare YYYY-MM-DD (the cause of the reported VALIDATION_ERROR).
+        expect(dob).toBe('1991-06-21T00:00:00.000Z');
+        expect(dob).toMatch(/T\d{2}:\d{2}:\d{2}/);
+    });
+});
