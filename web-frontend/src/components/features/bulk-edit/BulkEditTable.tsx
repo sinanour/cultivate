@@ -200,6 +200,7 @@ function renderCell<T>(
                     invalid={!!fieldError}
                     ariaLabel={col.header}
                     placeholder="YYYY/MM/DD"
+                    expandToViewport
                 />
             );
             break;
@@ -219,6 +220,7 @@ function renderCell<T>(
                     invalid={!!fieldError}
                     ariaLabel={col.header}
                     placeholder="Select"
+                    expandToViewport
                 />
             );
             break;

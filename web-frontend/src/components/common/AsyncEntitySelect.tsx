@@ -275,6 +275,7 @@ export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
             empty="No matches found"
             enteredTextLabel={(text) => `Use: "${text}"`}
             filteringType="manual"
+            expandToViewport
           />
         </div>
         {value && (
@@ -306,6 +307,7 @@ export const AsyncEntitySelect: React.FC<AsyncEntitySelectProps> = ({
       empty="No matches found"
       enteredTextLabel={(text) => `Use: "${text}"`}
       filteringType="manual"
+      expandToViewport
     />
   );
 };
