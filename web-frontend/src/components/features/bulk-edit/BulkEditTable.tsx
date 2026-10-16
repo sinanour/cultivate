@@ -8,6 +8,7 @@ import Box from '@cloudscape-design/components/box';
 import Badge from '@cloudscape-design/components/badge';
 import { AsyncEntitySelect } from '../../common/AsyncEntitySelect';
 import type { BulkColumnDef, BulkEntityConfig, BulkTableRow } from './BulkEntityConfig';
+import { defaultColumnWidth } from './BulkEntityConfig';
 import type { RecordKey, TempKey } from '../../../hooks/useStagedChangeSet';
 import { isTempKey } from '../../../hooks/useStagedChangeSet';
 
@@ -49,6 +50,7 @@ export function BulkEditTable<T>({
         const statusCol = {
             id: '_status',
             header: 'Status',
+            width: 120,
             minWidth: 110,
             cell: (row: BulkEditTableRow<T>) => renderStatusBadge(row),
         };
@@ -56,7 +58,8 @@ export function BulkEditTable<T>({
         const actionCol = {
             id: '_actions',
             header: 'Actions',
-            minWidth: 160,
+            width: 160,
+            minWidth: 140,
             cell: (row: BulkEditTableRow<T>) =>
                 renderRowActions(row, { onDeleteRow, onUndeleteRow, onRemoveCreate }),
         };
@@ -70,6 +73,7 @@ export function BulkEditTable<T>({
             loading={loading}
             loadingText={`Loading ${config.entityName.toLowerCase()}`}
             wrapLines={false}
+            resizableColumns
             trackBy={(row) => row.key as string}
             empty={
                 <Box textAlign="center" color="inherit" padding="l">
@@ -137,10 +141,15 @@ function makeColumnDef<T>(
     col: BulkColumnDef<T>,
     onEditField: (row: BulkEditTableRow<T>, field: keyof T, nextValue: unknown) => void
 ) {
+    const width = col.width ?? defaultColumnWidth(col.type);
+    // Keep the minimum at least wide enough for the editor even if the user
+    // drags the column narrower; the date calendar popover is ~238px.
+    const minWidth = col.minWidth ?? (col.type === 'date' ? 180 : 140);
     return {
         id: col.field as string,
         header: col.header,
-        minWidth: col.minWidth ?? 160,
+        width,
+        minWidth,
         cell: (row: BulkEditTableRow<T>) => renderCell(col, row, onEditField),
     };
 }

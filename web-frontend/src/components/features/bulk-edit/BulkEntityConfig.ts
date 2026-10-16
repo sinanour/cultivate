@@ -12,6 +12,33 @@ import type { RecordKey, TempKey } from '../../../hooks/useStagedChangeSet';
 
 export type BulkFieldType = 'text' | 'number' | 'date' | 'enum' | 'reference';
 
+/**
+ * Starting width (px) for a column whose config does not set an explicit
+ * `width`. Chosen so each inline editor is usable without horizontal clipping:
+ *   - `date`      needs room for the `YYYY/MM/DD` input + calendar button, and
+ *                 the calendar popover is a fixed ~238px grid.
+ *   - `reference`/`enum` hold an Autosuggest/Select whose option text and clear
+ *                 button need breathing room.
+ *   - `number`    is short; `text` uses the generic default.
+ * With `resizableColumns` on the table these are only initial widths — the user
+ * can still drag to adjust per their data.
+ */
+export function defaultColumnWidth(type: BulkFieldType): number {
+    switch (type) {
+        case 'date':
+            return 200;
+        case 'reference':
+            return 260;
+        case 'enum':
+            return 200;
+        case 'number':
+            return 140;
+        case 'text':
+        default:
+            return 200;
+    }
+}
+
 export interface BulkEnumChoice {
     value: string;
     label: string;
@@ -64,6 +91,15 @@ export interface BulkColumnDef<T> {
     required?: boolean;
     /** Minimum column width in CloudScape Table (defaults to 160). */
     minWidth?: number;
+    /**
+     * Preferred initial column width in CloudScape Table. When omitted, a
+     * type-based default is applied (see {@link defaultColumnWidth}) so every
+     * inline editor has enough room by default — notably `date` columns, whose
+     * input + calendar button and ~238px calendar popover do not fit the
+     * generic default. With `resizableColumns` enabled on the table this is
+     * only the starting width; the user can still drag to adjust.
+     */
+    width?: number;
     /**
      * Optional transform applied to a field value when the staged change set
      * is serialized into a POST /{entity}/bulk request (see
