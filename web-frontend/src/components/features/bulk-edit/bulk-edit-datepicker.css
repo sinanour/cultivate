@@ -5,8 +5,8 @@
  * width (`<Dropdown minWidth="trigger" maxWidth="trigger">` in
  * date-picker/index.js), with no prop to override it. In the bulk-edit table
  * the trigger is only as wide as its (resizable) column, so a column sized
- * just wide enough for the `YYYY/MM/DD` input still squeezes the ~238px
- * calendar grid and clips the month label and the right-hand weekday columns.
+ * just wide enough for the `YYYY/MM/DD` input squeezes the calendar grid and
+ * clips the month label and the right-hand weekday columns.
  *
  * `expandToViewport` portals the dropdown to <body> (fixing the vertical
  * clipping by table rows) but does NOT change the width binding. Because the
@@ -15,25 +15,25 @@
  * ONLY dropdown content that contains a CloudScape calendar — Select and
  * Autosuggest popovers (which should keep trigger width) are untouched.
  *
- * We relax the max width (CloudScape sets it to the trigger's pixel width via
- * a CSS custom property) and give the popover a sensible minimum so the full
- * calendar always renders. The attribute-substring selector matches the
- * stable `awsui_*` class prefixes (the hash suffix varies per build) — the
- * same pattern already used elsewhere in this codebase for CloudScape
- * overrides (see mobile-spacing.css, ReconciliationPage.css).
+ * The fix is narrow on purpose: pin the dropdown wrapper to the calendar's
+ * natural width and nothing more. We do NOT touch the calendar grid itself —
+ * CloudScape lays it out at its built-in width (--size-calendar-grid-width,
+ * ~238px) and overriding its `inline-size` collapses the 7-column grid.
+ *
+ * The attribute-substring selector matches the stable `awsui_*` class
+ * prefixes (the hash suffix varies per build) — the same pattern already used
+ * elsewhere in this codebase for CloudScape overrides (see mobile-spacing.css,
+ * ReconciliationPage.css).
  */
 
 [class*="awsui_dropdown-content-wrapper"]:has([class*="awsui_calendar"]),
 [class*="awsui_dropdown-content"]:has([class*="awsui_calendar"]) {
-  /* Let the calendar grid render at its natural width regardless of the
-     trigger/column width. 260px comfortably fits the 238px grid + padding. */
-  max-inline-size: none !important;
-  min-inline-size: 260px !important;
-}
-
-/* The calendar grid itself keeps its intrinsic width; ensure it is not
-   shrunk by a narrow flex/clamped ancestor. */
-[class*="awsui_dropdown-content"] [class*="awsui_calendar"] {
-  inline-size: auto !important;
-  min-inline-size: 238px !important;
+  /* Size the popover to exactly its content's intrinsic width (the ~238px
+     calendar grid plus the dropdown/calendar padding) — never narrower (which
+     clipped the grid) and never wider (which forced horizontal scrolling).
+     `max-content` derives the correct width from CloudScape's own layout
+     instead of a hard-coded guess. */
+  inline-size: max-content !important;
+  min-inline-size: max-content !important;
+  max-inline-size: max-content !important;
 }
