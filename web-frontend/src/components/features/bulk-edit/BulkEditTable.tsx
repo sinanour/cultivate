@@ -11,6 +11,7 @@ import type { BulkColumnDef, BulkEntityConfig, BulkTableRow } from './BulkEntity
 import { defaultColumnWidth } from './BulkEntityConfig';
 import type { RecordKey, TempKey } from '../../../hooks/useStagedChangeSet';
 import { isTempKey } from '../../../hooks/useStagedChangeSet';
+import './bulk-edit-datepicker.css';
 
 export interface BulkEditTableRow<T> extends BulkTableRow<T> {
     rowErrors: Record<string, string>;
