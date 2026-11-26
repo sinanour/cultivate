@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Cultivate</title>
+  <rect width="1024" height="1024" rx="224" fill="#0B1F3B"/>
+  <!-- Map the original 60x60 tile (x/y 20..80 in a 100x100 box) onto the full 1024 canvas -->
+  <g transform="scale(17.0667) translate(-20 -20)">
+    <g transform="translate(50 50) rotate(-90) translate(-50 -50)">
+      <g transform="translate(50 50) scale(0.6625) translate(-50 -50)">
+        <path d="M50 50
+                 m-30 0
+                 a30 30 0 1 1 60 0
+                 a20 20 0 1 0 -40 0
+                 a10 10 0 1 1 20 0"
+              fill="none" stroke="#D4AF37" stroke-width="4"/>
+        <path d="M50 50
+                 m-30 0
+                 a30 30 0 1 1 60 0
+                 a20 20 0 1 0 -40 0
+                 a10 10 0 1 1 20 0"
+              fill="none" stroke="#D4AF37" stroke-width="4"
+              transform="scale(1 -1) translate(0 -100)"/>
+      </g>
+    </g>
+  </g>
+</svg>
